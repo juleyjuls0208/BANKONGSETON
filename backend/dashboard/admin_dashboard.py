@@ -1046,18 +1046,21 @@ def handle_money_card(uid):
                     socketio.emit('card_error', {'message': f'This card is already money card for {existing_name} ({existing_student})'})
                     return
             
-            # Check if UID matches ID card
+            # Check if UID matches ID card (same student trying to use ID card as money card)
             if existing_id_card == normalized_uid and existing_id_card:
                 existing_student = record.get('StudentID', '')
                 existing_name = record.get('Name', '')
-                # Allow same student to use their ID card as money card
-                if str(existing_student).strip() != str(student_id).strip():
+                # Block even if it's the same student - must use different cards
+                if str(existing_student).strip() == str(student_id).strip():
+                    print(f"[DEBUG] ✗ SAME CARD! Student trying to use ID card as money card")
+                    send_error("Use different card")
+                    socketio.emit('card_error', {'message': 'Cannot use ID card as money card. Please use a different card.'})
+                    return
+                else:
                     print(f"[DEBUG] ✗ DUPLICATE! Card is already ID card for {existing_name} ({existing_student})")
                     send_error("Card in use")
                     socketio.emit('card_error', {'message': f'This card is already registered as ID card for {existing_name} ({existing_student}). Cannot use as money card.'})
                     return
-                else:
-                    print(f"[DEBUG] ✓ Card is this student's ID card - allowing as money card too")
         
         # Find the student to link the card to
         print(f"[DEBUG] No duplicates found, proceeding with linking")
@@ -1133,19 +1136,20 @@ def register_student():
                 socketio.emit('card_error', {'message': f'Student ID {student_id} already exists'})
                 return jsonify({'error': f'Student ID {student_id} already exists'}), 400
         
-        # Check if card is already registered as ID card
+        # Check if card is already registered as ID card OR money card
         for record in users_records:
             existing_id_card = normalize_card_uid(record.get('IDCardNumber', ''))
+            existing_money_card = normalize_card_uid(record.get('MoneyCardNumber', ''))
+            
+            # Check if already used as ID card
             if existing_id_card == normalized_uid and existing_id_card:
                 existing_student = record.get('StudentID', '')
                 existing_name = record.get('Name', '')
                 print(f"[DEBUG] DUPLICATE ID Card found: {normalized_uid} belongs to {existing_name} ({existing_student})")
                 socketio.emit('card_error', {'message': f'This card is already registered as ID card for {existing_name} ({existing_student})'})
                 return jsonify({'error': f'This card is already registered as ID card for {existing_name} ({existing_student})'}), 400
-        
-        # Check if card is already registered as money card
-        for record in users_records:
-            existing_money_card = normalize_card_uid(record.get('MoneyCardNumber', ''))
+            
+            # Check if already used as money card
             if existing_money_card == normalized_uid and existing_money_card:
                 existing_student = record.get('StudentID', '')
                 existing_name = record.get('Name', '')
