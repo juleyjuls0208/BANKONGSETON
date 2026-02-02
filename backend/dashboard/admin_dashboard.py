@@ -714,6 +714,22 @@ def load_balance():
         except Exception as trans_error:
             pass  # Balance was updated successfully, continue
         
+        # Send email notification to parent
+        try:
+            if student and PHASE3_AVAILABLE:
+                parent_email = student.get('ParentEmail', '').strip()
+                if parent_email and '@' in parent_email:
+                    notification_manager = get_notification_manager()
+                    notification_manager.email_notifier.send_load_confirmation(
+                        student_name=student_name,
+                        student_id=student_id,
+                        amount=amount,
+                        new_balance=new_balance,
+                        to_email=parent_email
+                    )
+        except Exception as notify_error:
+            pass  # Notification failed but balance was updated
+        
         return jsonify({
             'success': True,
             'message': f'₱{amount:.2f} loaded successfully!',

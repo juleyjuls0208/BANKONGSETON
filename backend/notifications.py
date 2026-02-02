@@ -163,6 +163,91 @@ Bangko ng Seton Finance Office
         
         return self.send_email(to_email, subject, body, html_body)
     
+    def send_load_confirmation(self, student_name: str, student_id: str,
+                               amount: float, new_balance: float,
+                               to_email: str) -> bool:
+        """
+        Send load/top-up confirmation email to parent
+        
+        Args:
+            student_name: Student's full name
+            student_id: Student ID
+            amount: Amount loaded
+            new_balance: New balance after load
+            to_email: Parent/guardian email
+        
+        Returns:
+            True if sent successfully
+        """
+        now = get_philippines_time()
+        
+        subject = f"Balance Loaded - {student_name}"
+        
+        body = f"""
+Dear Parent/Guardian,
+
+This is to confirm that funds have been loaded to {student_name}'s account (ID: {student_id}).
+
+Load Details:
+- Amount Loaded: ₱{amount:.2f}
+- New Balance: ₱{new_balance:.2f}
+- Date/Time: {now.strftime('%Y-%m-%d %H:%M:%S')}
+
+Thank you for using Bangko ng Seton!
+
+Best regards,
+Bangko ng Seton Finance Office
+        """.strip()
+        
+        html_body = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {{ font-family: Arial, sans-serif; line-height: 1.6; }}
+        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+        .header {{ background: #22C55E; color: white; padding: 20px; text-align: center; }}
+        .content {{ padding: 20px; background: #f8f9fa; }}
+        .success {{ background: #d4edda; border-left: 4px solid #28a745; padding: 15px; margin: 15px 0; }}
+        .details {{ background: white; padding: 15px; margin: 15px 0; border-radius: 8px; }}
+        .amount {{ font-size: 24px; color: #22C55E; font-weight: bold; }}
+        .balance {{ font-size: 20px; color: #4F46E5; font-weight: bold; }}
+        .footer {{ padding: 20px; text-align: center; font-size: 12px; color: #6c757d; }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>✅ Balance Loaded Successfully</h2>
+        </div>
+        <div class="content">
+            <p>Dear Parent/Guardian,</p>
+            <p>Funds have been loaded to <strong>{student_name}</strong>'s account (ID: {student_id}).</p>
+            
+            <div class="details">
+                <h3>Load Details:</h3>
+                <p class="amount">Amount Loaded: ₱{amount:.2f}</p>
+                <p class="balance">New Balance: ₱{new_balance:.2f}</p>
+                <p><strong>Date/Time:</strong> {now.strftime('%Y-%m-%d %H:%M:%S')}</p>
+            </div>
+            
+            <div class="success">
+                <strong>✓</strong> Transaction completed successfully!
+            </div>
+            
+            <p>Thank you for using Bangko ng Seton!</p>
+        </div>
+        <div class="footer">
+            <p>Bangko ng Seton Finance Office</p>
+            <p>This is an automated notification. Please do not reply.</p>
+        </div>
+    </div>
+</body>
+</html>
+        """
+        
+        return self.send_email(to_email, subject, body, html_body)
+    
     def send_large_transaction_alert(self, student_name: str, student_id: str,
                                     amount: float, transaction_type: str,
                                     to_email: str) -> bool:

@@ -15,8 +15,17 @@ from dotenv import load_dotenv
 from datetime import datetime
 import pytz
 from functools import wraps
+import sys
 
 load_dotenv()
+
+# Import notifications module
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+try:
+    from notifications import get_notification_manager
+    NOTIFICATIONS_AVAILABLE = True
+except ImportError:
+    NOTIFICATIONS_AVAILABLE = False
 
 # Timezone configuration
 PHILIPPINES_TZ = pytz.timezone('Asia/Manila')
@@ -441,6 +450,22 @@ def load_balance():
             transactions_sheet.append_row(transaction_row)
         except Exception as trans_error:
             pass  # Balance was updated successfully, continue
+        
+        # Send email notification to parent
+        try:
+            if student and NOTIFICATIONS_AVAILABLE:
+                parent_email = student.get('ParentEmail', '').strip()
+                if parent_email and '@' in parent_email:
+                    notification_manager = get_notification_manager()
+                    notification_manager.email_notifier.send_load_confirmation(
+                        student_name=student_name,
+                        student_id=student_id,
+                        amount=amount,
+                        new_balance=new_balance,
+                        to_email=parent_email
+                    )
+        except Exception as notify_error:
+            pass  # Notification failed but balance was updated
         
         return jsonify({
             'success': True,
