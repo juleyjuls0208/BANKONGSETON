@@ -248,6 +248,193 @@ Bangko ng Seton Finance Office
         
         return self.send_email(to_email, subject, body, html_body)
     
+    def send_card_lost_alert(self, student_name: str, student_id: str,
+                            old_card: str, balance: float,
+                            to_email: str) -> bool:
+        """
+        Send card lost alert email to parent
+        
+        Args:
+            student_name: Student's full name
+            student_id: Student ID
+            old_card: Lost card number
+            balance: Balance preserved
+            to_email: Parent/guardian email
+        
+        Returns:
+            True if sent successfully
+        """
+        now = get_philippines_time()
+        
+        subject = f"Card Reported Lost - {student_name}"
+        
+        body = f"""
+Dear Parent/Guardian,
+
+This is to inform you that the money card for {student_name} (ID: {student_id}) 
+has been reported as lost.
+
+Card Details:
+- Lost Card Number: {old_card}
+- Balance Preserved: ₱{balance:.2f}
+- Reported: {now.strftime('%Y-%m-%d %H:%M:%S')}
+
+The card has been deactivated for security. The balance of ₱{balance:.2f} has been 
+preserved and will be transferred to a replacement card.
+
+Next Steps:
+1. Visit the Finance Office to get a replacement card
+2. The preserved balance will be transferred to the new card
+3. Your child can continue using Bangko ng Seton with the new card
+
+Thank you,
+Bangko ng Seton Finance Office
+        """.strip()
+        
+        html_body = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {{ font-family: Arial, sans-serif; line-height: 1.6; }}
+        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+        .header {{ background: #DC2626; color: white; padding: 20px; text-align: center; }}
+        .content {{ padding: 20px; background: #f8f9fa; }}
+        .warning {{ background: #FEF3C7; border-left: 4px solid #F59E0B; padding: 15px; margin: 15px 0; }}
+        .details {{ background: white; padding: 15px; margin: 15px 0; border-radius: 8px; }}
+        .balance {{ font-size: 20px; color: #059669; font-weight: bold; }}
+        .footer {{ padding: 20px; text-align: center; font-size: 12px; color: #6c757d; }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>⚠️ Card Reported Lost</h2>
+        </div>
+        <div class="content">
+            <p>Dear Parent/Guardian,</p>
+            <p>The money card for <strong>{student_name}</strong> (ID: {student_id}) has been reported as lost.</p>
+            
+            <div class="details">
+                <h3>Card Details:</h3>
+                <p><strong>Lost Card Number:</strong> {old_card}</p>
+                <p class="balance">Balance Preserved: ₱{balance:.2f}</p>
+                <p><strong>Reported:</strong> {now.strftime('%Y-%m-%d %H:%M:%S')}</p>
+            </div>
+            
+            <div class="warning">
+                <strong>🔒 Security:</strong> The card has been deactivated and cannot be used. 
+                The balance is safe and preserved.
+            </div>
+            
+            <h3>Next Steps:</h3>
+            <ol>
+                <li>Visit the Finance Office to get a replacement card</li>
+                <li>The preserved balance will be transferred to the new card</li>
+                <li>Your child can continue using Bangko ng Seton with the new card</li>
+            </ol>
+        </div>
+        <div class="footer">
+            <p>Bangko ng Seton Finance Office</p>
+            <p>This is an automated notification. Please do not reply.</p>
+        </div>
+    </div>
+</body>
+</html>
+        """
+        
+        return self.send_email(to_email, subject, body, html_body)
+    
+    def send_card_replaced_confirmation(self, student_name: str, student_id: str,
+                                       new_card: str, balance: float,
+                                       to_email: str) -> bool:
+        """
+        Send card replacement confirmation email to parent
+        
+        Args:
+            student_name: Student's full name
+            student_id: Student ID
+            new_card: New card number
+            balance: Balance transferred
+            to_email: Parent/guardian email
+        
+        Returns:
+            True if sent successfully
+        """
+        now = get_philippines_time()
+        
+        subject = f"Replacement Card Issued - {student_name}"
+        
+        body = f"""
+Dear Parent/Guardian,
+
+This is to confirm that a replacement money card has been issued for {student_name} 
+(ID: {student_id}).
+
+Replacement Details:
+- New Card Number: {new_card}
+- Balance Transferred: ₱{balance:.2f}
+- Issued: {now.strftime('%Y-%m-%d %H:%M:%S')}
+
+The card is now active and ready to use. The balance of ₱{balance:.2f} from the 
+lost card has been successfully transferred to this new card.
+
+Your child can now use the new card at school immediately.
+
+Thank you,
+Bangko ng Seton Finance Office
+        """.strip()
+        
+        html_body = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {{ font-family: Arial, sans-serif; line-height: 1.6; }}
+        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+        .header {{ background: #059669; color: white; padding: 20px; text-align: center; }}
+        .content {{ padding: 20px; background: #f8f9fa; }}
+        .success {{ background: #D1FAE5; border-left: 4px solid #059669; padding: 15px; margin: 15px 0; }}
+        .details {{ background: white; padding: 15px; margin: 15px 0; border-radius: 8px; }}
+        .card-number {{ font-family: monospace; font-size: 20px; color: #4F46E5; font-weight: bold; }}
+        .balance {{ font-size: 20px; color: #059669; font-weight: bold; }}
+        .footer {{ padding: 20px; text-align: center; font-size: 12px; color: #6c757d; }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>✅ Replacement Card Issued</h2>
+        </div>
+        <div class="content">
+            <p>Dear Parent/Guardian,</p>
+            <p>A replacement money card has been issued for <strong>{student_name}</strong> (ID: {student_id}).</p>
+            
+            <div class="details">
+                <h3>Replacement Details:</h3>
+                <p class="card-number">New Card: {new_card}</p>
+                <p class="balance">Balance Transferred: ₱{balance:.2f}</p>
+                <p><strong>Issued:</strong> {now.strftime('%Y-%m-%d %H:%M:%S')}</p>
+            </div>
+            
+            <div class="success">
+                <strong>✓ Active:</strong> The card is now active and ready to use. 
+                The balance has been successfully transferred.
+            </div>
+            
+            <p>Your child can use the new card at school immediately.</p>
+        </div>
+        <div class="footer">
+            <p>Bangko ng Seton Finance Office</p>
+            <p>This is an automated notification. Please do not reply.</p>
+        </div>
+    </div>
+</body>
+</html>
+        """
+        
+        return self.send_email(to_email, subject, body, html_body)
+    
     def send_large_transaction_alert(self, student_name: str, student_id: str,
                                     amount: float, transaction_type: str,
                                     to_email: str) -> bool:

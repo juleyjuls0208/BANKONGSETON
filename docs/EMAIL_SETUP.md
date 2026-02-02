@@ -37,7 +37,7 @@ Open `.env` and replace these values:
 SMTP_SERVER=smtp.gmail.com
 SMTP_PORT=587
 SMTP_USER=your-school-email@gmail.com
-SMTP_PASSWORD=abcdefghijklmnop
+SMTP_PASSWORD=wzvuyynegaxzglbc
 FROM_EMAIL=your-school-email@gmail.com
 ```
 

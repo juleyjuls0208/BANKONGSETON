@@ -1315,6 +1315,23 @@ def report_lost_card():
         ]
         lost_sheet.append_row(lost_row)
         
+        # Send email notification to parent
+        try:
+            if student and PHASE3_AVAILABLE:
+                parent_email = student.get('ParentEmail', '').strip()
+                if parent_email and '@' in parent_email:
+                    student_name = student.get('Name', 'Unknown')
+                    notification_manager = get_notification_manager()
+                    notification_manager.email_notifier.send_card_lost_alert(
+                        student_name=student_name,
+                        student_id=student_id,
+                        old_card=old_card,
+                        balance=current_balance,
+                        to_email=parent_email
+                    )
+        except Exception as notify_error:
+            pass  # Notification failed but card was reported
+        
         socketio.emit('card_reported_lost', {
             'student_id': student_id,
             'old_card': old_card,
@@ -1471,6 +1488,23 @@ def handle_replace_card(uid):
         
         lost_sheet.update_cell(report_row_index, new_card_col, uid)
         lost_sheet.update_cell(report_row_index, status_col, 'Completed')
+        
+        # Send email notification to parent
+        try:
+            if student_record and PHASE3_AVAILABLE:
+                parent_email = student_record.get('ParentEmail', '').strip()
+                if parent_email and '@' in parent_email:
+                    student_name = student_record.get('Name', 'Unknown')
+                    notification_manager = get_notification_manager()
+                    notification_manager.email_notifier.send_card_replaced_confirmation(
+                        student_name=student_name,
+                        student_id=student_id,
+                        new_card=uid,
+                        balance=balance,
+                        to_email=parent_email
+                    )
+        except Exception as notify_error:
+            pass  # Notification failed but card was replaced
         
         send_success("Replaced!")
         socketio.emit('card_replaced', {
