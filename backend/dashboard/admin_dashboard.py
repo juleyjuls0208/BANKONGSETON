@@ -1050,10 +1050,14 @@ def handle_money_card(uid):
             if existing_id_card == normalized_uid and existing_id_card:
                 existing_student = record.get('StudentID', '')
                 existing_name = record.get('Name', '')
-                print(f"[DEBUG] ✗ DUPLICATE! Card is already ID card for {existing_name} ({existing_student})")
-                send_error("Card in use")
-                socketio.emit('card_error', {'message': f'This card is already registered as ID card for {existing_name} ({existing_student}). Cannot use as money card.'})
-                return
+                # Allow same student to use their ID card as money card
+                if str(existing_student).strip() != str(student_id).strip():
+                    print(f"[DEBUG] ✗ DUPLICATE! Card is already ID card for {existing_name} ({existing_student})")
+                    send_error("Card in use")
+                    socketio.emit('card_error', {'message': f'This card is already registered as ID card for {existing_name} ({existing_student}). Cannot use as money card.'})
+                    return
+                else:
+                    print(f"[DEBUG] ✓ Card is this student's ID card - allowing as money card too")
         
         # Find the student to link the card to
         print(f"[DEBUG] No duplicates found, proceeding with linking")
