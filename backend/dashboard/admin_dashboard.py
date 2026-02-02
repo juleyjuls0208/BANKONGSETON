@@ -1553,5 +1553,10 @@ if __name__ == '__main__':
     print(f"✓ Debug mode: {debug}")
     print("\n" + "="*50 + "\n")
     
+    # Suppress SSL/TLS handshake errors (400 "Bad request" from HTTPS attempts)
+    import logging
+    log = logging.getLogger('werkzeug')
+    log.setLevel(logging.ERROR)
+    
     socketio.run(app, host='0.0.0.0', port=port, debug=debug)
 
