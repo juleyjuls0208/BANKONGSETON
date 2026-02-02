@@ -26,13 +26,19 @@ try:
     from resilience import with_retry, RetryConfig, get_write_queue, get_queue_status, get_rate_limiter
     from health import get_health_status, get_uptime_stats, update_sheets_status, record_request
     from errors import setup_logging, get_logger, BankoError, ErrorCode
+    # Phase 3 modules
+    from analytics import Analytics, get_analytics_summary
+    from exports import export_transactions, export_students, generate_monthly_statement, filter_by_date_range
+    from notifications import get_notification_manager
+    PHASE3_AVAILABLE = True
 except ImportError as e:
-    print(f"Warning: Could not import Phase 1 modules: {e}")
+    print(f"Warning: Could not import modules: {e}")
     # Fallback to basic functionality
     def get_cache_stats(): return {}
     def get_health_status(): return {'status': 'unknown'}
     def get_uptime_stats(): return {}
     def get_queue_status(): return {}
+    PHASE3_AVAILABLE = False
 
 load_dotenv()
 
@@ -284,6 +290,193 @@ def queue_status():
     try:
         status = get_queue_status()
         return jsonify(status), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# ============= ANALYTICS & REPORTS (PHASE 3) =============
+
+@app.route('/api/analytics/summary', methods=['GET'])
+@login_required
+def analytics_summary():
+    """Get comprehensive analytics summary"""
+    if not PHASE3_AVAILABLE:
+        return jsonify({'error': 'Analytics not available'}), 503
+    
+    try:
+        transactions_sheet = get_worksheet_with_retry('Transactions Log')
+        transactions = transactions_sheet.get_all_records()
+        
+        accounts_sheet = get_worksheet_with_retry('Money Accounts')
+        accounts = accounts_sheet.get_all_records()
+        
+        summary = get_analytics_summary(transactions, accounts)
+        return jsonify(summary), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/analytics/spending', methods=['GET'])
+@login_required
+def analytics_spending():
+    """Get spending totals by period"""
+    if not PHASE3_AVAILABLE:
+        return jsonify({'error': 'Analytics not available'}), 503
+    
+    try:
+        period = request.args.get('period', 'daily')  # daily, weekly, monthly
+        
+        transactions_sheet = get_worksheet_with_retry('Transactions Log')
+        transactions = transactions_sheet.get_all_records()
+        
+        analytics = Analytics(transactions)
+        totals = analytics.get_spending_totals(period)
+        
+        return jsonify({
+            'period': period,
+            'totals': totals
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/analytics/top-spenders', methods=['GET'])
+@login_required
+def top_spenders():
+    """Get top spenders"""
+    if not PHASE3_AVAILABLE:
+        return jsonify({'error': 'Analytics not available'}), 503
+    
+    try:
+        limit = int(request.args.get('limit', 10))
+        days = int(request.args.get('days', 30))
+        
+        transactions_sheet = get_worksheet_with_retry('Transactions Log')
+        transactions = transactions_sheet.get_all_records()
+        
+        analytics = Analytics(transactions)
+        top = analytics.get_top_spenders(limit=limit, days=days)
+        
+        return jsonify({
+            'top_spenders': top,
+            'limit': limit,
+            'period_days': days
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/analytics/low-balance', methods=['GET'])
+@login_required
+def low_balance_students():
+    """Get students with low balance"""
+    if not PHASE3_AVAILABLE:
+        return jsonify({'error': 'Analytics not available'}), 503
+    
+    try:
+        threshold = float(request.args.get('threshold', 50))
+        
+        accounts_sheet = get_worksheet_with_retry('Money Accounts')
+        accounts = accounts_sheet.get_all_records()
+        
+        transactions_sheet = get_worksheet_with_retry('Transactions Log')
+        transactions = transactions_sheet.get_all_records()
+        
+        analytics = Analytics(transactions)
+        low_balance = analytics.get_low_balance_students(threshold=threshold, account_data=accounts)
+        
+        return jsonify({
+            'low_balance_students': low_balance,
+            'threshold': threshold,
+            'count': len(low_balance)
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/export/transactions', methods=['GET'])
+@login_required
+def export_transactions_route():
+    """Export transactions to CSV or Excel"""
+    if not PHASE3_AVAILABLE:
+        return jsonify({'error': 'Export not available'}), 503
+    
+    try:
+        format_type = request.args.get('format', 'csv').lower()
+        start_date = request.args.get('start_date')
+        end_date = request.args.get('end_date')
+        
+        transactions_sheet = get_worksheet_with_retry('Transactions Log')
+        transactions = transactions_sheet.get_all_records()
+        
+        data, mimetype, filename = export_transactions(
+            transactions,
+            format=format_type,
+            start_date=start_date,
+            end_date=end_date
+        )
+        
+        from flask import Response, make_response
+        response = make_response(data)
+        response.headers['Content-Type'] = mimetype
+        response.headers['Content-Disposition'] = f'attachment; filename={filename}'
+        
+        return response
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/export/students', methods=['GET'])
+@login_required
+def export_students_route():
+    """Export students list to CSV or Excel"""
+    if not PHASE3_AVAILABLE:
+        return jsonify({'error': 'Export not available'}), 503
+    
+    try:
+        format_type = request.args.get('format', 'csv').lower()
+        
+        users_sheet = get_worksheet_with_retry('Users')
+        students = users_sheet.get_all_records()
+        
+        data, mimetype, filename = export_students(students, format=format_type)
+        
+        from flask import Response, make_response
+        response = make_response(data)
+        response.headers['Content-Type'] = mimetype
+        response.headers['Content-Disposition'] = f'attachment; filename={filename}'
+        
+        return response
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/statement/<student_id>', methods=['GET'])
+@login_required
+def monthly_statement(student_id):
+    """Generate monthly statement for student"""
+    if not PHASE3_AVAILABLE:
+        return jsonify({'error': 'Statements not available'}), 503
+    
+    try:
+        month = request.args.get('month')  # YYYY-MM format
+        
+        users_sheet = get_worksheet_with_retry('Users')
+        users = users_sheet.get_all_records()
+        student = next((u for u in users if u['StudentID'] == student_id), None)
+        
+        if not student:
+            return jsonify({'error': 'Student not found'}), 404
+        
+        transactions_sheet = get_worksheet_with_retry('Transactions Log')
+        transactions = transactions_sheet.get_all_records()
+        
+        statement = generate_monthly_statement(
+            student_id=student_id,
+            transactions=transactions,
+            student_name=student.get('Name', 'Unknown'),
+            month=month
+        )
+        
+        from flask import Response, make_response
+        response = make_response(statement)
+        response.headers['Content-Type'] = 'text/plain; charset=utf-8'
+        response.headers['Content-Disposition'] = f'attachment; filename=statement_{student_id}_{month or "current"}.txt'
+        
+        return response
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

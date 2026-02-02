@@ -162,7 +162,7 @@ StudentID | StudentName | LostCardNumber | ReportDate | Status | ReplacementCard
 ```bash
 # In PythonAnywhere Bash console
 cd ~
-git clone https://github.com/YOUR_USERNAME/BANKONGSETON.git
+git clone https://github.com/juleyjuls0208/BANKONGSETON.git
 cd BANKONGSETON
 ```
 
