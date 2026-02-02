@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<host-apdu-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/hce_service_description"
+    android:requireDeviceUnlock="true">
+    
+    <!-- Custom AID for Bangko ng Seton -->
+    <!-- Format: F0 + "BANKONGSETON" in hex = F042414E4B4F4E475345544F4E -->
+    <aid-group
+        android:category="payment"
+        android:description="@string/hce_aid_description">
+        <aid-filter android:name="F042414E4B4F4E475345544F4E" />
+    </aid-group>
+    
+</host-apdu-service>

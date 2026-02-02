@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Banko ng Seton Android</string>
+    <string name="hce_service_description">Bangko ng Seton NFC Payment Service</string>
+    <string name="hce_aid_description">Bangko ng Seton Payment AID</string>
+</resources>
