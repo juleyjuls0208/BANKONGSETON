@@ -1436,17 +1436,54 @@ def handle_replace_card(uid):
         old_card = report.get('OldCardNumber', '')
         balance = float(report.get('TransferredBalance', 0))
         
-        # Update Users sheet with new card
+        # Normalize and check for duplicates
+        normalized_uid = normalize_card_uid(uid)
+        print(f"[DEBUG] Replacing with card: {uid}, normalized: {normalized_uid}")
+        
+        # Check if new card is already in use
         users_sheet = get_worksheet_with_retry('Users')
         users_records = users_sheet.get_all_records()
         
         user_row_index = None
         student_record = None
+        
+        # Find the student and check for duplicates in one loop
         for i, record in enumerate(users_records):
-            if str(record.get('StudentID', '')).strip() == str(student_id).strip():
+            current_student_id = str(record.get('StudentID', '')).strip()
+            
+            # Save student record if this is our student
+            if current_student_id == str(student_id).strip():
                 user_row_index = i + 2
                 student_record = record
-                break
+            
+            # Check if card is already used as ID card
+            existing_id_card = normalize_card_uid(record.get('IDCardNumber', ''))
+            if existing_id_card == normalized_uid and existing_id_card:
+                existing_name = record.get('Name', '')
+                # Block if it's this student's ID card
+                if current_student_id == str(student_id).strip():
+                    print(f"[DEBUG] ✗ Student trying to use their own ID card as replacement")
+                    send_error("Use different card")
+                    socketio.emit('card_error', {'message': 'Cannot use your ID card as money card. Please use a different card.'})
+                    return
+                # Block if it's another student's ID card
+                else:
+                    print(f"[DEBUG] ✗ Card is ID card for {existing_name} ({current_student_id})")
+                    send_error("Card in use")
+                    socketio.emit('card_error', {'message': f'This card is already registered as ID card for {existing_name} ({current_student_id}).'})
+                    return
+            
+            # Check if card is already used as money card (skip the old lost card)
+            existing_money_card = normalize_card_uid(record.get('MoneyCardNumber', ''))
+            normalized_old = normalize_card_uid(old_card)
+            if existing_money_card == normalized_uid and existing_money_card and existing_money_card != normalized_old:
+                existing_name = record.get('Name', '')
+                print(f"[DEBUG] ✗ Card is already money card for {existing_name} ({current_student_id})")
+                send_error("Card in use")
+                socketio.emit('card_error', {'message': f'This card is already registered as money card for {existing_name} ({current_student_id}).'})
+                return
+        
+        print(f"[DEBUG] ✓ Card is available for replacement")
         
         # Get student's ID card number
         id_card_number = student_record.get('IDCardNumber', '') if student_record else ''
@@ -1461,7 +1498,6 @@ def handle_replace_card(uid):
         money_records = money_sheet.get_all_records()
         
         # Find the old card's row in Money Accounts
-        normalized_old = normalize_card_uid(old_card)
         old_card_row_index = None
         for i, record in enumerate(money_records):
             if normalize_card_uid(record.get('MoneyCardNumber', '')) == normalized_old:
