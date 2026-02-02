@@ -1,0 +1,17 @@
+# Core dependencies
+pyserial>=3.5
+gspread>=5.12.0
+oauth2client>=4.1.3
+python-dotenv>=1.0.0
+pytz>=2024.1
+
+# Flask Web Framework
+Flask>=3.0.0
+Flask-CORS>=4.0.0
+
+# Production server
+gunicorn>=21.2.0
+
+# Security (for API)
+pyjwt>=2.8.0
+cryptography>=41.0.7

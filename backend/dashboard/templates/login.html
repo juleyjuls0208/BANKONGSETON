@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Banko ng Seton</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        body {
+            background: url('https://instagram.fmnl4-2.fna.fbcdn.net/v/t51.82787-15/605597737_17970934208989784_2673269066965092796_n.jpg?stp=dst-jpg_e35_tt6&_nc_cat=101&ig_cache_key=Mzc5NDYyODU2NjQxMjY0ODc4Nw%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6InhwaWRzLjE0NDB4MTkyMC5zZHIuQzMifQ%3D%3D&_nc_ohc=w3OcgyZHRuoQ7kNvwEprRoe&_nc_oc=Adkt8IiQzLHLfIPJ4C9XYHhX-cGUEcckVDuIAUq0KmBiO197uoKRCK_ZTj7KY1PZ3j8&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=instagram.fmnl4-2.fna&_nc_gid=PUd-fy1GVK_Th-4RrQqLUQ&oh=00_AfutLS51Uktfa4tYU1yeiOM_GMLP5SiQSitHXQF1StpZFQ&oe=6985C5A3') no-repeat center center;
+            background-size: cover;
+            background-color: #8b9dc3;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        /* On mobile portrait, show at least 50% of image */
+        @media (max-width: 768px) and (orientation: portrait) {
+            body {
+                background-size: contain;
+            }
+        }
+        /* On landscape, use landscape image */
+        @media (orientation: landscape) {
+            body {
+                background-image: url('https://instagram.fmnl4-4.fna.fbcdn.net/v/t51.82787-15/607516714_17971270808989784_4162707084391241941_n.jpg?stp=dst-jpg_e35_tt6&_nc_cat=100&ig_cache_key=Mzc5NjY2MjAwNDA5OTUxNzUwMg%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6InhwaWRzLjE0NDB4OTYwLnNkci5DMyJ9&_nc_ohc=jKnWRIa-jY0Q7kNvwGQd-1y&_nc_oc=Adkv_vYz1UBdJ79rVVjJVQxXqMI8D7gBAg5AO-Pp6pfOzLXvW04zfbawAcovkSsR5X8&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=instagram.fmnl4-4.fna&_nc_gid=AyDyPKZd1f5vKkHlsiW3Jg&oh=00_AfsYRK_6Vl7equa-lM2PEg95UFduKlUjSBKD8VMBwkfvuA&oe=6985CA67');
+                background-size: cover;
+            }
+        }
+        .login-card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+            width: 100%;
+            max-width: 400px;
+        }
+        .logo {
+            font-size: 64px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .app-title {
+            text-align: center;
+            font-weight: bold;
+            font-size: 24px;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        .app-subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+        }
+        
+        /* Mobile Responsive */
+        @media (max-width: 480px) {
+            .login-card {
+                padding: 25px;
+                border-radius: 15px;
+            }
+            .app-title {
+                font-size: 20px;
+            }
+            .logo img {
+                width: 60px !important;
+                height: 60px !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <div class="logo"><img src="https://paascu.org.ph/wp-content/uploads/2025/06/ncr-25-p43h8tkqaf761lklr6lx4hz5dctzp10ktwsf9dok8g.png" alt="Banko ng Seton Logo" style="width: 80px; height: 80px; display: block; margin: 0 auto;"></div>
+        <div class="app-title">Bangko ng Seton</div>
+        <div class="app-subtitle">Finance</div>
+        
+        <form id="loginForm">
+            <div class="mb-3">
+                <label for="username" class="form-label">Username</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-person"></i></span>
+                    <input type="text" class="form-control" id="username">
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="password" class="form-label">Password</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                    <input type="password" class="form-control" id="password">
+                </div>
+            </div>
+            
+            <div id="errorAlert" class="alert alert-danger d-none" role="alert"></div>
+            
+            <button type="submit" class="btn btn-primary w-100" id="loginBtn">
+                <span id="loginText">Login</span>
+                <span id="loginSpinner" class="spinner-border spinner-border-sm d-none" role="status"></span>
+            </button>
+        </form>
+    </div>
+
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const errorAlert = document.getElementById('errorAlert');
+            const loginBtn = document.getElementById('loginBtn');
+            const loginText = document.getElementById('loginText');
+            const loginSpinner = document.getElementById('loginSpinner');
+            
+            // Show loading
+            loginBtn.disabled = true;
+            loginText.classList.add('d-none');
+            loginSpinner.classList.remove('d-none');
+            errorAlert.classList.add('d-none');
+            
+            try {
+                const response = await fetch('/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    window.location.href = '/dashboard';
+                } else {
+                    errorAlert.textContent = data.error || 'Invalid credentials';
+                    errorAlert.classList.remove('d-none');
+                }
+            } catch (error) {
+                errorAlert.textContent = 'Connection error. Please try again.';
+                errorAlert.classList.remove('d-none');
+            } finally {
+                loginBtn.disabled = false;
+                loginText.classList.remove('d-none');
+                loginSpinner.classList.add('d-none');
+            }
+        });
+    </script>
+</body>
+</html>

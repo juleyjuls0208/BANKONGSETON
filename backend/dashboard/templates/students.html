@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Students</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .sidebar {
+            height: 100vh;
+            background: url('https://i.pinimg.com/736x/f7/db/84/f7db841f2bf75e76c13cdb27ea35326b.jpg') no-repeat center center;
+            background-size: cover;
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 250px;
+            color: white;
+            padding: 20px;
+            z-index: 1000;
+            transition: transform 0.3s ease;
+        }
+        .sidebar-brand {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .sidebar-menu {
+            list-style: none;
+            padding: 0;
+        }
+        .sidebar-menu li {
+            margin-bottom: 10px;
+        }
+        .sidebar-menu a {
+            color: white;
+            text-decoration: none;
+            padding: 12px 15px;
+            display: block;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+        .sidebar-menu a:hover,
+        .sidebar-menu a.active {
+            background: rgba(255,255,255,0.2);
+        }
+        .main-content {
+            margin-left: 250px;
+            padding: 30px;
+            transition: margin-left 0.3s ease;
+        }
+        .content-card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .badge-status {
+            font-size: 12px;
+            padding: 5px 10px;
+        }
+        .mobile-header {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 20px;
+            z-index: 999;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+        .mobile-header h5 {
+            margin: 0;
+            font-weight: bold;
+        }
+        .menu-toggle {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 0;
+        }
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 999;
+        }
+        
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+            .sidebar.active {
+                transform: translateX(0);
+            }
+            .main-content {
+                margin-left: 0;
+                padding: 80px 15px 20px 15px;
+            }
+            .mobile-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            .sidebar-overlay.active {
+                display: block;
+            }
+            .content-card {
+                padding: 15px;
+            }
+            h1 {
+                font-size: 1.5rem;
+            }
+            .table {
+                font-size: 0.85rem;
+            }
+            .input-group {
+                width: 100% !important;
+            }
+            .col-md-6 {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Mobile Header -->
+    <div class="mobile-header">
+        <h5>Banko ng Seton</h5>
+        <button class="menu-toggle" onclick="toggleSidebar()">
+            <i class="bi bi-list"></i>
+        </button>
+    </div>
+    
+    <!-- Sidebar Overlay -->
+    <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
+    
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="sidebar-brand">
+            Banko ng Seton
+        </div>
+        <ul class="sidebar-menu">
+            <li><a href="/dashboard"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
+            <li><a href="/students" class="active"><i class="bi bi-people"></i> Students</a></li>
+            <li><a href="/transactions"><i class="bi bi-credit-card"></i> Transactions</a></li>
+            <li><a href="/logout"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
+        </ul>
+        <div class="mt-4 text-center" style="opacity: 0.7;">
+            <small>Logged in as: {{ username }}</small>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>Students Management</h1>
+        </div>
+        
+        <div class="content-card">
+            <!-- Search Bar -->
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input type="text" class="form-control" id="searchInput" placeholder="Search by name or ID...">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Students Table -->
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Student ID</th>
+                            <th>Name</th>
+                            <th>ID Card</th>
+                            <th>Money Card</th>
+                            <th>Balance</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="studentsTable">
+                        <tr>
+                            <td colspan="6" class="text-center">Loading students...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function toggleSidebar() {
+            document.querySelector('.sidebar').classList.toggle('active');
+            document.querySelector('.sidebar-overlay').classList.toggle('active');
+        }
+        
+        document.querySelectorAll('.sidebar-menu a').forEach(link => {
+            link.addEventListener('click', () => {
+                if (window.innerWidth <= 768) {
+                    toggleSidebar();
+                }
+            });
+        });
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            loadStudents();
+            document.getElementById('searchInput').addEventListener('input', searchStudents);
+        });
+
+        async function loadStudents() {
+            try {
+                const response = await fetch('/api/students');
+                const data = await response.json();
+                
+                displayStudents(data.students);
+            } catch (error) {
+                console.error('Error loading students:', error);
+            }
+        }
+
+        function displayStudents(students) {
+            const tbody = document.getElementById('studentsTable');
+            
+            if (!students || students.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center">No students found</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = students.map(s => `
+                <tr>
+                    <td>${s.StudentID}</td>
+                    <td>${s.Name}</td>
+                    <td><code>${s.IDCardNumber || '-'}</code></td>
+                    <td><code>${s.MoneyCardNumber || '-'}</code></td>
+                    <td>₱${(s.Balance || 0).toFixed(2)}</td>
+                    <td><span class="badge ${s.Status === 'Active' ? 'bg-success' : 'bg-secondary'} badge-status">${s.Status || 'Active'}</span></td>
+                </tr>
+            `).join('');
+        }
+
+        async function searchStudents() {
+            const query = document.getElementById('searchInput').value;
+            
+            try {
+                const response = await fetch(`/api/students/search?q=${encodeURIComponent(query)}`);
+                const data = await response.json();
+                displayStudents(data.students);
+            } catch (error) {
+                console.error('Error searching:', error);
+            }
+        }
+    </script>
+</body>
+</html>

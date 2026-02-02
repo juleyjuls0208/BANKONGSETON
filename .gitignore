@@ -1,0 +1,80 @@
+# Environment and credentials
+.env
+credentials.json
+token.json
+*.key
+*.pem
+
+# Config folder credentials
+config/credentials.json
+backend/dashboard/.env
+backend/dashboard/credentials.json
+backend/api/.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv
+
+# Logs
+*.log
+bangko.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# Database dumps
+*.sql
+*.db
+*.sqlite
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+coverage_report/
+
+# Node modules (if any)
+node_modules/
+
+# Android
+*.apk
+*.ap_
+*.dex
+.gradle/
+local.properties
+*.iml
+.kotlin/
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Temporary files
+*.tmp
+temp/
+tmp/
+

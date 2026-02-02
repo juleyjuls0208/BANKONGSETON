@@ -1,0 +1,7 @@
+# Deployment files - DO NOT edit manually
+*.pyc
+__pycache__/
+.env
+credentials.json
+*.log
+.DS_Store

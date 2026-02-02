@@ -1,0 +1,1304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Main - Bangko ng Seton</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="description" content="Bangko ng Seton - School RFID Money Management System">
+    <meta name="theme-color" content="#4F46E5">
+    <link rel="manifest" href="/static/manifest.json">
+    <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192x192.png">
+    <link rel="apple-touch-icon" href="/static/icons/icon-192x192.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Bangko ng Seton">
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="/static/css/pwa.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .sidebar {
+            height: 100vh;
+            background: url('https://i.pinimg.com/736x/08/1a/6e/081a6e345f9c8cb5c2be4d6acc4309f3.jpg') no-repeat center center;
+            background-size: cover;
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 250px;
+            color: white;
+            padding: 20px;
+            z-index: 1000;
+            transition: transform 0.3s ease;
+        }
+        .sidebar-brand {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .sidebar-menu {
+            list-style: none;
+            padding: 0;
+        }
+        .sidebar-menu li {
+            margin-bottom: 10px;
+        }
+        .sidebar-menu a {
+            color: white;
+            text-decoration: none;
+            padding: 12px 15px;
+            display: block;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+        .sidebar-menu a:hover,
+        .sidebar-menu a.active {
+            background: rgba(255,255,255,0.2);
+        }
+        .main-content {
+            margin-left: 250px;
+            padding: 30px;
+            transition: margin-left 0.3s ease;
+        }
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .stat-icon {
+            font-size: 40px;
+            margin-bottom: 10px;
+        }
+        .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #333;
+        }
+        .stat-label {
+            color: #666;
+            font-size: 14px;
+        }
+        .quick-action-btn {
+            width: 100%;
+            padding: 20px;
+            margin-bottom: 15px;
+            font-size: 16px;
+            border-radius: 10px;
+        }
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .status-connected {
+            background-color: #28a745;
+            box-shadow: 0 0 5px #28a745;
+        }
+        .status-disconnected {
+            background-color: #dc3545;
+        }
+        .student-item {
+            padding: 12px;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .student-item:hover {
+            background: #e5e7eb;
+            transform: translateY(-2px);
+        }
+        .log-entry {
+            padding: 8px 12px;
+            margin-bottom: 4px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+        .log-success {
+            background: #d4edda;
+            border-left: 3px solid #28a745;
+        }
+        .log-error {
+            background: #f8d7da;
+            border-left: 3px solid #dc3545;
+        }
+        .log-info {
+            background: #d1ecf1;
+            border-left: 3px solid #17a2b8;
+        }
+        .mobile-header {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 20px;
+            z-index: 999;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+        .mobile-header h5 {
+            margin: 0;
+            font-weight: bold;
+        }
+        .menu-toggle {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 0;
+        }
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 999;
+        }
+        
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+            .sidebar.active {
+                transform: translateX(0);
+            }
+            .main-content {
+                margin-left: 0;
+                padding: 80px 15px 20px 15px;
+            }
+            .mobile-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            .sidebar-overlay.active {
+                display: block;
+            }
+            .stat-value {
+                font-size: 24px;
+            }
+            .stat-card {
+                padding: 15px;
+            }
+            h1 {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Skip to content for accessibility -->
+    <a href="#main-content" class="skip-to-content">Skip to main content</a>
+    
+    <!-- Mobile Header -->
+    <div class="mobile-header">
+        <h5>Banko ng Seton</h5>
+        <div class="d-flex align-items-center gap-2">
+            <!-- Sync Status Indicator -->
+            <div class="sync-status online" aria-live="polite" aria-atomic="true">
+                <span class="status-dot"></span>
+                <span class="visually-hidden-focusable">Network status: </span>Online
+            </div>
+            <button class="menu-toggle" onclick="toggleSidebar()" aria-label="Toggle navigation menu">
+                <i class="bi bi-list"></i>
+            </button>
+        </div>
+    </div>
+        </button>
+    </div>
+    
+    <!-- Sidebar Overlay -->
+    <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
+    
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="sidebar-brand">
+            Banko ng Seton
+        </div>
+        <ul class="sidebar-menu">
+            <li><a href="/dashboard" class="active"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
+            <li><a href="/students"><i class="bi bi-people"></i> Students</a></li>
+            <li><a href="/transactions"><i class="bi bi-credit-card"></i> Transactions</a></li>
+            <li><a href="/logout"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
+        </ul>
+        <div class="mt-4 text-center" style="opacity: 0.7;">
+            <small>Logged in as: {{ username }}</small>
+            {% if role == 'admin' %}
+            <div class="mt-2">
+                <span class="badge bg-danger">Admin</span>
+            </div>
+            {% else %}
+            <div class="mt-2">
+                <span class="badge bg-info">Finance</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <h1 class="mb-4">Dashboard</h1>
+        
+        <!-- Stats Row -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="stat-card">
+                    <div class="stat-icon text-primary">👥</div>
+                    <div class="stat-value" id="totalStudents">0</div>
+                    <div class="stat-label">Total Students</div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="stat-card">
+                    <div class="stat-icon text-warning">📊</div>
+                    <div class="stat-value" id="todayTransactions">0</div>
+                    <div class="stat-label">Today's Transactions</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Student Management & Recent Activity -->
+        <div class="row">
+            <div class="col-md-6">
+                <div class="stat-card">
+                    <h5 class="mb-3">Student Management</h5>
+                    <div class="mb-3">
+                        <label class="form-label">Search Student</label>
+                        <input type="text" class="form-control" id="studentSearch" placeholder="Search by name or ID...">
+                    </div>
+                    <div id="studentList" style="max-height: 400px; overflow-y: auto;">
+                        <p class="text-muted">Type to search students...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="stat-card">
+                    <h5 class="mb-3">Recent Activity</h5>
+                    <div id="recentActivity">
+                        <p class="text-muted">Loading recent transactions...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card Management Section (Admin Only) -->
+        {% if role == 'admin' %}
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="stat-card">
+                    <h5 class="mb-3">
+                        <i class="bi bi-gear-fill text-danger"></i> 
+                        Card Management
+                        <span class="badge bg-danger ms-2">Admin Only</span>
+                    </h5>
+                    
+                    <!-- Arduino Connection (Desktop Only) -->
+                    {% if arduino_available %}
+                    <div class="row mb-4">
+                        <div class="col-md-4">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h6 class="card-title">Arduino Connection</h6>
+                                    <div class="mb-2">
+                                        <div class="d-flex align-items-center mb-2">
+                                            <div id="connectionStatus" class="status-indicator status-disconnected"></div>
+                                            <small id="connectionText" class="ms-2">Not Connected</small>
+                                        </div>
+                                    </div>
+                                    <select class="form-select form-select-sm mb-2" id="serialPort">
+                                        <option value="">Select a port...</option>
+                                    </select>
+                                    <button class="btn btn-primary btn-sm w-100 mb-1" id="connectBtn" onclick="connectArduino()">
+                                        <i class="bi bi-plug"></i> Connect
+                                    </button>
+                                    <button class="btn btn-secondary btn-sm w-100 d-none" id="disconnectBtn" onclick="disconnectArduino()">
+                                        <i class="bi bi-x-circle"></i> Disconnect
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h6 class="card-title">Quick Actions</h6>
+                                    <div class="row g-2">
+                                        <div class="col-6">
+                                            <button class="btn btn-success w-100" onclick="startRegister()" id="registerBtn" disabled>
+                                                <i class="bi bi-person-plus"></i> Register Student
+                                            </button>
+                                        </div>
+                                        <div class="col-6">
+                                            <button class="btn btn-info w-100" onclick="showLinkMoneyCard()" id="linkBtn" disabled>
+                                                <i class="bi bi-credit-card"></i> Link Money Card
+                                            </button>
+                                        </div>
+                                        <div class="col-6">
+                                            <button class="btn btn-warning w-100" onclick="showReportLostCard()" id="lostBtn" disabled>
+                                                <i class="bi bi-exclamation-triangle"></i> Report Lost Card
+                                            </button>
+                                        </div>
+                                        <div class="col-6">
+                                            <button class="btn btn-primary w-100" onclick="showReplaceCard()" id="replaceBtn" disabled>
+                                                <i class="bi bi-arrow-repeat"></i> Replace Lost Card
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <!-- Web-Only Mode Notice -->
+                    <div class="alert alert-info mb-4">
+                        <i class="bi bi-cloud"></i> <strong>Web Dashboard Mode</strong> - Card management features require desktop installation with Arduino hardware.
+                    </div>
+                    {% endif %}
+
+                    <!-- Status Log -->
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <span><i class="bi bi-terminal"></i> Status Log</span>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="clearLog()">Clear</button>
+                        </div>
+                        <div class="card-body">
+                            <div id="statusLog" style="max-height: 200px; overflow-y: auto; font-family: monospace; font-size: 0.85rem;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Load Balance Modal -->
+    <div class="modal fade" id="loadBalanceModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Load Balance</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> Enter the amount to load
+                    </div>
+                    <form id="loadBalanceForm">
+                        <input type="hidden" id="selectedStudentId">
+                        <input type="hidden" id="selectedMoneyCard">
+                        <div class="mb-3">
+                            <label class="form-label">Student</label>
+                            <input type="text" class="form-control" id="studentName" readonly required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Current Balance</label>
+                            <input type="text" class="form-control" id="currentBalance" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Amount to Load (₱)</label>
+                            <input type="number" class="form-control" id="loadAmount" min="1" step="0.01" required>
+                        </div>
+                        <div id="loadAlert" class="alert d-none"></div>
+                        <button type="submit" class="btn btn-success w-100">Load Balance</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Register Student Modal (Finance + Admin on Desktop) -->
+    <div class="modal fade" id="registerModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-person-plus"></i> Register New Student
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <strong>Step 1:</strong> Tap ID card on reader<br>
+                        <strong>Step 2:</strong> Fill in student details
+                    </div>
+                    <form id="registerForm">
+                        <div class="mb-3">
+                            <label class="form-label">ID Card UID</label>
+                            <input type="text" class="form-control" id="idCardUID" readonly required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Student ID</label>
+                            <input type="text" class="form-control" id="studentId" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Full Name</label>
+                            <input type="text" class="form-control" id="studentName2" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Parent Email (optional)</label>
+                            <input type="email" class="form-control" id="parentEmail">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="submitRegister()">Register</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Link Money Card Modal -->
+    <div class="modal fade" id="linkMoneyModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-credit-card"></i> Link Money Card
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Search Student</label>
+                        <input type="text" class="form-control" id="studentSearchLink" placeholder="Search by name or ID..." oninput="searchStudentsForLink()">
+                    </div>
+                    <div id="studentsListLink"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if role == 'admin' %}
+    <!-- Report Lost Card Modal (Admin Only) -->
+    <div class="modal fade" id="reportLostModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-warning">
+                    <h5 class="modal-title">
+                        <i class="bi bi-exclamation-triangle"></i> Report Lost Card
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <strong>Warning:</strong> This will deactivate the student's current money card and preserve their balance for transfer to a replacement card.
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Search Student</label>
+                        <input type="text" class="form-control" id="lostCardSearch" placeholder="Search by name or ID..." oninput="searchStudentsWithCards()">
+                    </div>
+                    <div id="lostCardList"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Replace Lost Card Modal -->
+    <div class="modal fade" id="replaceCardModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-arrow-repeat"></i> Replace Lost Card
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <strong>Info:</strong> Select a student with a pending lost card report to issue a replacement card. The balance will be automatically transferred.
+                    </div>
+                    <div id="replaceCardList">
+                        <div class="text-center py-3">
+                            <div class="spinner-border" role="status"></div>
+                            <p class="mt-2">Loading students with pending reports...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script>
+        function toggleSidebar() {
+            document.querySelector('.sidebar').classList.toggle('active');
+            document.querySelector('.sidebar-overlay').classList.toggle('active');
+        }
+        
+        // Close sidebar when clicking a menu item on mobile
+        document.querySelectorAll('.sidebar-menu a').forEach(link => {
+            link.addEventListener('click', () => {
+                if (window.innerWidth <= 768) {
+                    toggleSidebar();
+                }
+            });
+        });
+        
+        let loadBalanceModal;
+        let currentStudent = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+                        loadBalanceModal = new bootstrap.Modal(document.getElementById('loadBalanceModal'));
+            
+            loadStats();
+            loadRecentActivity();
+            
+            // Student search with debounce
+            const searchInput = document.getElementById('studentSearch');
+            let searchTimeout;
+            
+            searchInput.addEventListener('input', function() {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => {
+                    searchStudents();
+                }, 500); // Wait 500ms after user stops typing
+            });
+            
+            // Initial load - show all students
+            searchStudents();
+            
+            // Refresh stats every 30 seconds
+            setInterval(loadStats, 30000);
+        });
+
+        async function loadStats() {
+            try {
+                console.log('[DEBUG] Loading dashboard stats...');
+                const response = await fetch('/api/stats');
+                const data = await response.json();
+                
+                console.log('[DEBUG] Stats data:', data);
+                document.getElementById('totalStudents').textContent = data.total_students;
+                document.getElementById('todayTransactions').textContent = data.today_transactions;
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+
+        async function loadRecentActivity() {
+            try {
+                const response = await fetch('/api/transactions/recent?limit=5');
+                const data = await response.json();
+                
+                const activityDiv = document.getElementById('recentActivity');
+                if (data.transactions.length === 0) {
+                    activityDiv.innerHTML = '<p class="text-muted">No recent transactions</p>';
+                    return;
+                }
+                
+                let html = '<div class="list-group">';
+                data.transactions.forEach(t => {
+                    html += `
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <strong>${t.StudentName}</strong>
+                                    <small class="text-muted d-block">${t.Type}</small>
+                                </div>
+                                <div class="text-end">
+                                    <strong>₱${parseFloat(t.Amount).toFixed(2)}</strong>
+                                    <small class="text-muted d-block">${new Date(t.Date).toLocaleString()}</small>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+                activityDiv.innerHTML = html;
+            } catch (error) {
+                console.error('Error loading recent activity:', error);
+            }
+        }
+
+        async function searchStudents() {
+            const query = document.getElementById('studentSearch').value.trim();
+            const listDiv = document.getElementById('studentList');
+            
+            // Show loading
+            listDiv.innerHTML = '<p class="text-muted"><span class="spinner-border spinner-border-sm"></span> Loading students...</p>';
+            
+            try {
+                console.log('Searching for:', query);
+                const url = query ? `/api/students/search?q=${encodeURIComponent(query)}` : '/api/students/search';
+                const response = await fetch(url);
+                
+                console.log('Response status:', response.status);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('Received data:', data);
+                
+                if (data.error) {
+                    listDiv.innerHTML = `<div class="alert alert-danger">${data.error}</div>`;
+                    return;
+                }
+                
+                if (!data.students || data.students.length === 0) {
+                    listDiv.innerHTML = '<div class="alert alert-info">No students found</div>';
+                    return;
+                }
+                
+                let html = '<div class="list-group">';
+                data.students.forEach(s => {
+                    const hasMoneyCard = s.MoneyCardNumber && String(s.MoneyCardNumber).trim();
+                    const status = s.Status || 'Unknown';
+                    const moneyCardStatus = s.MoneyCardStatus || 'N/A';
+                    
+                    // Determine badge colors
+                    let statusBadge = 'secondary';
+                    let cardStatusBadge = 'secondary';
+                    let cardStatusText = '';
+                    
+                    if (status === 'Active') statusBadge = 'success';
+                    
+                    if (hasMoneyCard) {
+                        if (moneyCardStatus.toLowerCase() === 'lost') {
+                            cardStatusBadge = 'danger';
+                            cardStatusText = '🔴 Card Lost';
+                        } else if (moneyCardStatus.toLowerCase() === 'active') {
+                            cardStatusBadge = 'success';
+                            cardStatusText = '💳 Has money card';
+                        } else {
+                            cardStatusText = '💳 Has money card';
+                        }
+                    } else {
+                        cardStatusText = '⚠️ No money card';
+                    }
+                    
+                    html += `
+                        <a href="#" class="list-group-item list-group-item-action" onclick="event.preventDefault(); selectStudent('${s.StudentID}');">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>${s.Name}</strong>
+                                    <small class="text-muted d-block">ID: ${s.StudentID}</small>
+                                    <small class="${moneyCardStatus.toLowerCase() === 'lost' ? 'text-danger' : 'text-muted'} d-block">
+                                        ${cardStatusText}
+                                    </small>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <span class="badge bg-${statusBadge}">${status}</span>
+                                    ${moneyCardStatus.toLowerCase() === 'lost' ? '<span class="badge bg-danger">Card Lost</span>' : ''}
+                                </div>
+                            </div>
+                        </a>
+                    `;
+                });
+                html += '</div>';
+                listDiv.innerHTML = html;
+            } catch (error) {
+                console.error('Error searching students:', error);
+                // Try to show the actual error from server if available
+                let errorMsg = error.message;
+                try {
+                    const errorData = await response.json();
+                    if (errorData.error) {
+                        errorMsg = errorData.error;
+                    }
+                } catch (e) {
+                    // Response is not JSON or already consumed
+                }
+                listDiv.innerHTML = `
+                    <div class="alert alert-danger">
+                        <strong>Error loading students:</strong> ${errorMsg}
+                        <br><small>Please try refreshing the page. If the error persists, check the server logs.</small>
+                    </div>`;
+            }
+        }
+
+        async function selectStudent(studentId) {
+            try {
+                const response = await fetch(`/api/students/${studentId}`);
+                const data = await response.json();
+                
+                currentStudent = data;
+                showStudentActions(data);
+            } catch (error) {
+                alert('Error loading student details: ' + error.message);
+            }
+        }
+
+        function showStudentActions(data) {
+            const student = data.student;
+            const hasMoneyCard = student.MoneyCardNumber && String(student.MoneyCardNumber).trim();
+            
+            let html = `
+                <div class="card">
+                    <div class="card-body">
+                        <h5>${student.Name}</h5>
+                        <p class="mb-1"><strong>Student ID:</strong> ${student.StudentID}</p>
+                        <p class="mb-1"><strong>Status:</strong> <span class="badge bg-${student.Status === 'Active' ? 'success' : 'secondary'}">${student.Status}</span></p>
+            `;
+            
+            if (hasMoneyCard) {
+                html += `
+                        <p class="mb-1"><strong>Balance:</strong> ₱${data.balance.toFixed(2)}</p>
+                        <p class="mb-1"><strong>Card Status:</strong> ${data.account_status}</p>
+                        <hr>
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-success" onclick="showLoadBalanceForStudent()">
+                                <i class="bi bi-cash-stack"></i> Load Balance
+                            </button>
+                            
+                        </div>
+                `;
+            } else {
+                html += `
+                        <p class="text-warning">⚠️<strong> No money card registered</strong></p>
+                `;
+            }
+            
+            html += `
+                    </div>
+                </div>
+            `;
+            
+            // Show in a modal or replace student list
+            const listDiv = document.getElementById('studentList');
+            listDiv.innerHTML = html + '<button class="btn btn-link mt-2" onclick="document.getElementById(\'studentSearch\').dispatchEvent(new Event(\'input\'))">← Back to search</button>';
+        }
+
+        function showLoadBalanceForStudent() {
+            console.log('showLoadBalanceForStudent called');
+            console.log('currentStudent:', currentStudent);
+            
+            if (!currentStudent) {
+                alert('No student selected. Please select a student first.');
+                return;
+            }
+            
+            const student = currentStudent.student;
+            const moneyCard = student.MoneyCardNumber ? String(student.MoneyCardNumber) : '';
+            
+            console.log('Loading modal for:', student.Name, 'Card:', moneyCard);
+            
+            // Populate modal fields
+            document.getElementById('selectedStudentId').value = student.StudentID;
+            document.getElementById('selectedMoneyCard').value = moneyCard;
+            document.getElementById('studentName').value = student.Name;
+            document.getElementById('currentBalance').value = `₱${currentStudent.balance.toFixed(2)}`;
+            document.getElementById('loadAmount').value = '';
+            document.getElementById('loadAlert').classList.add('d-none');
+            
+            console.log('Modal fields populated, showing modal');
+            loadBalanceModal.show();
+        }
+
+        function showReplaceCardModal() {
+            if (!currentStudent) return;
+            
+            const student = currentStudent.student;
+            document.getElementById('replaceStudentId').value = student.StudentID;
+            document.getElementById('studentInfo').innerHTML = `
+                <div class="card bg-light">
+                    <div class="card-body">
+                        <h6>${student.Name}</h6>
+                        <p class="mb-1"><small>Student ID: ${student.StudentID}</small></p>
+                        <p class="mb-1"><small>Current Balance: ₱${currentStudent.balance.toFixed(2)}</small></p>
+                        <p class="mb-0"><small>Old Card: ${student.MoneyCardNumber}</small></p>
+                    </div>
+                </div>
+            `;
+            document.getElementById('replaceCardForm').reset();
+            document.getElementById('replaceAlert').classList.add('d-none');
+            replaceCardModal.show();
+        }
+
+        document.getElementById('loadBalanceForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const alertDiv = document.getElementById('loadAlert');
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            
+            submitBtn.disabled = true;
+            alertDiv.classList.add('d-none');
+            
+            try {
+                const response = await fetch('/api/load-balance', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        money_card: document.getElementById('selectedMoneyCard').value,
+                        amount: parseFloat(document.getElementById('loadAmount').value)
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    alertDiv.className = 'alert alert-success';
+                    alertDiv.innerHTML = `
+                        <strong>${data.message}</strong><br>
+                        Student: ${data.student_name}<br>
+                        New Balance: ₱${data.new_balance.toFixed(2)}
+                    `;
+                    alertDiv.classList.remove('d-none');
+                    
+                    setTimeout(() => {
+                        loadBalanceModal.hide();
+                        loadStats();
+                        loadRecentActivity();
+                        if (currentStudent) {
+                            selectStudent(currentStudent.student.StudentID);
+                        }
+                    }, 2000);
+                } else {
+                    alertDiv.className = 'alert alert-danger';
+                    alertDiv.textContent = data.error;
+                    alertDiv.classList.remove('d-none');
+                }
+            } catch (error) {
+                alertDiv.className = 'alert alert-danger';
+                alertDiv.textContent = 'Error: ' + error.message;
+                alertDiv.classList.remove('d-none');
+            } finally {
+                submitBtn.disabled = false;
+            }
+        });
+
+        // Global flag to prevent duplicate submissions (used by all roles)
+        let isSubmitting = false;
+
+        {% if role == 'admin' %}
+        // ============= CARD MANAGEMENT FUNCTIONS (Admin Only) =============
+        // Socket.IO connection for real-time updates
+        const socket = io();
+        let registerModal, linkMoneyModal, reportLostModal, replaceCardModal;
+        let idCardUID = '';
+
+        // Initialize card management modals (Admin only)
+        registerModal = new bootstrap.Modal(document.getElementById('registerModal'));
+        linkMoneyModal = new bootstrap.Modal(document.getElementById('linkMoneyModal'));
+        reportLostModal = new bootstrap.Modal(document.getElementById('reportLostModal'));
+        replaceCardModal = new bootstrap.Modal(document.getElementById('replaceCardModal'));
+
+        // Load serial ports
+        loadSerialPorts();
+
+        // Socket event listeners
+        socket.on('status', (data) => {
+            addLog(data.type, data.message);
+        });
+
+        socket.on('id_card_read', (data) => {
+            idCardUID = data.uid;
+            document.getElementById('idCardUID').value = data.uid;
+            addLog('success', `ID Card read: ${data.uid}`);
+            registerModal.show();
+        });
+
+        socket.on('money_card_linked', (data) => {
+            linkMoneyModal.hide();
+            addLog('success', `Money card linked for ${data.student_id}`);
+            loadStats();
+        });
+
+        socket.on('card_reported_lost', (data) => {
+            reportLostModal.hide();
+            addLog('success', `Card reported lost for ${data.student_id}. Balance ₱${data.balance.toFixed(2)} preserved.`);
+        });
+
+        socket.on('card_replaced', (data) => {
+            replaceCardModal.hide();
+            addLog('success', data.message);
+        });
+
+        socket.on('card_error', (data) => {
+            addLog('error', data.message);
+        });
+
+        socket.on('card_timeout', (data) => {
+            addLog('error', data.message);
+        });
+
+        socket.on('student_registered', (data) => {
+            registerModal.hide();
+            addLog('success', `Student ${data.name} registered successfully!`);
+            loadStats();
+        });
+
+        async function loadSerialPorts() {
+            try {
+                console.log('[DEBUG] Loading serial ports...');
+                const response = await fetch('/api/serial/ports');
+                const data = await response.json();
+                
+                console.log('[DEBUG] Serial ports response:', data);
+                
+                const select = document.getElementById('serialPort');
+                if (!select) {
+                    console.error('[ERROR] serialPort select element not found');
+                    return;
+                }
+                
+                select.innerHTML = '<option value="">Select a port...</option>';
+                
+                if (data.ports && data.ports.length > 0) {
+                    data.ports.forEach(port => {
+                        const option = document.createElement('option');
+                        option.value = port.port;
+                        option.textContent = `${port.port} - ${port.description}`;
+                        select.appendChild(option);
+                    });
+                    console.log(`[DEBUG] Loaded ${data.ports.length} ports`);
+                } else {
+                    console.log('[DEBUG] No ports available');
+                    addLog('info', 'No Arduino ports detected. Make sure Arduino is connected.');
+                }
+            } catch (error) {
+                console.error('[ERROR] Failed to load serial ports:', error);
+                addLog('error', 'Failed to load serial ports: ' + error.message);
+            }
+        }
+
+        async function connectArduino() {
+            const port = document.getElementById('serialPort').value;
+            
+            if (!port) {
+                alert('Please select a serial port');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/serial/connect', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({port})
+                });
+                
+                if (response.ok) {
+                    document.getElementById('connectionStatus').className = 'status-indicator status-connected';
+                    document.getElementById('connectionText').textContent = `Connected to ${port}`;
+                    document.getElementById('connectBtn').classList.add('d-none');
+                    document.getElementById('disconnectBtn').classList.remove('d-none');
+                    document.getElementById('registerBtn').disabled = false;
+                    document.getElementById('linkBtn').disabled = false;
+                    document.getElementById('lostBtn').disabled = false;
+                    document.getElementById('replaceBtn').disabled = false;
+                    // Backend will emit 'status' event with message
+                } else {
+                    const data = await response.json();
+                    addLog('error', data.error || 'Connection failed');
+                }
+            } catch (error) {
+                addLog('error', 'Connection error');
+            }
+        }
+
+        async function disconnectArduino() {
+            try {
+                await fetch('/api/serial/disconnect', {method: 'POST'});
+                document.getElementById('connectionStatus').className = 'status-indicator status-disconnected';
+                document.getElementById('connectionText').textContent = 'Not Connected';
+                document.getElementById('connectBtn').classList.remove('d-none');
+                document.getElementById('disconnectBtn').classList.add('d-none');
+                document.getElementById('registerBtn').disabled = true;
+                document.getElementById('linkBtn').disabled = true;
+                document.getElementById('lostBtn').disabled = true;
+                document.getElementById('replaceBtn').disabled = true;
+                addLog('info', 'Disconnected');
+            } catch (error) {
+                addLog('error', 'Disconnect error');
+            }
+        }
+
+        async function startRegister() {
+            try {
+                const response = await fetch('/api/card/start-register', {method: 'POST'});
+                if (!response.ok) {
+                    addLog('error', 'Failed to start registration');
+                }
+                // Backend will emit 'status' event with message
+            } catch (error) {
+                addLog('error', 'Failed to start registration');
+            }
+        }
+
+        async function submitRegister() {
+            if (isSubmitting) {
+                addLog('warning', 'Please wait, processing previous request...');
+                return;
+            }
+            
+            const studentId = document.getElementById('studentId').value;
+            const name = document.getElementById('studentName2').value;
+            const parentEmail = document.getElementById('parentEmail').value;
+            
+            if (!studentId || !name) {
+                alert('Please fill in all required fields');
+                return;
+            }
+            
+            isSubmitting = true;
+            
+            try {
+                const response = await fetch('/api/student/register', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        student_id: studentId,
+                        name: name,
+                        id_card_uid: idCardUID,
+                        parent_email: parentEmail
+                    })
+                });
+                
+                if (response.ok) {
+                    registerModal.hide();
+                    document.getElementById('registerForm').reset();
+                    idCardUID = '';
+                } else {
+                    const data = await response.json();
+                    addLog('error', data.error || 'Registration failed');
+                    alert(data.error || 'Registration failed');
+                }
+            } catch (error) {
+                addLog('error', 'Error: ' + error.message);
+                alert('Error: ' + error.message);
+            } finally {
+                isSubmitting = false;
+            }
+        }
+
+        function showLinkMoneyCard() {
+            linkMoneyModal.show();
+            searchStudentsForLink();
+        }
+
+        async function searchStudentsForLink() {
+            const query = document.getElementById('studentSearchLink').value;
+            
+            try {
+                const response = await fetch(`/api/students/without-cards?q=${encodeURIComponent(query)}`);
+                const data = await response.json();
+                
+                const list = document.getElementById('studentsListLink');
+                
+                if (data.students.length === 0) {
+                    list.innerHTML = '<p class="text-muted">No students found without money cards</p>';
+                    return;
+                }
+                
+                list.innerHTML = data.students.map(s => `
+                    <div class="student-item" onclick="linkMoneyCardToStudent('${s.student_id}')">
+                        <div><strong>${s.name}</strong></div>
+                        <div class="text-muted">${s.student_id}</div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                addLog('error', 'Failed to load students');
+            }
+        }
+
+        async function linkMoneyCardToStudent(studentId) {
+            try {
+                const response = await fetch('/api/card/link-money', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({student_id: studentId})
+                });
+                
+                if (!response.ok) {
+                    addLog('error', 'Failed to start money card link');
+                }
+                // Backend will emit 'status' event with message
+            } catch (error) {
+                addLog('error', 'Failed to start money card link');
+            }
+        }
+
+        // ============= CARD MANAGEMENT FUNCTIONS =============
+        function showReportLostCard() {
+            reportLostModal.show();
+            searchStudentsWithCards();
+        }
+
+        async function searchStudentsWithCards() {
+            const query = document.getElementById('lostCardSearch').value;
+            
+            try {
+                const response = await fetch(`/api/students/with-cards?q=${encodeURIComponent(query)}`);
+                const data = await response.json();
+                
+                const list = document.getElementById('lostCardList');
+                
+                if (data.students.length === 0) {
+                    list.innerHTML = '<p class="text-muted">No students found with money cards</p>';
+                    return;
+                }
+                
+                list.innerHTML = data.students.map(s => `
+                    <div class="student-item" onclick="reportLostCard('${s.student_id}', '${s.money_card}')">
+                        <div><strong>${s.name}</strong></div>
+                        <div class="text-muted">${s.student_id}</div>
+                        <div class="text-muted small">Card: ${s.money_card}</div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                addLog('error', 'Failed to load students');
+            }
+        }
+
+        async function reportLostCard(studentId, cardNumber) {
+            if (isSubmitting) {
+                addLog('warning', 'Please wait, processing previous request...');
+                return;
+            }
+            
+            if (!confirm(`Report card ${cardNumber} as lost for student ${studentId}?`)) {
+                return;
+            }
+            
+            isSubmitting = true;
+            
+            try {
+                const response = await fetch('/api/card/report-lost', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        student_id: studentId,
+                        card_number: cardNumber
+                    })
+                });
+                
+                if (response.ok) {
+                    addLog('success', 'Card reported lost. Balance preserved for replacement.');
+                    reportLostModal.hide();
+                } else {
+                    const data = await response.json();
+                    addLog('error', data.error || 'Failed to report lost card');
+                }
+            } catch (error) {
+                addLog('error', 'Failed to report lost card');
+            } finally {
+                isSubmitting = false;
+            }
+        }
+
+        async function showReplaceCard() {
+            replaceCardModal.show();
+            await loadPendingReports();
+        }
+
+        async function loadPendingReports() {
+            const list = document.getElementById('replaceCardList');
+            list.innerHTML = '<div class="text-center py-3"><div class="spinner-border" role="status"></div></div>';
+            
+            try {
+                const response = await fetch('/api/students/with-lost-reports');
+                const data = await response.json();
+                
+                if (data.error) {
+                    list.innerHTML = `
+                        <div class="alert alert-warning">
+                            <strong>⚠️ Setup Required</strong><br>
+                            ${data.error}<br><br>
+                            <small>Add a sheet named "Lost Card Reports" with these columns:<br>
+                            ReportID | ReportDate | StudentID | OldCardNumber | NewCardNumber | TransferredBalance | ReportedBy | Status</small>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                if (data.students.length === 0) {
+                    list.innerHTML = '<p class="text-muted">No pending lost card reports. Report a lost card first.</p>';
+                    return;
+                }
+                
+                list.innerHTML = data.students.map(s => `
+                    <div class="student-item" onclick="startReplaceCard('${s.student_id}')">
+                        <div><strong>${s.student_id}</strong></div>
+                        <div class="text-muted">Old Card: ${s.old_card}</div>
+                        <div class="text-muted">Balance: ₱${parseFloat(s.balance).toFixed(2)}</div>
+                        <div class="text-muted small">Reported: ${s.report_date}</div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                list.innerHTML = '<p class="text-danger">Failed to load reports</p>';
+                addLog('error', 'Failed to load pending reports');
+            }
+        }
+
+        async function startReplaceCard(studentId) {
+            if (isSubmitting) {
+                addLog('warning', 'Please wait, processing previous request...');
+                return;
+            }
+            
+            isSubmitting = true;
+            
+            try {
+                const response = await fetch('/api/card/replace-lost', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({student_id: studentId})
+                });
+                
+                if (response.ok) {
+                    replaceCardModal.hide();
+                    // Backend will emit 'status' event with message
+                } else {
+                    const data = await response.json();
+                    addLog('error', data.error || 'Failed to start replacement');
+                }
+            } catch (error) {
+                addLog('error', 'Failed to start replacement');
+            } finally {
+                isSubmitting = false;
+            }
+        }
+
+        // ============= SHARED UTILITY FUNCTIONS =============
+        function addLog(type, message) {
+            const log = document.getElementById('statusLog');
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            
+            const time = new Date().toLocaleTimeString();
+            entry.innerHTML = `<strong>${time}</strong> - ${message}`;
+            
+            log.insertBefore(entry, log.firstChild);
+            
+            // Limit to 50 entries
+            while (log.children.length > 50) {
+                log.removeChild(log.lastChild);
+            }
+        }
+
+        function clearLog() {
+            document.getElementById('statusLog').innerHTML = '';
+        }
+        {% endif %}
+    </script>
+    
+    <!-- PWA Script -->
+    <script src="/static/js/pwa.js"></script>
+    <script src="/static/js/sync-status.js"></script>
+    <script>
+        // Initialize online/offline status
+        window.addEventListener('load', () => {
+            PWA.updateOnlineStatus(navigator.onLine);
+        });
+    </script>
+</body>
+</html>
