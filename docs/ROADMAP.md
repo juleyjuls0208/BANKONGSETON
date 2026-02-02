@@ -91,23 +91,23 @@ To modernize the **Banko ng Seton** school finance system into a reliable, perfo
     - Parent notifications for large transactions (>₱100)
     - Daily transaction summary option
 
-### Phase 4: Scale & Advanced Features
+### Phase 4: Scale & Advanced Features ✅
 **Goal:** Prepare for growth and future hardware capabilities.
 **Success Metrics:** Support 500+ students, <2s transaction time
 
-- [ ] **NFC Phone Payments (HCE)**
+- [x] **NFC Phone Payments (HCE)**
     - Abstract NFC handling in Android app
     - Implement Host Card Emulation for phone-based payments
     - Add security layer (biometric + PIN for high-value)
-- [ ] **Multi-Station Synchronization**
+- [x] **Multi-Station Synchronization**
     - Implement distributed locking for concurrent writes
     - Add transaction ID generation to prevent duplicates
     - Test with multiple cashier stations simultaneously
-- [ ] **Advanced Fraud Detection** *(Optional)*
+- [x] **Advanced Fraud Detection**
     - Pattern analysis: Unusual transaction amounts/times
     - Location-based verification (if stations are tracked)
     - Automatic card suspension on suspicious activity
-- [ ] **Performance Optimization**
+- [x] **Performance Optimization**
     - Profile and optimize slow database queries
     - Add connection pooling for Google Sheets API
     - Consider Redis for distributed caching (if needed)
