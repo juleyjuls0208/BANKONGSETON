@@ -61,7 +61,8 @@ Students can pay for canteen food instantly by tapping their RFID card, with the
 - **Hardware:** RFID only for v1; NFC hardware not available yet (architected for next version)
 - **Language:** Python (Flask) for backend; Kotlin (Jetpack Compose) for Android
 - **Timezone:** Asia/Manila (Philippines) throughout
-- **Platform:** Android min SDK 24; desktop server (Windows/Linux) for Flask
+- **Platform:** Android min SDK 24; Flask deployed on PythonAnywhere (WSGI via wsgi.py)
+- **Deployment:** Already live on PythonAnywhere — changes must remain WSGI-compatible; no serial port (Arduino) in production (web_app_complete.py is the production entry point)
 
 ## Key Decisions
 

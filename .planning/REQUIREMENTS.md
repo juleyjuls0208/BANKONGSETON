@@ -101,24 +101,55 @@ Deferred to next version (not in current roadmap).
 
 ## Traceability
 
-*Populated during roadmap creation.*
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| BUG-01 to BUG-05 | Phase 1 | Pending |
-| SEC-01 to SEC-05 | Phase 1 | Pending |
-| QUAL-01 to QUAL-05 | Phase 2 | Pending |
-| PROD-01 to PROD-06 | Phase 3 | Pending |
-| APP-01 to APP-05 | Phase 4 | Pending |
-| NOTF-01 to NOTF-02 | Phase 4 | Pending |
-| NFC-01 to NFC-05 | Phase 5 | Pending |
-| DOC-01 to DOC-08 | Phase 6 | Pending |
+| BUG-01 | Phase 1 - Critical Fixes + Security | Pending |
+| BUG-02 | Phase 1 - Critical Fixes + Security | Pending |
+| BUG-03 | Phase 1 - Critical Fixes + Security | Pending |
+| BUG-04 | Phase 1 - Critical Fixes + Security | Pending |
+| BUG-05 | Phase 1 - Critical Fixes + Security | Pending |
+| SEC-01 | Phase 1 - Critical Fixes + Security | Pending |
+| SEC-02 | Phase 1 - Critical Fixes + Security | Pending |
+| SEC-03 | Phase 1 - Critical Fixes + Security | Pending |
+| SEC-04 | Phase 1 - Critical Fixes + Security | Pending |
+| SEC-05 | Phase 1 - Critical Fixes + Security | Pending |
+| QUAL-01 | Phase 2 - Code Quality | Pending |
+| QUAL-02 | Phase 2 - Code Quality | Pending |
+| QUAL-03 | Phase 2 - Code Quality | Pending |
+| QUAL-04 | Phase 2 - Code Quality | Pending |
+| QUAL-05 | Phase 2 - Code Quality | Pending |
+| PROD-01 | Phase 3 - Product Management | Pending |
+| PROD-02 | Phase 3 - Product Management | Pending |
+| PROD-03 | Phase 3 - Product Management | Pending |
+| PROD-04 | Phase 3 - Product Management | Pending |
+| PROD-05 | Phase 3 - Product Management | Pending |
+| PROD-06 | Phase 3 - Product Management | Pending |
+| APP-01 | Phase 4 - Student App + Notifications | Pending |
+| APP-02 | Phase 4 - Student App + Notifications | Pending |
+| APP-03 | Phase 4 - Student App + Notifications | Pending |
+| APP-04 | Phase 4 - Student App + Notifications | Pending |
+| APP-05 | Phase 4 - Student App + Notifications | Pending |
+| NOTF-01 | Phase 4 - Student App + Notifications | Pending |
+| NOTF-02 | Phase 4 - Student App + Notifications | Pending |
+| NFC-01 | Phase 5 - NFC Architecture Prep | Pending |
+| NFC-02 | Phase 5 - NFC Architecture Prep | Pending |
+| NFC-03 | Phase 5 - NFC Architecture Prep | Pending |
+| NFC-04 | Phase 5 - NFC Architecture Prep | Pending |
+| NFC-05 | Phase 5 - NFC Architecture Prep | Pending |
+| DOC-01 | Phase 6 - Documentation | Pending |
+| DOC-02 | Phase 6 - Documentation | Pending |
+| DOC-03 | Phase 6 - Documentation | Pending |
+| DOC-04 | Phase 6 - Documentation | Pending |
+| DOC-05 | Phase 6 - Documentation | Pending |
+| DOC-06 | Phase 6 - Documentation | Pending |
+| DOC-07 | Phase 6 - Documentation | Pending |
+| DOC-08 | Phase 6 - Documentation | Pending |
 
 **Coverage:**
 - v1 requirements: 41 total
 - Mapped to phases: 41
-- Unmapped: 0 ✓
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-22*
-*Last updated: 2026-02-22 after initial definition*
+*Last updated: 2026-02-22 — Traceability finalized after roadmap creation*
