@@ -36,7 +36,13 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. A Google Sheets API outage returns a readable error to the client, not a 500 traceback
   4. Submitting an empty username and password to admin login is rejected with an error
   5. Server startup produces no credentials or secret keys in stdout or log files; system refuses to start with a blank FLASK_SECRET_KEY
-**Plans**: TBD
+**Plans**: 5 plans
+Plans:
+- [x] 01-01-PLAN.md -- Startup hardening (secret key guard, CORS restriction, credential redaction) [SEC-01, SEC-02, SEC-03]
+- [ ] 01-02-PLAN.md -- Fix cashier POS blank screen (template corruption rewrite) [BUG-01]
+- [ ] 01-03-PLAN.md -- Empty credential login guard, test file secrets cleanup, wsgi.py fix [BUG-04, SEC-05]
+- [ ] 01-04-PLAN.md -- Card UID input validation (regex hex format check at all entry points) [BUG-02, SEC-04]
+- [ ] 01-05-PLAN.md -- Graceful Sheets error handling and transaction atomicity with retry/rollback [BUG-03, BUG-05]
 
 ### Phase 2: Code Quality
 **Goal**: The codebase is safe to modify, with consistent logging, centralized utilities, and no dead code or deprecated dependencies
@@ -108,7 +114,7 @@ Phase 4 depends on Phase 3. Phase 6 depends on Phase 5.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Critical Fixes + Security | 0/? | Not started | - |
+| 1. Critical Fixes + Security | 1/5 | In progress | - |
 | 2. Code Quality | 0/? | Not started | - |
 | 3. Product Management | 0/? | Not started | - |
 | 4. Student App + Notifications | 0/? | Not started | - |
