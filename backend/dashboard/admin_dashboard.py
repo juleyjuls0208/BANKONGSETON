@@ -40,7 +40,24 @@ except ImportError as e:
     def get_queue_status(): return {}
     PHASE3_AVAILABLE = False
 
+# Import cashier blueprint
+try:
+    from cashier.cashier_routes import cashier_bp
+    CASHIER_AVAILABLE = True
+except ImportError:
+    print("Warning: Cashier blueprint not available")
+    CASHIER_AVAILABLE = False
+
 load_dotenv()
+
+# --- FLASK_SECRET_KEY startup guard (SEC-02) ---
+_secret_key = os.getenv('FLASK_SECRET_KEY', '').strip()
+_INSECURE_DEFAULT = 'bangko-admin-secret-key-change-in-production'
+if not _secret_key or _secret_key == _INSECURE_DEFAULT:
+    print("FATAL: FLASK_SECRET_KEY is not set or is using the insecure default.")
+    print("Set a strong random key in your .env file before starting the server.")
+    print("Generate one with: python -c \"import secrets; print(secrets.token_urlsafe(32))\"")
+    sys.exit(1)
 
 # Timezone configuration
 PHILIPPINES_TZ = pytz.timezone('Asia/Manila')
@@ -49,13 +66,37 @@ def get_philippines_time():
     """Get current time in Philippine timezone"""
     return datetime.now(PHILIPPINES_TZ)
 
+# --- CORS restriction (SEC-03) ---
+def get_cors_origins():
+    """Parse CORS_ORIGINS env var into a list of allowed origins."""
+    flask_env = os.getenv('FLASK_ENV', 'production')
+    origins_str = os.getenv('CORS_ORIGINS', '')
+    origins = [o.strip() for o in origins_str.split(',') if o.strip()]
+    if flask_env == 'development' or not origins:
+        origins = origins + [
+            'http://localhost', 'http://localhost:3000', 'http://localhost:5001',
+            'http://127.0.0.1', 'http://127.0.0.1:5001', 'http://127.0.0.1:5003'
+        ]
+    return origins
+
 app = Flask(__name__)
-app.secret_key = os.getenv('FLASK_SECRET_KEY', 'bangko-admin-secret-key-change-in-production')
-CORS(app)
-socketio = SocketIO(app, cors_allowed_origins="*")
+app.secret_key = _secret_key
+
+_allowed_origins = get_cors_origins()
+CORS(app, origins=_allowed_origins)
+socketio = SocketIO(app, cors_allowed_origins=_allowed_origins)
+
+# Attach socketio to app for cashier blueprint access
+app.socketio = socketio
+
+# Register cashier blueprint
+if CASHIER_AVAILABLE:
+    app.register_blueprint(cashier_bp)
+    print("✅ Cashier blueprint registered at /cashier")
 
 # Global variables for admin features
 arduino = None
+arduino_bridge = None
 db = None
 card_reading_active = False
 pending_student_id = None
@@ -240,6 +281,107 @@ def students_page():
     return render_template('students.html', 
                          username=session.get('admin_username'),
                          role=session.get('role', 'finance'))
+
+@app.route('/products')
+@login_required
+def products_page():
+    """Products management page"""
+    return render_template('products.html',
+                         username=session.get('admin_username'),
+                         role=session.get('role', 'finance'))
+
+@app.route('/api/products/list', methods=['GET'])
+@login_required
+def get_products_list():
+    """Get all products from Products sheet"""
+    try:
+        products_sheet = db.worksheet('Products')
+        records = products_sheet.get_all_records()
+        
+        products = []
+        for idx, record in enumerate(records, start=2):
+            products.append({
+                'row': idx,
+                'id': record.get('ID', ''),
+                'name': record.get('Name', ''),
+                'category': record.get('Category', ''),
+                'price': float(record.get('Price', 0)),
+                'image_url': record.get('ImageURL', ''),
+                'active': str(record.get('Active', 'FALSE')).upper() == 'TRUE',
+                'date_added': record.get('DateAdded', '')
+            })
+        
+        return jsonify({'products': products})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/products/update', methods=['POST'])
+@login_required
+def update_product():
+    """Update or create a product"""
+    try:
+        data = request.get_json()
+        product_id = data.get('id', '').strip()
+        
+        if not product_id:
+            return jsonify({'error': 'Product ID required'}), 400
+        
+        products_sheet = db.worksheet('Products')
+        records = products_sheet.get_all_records()
+        
+        # Find existing product
+        product_row = None
+        for idx, record in enumerate(records, start=2):
+            if record.get('ID') == product_id:
+                product_row = idx
+                break
+        
+        # Prepare data
+        product_data = [
+            product_id,
+            data.get('name', ''),
+            data.get('category', ''),
+            float(data.get('price', 0)),
+            data.get('image_url', ''),
+            'TRUE' if data.get('active', True) else 'FALSE',
+            data.get('date_added', '') if product_row else get_philippines_time().strftime('%Y-%m-%d')
+        ]
+        
+        if product_row:
+            # Update existing
+            products_sheet.update(f'A{product_row}:G{product_row}', [product_data])
+            return jsonify({'success': True, 'message': 'Product updated'})
+        else:
+            # Add new
+            products_sheet.append_row(product_data)
+            return jsonify({'success': True, 'message': 'Product created'})
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/products/delete', methods=['POST'])
+@login_required
+def delete_product():
+    """Deactivate a product (soft delete)"""
+    try:
+        data = request.get_json()
+        product_id = data.get('id', '').strip()
+        
+        if not product_id:
+            return jsonify({'error': 'Product ID required'}), 400
+        
+        products_sheet = db.worksheet('Products')
+        records = products_sheet.get_all_records()
+        
+        for idx, record in enumerate(records, start=2):
+            if record.get('ID') == product_id:
+                products_sheet.update_cell(idx, 6, 'FALSE')  # Column F (Active)
+                return jsonify({'success': True, 'message': 'Product deactivated'})
+        
+        return jsonify({'error': 'Product not found'}), 404
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/transactions')
 @login_required
@@ -822,7 +964,7 @@ def get_serial_ports():
 @desktop_features
 def connect_serial():
     """Connect to Arduino"""
-    global arduino
+    global arduino, arduino_bridge
     try:
         data = request.get_json()
         port = data.get('port')
@@ -832,6 +974,13 @@ def connect_serial():
         
         arduino = serial.Serial(port, 9600, timeout=2)
         time.sleep(2)
+        
+        # Initialize arduino bridge
+        from arduino_bridge import ArduinoBridge
+        arduino_bridge = ArduinoBridge(arduino, socketio)
+        
+        # Make bridge available to cashier
+        app.arduino_bridge = arduino_bridge
         
         send_display("Bangko Admin", "Connected!")
         
@@ -1621,14 +1770,13 @@ if __name__ == '__main__':
     admin_pass = os.getenv('ADMIN_PASSWORD', '').strip()
     finance_user = os.getenv('FINANCE_USERNAME', 'financedashboard')
     finance_pass = os.getenv('FINANCE_PASSWORD', 'finance2025')
-    
-    print(f"\n✓ Dashboard starting on http://localhost:{port}")
-    print(f"✓ Finance login: {finance_user} / {finance_pass}")
-    if admin_user and admin_pass:
-        print(f"✓ Admin login: {admin_user} / {admin_pass}")
-    else:
-        print(f"✓ Admin login: (empty username and password)")
-    print(f"✓ Debug mode: {debug}")
+
+    # --- Redacted credential logging (SEC-01) ---
+    print(f"\n  Dashboard starting on http://localhost:{port}")
+    print(f"  Finance user: {'[configured]' if finance_user else '[NOT SET - login disabled]'}")
+    print(f"  Admin user: {'[configured]' if (admin_user and admin_pass) else '[NOT SET - login disabled]'}")
+    print(f"  Secret key: [set]")
+    print(f"  Debug mode: {debug}")
     print("\n" + "="*50 + "\n")
     
     # Suppress SSL/TLS handshake errors (400 "Bad request" from HTTPS attempts)
