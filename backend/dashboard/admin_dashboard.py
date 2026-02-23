@@ -240,8 +240,14 @@ def login():
         finance_user = os.getenv('FINANCE_USERNAME', 'financedashboard')
         finance_pass = os.getenv('FINANCE_PASSWORD', 'finance2025')
         
-        # Admin login: either empty credentials OR matching admin credentials
-        if (username == admin_user and password == admin_pass):
+        # Empty-credential guard (BUG-04): reject blank submissions before comparison
+        if not username:
+            return jsonify({'success': False, 'error': 'Username cannot be empty'}), 400
+        if not password:
+            return jsonify({'success': False, 'error': 'Password cannot be empty'}), 400
+
+        # Admin login (requires admin_user to be truthy to prevent blank env var match)
+        if username == admin_user and password == admin_pass and admin_user:
             session['admin_logged_in'] = True
             session['admin_username'] = username if username else 'admin'
             session['role'] = 'admin'
