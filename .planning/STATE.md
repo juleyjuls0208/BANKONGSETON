@@ -10,27 +10,27 @@ See: .planning/PROJECT.md (updated 2026-02-22)
 ## Current Position
 
 Phase: 1 of 6 (Critical Fixes + Security)
-Plan: 0 of ? in current phase
-Status: Ready to plan
-Last activity: 2026-02-22 — Roadmap created; all 41 v1 requirements mapped to 6 phases
+Plan: 1 of 1 in current phase (complete)
+Status: Phase 1 complete
+Last activity: 2026-02-23 — Executed 01-01-PLAN.md: startup hardening (secret key guard, CORS restriction, credential redaction)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [##########] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 0
-- Average duration: -
-- Total execution time: 0 hours
+- Total plans completed: 1
+- Average duration: 2min
+- Total execution time: 0.03 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| - | - | - | - |
+| 01-critical-fixes-security | 1 | 2min | 2min |
 
 **Recent Trend:**
-- Last 5 plans: none yet
+- Last 5 plans: 01-01 (2min)
 - Trend: -
 
 *Updated after each plan completion*
@@ -46,6 +46,9 @@ Recent decisions affecting current work:
 - [Init]: Keep Google Sheets as database — no SQL migration
 - [Init]: NFC: architect backend now, Android implementation is v2
 - [Init]: Documentation as Markdown in /docs/ so system can be explained to peers
+- [01-01]: Startup guard at module level (not __main__) so it fires on import too
+- [01-01]: CORS dev-mode auto-allows localhost origins when FLASK_ENV=development or CORS_ORIGINS is empty
+- [01-01]: Used plain print() for redacted startup messages since get_logger import can fail
 
 ### Pending Todos
 
@@ -60,6 +63,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-22
-Stopped at: Roadmap created and written to disk. REQUIREMENTS.md traceability updated.
+Last session: 2026-02-23
+Stopped at: Completed 01-01-PLAN.md (startup hardening). Phase 1 has 1 plan and it is complete.
 Resume file: None

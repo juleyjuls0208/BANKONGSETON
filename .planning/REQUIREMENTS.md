@@ -17,9 +17,9 @@ Requirements for this milestone. Backend-first, then mobile improvements, then d
 
 ### Security
 
-- [ ] **SEC-01**: Credentials (admin username/password) are never printed to stdout or logs at startup
-- [ ] **SEC-02**: FLASK_SECRET_KEY is required non-empty (system refuses to start with default key)
-- [ ] **SEC-03**: CORS is restricted to known origins (no wildcard `*` in production)
+- [x] **SEC-01**: Credentials (admin username/password) are never printed to stdout or logs at startup
+- [x] **SEC-02**: FLASK_SECRET_KEY is required non-empty (system refuses to start with default key)
+- [x] **SEC-03**: CORS is restricted to known origins (no wildcard `*` in production)
 - [ ] **SEC-04**: Card UIDs are validated (regex format check) before use in Sheets queries
 - [ ] **SEC-05**: Test files do not contain hardcoded secrets (JWT keys, passwords use env vars)
 
@@ -108,9 +108,9 @@ Deferred to next version (not in current roadmap).
 | BUG-03 | Phase 1 - Critical Fixes + Security | Pending |
 | BUG-04 | Phase 1 - Critical Fixes + Security | Pending |
 | BUG-05 | Phase 1 - Critical Fixes + Security | Pending |
-| SEC-01 | Phase 1 - Critical Fixes + Security | Pending |
-| SEC-02 | Phase 1 - Critical Fixes + Security | Pending |
-| SEC-03 | Phase 1 - Critical Fixes + Security | Pending |
+| SEC-01 | Phase 1 - Critical Fixes + Security | Complete |
+| SEC-02 | Phase 1 - Critical Fixes + Security | Complete |
+| SEC-03 | Phase 1 - Critical Fixes + Security | Complete |
 | SEC-04 | Phase 1 - Critical Fixes + Security | Pending |
 | SEC-05 | Phase 1 - Critical Fixes + Security | Pending |
 | QUAL-01 | Phase 2 - Code Quality | Pending |
