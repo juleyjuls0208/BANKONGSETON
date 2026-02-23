@@ -9,12 +9,20 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import os
 from dotenv import load_dotenv
-from datetime import datetime
+from datetime import datetime, timedelta
 import pytz
 import hashlib
 import secrets
+import jwt
+from functools import wraps
+import json
 
 load_dotenv()
+
+# JWT Configuration
+JWT_SECRET = os.getenv('JWT_SECRET', secrets.token_urlsafe(32))
+JWT_ALGORITHM = 'HS256'
+JWT_EXPIRY_HOURS = 24
 
 # Timezone configuration
 PHILIPPINES_TZ = pytz.timezone('Asia/Manila')
@@ -24,7 +32,20 @@ def get_philippines_time():
     return datetime.now(PHILIPPINES_TZ)
 
 app = Flask(__name__)
-CORS(app)
+
+def get_cors_origins():
+    """Parse CORS_ORIGINS env var into a list of allowed origins."""
+    flask_env = os.getenv('FLASK_ENV', 'production')
+    origins_str = os.getenv('CORS_ORIGINS', '')
+    origins = [o.strip() for o in origins_str.split(',') if o.strip()]
+    if flask_env == 'development' or not origins:
+        origins = origins + [
+            'http://localhost', 'http://localhost:3000', 'http://localhost:5001',
+            'http://127.0.0.1', 'http://127.0.0.1:5001', 'http://127.0.0.1:5003'
+        ]
+    return origins
+
+CORS(app, origins=get_cors_origins())
 
 # Google Sheets Setup
 scope = [
@@ -70,6 +91,51 @@ active_sessions = {}
 def generate_token():
     """Generate secure session token"""
     return secrets.token_urlsafe(32)
+
+def generate_jwt_token(user_id, role='student'):
+    """Generate JWT token for authenticated users"""
+    payload = {
+        'user_id': user_id,
+        'role': role,
+        'exp': datetime.utcnow() + timedelta(hours=JWT_EXPIRY_HOURS),
+        'iat': datetime.utcnow()
+    }
+    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+
+def verify_jwt_token(token):
+    """Verify and decode JWT token"""
+    try:
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        return payload
+    except jwt.ExpiredSignatureError:
+        return None
+    except jwt.InvalidTokenError:
+        return None
+
+def require_auth(roles=None):
+    """Decorator to require JWT authentication with optional role check"""
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            token = request.headers.get('Authorization', '').replace('Bearer ', '')
+            
+            if not token:
+                return jsonify({'error': 'No token provided'}), 401
+            
+            payload = verify_jwt_token(token)
+            if not payload:
+                return jsonify({'error': 'Invalid or expired token'}), 401
+            
+            # Check role if specified
+            if roles and payload.get('role') not in roles:
+                return jsonify({'error': 'Insufficient permissions'}), 403
+            
+            # Add payload to request context
+            request.user = payload
+            return f(*args, **kwargs)
+        
+        return decorated_function
+    return decorator
 
 def normalize_card_uid(uid):
     """Normalize card UID by removing leading zeros"""
@@ -345,12 +411,22 @@ def get_transactions():
         for record in trans_records:
             card = normalize_card_uid(record.get('MoneyCardNumber', ''))
             if card == normalized_card:
+                # Parse ItemsJson if available
+                items_json = record.get('ItemsJson', '')
+                items = []
+                if items_json:
+                    try:
+                        items = json.loads(items_json) if isinstance(items_json, str) else items_json
+                    except:
+                        items = []
+                
                 transactions.append({
                     'timestamp': record.get('Timestamp', ''),
                     'type': record.get('TransactionType', ''),
                     'amount': float(record.get('Amount', 0)),
                     'balance': float(record.get('BalanceAfter', 0)),
-                    'description': f"{record.get('TransactionType', '')} - {record.get('Status', '')}"
+                    'description': f"{record.get('TransactionType', '')} - {record.get('Status', '')}",
+                    'items': items  # Include itemized receipt
                 })
         
         # Sort by timestamp descending and limit
@@ -385,24 +461,306 @@ def logout():
         print(f"API Error: {e}")
         return jsonify({'error': str(e)}), 500
 
+# ==================== NEW PHASE 1 ENDPOINTS ====================
+
+@app.route('/api/products', methods=['GET'])
+def get_products():
+    """
+    Get list of active products
+    GET /api/products?category=Food
+    """
+    try:
+        category = request.args.get('category', None)
+        
+        # Try to get products from Products sheet first
+        try:
+            products_sheet = get_worksheet_with_retry('Products')
+            records = products_sheet.get_all_records()
+            
+            products = []
+            for record in records:
+                # Only include active products
+                if str(record.get('Active', '')).upper() == 'TRUE':
+                    product = {
+                        'id': record.get('ID', ''),
+                        'name': record.get('Name', ''),
+                        'category': record.get('Category', ''),
+                        'price': float(record.get('Price', 0)),
+                        'image_url': record.get('ImageURL', '')
+                    }
+                    
+                    # Filter by category if specified
+                    if category is None or product['category'] == category:
+                        products.append(product)
+            
+            return jsonify({
+                'products': products,
+                'count': len(products)
+            })
+        
+        except Exception as sheet_error:
+            # Fallback to products.json
+            print(f"Products sheet not found, using products.json: {sheet_error}")
+            products_file = os.path.join(os.path.dirname(__file__), '..', 'data', 'products.json')
+            
+            if os.path.exists(products_file):
+                with open(products_file, 'r') as f:
+                    products = json.load(f)
+                
+                # Filter by category if specified
+                if category:
+                    products = [p for p in products if p.get('category') == category]
+                
+                return jsonify({
+                    'products': products,
+                    'count': len(products)
+                })
+            else:
+                return jsonify({'products': [], 'count': 0})
+    
+    except Exception as e:
+        print(f"API Error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/products', methods=['POST'])
+@require_auth(roles=['admin', 'cashier'])
+def manage_product():
+    """
+    Create or update a product (Admin/Cashier only)
+    POST /api/products
+    Header: Authorization: Bearer <jwt_token>
+    Body: { "id": "PROD-001", "name": "...", "category": "...", "price": 50.00, "active": true }
+    """
+    try:
+        data = request.get_json()
+        
+        # Validate required fields
+        required = ['id', 'name', 'category', 'price']
+        for field in required:
+            if field not in data:
+                return jsonify({'error': f'Missing required field: {field}'}), 400
+        
+        products_sheet = get_worksheet_with_retry('Products')
+        records = products_sheet.get_all_records()
+        
+        # Check if product exists
+        product_row = None
+        for idx, record in enumerate(records, start=2):  # Start at 2 (skip header)
+            if record.get('ID') == data['id']:
+                product_row = idx
+                break
+        
+        product_data = [
+            data['id'],
+            data['name'],
+            data['category'],
+            float(data['price']),
+            data.get('image_url', ''),
+            'TRUE' if data.get('active', True) else 'FALSE',
+            get_philippines_time().strftime('%Y-%m-%d %H:%M:%S') if not product_row else ''
+        ]
+        
+        if product_row:
+            # Update existing product
+            products_sheet.update(f'A{product_row}:G{product_row}', [product_data])
+            return jsonify({'message': 'Product updated', 'id': data['id']})
+        else:
+            # Add new product
+            products_sheet.append_row(product_data)
+            return jsonify({'message': 'Product created', 'id': data['id']}), 201
+    
+    except Exception as e:
+        print(f"API Error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/cashier/transaction', methods=['POST'])
+@require_auth(roles=['admin', 'cashier'])
+def process_cashier_transaction():
+    """
+    Process a cashier purchase transaction with itemized receipt
+    POST /api/cashier/transaction
+    Header: Authorization: Bearer <jwt_token>
+    Body: {
+        "card_uid": "ABC123",
+        "items": [{"id": "PROD-001", "name": "Burger", "price": 50, "qty": 2}],
+        "total": 100.00
+    }
+    """
+    try:
+        data = request.get_json()
+        
+        card_uid = data.get('card_uid', '').strip()
+        items = data.get('items', [])
+        total = float(data.get('total', 0))
+        
+        if not card_uid or not items or total <= 0:
+            return jsonify({'error': 'Invalid transaction data'}), 400
+        
+        # Normalize card UID
+        normalized_card = normalize_card_uid(card_uid)
+        
+        # Find the money account
+        money_sheet = get_worksheet_with_retry('Money Accounts')
+        money_records = money_sheet.get_all_records()
+        
+        account_row = None
+        current_balance = 0.0
+        student_id = None
+        
+        for idx, record in enumerate(money_records, start=2):
+            if normalize_card_uid(record.get('MoneyCardNumber', '')) == normalized_card:
+                account_row = idx
+                current_balance = float(record.get('Balance', 0))
+                card_status = record.get('Status', '').strip().lower()
+                
+                # Check card status
+                if card_status == 'lost':
+                    return jsonify({'error': 'Card reported as lost'}), 403
+                if card_status != 'active':
+                    return jsonify({'error': f'Card is {card_status}'}), 403
+                
+                # Get student ID from associated user
+                student_id_card = record.get('StudentIDCard', '')
+                users_sheet = get_worksheet_with_retry('Users')
+                user_records = users_sheet.get_all_records()
+                for user in user_records:
+                    if normalize_card_uid(user.get('IDCardNumber', '')) == normalize_card_uid(student_id_card):
+                        student_id = user.get('StudentID')
+                        break
+                break
+        
+        if not account_row:
+            return jsonify({'error': 'Card not found'}), 404
+        
+        # Check sufficient balance
+        if current_balance < total:
+            return jsonify({'error': 'Insufficient funds', 'balance': current_balance}), 400
+        
+        # Deduct balance
+        new_balance = current_balance - total
+        money_sheet.update(f'C{account_row}', [[new_balance]])  # Assuming Balance is column C
+        
+        # Log transaction with ItemsJson
+        trans_sheet = get_worksheet_with_retry('Transactions Log')
+        timestamp = get_philippines_time().strftime('%Y-%m-%d %H:%M:%S')
+        
+        transaction_row = [
+            timestamp,
+            normalized_card,
+            'Purchase',
+            -total,
+            new_balance,
+            'Success',
+            json.dumps(items)  # ItemsJson as JSON string
+        ]
+        
+        trans_sheet.append_row(transaction_row)
+        
+        # Send email receipt (async with retry)
+        if student_id:
+            users_sheet = get_worksheet_with_retry('Users')
+            user_records = users_sheet.get_all_records()
+            for user in user_records:
+                if user.get('StudentID') == student_id:
+                    parent_email = user.get('ParentEmail', '')
+                    student_email = user.get('Email', '')
+                    student_name = user.get('Name', 'Student')
+                    
+                    # Import email service
+                    import sys
+                    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'services'))
+                    from email_service import email_service
+                    
+                    email_service.send_receipt(parent_email, student_email, student_name, items, total, new_balance)
+                    break
+        
+        return jsonify({
+            'success': True,
+            'new_balance': new_balance,
+            'timestamp': timestamp
+        })
+    
+    except Exception as e:
+        print(f"API Error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/users/fcm-token', methods=['POST'])
+@require_auth(roles=['student'])
+def register_fcm_token():
+    """
+    Register FCM token for push notifications
+    POST /api/users/fcm-token
+    Header: Authorization: Bearer <jwt_token>
+    Body: { "fcm_token": "..." }
+    """
+    try:
+        user_id = request.user.get('user_id')
+        data = request.get_json()
+        fcm_token = data.get('fcm_token', '').strip()
+        
+        if not fcm_token:
+            return jsonify({'error': 'FCM token required'}), 400
+        
+        # Update user's FCM token
+        users_sheet = get_worksheet_with_retry('Users')
+        records = users_sheet.get_all_records()
+        
+        user_row = None
+        for idx, record in enumerate(records, start=2):
+            if str(record.get('StudentID')) == str(user_id):
+                user_row = idx
+                break
+        
+        if not user_row:
+            return jsonify({'error': 'User not found'}), 404
+        
+        # Find FCMToken column index
+        headers = users_sheet.row_values(1)
+        if 'FCMToken' not in headers:
+            return jsonify({'error': 'FCMToken column not found. Run migration first.'}), 500
+        
+        fcm_col_idx = headers.index('FCMToken') + 1  # +1 for 1-based indexing
+        fcm_col_letter = chr(64 + fcm_col_idx)  # Convert to column letter
+        
+        users_sheet.update(f'{fcm_col_letter}{user_row}', [[fcm_token]])
+        
+        return jsonify({'message': 'FCM token registered'})
+    
+    except Exception as e:
+        print(f"API Error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
     port = int(os.getenv('API_PORT', 5001))
     debug = os.getenv('API_DEBUG', 'False') == 'True'
     
     print(f"""
     ╔════════════════════════════════════════╗
-    ║   Bangko ng Seton - Mobile API v1.0    ║
+    ║   Bangko ng Seton - Mobile API v2.0    ║
     ╚════════════════════════════════════════╝
     
     🚀 Server running on http://localhost:{port}
     📱 Ready to serve Android app requests
     
     API Endpoints:
+    Student:
     - POST /api/auth/login
     - GET  /api/student/profile
     - GET  /api/student/balance
     - GET  /api/student/transactions
+    - POST /api/users/fcm-token
     - POST /api/auth/logout
+    
+    Cashier/Admin (JWT Required):
+    - GET  /api/products
+    - POST /api/products
+    - POST /api/cashier/transaction
     
     Press Ctrl+C to stop
     """)
