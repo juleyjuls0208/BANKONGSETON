@@ -1,5 +1,5 @@
 ---
-status: complete
+status: diagnosed
 phase: 02-code-quality
 source: 02-01-SUMMARY.md, 02-02-SUMMARY.md, 02-03-SUMMARY.md, 02-04-SUMMARY.md, 02-05-SUMMARY.md, 02-06-SUMMARY.md
 started: 2026-02-26T11:00:00Z
@@ -59,17 +59,28 @@ skipped: 0
   reason: "User reported: ModuleNotFoundError: No module named 'flask' — server can't start, Flask not installed"
   severity: blocker
   test: 1
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+  root_cause: "Flask and all runtime web-server packages are listed in backend/dashboard/requirements.txt but were never installed — only pytest/dotenv/google-auth were bootstrapped during Phase 2 development"
+  artifacts:
+    - path: "backend/dashboard/requirements.txt"
+      issue: "Complete and correct but packages never installed (Flask>=3.0.0, gspread>=5.12.0, pyserial>=3.5, pyjwt, psutil, openpyxl, Flask-CORS, Flask-SocketIO, gunicorn)"
+  missing:
+    - "Run: pip install -r backend/dashboard/requirements.txt"
+  debug_session: ".planning/debug/flask-missing-deps.md"
 
 - truth: "normalize_card_uid(None) returns None"
   status: failed
   reason: "User reported: Output is 'ABC  ABC' — None input returns empty string instead of None"
   severity: major
   test: 3
-  root_cause: ""
-  artifacts: []
-  missing: []
+  root_cause: "normalize_card_uid() was intentionally spec'd to return '' for None input (docstring line 7, line 34, test line 32) — both implementation and test are internally consistent but disagree with the QUAL-02 requirement that None should pass through as None"
+  artifacts:
+    - path: "backend/utils.py"
+      issue: "Lines 50-51: if uid is None: return '' — should return None; return type -> str should be -> str | None"
+    - path: "tests/test_utils.py"
+      issue: "Line 32: asserts normalize_card_uid(None) == '' — needs updating to assert is None"
+  missing:
+    - "backend/utils.py line 51: change return '' to return None"
+    - "backend/utils.py line 30: change -> str to -> str | None"
+    - "backend/utils.py docstring line 7: update to 'Returns None for None input'"
+    - "tests/test_utils.py line 32: change == '' to is None"
   debug_session: ""
