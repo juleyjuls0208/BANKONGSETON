@@ -21,7 +21,7 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 try:
-    from errors import get_logger
+    from errors import setup_logging, get_logger
     logger = get_logger(__name__)
 except ImportError:
     logger = logging.getLogger(__name__)
@@ -778,6 +778,7 @@ def register_fcm_token():
         return jsonify({'error': 'An unexpected error occurred'}), 500
 
 if __name__ == '__main__':
+    setup_logging()  # activate bangko StreamHandler before first log call
     port = int(os.getenv('API_PORT', 5001))
     debug = os.getenv('API_DEBUG', 'False') == 'True'
     

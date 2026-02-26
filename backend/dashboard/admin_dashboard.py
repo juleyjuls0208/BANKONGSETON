@@ -1898,6 +1898,7 @@ def handle_disconnect():
     logger.debug("event=client_disconnected")
 
 if __name__ == '__main__':
+    setup_logging()  # activate bangko StreamHandler before first log call
     port = int(os.getenv('FINANCE_PORT_WEB', 5003))
     debug = os.getenv('FLASK_DEBUG', 'true').lower() == 'true'
     
