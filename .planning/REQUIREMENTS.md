@@ -9,7 +9,7 @@ Requirements for this milestone. Backend-first, then mobile improvements, then d
 
 ### Bug Fixes
 
-- [ ] **BUG-01**: Cashier POS app displays the product menu correctly (currently broken — no products shown)
+- [x] **BUG-01**: Cashier POS app displays the product menu correctly (currently broken — no products shown)
 - [ ] **BUG-02**: Null/empty card UID is rejected at input boundary (not silently treated as valid)
 - [ ] **BUG-03**: Google Sheets API failures return graceful error responses (not 500 crashes)
 - [x] **BUG-04**: Admin login requires non-empty credentials (empty string is not a valid login)
@@ -103,7 +103,7 @@ Deferred to next version (not in current roadmap).
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| BUG-01 | Phase 1 - Critical Fixes + Security | Pending |
+| BUG-01 | Phase 1 - Critical Fixes + Security | Complete |
 | BUG-02 | Phase 1 - Critical Fixes + Security | Pending |
 | BUG-03 | Phase 1 - Critical Fixes + Security | Pending |
 | BUG-04 | Phase 1 - Critical Fixes + Security | Complete |

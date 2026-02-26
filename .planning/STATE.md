@@ -34,6 +34,8 @@ Progress: [##########] 100%
 - Trend: -
 
 *Updated after each plan completion*
+| Phase 01-critical-fixes-security P02 | 2min | 1 tasks | 2 files |
+| Phase 01-critical-fixes-security P04 | 2min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -53,6 +55,8 @@ Recent decisions affecting current work:
 - [01-03]: and admin_user truthy check appended to credential comparison (not separate block)
 - [01-03]: Test credentials use obviously-fake strings not env vars (tests run against live server)
 - [01-03]: wsgi.py retains only GOOGLE_SHEETS_ID/GOOGLE_CREDENTIALS_FILE as non-secret defaults
+- [Phase 01-02]: Used /cashier/api/products (JWT-protected) instead of /api/products/list (admin session required) to avoid auth mismatch
+- [Phase 01-02]: Added /cashier/api/logout route (missing from cashier_routes.py, called by template logout button)
 
 ### Pending Todos
 
@@ -60,7 +64,7 @@ None yet.
 
 ### Blockers/Concerns
 
-- Phase 1: Cashier POS products bug root cause not yet confirmed — plan-phase must investigate cashier_routes.py before writing fix
+- ~~Phase 1: Cashier POS products bug root cause not yet confirmed~~ RESOLVED in 01-02: added /cashier/api/products and /cashier/api/logout routes
 - ~~Phase 1: Empty credential login (admin_dashboard.py line 221) appears intentional; needs user decision on replacement strategy~~ RESOLVED in 01-03
 - Phase 2: QUAL-05 (oauth2client -> google-auth) may require credential file format change — verify before executing
 - Phase 4: Push notifications require FCM setup; check if Android app already has FCM dependency before planning
