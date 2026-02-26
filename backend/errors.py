@@ -2,7 +2,6 @@
 Centralized error handling and logging for Bangko ng Seton
 """
 import logging
-import os
 from datetime import datetime
 from enum import Enum
 from typing import Optional, Dict, Any
@@ -89,45 +88,19 @@ class BankoError(Exception):
         }
 
 
-def setup_logging(log_dir: str = 'logs', log_level: str = 'INFO'):
-    """
-    Configure logging for the application
-    
-    Args:
-        log_dir: Directory to store log files
-        log_level: Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
-    """
-    # Create logs directory if it doesn't exist
-    if not os.path.exists(log_dir):
-        os.makedirs(log_dir)
-    
-    # Get current date for log filename
-    today = datetime.now(PHILIPPINES_TZ).strftime('%Y-%m-%d')
-    log_file = os.path.join(log_dir, f'bangko_{today}.log')
-    
-    # Configure logging format
-    log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    date_format = '%Y-%m-%d %H:%M:%S'
-    
-    # Create logger
+def setup_logging(log_level: str = 'INFO') -> logging.Logger:
+    """Configure console-only structured key=value logging. Call once at startup."""
     logger = logging.getLogger('bangko')
-    logger.setLevel(getattr(logging, log_level.upper()))
-    
-    # Remove existing handlers
-    logger.handlers.clear()
-    
-    # File handler - writes to log file
-    file_handler = logging.FileHandler(log_file, encoding='utf-8')
-    file_handler.setLevel(logging.DEBUG)
-    file_handler.setFormatter(logging.Formatter(log_format, datefmt=date_format))
-    logger.addHandler(file_handler)
-    
-    # Console handler - writes to stdout
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.INFO)
-    console_handler.setFormatter(logging.Formatter(log_format, datefmt=date_format))
-    logger.addHandler(console_handler)
-    
+    logger.setLevel(getattr(logging, log_level.upper(), logging.INFO))
+    logger.handlers.clear()          # Prevent duplicate handlers on re-call
+    logger.propagate = False         # Don't leak to root logger
+
+    handler = logging.StreamHandler()  # stdout only — NO file handler
+    handler.setLevel(logging.DEBUG)
+    handler.setFormatter(logging.Formatter(
+        fmt='level=%(levelname)s logger=%(name)s %(message)s'
+    ))
+    logger.addHandler(handler)
     return logger
 
 
