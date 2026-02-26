@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-22)
 ## Current Position
 
 Phase: 2 of 6 (Code Quality)
-Plan: 1 of 5 completed in current phase
-Status: Phase 2 plan 01 complete
-Last activity: 2026-02-26 — Executed 02-01-PLAN.md: backend/utils.py with normalize_card_uid + CardReaderState thread-safe singleton
+Plan: 2 of 5 completed in current phase
+Status: Phase 2 plan 02 complete
+Last activity: 2026-02-26 — Executed 02-02-PLAN.md: console-only key=value logging in errors.py; archived web_app_complete.py and mobile/BankongSetonApp to _archive/
 
-Progress: [##########] 20% (phase 2)
+Progress: [####------] 40% (phase 2)
 
 ## Performance Metrics
 
@@ -58,6 +58,9 @@ Recent decisions affecting current work:
 - [01-05]: Serial/Arduino routes use ConnectionError/TimeoutError only (no gspread exceptions — they don't touch Sheets)
 - [01-05]: timestamp set before retry loop to ensure consistent transaction time across retry attempts
 - [01-05]: web_app_complete.py has 6 remaining bare str(e) — deferred (out-of-scope legacy file)
+- [02-02]: Removed log_dir param from setup_logging() entirely (no callers used it; config_validator only passes log_level=)
+- [02-02]: Kept get_logger() unchanged (returns getLogger(name) with default 'bangko') for downstream compatibility
+- [02-02]: Unused imports in admin_dashboard.py/wsgi.py deferred (complex interdependencies, at-discretion scope)
 - [02-01]: threading.Lock (not RLock) for CardReaderState — re-entrant locking not needed since get/set/update do not call each other
 - [02-01]: No imports from errors.py in utils.py — avoids circular import risk given runtime sys.path.insert pattern
 - [02-01]: pytest + python-dotenv installed system-wide (no venv present in this project)
@@ -76,5 +79,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Completed 02-01-PLAN.md (normalize_card_uid + CardReaderState in backend/utils.py).
+Stopped at: Completed 02-02-PLAN.md (console-only logging + dead code archive).
 Resume file: None

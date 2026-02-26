@@ -25,10 +25,10 @@ Requirements for this milestone. Backend-first, then mobile improvements, then d
 
 ### Code Quality
 
-- [ ] **QUAL-01**: All 60+ debug print() statements replaced with structured logging (get_logger())
+- [x] **QUAL-01**: All 60+ debug print() statements replaced with structured logging (get_logger())
 - [x] **QUAL-02**: Card UID normalization centralized in a single utility function (backend/utils.py)
 - [x] **QUAL-03**: Global state in admin_dashboard.py wrapped in thread-safe singleton with locking
-- [ ] **QUAL-04**: Dead code removed (BankongSetonApp folder, unused files)
+- [x] **QUAL-04**: Dead code removed (BankongSetonApp folder, unused files)
 - [ ] **QUAL-05**: oauth2client replaced with google-auth library (deprecated dependency)
 
 ### Product Management
@@ -113,10 +113,10 @@ Deferred to next version (not in current roadmap).
 | SEC-03 | Phase 1 - Critical Fixes + Security | Complete |
 | SEC-04 | Phase 1 - Critical Fixes + Security | Complete |
 | SEC-05 | Phase 1 - Critical Fixes + Security | Complete |
-| QUAL-01 | Phase 2 - Code Quality | Pending |
+| QUAL-01 | Phase 2 - Code Quality | Complete |
 | QUAL-02 | Phase 2 - Code Quality | Complete |
 | QUAL-03 | Phase 2 - Code Quality | Complete |
-| QUAL-04 | Phase 2 - Code Quality | Pending |
+| QUAL-04 | Phase 2 - Code Quality | Complete |
 | QUAL-05 | Phase 2 - Code Quality | Pending |
 | PROD-01 | Phase 3 - Product Management | Pending |
 | PROD-02 | Phase 3 - Product Management | Pending |
