@@ -10,7 +10,16 @@ from email.mime.multipart import MIMEMultipart
 from datetime import datetime
 from typing import List, Dict, Optional
 import os
+import sys
+import logging
 import pytz
+
+sys.path.insert(0, os.path.dirname(__file__))
+try:
+    from errors import get_logger
+    logger = get_logger(__name__)
+except ImportError:
+    logger = logging.getLogger(__name__)
 
 PHILIPPINES_TZ = pytz.timezone('Asia/Manila')
 
@@ -59,7 +68,7 @@ class EmailNotifier:
             True if sent successfully, False otherwise
         """
         if not self.enabled:
-            print(f"[Email] Would send to {to_email}: {subject}")
+            logger.debug("event=email_dry_run to=%s subject=%s", to_email, subject)
             return False
         
         try:
@@ -85,7 +94,7 @@ class EmailNotifier:
             return True
         
         except Exception as e:
-            print(f"[Email Error] Failed to send to {to_email}: {e}")
+            logger.error("event=email_send_failed to=%s error=%s", to_email, e)
             return False
     
     def send_low_balance_alert(self, student_name: str, student_id: str,

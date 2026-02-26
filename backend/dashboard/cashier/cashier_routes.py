@@ -11,9 +11,15 @@ import json
 import re
 import gspread
 import logging
+import sys
+import os as _os
+sys.path.insert(0, _os.path.join(_os.path.dirname(__file__), '..', '..'))
+try:
+    from errors import get_logger
+    logger = get_logger(__name__)
+except ImportError:
+    logger = logging.getLogger(__name__)
 import time
-
-logger = logging.getLogger(__name__)
 
 cashier_bp = Blueprint('cashier', __name__, 
                        template_folder='templates',
@@ -167,7 +173,7 @@ def get_products():
 
         return jsonify({'products': products})
     except Exception as e:
-        print(f"Error fetching products: {e}")
+        logger.error("event=products_fetch_error error=%s", e)
         return jsonify({'error': 'Service unavailable, please try again'}), 503
 
 
@@ -360,7 +366,7 @@ def complete_sale():
                     )
                     break
         except Exception as e:
-            print(f"Email send error (non-fatal): {e}")
+            logger.warning("event=email_send_error error=%s", e)
         
         return jsonify({
             'success': True,
