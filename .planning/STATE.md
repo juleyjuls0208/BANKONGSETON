@@ -5,32 +5,33 @@
 See: .planning/PROJECT.md (updated 2026-02-22)
 
 **Core value:** Students can pay for canteen food instantly by tapping their RFID card, with their balance always visible in the app
-**Current focus:** Phase 1 - Critical Fixes + Security
+**Current focus:** Phase 2 - Code Quality
 
 ## Current Position
 
-Phase: 1 of 6 (Critical Fixes + Security)
-Plan: 5 of 5 completed in current phase
-Status: Phase 1 plan 05 complete
-Last activity: 2026-02-26 — Executed 01-05-PLAN.md: graceful two-tier error handling (BUG-03) and transaction atomicity with retry/rollback in complete_sale (BUG-05)
+Phase: 2 of 6 (Code Quality)
+Plan: 1 of 5 completed in current phase
+Status: Phase 2 plan 01 complete
+Last activity: 2026-02-26 — Executed 02-01-PLAN.md: backend/utils.py with normalize_card_uid + CardReaderState thread-safe singleton
 
-Progress: [##########] 100%
+Progress: [##########] 20% (phase 2)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 4
+- Total plans completed: 6
 - Average duration: 1-2min
-- Total execution time: 0.07 hours
+- Total execution time: 0.08 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-critical-fixes-security | 4 | 7min | 2min |
+| 02-code-quality | 1 | 2min | 2min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (2min), 01-02 (2min), 01-03 (1min), 01-04 (2min)
+- Last 5 plans: 01-01 (2min), 01-02 (2min), 01-03 (1min), 01-04 (2min), 02-01 (2min)
 - Trend: Stable
 
 ## Accumulated Context
@@ -57,6 +58,9 @@ Recent decisions affecting current work:
 - [01-05]: Serial/Arduino routes use ConnectionError/TimeoutError only (no gspread exceptions — they don't touch Sheets)
 - [01-05]: timestamp set before retry loop to ensure consistent transaction time across retry attempts
 - [01-05]: web_app_complete.py has 6 remaining bare str(e) — deferred (out-of-scope legacy file)
+- [02-01]: threading.Lock (not RLock) for CardReaderState — re-entrant locking not needed since get/set/update do not call each other
+- [02-01]: No imports from errors.py in utils.py — avoids circular import risk given runtime sys.path.insert pattern
+- [02-01]: pytest + python-dotenv installed system-wide (no venv present in this project)
 
 ### Pending Todos
 
@@ -72,5 +76,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Completed 01-05-PLAN.md (graceful error handling + transaction atomicity).
+Stopped at: Completed 02-01-PLAN.md (normalize_card_uid + CardReaderState in backend/utils.py).
 Resume file: None
