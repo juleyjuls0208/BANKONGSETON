@@ -6,7 +6,6 @@ Secure REST API for Android app to access Google Sheets data
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 import gspread
-from oauth2client.service_account import ServiceAccountCredentials
 import os
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
@@ -18,8 +17,14 @@ from functools import wraps
 import json
 import re
 import logging
+import sys
 
-logger = logging.getLogger(__name__)
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+try:
+    from errors import get_logger
+    logger = get_logger(__name__)
+except ImportError:
+    logger = logging.getLogger(__name__)
 
 load_dotenv()
 
@@ -52,10 +57,6 @@ def get_cors_origins():
 CORS(app, origins=get_cors_origins())
 
 # Google Sheets Setup
-scope = [
-    'https://spreadsheets.google.com/feeds',
-    'https://www.googleapis.com/auth/drive'
-]
 
 def get_sheets_client():
     """Get or refresh Google Sheets client"""
@@ -66,11 +67,10 @@ def get_sheets_client():
             # Fallback to current directory for backward compatibility
             credentials_path = 'credentials.json'
         
-        creds = ServiceAccountCredentials.from_json_keyfile_name(credentials_path, scope)
-        client = gspread.authorize(creds)
-        return client.open_by_key(os.getenv('GOOGLE_SHEETS_ID'))
+        gc = gspread.service_account(filename=credentials_path)
+        return gc.open_by_key(os.getenv('GOOGLE_SHEETS_ID'))
     except Exception as e:
-        print(f"Error initializing Google Sheets: {e}")
+        logger.error("event=sheets_init_failed error=%s", e)
         raise
 
 # Initialize connection
@@ -84,7 +84,7 @@ def get_worksheet_with_retry(sheet_name, retries=2):
             return db.worksheet(sheet_name)
         except Exception as e:
             if attempt < retries:
-                print(f"Retry {attempt + 1}/{retries} for worksheet {sheet_name}")
+                logger.warning("event=worksheet_retry attempt=%d retries=%d sheet=%s", attempt + 1, retries, sheet_name)
                 db = get_sheets_client()
             else:
                 raise e
@@ -293,7 +293,7 @@ def get_profile():
                         return jsonify({'error': 'CARD_LOST', 'message': 'Your money card has been reported as lost. Please contact admin to get a replacement.'}), 403
                     break
         
-        print(f"Profile request for student: {student_id}")
+        logger.debug("event=profile_request student_id=%s", student_id)
         
         return jsonify({
             'student_id': student['StudentID'],
@@ -528,7 +528,7 @@ def get_products():
         
         except Exception as sheet_error:
             # Fallback to products.json
-            print(f"Products sheet not found, using products.json: {sheet_error}")
+            logger.warning("event=products_sheet_fallback error=%s", sheet_error)
             products_file = os.path.join(os.path.dirname(__file__), '..', 'data', 'products.json')
             
             if os.path.exists(products_file):
@@ -783,30 +783,7 @@ if __name__ == '__main__':
     port = int(os.getenv('API_PORT', 5001))
     debug = os.getenv('API_DEBUG', 'False') == 'True'
     
-    print(f"""
-    ╔════════════════════════════════════════╗
-    ║   Bangko ng Seton - Mobile API v2.0    ║
-    ╚════════════════════════════════════════╝
-    
-    🚀 Server running on http://localhost:{port}
-    📱 Ready to serve Android app requests
-    
-    API Endpoints:
-    Student:
-    - POST /api/auth/login
-    - GET  /api/student/profile
-    - GET  /api/student/balance
-    - GET  /api/student/transactions
-    - POST /api/users/fcm-token
-    - POST /api/auth/logout
-    
-    Cashier/Admin (JWT Required):
-    - GET  /api/products
-    - POST /api/products
-    - POST /api/cashier/transaction
-    
-    Press Ctrl+C to stop
-    """)
+    logger.info("event=api_starting port=%d debug=%s", port, debug)
     
     app.run(host='0.0.0.0', port=port, debug=debug)
 

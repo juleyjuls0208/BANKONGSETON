@@ -10,7 +10,7 @@ import serial
 import serial.tools.list_ports
 import time
 import gspread
-from oauth2client.service_account import ServiceAccountCredentials
+from google.oauth2.service_account import Credentials
 import os
 from dotenv import load_dotenv
 from datetime import datetime
@@ -20,8 +20,6 @@ import threading
 import re
 import logging
 
-logger = logging.getLogger(__name__)
-
 # Import Phase 1 modules
 import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
@@ -30,13 +28,15 @@ try:
     from resilience import with_retry, RetryConfig, get_write_queue, get_queue_status, get_rate_limiter
     from health import get_health_status, get_uptime_stats, update_sheets_status, record_request
     from errors import setup_logging, get_logger, BankoError, ErrorCode
+    logger = get_logger(__name__)
     # Phase 3 modules
     from analytics import Analytics, get_analytics_summary
     from exports import export_transactions, export_students, generate_monthly_statement, filter_by_date_range
     from notifications import get_notification_manager
     PHASE3_AVAILABLE = True
 except ImportError as e:
-    print(f"Warning: Could not import modules: {e}")
+    logger = logging.getLogger(__name__)
+    logger.warning("event=import_failed modules=phase1_phase3 error=%s", e)
     # Fallback to basic functionality
     def get_cache_stats(): return {}
     def get_health_status(): return {'status': 'unknown'}
@@ -49,7 +49,7 @@ try:
     from cashier.cashier_routes import cashier_bp
     CASHIER_AVAILABLE = True
 except ImportError:
-    print("Warning: Cashier blueprint not available")
+    logger.warning("event=import_failed module=cashier_blueprint")
     CASHIER_AVAILABLE = False
 
 load_dotenv()
@@ -58,9 +58,7 @@ load_dotenv()
 _secret_key = os.getenv('FLASK_SECRET_KEY', '').strip()
 _INSECURE_DEFAULT = 'bangko-admin-secret-key-change-in-production'
 if not _secret_key or _secret_key == _INSECURE_DEFAULT:
-    print("FATAL: FLASK_SECRET_KEY is not set or is using the insecure default.")
-    print("Set a strong random key in your .env file before starting the server.")
-    print("Generate one with: python -c \"import secrets; print(secrets.token_urlsafe(32))\"")
+    logger.critical("event=startup_aborted reason=insecure_secret_key message=\"FLASK_SECRET_KEY is not set or is using the insecure default. Set a strong random key in your .env file. Generate one with: python -c 'import secrets; print(secrets.token_urlsafe(32))'\"")
     sys.exit(1)
 
 # Timezone configuration
@@ -96,7 +94,7 @@ app.socketio = socketio
 # Register cashier blueprint
 if CASHIER_AVAILABLE:
     app.register_blueprint(cashier_bp)
-    print("✅ Cashier blueprint registered at /cashier")
+    logger.info("event=blueprint_registered name=cashier prefix=/cashier")
 
 # Global variables for admin features
 arduino = None
@@ -110,8 +108,8 @@ _sheets_cache = {}
 _cache_timeout = 30  # Cache data for 30 seconds
 
 # Google Sheets Setup
-scope = [
-    'https://spreadsheets.google.com/feeds',
+scopes = [
+    'https://www.googleapis.com/auth/spreadsheets',
     'https://www.googleapis.com/auth/drive'
 ]
 
@@ -124,11 +122,11 @@ def get_sheets_client():
             # Fallback to current directory for backward compatibility
             credentials_path = 'credentials.json'
         
-        creds = ServiceAccountCredentials.from_json_keyfile_name(credentials_path, scope)
-        client = gspread.authorize(creds)
-        return client.open_by_key(os.getenv('GOOGLE_SHEETS_ID'))
+        credentials = Credentials.from_service_account_file(credentials_path, scopes=scopes)
+        gc = gspread.authorize(credentials)
+        return gc.open_by_key(os.getenv('GOOGLE_SHEETS_ID'))
     except Exception as e:
-        print(f"Error initializing Google Sheets: {e}")
+        logger.error("event=sheets_init_failed error=%s", e)
         raise
 
 # Initialize connection
@@ -142,7 +140,7 @@ def get_worksheet_with_retry(sheet_name, retries=2):
             return db.worksheet(sheet_name)
         except Exception as e:
             if attempt < retries:
-                print(f"Retry {attempt + 1}/{retries} for worksheet {sheet_name}")
+                logger.warning("event=worksheet_retry attempt=%d retries=%d sheet=%s", attempt + 1, retries, sheet_name)
                 time.sleep(2)  # Wait 2 seconds between retries
                 db = get_sheets_client()
             else:
@@ -170,7 +168,7 @@ def get_cached_sheet_data(sheet_name, force_refresh=False):
     except Exception as e:
         # If fetch fails but we have cached data, return stale cache
         if cache_key in _sheets_cache:
-            print(f"Warning: Using stale cache for {sheet_name} due to error: {e}")
+            logger.warning("event=stale_cache_used sheet=%s error=%s", sheet_name, e)
             cached_data, _ = _sheets_cache[cache_key]
             return cached_data
         raise
@@ -1198,18 +1196,18 @@ def read_card_thread(card_type):
                     if not uid:
                         try:
                             logger = get_logger('card_reader')
-                            logger.warning(f"Empty card UID received from Arduino (raw line: {line!r})")
+                            logger.warning("event=empty_card_uid raw_line=%r", line)
                         except Exception:
-                            print(f"[WARNING] Empty card UID received from Arduino (raw line: {line!r})")
+                            logging.getLogger('card_reader').warning("event=empty_card_uid raw_line=%r", line)
                         socketio.emit('card_error', {'message': 'Card scan failed -- please try again', 'requires_ack': True})
                         continue
 
                     if not UID_PATTERN.match(uid):
                         try:
                             logger = get_logger('card_reader')
-                            logger.warning(f"Malformed card UID received from Arduino: {uid!r}")
+                            logger.warning("event=malformed_card_uid uid=%r", uid)
                         except Exception:
-                            print(f"[WARNING] Malformed card UID received from Arduino: {uid!r}")
+                            logging.getLogger('card_reader').warning("event=malformed_card_uid uid=%r", uid)
                         socketio.emit('card_error', {'message': 'Card scan failed -- please try again', 'requires_ack': True})
                         continue
 
@@ -1226,7 +1224,7 @@ def read_card_thread(card_type):
             
             time.sleep(0.1)
         except Exception as e:
-            print(f"Error reading card: {e}")
+            logger.error("event=card_read_error error=%s", e)
             socketio.emit('card_error', {'message': str(e)})
             card_reading_active = False
             return
@@ -1239,14 +1237,14 @@ def read_card_thread(card_type):
 def handle_id_card(uid):
     """Handle ID card registration - check for duplicates in BOTH ID and money cards"""
     try:
-        print(f"[DEBUG] Checking ID card: {uid}")
+        logger.debug("event=id_card_check uid=%s", uid)
         normalized_uid = normalize_card_uid(uid)
-        print(f"[DEBUG] Normalized UID: {normalized_uid}")
+        logger.debug("event=id_card_normalized uid=%s", normalized_uid)
         
         # Check if card is already registered
         users_sheet = get_worksheet_with_retry('Users')
         users_records = users_sheet.get_all_records()
-        print(f"[DEBUG] Found {len(users_records)} users in sheet")
+        logger.debug("event=id_card_users_loaded count=%d", len(users_records))
         
         for i, record in enumerate(users_records):
             # Check IDCardNumber
@@ -1257,13 +1255,13 @@ def handle_id_card(uid):
             existing_money_card_raw = record.get('MoneyCardNumber', '')
             existing_money_card = normalize_card_uid(existing_money_card_raw)
             
-            print(f"[DEBUG] User {i+1}: StudentID={record.get('StudentID')}, IDCardNumber='{existing_id_card}', MoneyCardNumber='{existing_money_card}'")
+            logger.debug("event=id_card_check_row row=%d student_id=%s id_card=%s money_card=%s", i + 1, record.get('StudentID'), existing_id_card, existing_money_card)
             
             # Check if UID matches ID card
             if existing_id_card == normalized_uid and existing_id_card:
                 existing_student = record.get('StudentID', '')
                 existing_name = record.get('Name', '')
-                print(f"[DEBUG] ✗ DUPLICATE! This card is already registered as ID card for {existing_name} ({existing_student})")
+                logger.debug("event=id_card_duplicate card_type=id_card student=%s name=%s", existing_student, existing_name)
                 send_error("Card in use")
                 socketio.emit('card_error', {'message': f'This card is already registered as ID card for {existing_name} ({existing_student})'})
                 return
@@ -1272,19 +1270,17 @@ def handle_id_card(uid):
             if existing_money_card == normalized_uid and existing_money_card:
                 existing_student = record.get('StudentID', '')
                 existing_name = record.get('Name', '')
-                print(f"[DEBUG] ✗ DUPLICATE! This card is already registered as money card for {existing_name} ({existing_student})")
+                logger.debug("event=id_card_duplicate card_type=money_card student=%s name=%s", existing_student, existing_name)
                 send_error("Card in use")
                 socketio.emit('card_error', {'message': f'This card is already registered as money card for {existing_name} ({existing_student})'})
                 return
         
         # Card is new, proceed with registration
-        print(f"[DEBUG] Card is new (not used as ID or money card), showing registration modal")
+        logger.debug("event=id_card_available uid=%s", normalized_uid)
         send_success("Card read!")
         socketio.emit('id_card_read', {'uid': uid})
     except Exception as e:
-        print(f"[ERROR] Error checking ID card: {e}")
-        import traceback
-        traceback.print_exc()
+        logger.error("event=id_card_check_error error=%s", e, exc_info=True)
         send_error("Error")
         socketio.emit('card_error', {'message': str(e)})
 
@@ -1299,19 +1295,19 @@ def handle_money_card(uid):
             socketio.emit('card_error', {'message': 'No student ID provided'})
             return
         
-        print(f"[DEBUG] Linking money card: {uid} to student: {student_id}")
+        logger.debug("event=money_card_link uid=%s student_id=%s", uid, student_id)
         normalized_uid = normalize_card_uid(uid)
-        print(f"[DEBUG] Normalized UID: {normalized_uid}")
+        logger.debug("event=money_card_normalized uid=%s", normalized_uid)
         
         # Check if card already exists in Money Accounts
         money_sheet = get_worksheet_with_retry('Money Accounts')
         money_records = money_sheet.get_all_records()
-        print(f"[DEBUG] Found {len(money_records)} money accounts in sheet")
+        logger.debug("event=money_card_accounts_loaded count=%d", len(money_records))
         
         for i, record in enumerate(money_records):
             existing_card = normalize_card_uid(record.get('MoneyCardNumber', ''))
             if existing_card == normalized_uid:
-                print(f"[DEBUG] ✗ DUPLICATE in Money Accounts: {existing_card}")
+                logger.debug("event=money_card_duplicate_in_accounts card=%s", existing_card)
                 send_error("Card exists")
                 socketio.emit('card_error', {'message': 'This card is already registered as a money card'})
                 return
@@ -1319,7 +1315,7 @@ def handle_money_card(uid):
         # Check if card is already used as ID card or money card in Users sheet
         users_sheet = get_worksheet_with_retry('Users')
         users_records = users_sheet.get_all_records()
-        print(f"[DEBUG] Found {len(users_records)} users in sheet")
+        logger.debug("event=money_card_users_loaded count=%d", len(users_records))
         
         for i, record in enumerate(users_records):
             # Check MoneyCardNumber
@@ -1330,14 +1326,14 @@ def handle_money_card(uid):
             existing_id_card_raw = record.get('IDCardNumber', '')
             existing_id_card = normalize_card_uid(existing_id_card_raw)
             
-            print(f"[DEBUG] User {i+1}: StudentID={record.get('StudentID')}, IDCardNumber='{existing_id_card}', MoneyCardNumber='{existing_money_card}'")
+            logger.debug("event=money_card_check_row row=%d student_id=%s id_card=%s money_card=%s", i + 1, record.get('StudentID'), existing_id_card, existing_money_card)
             
             # Check if UID matches money card
             if existing_money_card == normalized_uid and existing_money_card:
                 existing_student = record.get('StudentID', '')
                 existing_name = record.get('Name', '')
                 if str(existing_student).strip() != str(student_id).strip():
-                    print(f"[DEBUG] ✗ DUPLICATE! Card is already money card for {existing_name} ({existing_student})")
+                    logger.debug("event=money_card_duplicate card_type=money_card student=%s name=%s", existing_student, existing_name)
                     send_error("Card in use")
                     socketio.emit('card_error', {'message': f'This card is already money card for {existing_name} ({existing_student})'})
                     return
@@ -1348,18 +1344,18 @@ def handle_money_card(uid):
                 existing_name = record.get('Name', '')
                 # Block even if it's the same student - must use different cards
                 if str(existing_student).strip() == str(student_id).strip():
-                    print(f"[DEBUG] ✗ SAME CARD! Student trying to use ID card as money card")
+                    logger.debug("event=money_card_same_card student=%s", existing_student)
                     send_error("Use different card")
                     socketio.emit('card_error', {'message': 'Cannot use ID card as money card. Please use a different card.'})
                     return
                 else:
-                    print(f"[DEBUG] ✗ DUPLICATE! Card is already ID card for {existing_name} ({existing_student})")
+                    logger.debug("event=money_card_duplicate card_type=id_card student=%s name=%s", existing_student, existing_name)
                     send_error("Card in use")
                     socketio.emit('card_error', {'message': f'This card is already registered as ID card for {existing_name} ({existing_student}). Cannot use as money card.'})
                     return
         
         # Find the student to link the card to
-        print(f"[DEBUG] No duplicates found, proceeding with linking")
+        logger.debug("event=money_card_no_duplicates student_id=%s", student_id)
         user_row_index = None
         student_record = None
         for i, record in enumerate(users_records):
@@ -1399,9 +1395,7 @@ def handle_money_card(uid):
         })
         
     except Exception as e:
-        print(f"Error linking money card: {e}")
-        import traceback
-        traceback.print_exc()
+        logger.error("event=money_card_link_error error=%s", e, exc_info=True)
         send_error("Error")
         socketio.emit('card_error', {'message': str(e)})
 
@@ -1416,10 +1410,10 @@ def register_student():
         id_card_uid = data.get('id_card_uid')
         parent_email = data.get('parent_email', '')
         
-        print(f"[DEBUG] Registering student: {student_id}, {name}, ID Card: {id_card_uid}")
+        logger.debug("event=student_register student_id=%s name=%s id_card=%s", student_id, name, id_card_uid)
         
         normalized_uid = normalize_card_uid(id_card_uid)
-        print(f"[DEBUG] Normalized ID Card: {normalized_uid}")
+        logger.debug("event=student_register_normalized id_card=%s", normalized_uid)
         
         # Check for duplicates
         users_sheet = get_worksheet_with_retry('Users')
@@ -1428,7 +1422,7 @@ def register_student():
         # Check if Student ID already exists
         for record in users_records:
             if str(record.get('StudentID', '')).strip() == str(student_id).strip():
-                print(f"[DEBUG] DUPLICATE Student ID found: {student_id}")
+                logger.debug("event=student_register_duplicate_id student_id=%s", student_id)
                 socketio.emit('card_error', {'message': f'Student ID {student_id} already exists'})
                 return jsonify({'error': f'Student ID {student_id} already exists'}), 400
         
@@ -1441,7 +1435,7 @@ def register_student():
             if existing_id_card == normalized_uid and existing_id_card:
                 existing_student = record.get('StudentID', '')
                 existing_name = record.get('Name', '')
-                print(f"[DEBUG] DUPLICATE ID Card found: {normalized_uid} belongs to {existing_name} ({existing_student})")
+                logger.debug("event=student_register_duplicate_card card_type=id_card student=%s name=%s", existing_student, existing_name)
                 socketio.emit('card_error', {'message': f'This card is already registered as ID card for {existing_name} ({existing_student})'})
                 return jsonify({'error': f'This card is already registered as ID card for {existing_name} ({existing_student})'}), 400
             
@@ -1449,11 +1443,11 @@ def register_student():
             if existing_money_card == normalized_uid and existing_money_card:
                 existing_student = record.get('StudentID', '')
                 existing_name = record.get('Name', '')
-                print(f"[DEBUG] DUPLICATE! Card is already money card for {existing_name} ({existing_student})")
+                logger.debug("event=student_register_duplicate_card card_type=money_card student=%s name=%s", existing_student, existing_name)
                 socketio.emit('card_error', {'message': f'This card is already registered as money card for {existing_name} ({existing_student}). Cannot use as ID card.'})
                 return jsonify({'error': f'This card is already registered as money card for {existing_name} ({existing_student}). Cannot use as ID card.'}), 400
         
-        print(f"[DEBUG] No duplicates found, proceeding with registration")
+        logger.debug("event=student_register_no_duplicates student_id=%s", student_id)
         timestamp = get_philippines_time().strftime('%Y-%m-%d %H:%M:%S')
         
         row = [
@@ -1466,7 +1460,7 @@ def register_student():
             timestamp
         ]
         users_sheet.append_row(row)
-        print(f"[DEBUG] Student registered successfully!")
+        logger.debug("event=student_registered student_id=%s", student_id)
         
         send_success("Registered!")
         socketio.emit('student_registered', {
@@ -1688,7 +1682,7 @@ def replace_lost_card():
         lost_sheet = get_worksheet_with_retry('Lost Card Reports')
         lost_records = lost_sheet.get_all_records()
     except Exception as e:
-        print(f"ERROR: Failed to access Lost Card Reports sheet: {e}")
+        logger.error("event=lost_card_sheet_error error=%s", e)
         return jsonify({'error': 'Lost Card Reports sheet not found. Please create it first.'}), 400
     
     pending_report = None
@@ -1698,8 +1692,7 @@ def replace_lost_card():
             break
     
     if not pending_report:
-        print(f"DEBUG: No pending report found for {student_id}")
-        print(f"DEBUG: Available reports: {[{r.get('StudentID'): r.get('Status')} for r in lost_records]}")
+        logger.debug("event=lost_card_no_pending_report student_id=%s available=%s", student_id, [{r.get('StudentID'): r.get('Status')} for r in lost_records])
         return jsonify({'error': 'No pending lost card report for this student'}), 400
     
     # Store student_id for card reading
@@ -1749,7 +1742,7 @@ def handle_replace_card(uid):
         
         # Normalize and check for duplicates
         normalized_uid = normalize_card_uid(uid)
-        print(f"[DEBUG] Replacing with card: {uid}, normalized: {normalized_uid}")
+        logger.debug("event=replace_card_check uid=%s normalized=%s", uid, normalized_uid)
         
         # Check if new card is already in use
         users_sheet = get_worksheet_with_retry('Users')
@@ -1773,13 +1766,13 @@ def handle_replace_card(uid):
                 existing_name = record.get('Name', '')
                 # Block if it's this student's ID card
                 if current_student_id == str(student_id).strip():
-                    print(f"[DEBUG] ✗ Student trying to use their own ID card as replacement")
+                    logger.debug("event=replace_card_own_id_card student_id=%s", student_id)
                     send_error("Use different card")
                     socketio.emit('card_error', {'message': 'Cannot use your ID card as money card. Please use a different card.'})
                     return
                 # Block if it's another student's ID card
                 else:
-                    print(f"[DEBUG] ✗ Card is ID card for {existing_name} ({current_student_id})")
+                    logger.debug("event=replace_card_duplicate card_type=id_card name=%s student_id=%s", existing_name, current_student_id)
                     send_error("Card in use")
                     socketio.emit('card_error', {'message': f'This card is already registered as ID card for {existing_name} ({current_student_id}).'})
                     return
@@ -1789,12 +1782,12 @@ def handle_replace_card(uid):
             normalized_old = normalize_card_uid(old_card)
             if existing_money_card == normalized_uid and existing_money_card and existing_money_card != normalized_old:
                 existing_name = record.get('Name', '')
-                print(f"[DEBUG] ✗ Card is already money card for {existing_name} ({current_student_id})")
+                logger.debug("event=replace_card_duplicate card_type=money_card name=%s student_id=%s", existing_name, current_student_id)
                 send_error("Card in use")
                 socketio.emit('card_error', {'message': f'This card is already registered as money card for {existing_name} ({current_student_id}).'})
                 return
         
-        print(f"[DEBUG] ✓ Card is available for replacement")
+        logger.debug("event=replace_card_available uid=%s", normalized_uid)
         
         # Get student's ID card number
         id_card_number = student_record.get('IDCardNumber', '') if student_record else ''
@@ -1870,9 +1863,7 @@ def handle_replace_card(uid):
         })
         
     except Exception as e:
-        print(f"Error replacing card: {e}")
-        import traceback
-        traceback.print_exc()
+        logger.error("event=replace_card_error error=%s", e, exc_info=True)
         send_error("Error")
         socketio.emit('card_error', {'message': str(e)})
 
@@ -1885,7 +1876,7 @@ def get_students_with_lost_reports():
             lost_sheet = get_worksheet_with_retry('Lost Card Reports')
             lost_records = lost_sheet.get_all_records()
         except Exception as e:
-            print(f"ERROR: Lost Card Reports sheet not found: {e}")
+            logger.error("event=lost_card_reports_sheet_missing error=%s", e)
             return jsonify({
                 'students': [],
                 'error': 'Lost Card Reports sheet not found. Please create it in your Google Sheet.'
@@ -1916,17 +1907,13 @@ def get_students_with_lost_reports():
 
 @socketio.on('connect')
 def handle_connect():
-    print('Client connected')
+    logger.debug("event=client_connected")
 
 @socketio.on('disconnect')
 def handle_disconnect():
-    print('Client disconnected')
+    logger.debug("event=client_disconnected")
 
 if __name__ == '__main__':
-    print("\n" + "="*50)
-    print("🏦 BANGKO NG SETON - UNIFIED DASHBOARD")
-    print("="*50 + "\n")
-    
     port = int(os.getenv('FINANCE_PORT_WEB', 5003))
     debug = os.getenv('FLASK_DEBUG', 'true').lower() == 'true'
     
@@ -1936,12 +1923,11 @@ if __name__ == '__main__':
     finance_pass = os.getenv('FINANCE_PASSWORD', 'finance2025')
 
     # --- Redacted credential logging (SEC-01) ---
-    print(f"\n  Dashboard starting on http://localhost:{port}")
-    print(f"  Finance user: {'[configured]' if finance_user else '[NOT SET - login disabled]'}")
-    print(f"  Admin user: {'[configured]' if (admin_user and admin_pass) else '[NOT SET - login disabled]'}")
-    print(f"  Secret key: [set]")
-    print(f"  Debug mode: {debug}")
-    print("\n" + "="*50 + "\n")
+    logger.info("event=dashboard_starting port=%d finance_user=%s admin_user=%s debug=%s",
+                port,
+                '[configured]' if finance_user else '[NOT SET - login disabled]',
+                '[configured]' if (admin_user and admin_pass) else '[NOT SET - login disabled]',
+                debug)
     
     # Suppress SSL/TLS handshake errors (400 "Bad request" from HTTPS attempts)
     import logging
