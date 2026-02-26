@@ -17,6 +17,7 @@ from datetime import datetime
 import pytz
 from functools import wraps
 import threading
+import re
 
 # Import Phase 1 modules
 import sys
@@ -178,6 +179,16 @@ def invalidate_cache(sheet_name=None):
         _sheets_cache.pop(sheet_name, None)
     else:
         _sheets_cache.clear()
+
+UID_PATTERN = re.compile(r'^[0-9A-Fa-f]{8}$')
+
+def validate_card_uid(uid):
+    """Validate card UID format. Returns (is_valid, error_message)."""
+    if not uid:
+        return False, "Card UID is empty -- please scan the card again"
+    if not UID_PATTERN.match(uid):
+        return False, "Card UID format is invalid -- please scan the card again"
+    return True, ""
 
 def normalize_card_uid(uid):
     """Normalize card UID by removing leading zeros"""
@@ -1072,6 +1083,26 @@ def read_card_thread(card_type):
                 
                 if line.startswith('<CARD|') and line.endswith('>'):
                     uid = line[6:-1]
+
+                    # Validate card UID format (BUG-02, SEC-04)
+                    if not uid:
+                        try:
+                            logger = get_logger('card_reader')
+                            logger.warning(f"Empty card UID received from Arduino (raw line: {line!r})")
+                        except Exception:
+                            print(f"[WARNING] Empty card UID received from Arduino (raw line: {line!r})")
+                        socketio.emit('card_error', {'message': 'Card scan failed -- please try again', 'requires_ack': True})
+                        continue
+
+                    if not UID_PATTERN.match(uid):
+                        try:
+                            logger = get_logger('card_reader')
+                            logger.warning(f"Malformed card UID received from Arduino: {uid!r}")
+                        except Exception:
+                            print(f"[WARNING] Malformed card UID received from Arduino: {uid!r}")
+                        socketio.emit('card_error', {'message': 'Card scan failed -- please try again', 'requires_ack': True})
+                        continue
+
                     if len(uid) == 8:
                         card_reading_active = False
                         
