@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-22)
 ## Current Position
 
 Phase: 1 of 6 (Critical Fixes + Security)
-Plan: 4 of 4 completed in current phase
-Status: Phase 1 plan 04 complete
-Last activity: 2026-02-26 — Executed 01-04-PLAN.md: card UID regex validation at all entry points (Arduino reader, API server, cashier POS)
+Plan: 5 of 5 completed in current phase
+Status: Phase 1 plan 05 complete
+Last activity: 2026-02-26 — Executed 01-05-PLAN.md: graceful two-tier error handling (BUG-03) and transaction atomicity with retry/rollback in complete_sale (BUG-05)
 
 Progress: [##########] 100%
 
@@ -54,6 +54,9 @@ Recent decisions affecting current work:
 - [Phase 01-02]: Used /cashier/api/products (JWT-protected) instead of /api/products/list (admin session required) to avoid auth mismatch
 - [Phase 01-02]: Added /cashier/api/logout route (missing from cashier_routes.py, called by template logout button)
 - [Phase 01-critical-fixes-security]: UID_PATTERN defined independently in each module to avoid cross-module import complexity given runtime sys.path.insert pattern in cashier_routes.py
+- [01-05]: Serial/Arduino routes use ConnectionError/TimeoutError only (no gspread exceptions — they don't touch Sheets)
+- [01-05]: timestamp set before retry loop to ensure consistent transaction time across retry attempts
+- [01-05]: web_app_complete.py has 6 remaining bare str(e) — deferred (out-of-scope legacy file)
 
 ### Pending Todos
 
@@ -69,5 +72,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Completed 01-04-PLAN.md (card UID regex validation at all entry points).
+Stopped at: Completed 01-05-PLAN.md (graceful error handling + transaction atomicity).
 Resume file: None

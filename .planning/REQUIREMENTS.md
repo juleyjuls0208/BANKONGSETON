@@ -11,9 +11,9 @@ Requirements for this milestone. Backend-first, then mobile improvements, then d
 
 - [x] **BUG-01**: Cashier POS app displays the product menu correctly (currently broken — no products shown)
 - [x] **BUG-02**: Null/empty card UID is rejected at input boundary (not silently treated as valid)
-- [ ] **BUG-03**: Google Sheets API failures return graceful error responses (not 500 crashes)
+- [x] **BUG-03**: Google Sheets API failures return graceful error responses (not 500 crashes)
 - [x] **BUG-04**: Admin login requires non-empty credentials (empty string is not a valid login)
-- [ ] **BUG-05**: Transaction balance deduction is protected against partial failure (no half-committed state)
+- [x] **BUG-05**: Transaction balance deduction is protected against partial failure (no half-committed state)
 
 ### Security
 
@@ -105,9 +105,9 @@ Deferred to next version (not in current roadmap).
 |-------------|-------|--------|
 | BUG-01 | Phase 1 - Critical Fixes + Security | Complete |
 | BUG-02 | Phase 1 - Critical Fixes + Security | Complete |
-| BUG-03 | Phase 1 - Critical Fixes + Security | Pending |
+| BUG-03 | Phase 1 - Critical Fixes + Security | Complete |
 | BUG-04 | Phase 1 - Critical Fixes + Security | Complete |
-| BUG-05 | Phase 1 - Critical Fixes + Security | Pending |
+| BUG-05 | Phase 1 - Critical Fixes + Security | Complete |
 | SEC-01 | Phase 1 - Critical Fixes + Security | Complete |
 | SEC-02 | Phase 1 - Critical Fixes + Security | Complete |
 | SEC-03 | Phase 1 - Critical Fixes + Security | Complete |
