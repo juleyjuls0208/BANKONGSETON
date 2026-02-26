@@ -377,8 +377,8 @@ def get_balance():
 @app.route('/api/student/transactions', methods=['GET'])
 def get_transactions():
     """
-    Get transaction history
-    GET /api/student/transactions?limit=50
+    Get transaction history with offset pagination
+    GET /api/student/transactions?limit=20&offset=0
     Header: Authorization: Bearer <token>
     """
     try:
@@ -389,6 +389,7 @@ def get_transactions():
         
         session = active_sessions[token]
         limit = int(request.args.get('limit', 50))
+        offset = int(request.args.get('offset', 0))
         
         # Get student's money card
         users_sheet = get_worksheet_with_retry('Users')
@@ -447,13 +448,16 @@ def get_transactions():
                     'items': items  # Include itemized receipt
                 })
         
-        # Sort by timestamp descending and limit
+        # Sort by timestamp descending, apply offset pagination
         transactions.sort(key=lambda x: x['timestamp'], reverse=True)
-        transactions = transactions[:limit]
+        total = len(transactions)
+        transactions = transactions[offset:offset + limit]
         
         return jsonify({
             'transactions': transactions,
-            'count': len(transactions)
+            'count': len(transactions),
+            'total': total,
+            'has_more': (offset + limit) < total
         })
         
     except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
@@ -728,16 +732,20 @@ def process_cashier_transaction():
         return jsonify({'error': 'An unexpected error occurred'}), 500
 
 @app.route('/api/users/fcm-token', methods=['POST'])
-@require_auth(roles=['student'])
 def register_fcm_token():
     """
     Register FCM token for push notifications
     POST /api/users/fcm-token
-    Header: Authorization: Bearer <jwt_token>
+    Header: Authorization: Bearer <session_token>
     Body: { "fcm_token": "..." }
     """
     try:
-        user_id = request.user.get('user_id')
+        token = request.headers.get('Authorization', '').replace('Bearer ', '')
+        if token not in active_sessions:
+            return jsonify({'error': 'Invalid or expired token'}), 401
+        session = active_sessions[token]
+        student_id = session['student_id']
+        
         data = request.get_json()
         fcm_token = data.get('fcm_token', '').strip()
         
@@ -750,7 +758,7 @@ def register_fcm_token():
         
         user_row = None
         for idx, record in enumerate(records, start=2):
-            if str(record.get('StudentID')) == str(user_id):
+            if str(record.get('StudentID')) == str(student_id):
                 user_row = idx
                 break
         
@@ -763,9 +771,7 @@ def register_fcm_token():
             return jsonify({'error': 'FCMToken column not found. Run migration first.'}), 500
         
         fcm_col_idx = headers.index('FCMToken') + 1  # +1 for 1-based indexing
-        fcm_col_letter = chr(64 + fcm_col_idx)  # Convert to column letter
-        
-        users_sheet.update(f'{fcm_col_letter}{user_row}', [[fcm_token]])
+        users_sheet.update_cell(user_row, fcm_col_idx, fcm_token)
         
         return jsonify({'message': 'FCM token registered'})
     
