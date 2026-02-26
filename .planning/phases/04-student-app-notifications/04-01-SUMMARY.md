@@ -73,7 +73,7 @@ Each task was committed atomically:
 2. **Task 2: FCM auth fix + offset pagination** — `e9f9e85` (fix)
 3. **Task 3: balance_before in response + cashier log** — `c9dc5b3` (feat)
 
-**Plan metadata:** TBD (docs: complete plan)
+**Plan metadata:** `087b933` (docs: complete plan)
 
 ## Files Created/Modified
 
@@ -113,3 +113,11 @@ None - no external service configuration required. The FCMToken column migration
 ---
 *Phase: 04-student-app-notifications*
 *Completed: 2026-02-26*
+
+## Self-Check: PASSED
+
+- ✅ `backend/api/api_server.py` — exists on disk
+- ✅ `04-01-SUMMARY.md` — exists on disk
+- ✅ commit `e9f9e85` — confirmed in git log (Task 2: FCM auth + offset pagination)
+- ✅ commit `c9dc5b3` — confirmed in git log (Task 3: balance_before)
+- ✅ commit `087b933` — confirmed in git log (docs: plan metadata)
