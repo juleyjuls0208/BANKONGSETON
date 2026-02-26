@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-22)
 ## Current Position
 
 Phase: 2 of 6 (Code Quality)
-Plan: 5 of 5 completed in current phase
+Plan: 6 of 6 completed in current phase
 Status: Phase 2 complete
-Last activity: 2026-02-26 — Executed 02-05-PLAN.md: wired utils.py into admin_dashboard, cashier_routes, api_server — 4 module globals replaced with CardReaderState singleton, normalize_card_uid consolidated
+Last activity: 2026-02-26 — Executed 02-06-PLAN.md: fixed get_logger() to return bangko.* child loggers; added setup_logging() to __main__ blocks in admin_dashboard.py and api_server.py — closes QUAL-01 logging routing gap
 
 Progress: [##########] 100% (phase 2)
 
@@ -69,10 +69,12 @@ Recent decisions affecting current work:
 - [02-03]: Option B (gspread.service_account shortcut) used for migrate_transactions.py — simplest migration, consistent with api_server.py
 - [02-04]: arduino_bridge.py was at backend/dashboard/ not backend/adapters/ as plan stated — found and fixed as Rule 3 (blocking path error)
 - [02-04]: email_service.py was out-of-scope but had 6 active print() calls — added as Rule 2 auto-fix to meet zero-print success criterion
-- [02-04]: test_phase1.py, test_phase3.py, generate_icons.py print() calls excluded (intentional test/utility output)
+  - [02-04]: test_phase1.py, test_phase3.py, generate_icons.py print() calls excluded (intentional test/utility output)
 - [02-05]: Use card_reader_state.update() for atomic multi-key writes (pending_student_id + card_reading_active set together)
 - [02-05]: Keep get_sheets_client/get_philippines_time in cashier_routes inline admin_dashboard import — only normalize_card_uid moved to utils
 - [02-05]: api_server.py normalize_card_uid lacked None-safety; utils version adds None guard as correctness improvement
+- [02-06]: Reversed 02-02 deferral: get_logger() now prepends 'bangko.' — VERIFICATION.md confirmed gap is real
+- [02-06]: setup_logging() is always first statement in __main__ blocks (entry-point pattern established)
 
 ### Pending Todos
 
@@ -88,5 +90,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Completed 02-05-PLAN.md (wire utils.py into admin_dashboard, cashier_routes, api_server; Phase 2 complete).
+Stopped at: Completed 02-06-PLAN.md (fix logging routing gaps: get_logger hierarchy + setup_logging in __main__; closes QUAL-01; Phase 2 fully complete).
 Resume file: None
