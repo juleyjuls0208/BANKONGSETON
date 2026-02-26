@@ -102,5 +102,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Completed 04-03-PLAN.md (GET/POST /api/settings/threshold + Notification Settings UI in dashboard.html; closes NOTF-02).
+Stopped at: Completed 04-01-PLAN.md (4 backend bug fixes: FCM auth, offset pagination, balance_before, 8-col cashier log; closes APP-02 through APP-05, NOTF-01).
 Resume file: None
