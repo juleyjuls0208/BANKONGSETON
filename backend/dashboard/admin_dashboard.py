@@ -23,6 +23,7 @@ import logging
 # Import Phase 1 modules
 import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+from utils import card_reader_state, normalize_card_uid
 try:
     from cache import get_cache, get_cache_stats, set_cached, get_cached, invalidate_pattern
     from resilience import with_retry, RetryConfig, get_write_queue, get_queue_status, get_rate_limiter
@@ -97,11 +98,7 @@ if CASHIER_AVAILABLE:
     logger.info("event=blueprint_registered name=cashier prefix=/cashier")
 
 # Global variables for admin features
-arduino = None
-arduino_bridge = None
 db = None
-card_reading_active = False
-pending_student_id = None
 
 # Cache for Google Sheets data to reduce API calls
 _sheets_cache = {}
@@ -190,12 +187,6 @@ def validate_card_uid(uid):
     if not UID_PATTERN.match(uid):
         return False, "Card UID format is invalid -- please scan the card again"
     return True, ""
-
-def normalize_card_uid(uid):
-    """Normalize card UID by removing leading zeros"""
-    if not uid:
-        return ""
-    return str(uid).strip().lstrip('0').upper()
 
 def login_required(f):
     """Decorator to require login (any role)"""
@@ -1048,17 +1039,20 @@ def get_recent_transactions():
 # Helper functions for Arduino communication
 def send_display(line1, line2=""):
     """Send display command to Arduino"""
+    arduino = card_reader_state.get('arduino')
     if arduino and arduino.is_open:
         command = f"<DISPLAY|{line1}|{line2}>\n"
         arduino.write(command.encode())
 
 def send_success(message):
     """Send success beep to Arduino"""
+    arduino = card_reader_state.get('arduino')
     if arduino and arduino.is_open:
         arduino.write(f"<SUCCESS|{message}>\n".encode())
 
 def send_error(message):
     """Send error beep to Arduino"""
+    arduino = card_reader_state.get('arduino')
     if arduino and arduino.is_open:
         arduino.write(f"<ERROR|{message}>\n".encode())
 
@@ -1081,11 +1075,11 @@ def get_serial_ports():
 @desktop_features
 def connect_serial():
     """Connect to Arduino"""
-    global arduino, arduino_bridge
     try:
         data = request.get_json()
         port = data.get('port')
         
+        arduino = card_reader_state.get('arduino')
         if arduino and arduino.is_open:
             arduino.close()
         
@@ -1095,6 +1089,8 @@ def connect_serial():
         # Initialize arduino bridge
         from arduino_bridge import ArduinoBridge
         arduino_bridge = ArduinoBridge(arduino, socketio)
+        
+        card_reader_state.update(arduino=arduino, arduino_bridge=arduino_bridge)
         
         # Make bridge available to cashier
         app.arduino_bridge = arduino_bridge
@@ -1114,14 +1110,14 @@ def connect_serial():
 @desktop_features
 def disconnect_serial():
     """Disconnect from Arduino"""
-    global arduino, card_reading_active
     try:
-        card_reading_active = False
+        card_reader_state.set('card_reading_active', False)
+        arduino = card_reader_state.get('arduino')
         if arduino and arduino.is_open:
             send_display("Bangko Admin", "Disconnected")
             time.sleep(0.5)
             arduino.close()
-            arduino = None
+            card_reader_state.set('arduino', None)
         return jsonify({'success': True})
     except (ConnectionError, TimeoutError) as e:
         logger.error(f"Serial connection error in disconnect_serial: {e}")
@@ -1134,12 +1130,11 @@ def disconnect_serial():
 @desktop_features
 def start_register():
     """Start card registration process"""
-    global card_reading_active
-    
-    if not arduino or not arduino.is_open:
+    ard = card_reader_state.get('arduino')
+    if not ard or not ard.is_open:
         return jsonify({'error': 'Arduino not connected'}), 400
     
-    card_reading_active = True
+    card_reader_state.set('card_reading_active', True)
     send_display("Tap ID Card", "to register...")
     socketio.emit('status', {'type': 'info', 'message': 'Waiting for ID card...'})
     
@@ -1153,17 +1148,14 @@ def start_register():
 @desktop_features
 def link_money_card():
     """Link money card to student"""
-    global card_reading_active, pending_student_id
-    
-    if not arduino or not arduino.is_open:
+    ard = card_reader_state.get('arduino')
+    if not ard or not ard.is_open:
         return jsonify({'error': 'Arduino not connected'}), 400
     
     data = request.get_json()
     student_id = data.get('student_id')
     
-    pending_student_id = student_id
-    
-    card_reading_active = True
+    card_reader_state.update(pending_student_id=student_id, card_reading_active=True)
     send_display("Tap Money Card", f"for {student_id[:8]}")
     socketio.emit('status', {'type': 'info', 'message': f'Waiting for money card for {student_id}...'})
     
@@ -1175,19 +1167,18 @@ def link_money_card():
 
 def read_card_thread(card_type):
     """Background thread to read RFID card"""
-    global card_reading_active, arduino
-    
-    if not arduino or not arduino.is_open:
+    ard = card_reader_state.get('arduino')
+    if not ard or not ard.is_open:
         socketio.emit('card_error', {'message': 'Arduino not connected'})
         return
     
-    arduino.reset_input_buffer()
+    ard.reset_input_buffer()
     start_time = time.time()
     
-    while card_reading_active and time.time() - start_time < 30:
+    while card_reader_state.get('card_reading_active') and time.time() - start_time < 30:
         try:
-            if arduino.in_waiting > 0:
-                line = arduino.readline().decode('utf-8', errors='ignore').strip()
+            if ard.in_waiting > 0:
+                line = ard.readline().decode('utf-8', errors='ignore').strip()
                 
                 if line.startswith('<CARD|') and line.endswith('>'):
                     uid = line[6:-1]
@@ -1212,7 +1203,7 @@ def read_card_thread(card_type):
                         continue
 
                     if len(uid) == 8:
-                        card_reading_active = False
+                        card_reader_state.set('card_reading_active', False)
                         
                         if card_type == 'id_card':
                             handle_id_card(uid)
@@ -1226,11 +1217,11 @@ def read_card_thread(card_type):
         except Exception as e:
             logger.error("event=card_read_error error=%s", e)
             socketio.emit('card_error', {'message': str(e)})
-            card_reading_active = False
+            card_reader_state.set('card_reading_active', False)
             return
     
-    if card_reading_active:
-        card_reading_active = False
+    if card_reader_state.get('card_reading_active'):
+        card_reader_state.set('card_reading_active', False)
         send_error("Timeout")
         socketio.emit('card_timeout', {'message': 'Card reading timeout'})
 
@@ -1286,10 +1277,8 @@ def handle_id_card(uid):
 
 def handle_money_card(uid):
     """Handle money card linking - check for duplicates in BOTH ID and money cards"""
-    global pending_student_id
-    
     try:
-        student_id = pending_student_id
+        student_id = card_reader_state.get('pending_student_id')
         if not student_id:
             send_error("No student")
             socketio.emit('card_error', {'message': 'No student ID provided'})
@@ -1669,9 +1658,8 @@ def report_lost_card():
 @admin_only
 def replace_lost_card():
     """Start process to replace a lost card"""
-    global card_reading_active, pending_student_id
-    
-    if not arduino or not arduino.is_open:
+    ard = card_reader_state.get('arduino')
+    if not ard or not ard.is_open:
         return jsonify({'error': 'Arduino not connected'}), 400
     
     data = request.get_json()
@@ -1696,9 +1684,7 @@ def replace_lost_card():
         return jsonify({'error': 'No pending lost card report for this student'}), 400
     
     # Store student_id for card reading
-    pending_student_id = student_id
-    
-    card_reading_active = True
+    card_reader_state.update(pending_student_id=student_id, card_reading_active=True)
     send_display("Tap NEW Card", f"for {student_id[:8]}")
     socketio.emit('status', {'type': 'info', 'message': f'Waiting for replacement card for {student_id}...'})
     
@@ -1711,10 +1697,8 @@ def replace_lost_card():
 
 def handle_replace_card(uid):
     """Handle replacement money card"""
-    global pending_student_id
-    
     try:
-        student_id = pending_student_id
+        student_id = card_reader_state.get('pending_student_id')
         if not student_id:
             send_error("No student")
             socketio.emit('card_error', {'message': 'No student ID provided'})
