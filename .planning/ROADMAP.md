@@ -75,7 +75,12 @@ Plans:
   3. Admin can deactivate a product and it no longer appears in the cashier grid
   4. Cashier POS displays all active products in a grid with name and price visible
   5. Cashier can select multiple products, see the running total, and complete the transaction as one charge to the student card
-**Plans**: TBD
+**Plans**: 4 plans
+Plans:
+- [ ] 03-01-PLAN.md — Backend: ensure_products_sheet(), merge-on-update, /api/products/toggle-status, resilience fixes
+- [ ] 03-02-PLAN.md — Admin UI: rewrite products.html with inline-edit table, always-visible add form, toggle, toasts
+- [ ] 03-03-PLAN.md — Cashier POS: fix category names (Snacks/Other), verify active filter and checkout flow
+- [ ] 03-04-PLAN.md — Human verification: end-to-end admin CRUD + cashier POS flow
 
 ### Phase 4: Student App + Notifications
 **Goal**: Students can see their real balance and full transaction history in the app, with itemized receipts for canteen purchases, and receive a push notification when their balance is low
