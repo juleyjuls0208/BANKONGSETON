@@ -18,7 +18,7 @@ the next begins.
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [ ] **Phase 1: Critical Fixes + Security** - System runs without critical bugs and is no longer a security liability
-- [x] **Phase 2: Code Quality** - Codebase is clean, safe, and maintainable (completed 2026-02-26)
+- [ ] **Phase 2: Code Quality** - Codebase is clean, safe, and maintainable (gap closure in progress)
 - [ ] **Phase 3: Product Management** - Admin can manage the canteen menu; cashier POS shows and sells products
 - [ ] **Phase 4: Student App + Notifications** - Students can see their balance and transaction history; low-balance alerts work
 - [ ] **Phase 5: NFC Architecture Prep** - Backend is ready for Android NFC integration in the next version
@@ -54,13 +54,14 @@ Plans:
   3. Global state variables in admin_dashboard.py are wrapped in a thread-safe class; concurrent card reads do not race
   4. The BankongSetonApp folder and all identified unused files are gone from the repository
   5. The project installs successfully with google-auth in place of oauth2client; no deprecation warnings from that dependency
-**Plans**: 5 plans
+**Plans**: 6 plans
 Plans:
 - [x] 02-01-PLAN.md — Create backend/utils.py: normalize_card_uid + CardReaderState + concurrency tests
 - [x] 02-02-PLAN.md — Fix errors.py console-only logging + archive dead code to _archive/
 - [x] 02-03-PLAN.md — Migrate oauth2client → google-auth, pin requirements.txt, smoke test
 - [x] 02-04-PLAN.md — Replace all print() with structured key=value logger calls across 6 files
 - [x] 02-05-PLAN.md — Wire utils.py into admin_dashboard.py + cashier_routes.py + api_server.py
+- [ ] 02-06-PLAN.md — Gap closure: fix get_logger() hierarchy + add setup_logging() to entry points
 
 ### Phase 3: Product Management
 **Goal**: Admin can maintain the canteen menu in the dashboard, and the cashier POS displays and sells those products in a single transaction
@@ -121,7 +122,7 @@ Phase 4 depends on Phase 3. Phase 6 depends on Phase 5.
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Critical Fixes + Security | 5/5 | Complete | 2026-02-26 |
-| 2. Code Quality | 5/5 | Complete   | 2026-02-26 |
+| 2. Code Quality | 5/6 | Gap closure | - |
 | 3. Product Management | 0/? | Not started | - |
 | 4. Student App + Notifications | 0/? | Not started | - |
 | 5. NFC Architecture Prep | 0/? | Not started | - |
