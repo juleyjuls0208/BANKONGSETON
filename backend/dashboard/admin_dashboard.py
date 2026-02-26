@@ -1907,6 +1907,77 @@ def get_students_with_lost_reports():
         logger.error(f"Unexpected error in get_students_with_lost_reports: {e}", exc_info=True)
         return jsonify({'error': 'An unexpected error occurred'}), 500
 
+# ============= NOTIFICATION SETTINGS =============
+
+def ensure_settings_sheet():
+    """Get or create the Settings sheet with Key/Value columns."""
+    try:
+        return db.worksheet('Settings')
+    except Exception:
+        ws = db.add_worksheet(title='Settings', rows=50, cols=2)
+        ws.update('A1:B1', [['Key', 'Value']])
+        return ws
+
+
+@app.route('/api/settings/threshold', methods=['GET'])
+@login_required
+def get_threshold():
+    """Get the global low-balance notification threshold."""
+    try:
+        ws = ensure_settings_sheet()
+        records = ws.get_all_records()
+        for r in records:
+            if r.get('Key') == 'low_balance_threshold':
+                return jsonify({'threshold': float(r.get('Value', 50))})
+        # Not set yet — return env default
+        return jsonify({'threshold': float(os.getenv('LOW_BALANCE_THRESHOLD', 50))})
+    except (gspread.exceptions.APIError, gspread.exceptions.WorksheetNotFound,
+            ConnectionError, TimeoutError) as e:
+        logger.error("event=get_threshold_failed error=%s", e)
+        return jsonify({'threshold': float(os.getenv('LOW_BALANCE_THRESHOLD', 50))})
+    except Exception as e:
+        logger.error("event=get_threshold_unexpected error=%s", e)
+        return jsonify({'threshold': float(os.getenv('LOW_BALANCE_THRESHOLD', 50))})
+
+
+@app.route('/api/settings/threshold', methods=['POST'])
+@login_required
+def set_threshold():
+    """Set the global low-balance notification threshold."""
+    try:
+        data = request.get_json()
+        value = float(data.get('threshold', 50))
+        if value < 0:
+            return jsonify({'error': 'Threshold must be non-negative'}), 400
+
+        ws = ensure_settings_sheet()
+        records = ws.get_all_records()
+
+        # Upsert: find existing row or append new one
+        existing_row = None
+        for idx, r in enumerate(records, start=2):  # row 1 is header
+            if r.get('Key') == 'low_balance_threshold':
+                existing_row = idx
+                break
+
+        if existing_row:
+            ws.update(f'B{existing_row}', [[str(value)]])
+        else:
+            ws.append_row(['low_balance_threshold', str(value)])
+
+        logger.info("event=threshold_updated value=%.2f", value)
+        return jsonify({'message': 'Threshold updated', 'threshold': value})
+
+    except ValueError:
+        return jsonify({'error': 'Threshold must be a number'}), 400
+    except (gspread.exceptions.APIError, ConnectionError, TimeoutError) as e:
+        logger.error("event=set_threshold_failed error=%s", e)
+        return jsonify({'error': 'Service unavailable, please try again'}), 503
+    except Exception as e:
+        logger.error("event=set_threshold_unexpected error=%s", e)
+        return jsonify({'error': 'An unexpected error occurred'}), 500
+
+
 # ============= SOCKET.IO EVENTS =============
 
 @socketio.on('connect')
