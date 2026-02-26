@@ -299,6 +299,7 @@
         // --- Checkout / Payment ---
 
         async function checkout() {
+            // Arduino connection is required for card reading; this guard is intentional
             if (!arduinoConnected) {
                 alert('Arduino not connected! Please connect to a COM port first.');
                 return;

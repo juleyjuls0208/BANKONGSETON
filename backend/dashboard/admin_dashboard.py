@@ -143,6 +143,17 @@ def get_worksheet_with_retry(sheet_name, retries=2):
             else:
                 raise e
 
+def ensure_products_sheet():
+    """Get Products worksheet, creating it with correct headers if missing."""
+    global db
+    try:
+        return get_worksheet_with_retry('Products')
+    except gspread.exceptions.WorksheetNotFound:
+        sheet = db.add_worksheet(title='Products', rows=100, cols=7)
+        sheet.update('A1:G1', [['ID', 'Name', 'Category', 'Price', 'ImageURL', 'Active', 'DateAdded']])
+        logger.info("event=products_sheet_created message=Products sheet did not exist, created with headers")
+        return sheet
+
 def get_cached_sheet_data(sheet_name, force_refresh=False):
     """Get worksheet data with caching to reduce API calls"""
     global _sheets_cache
@@ -304,7 +315,7 @@ def products_page():
 def get_products_list():
     """Get all products from Products sheet"""
     try:
-        products_sheet = db.worksheet('Products')
+        products_sheet = ensure_products_sheet()
         records = products_sheet.get_all_records()
         
         products = []
@@ -323,10 +334,10 @@ def get_products_list():
         return jsonify({'products': products})
     except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
             gspread.exceptions.WorksheetNotFound, ConnectionError, TimeoutError) as e:
-        logger.error(f"Google Sheets unavailable in get_products_list: {e}")
+        logger.error("event=products_list_error error=%s", e)
         return jsonify({'error': 'Service unavailable, please try again'}), 503
     except Exception as e:
-        logger.error(f"Unexpected error in get_products_list: {e}", exc_info=True)
+        logger.error("event=products_list_unexpected error=%s", e, exc_info=True)
         return jsonify({'error': 'An unexpected error occurred'}), 500
 
 @app.route('/api/products/update', methods=['POST'])
@@ -340,71 +351,80 @@ def update_product():
         if not product_id:
             return jsonify({'error': 'Product ID required'}), 400
         
-        products_sheet = db.worksheet('Products')
+        products_sheet = ensure_products_sheet()
         records = products_sheet.get_all_records()
         
-        # Find existing product
+        # Find existing row
         product_row = None
+        existing = {}
         for idx, record in enumerate(records, start=2):
             if record.get('ID') == product_id:
                 product_row = idx
+                existing = record
                 break
         
-        # Prepare data
-        product_data = [
-            product_id,
-            data.get('name', ''),
-            data.get('category', ''),
-            float(data.get('price', 0)),
-            data.get('image_url', ''),
-            'TRUE' if data.get('active', True) else 'FALSE',
-            data.get('date_added', '') if product_row else get_philippines_time().strftime('%Y-%m-%d')
-        ]
-        
+        # Merge: only update fields present in request payload
+        name = data.get('name', existing.get('Name', ''))
+        category = data.get('category', existing.get('Category', ''))
+        price = float(data.get('price', existing.get('Price', 0)))
+        image_url = data.get('image_url', existing.get('ImageURL', ''))
+        # active field: payload may be bool True/False or absent
+        if 'active' in data:
+            active_val = bool(data['active'])
+        else:
+            active_val = str(existing.get('Active', 'TRUE')).upper() == 'TRUE'
+        date_added = existing.get('DateAdded', get_philippines_time().strftime('%Y-%m-%d'))
+
+        row_data = [product_id, name, category, price, image_url,
+                    'TRUE' if active_val else 'FALSE', date_added]
+
         if product_row:
-            # Update existing
-            products_sheet.update(f'A{product_row}:G{product_row}', [product_data])
+            products_sheet.update(f'A{product_row}:G{product_row}', [row_data])
+            logger.info("event=product_updated id=%s", product_id)
             return jsonify({'success': True, 'message': 'Product updated'})
         else:
-            # Add new
-            products_sheet.append_row(product_data)
+            row_data[6] = get_philippines_time().strftime('%Y-%m-%d')
+            products_sheet.append_row(row_data)
+            logger.info("event=product_created id=%s", product_id)
             return jsonify({'success': True, 'message': 'Product created'})
     
     except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
             gspread.exceptions.WorksheetNotFound, ConnectionError, TimeoutError) as e:
-        logger.error(f"Google Sheets unavailable in update_product: {e}")
+        logger.error("event=update_product_error error=%s", e)
         return jsonify({'error': 'Service unavailable, please try again'}), 503
     except Exception as e:
-        logger.error(f"Unexpected error in update_product: {e}", exc_info=True)
+        logger.error("event=update_product_unexpected error=%s", e, exc_info=True)
         return jsonify({'error': 'An unexpected error occurred'}), 500
 
-@app.route('/api/products/delete', methods=['POST'])
+@app.route('/api/products/toggle-status', methods=['POST'])
 @login_required
-def delete_product():
-    """Deactivate a product (soft delete)"""
+def toggle_product_status():
+    """Toggle product active/inactive status"""
     try:
         data = request.get_json()
         product_id = data.get('id', '').strip()
-        
+        active = data.get('active', False)  # Default to deactivate
+
         if not product_id:
             return jsonify({'error': 'Product ID required'}), 400
-        
-        products_sheet = db.worksheet('Products')
+
+        products_sheet = ensure_products_sheet()
         records = products_sheet.get_all_records()
-        
+
         for idx, record in enumerate(records, start=2):
             if record.get('ID') == product_id:
-                products_sheet.update_cell(idx, 6, 'FALSE')  # Column F (Active)
-                return jsonify({'success': True, 'message': 'Product deactivated'})
-        
+                products_sheet.update_cell(idx, 6, 'TRUE' if active else 'FALSE')
+                logger.info("event=product_status_toggled id=%s active=%s", product_id, active)
+                return jsonify({'success': True, 'message': 'Product status updated'})
+
         return jsonify({'error': 'Product not found'}), 404
-    
+
     except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
             gspread.exceptions.WorksheetNotFound, ConnectionError, TimeoutError) as e:
-        logger.error(f"Google Sheets unavailable in deactivate_product: {e}")
+        logger.error("event=toggle_product_error error=%s", e)
         return jsonify({'error': 'Service unavailable, please try again'}), 503
     except Exception as e:
-        logger.error(f"Unexpected error in deactivate_product: {e}", exc_info=True)
+        logger.error("event=toggle_product_unexpected error=%s", e, exc_info=True)
         return jsonify({'error': 'An unexpected error occurred'}), 500
 
 @app.route('/transactions')
