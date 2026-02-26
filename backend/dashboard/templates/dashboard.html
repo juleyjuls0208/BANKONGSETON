@@ -384,6 +384,27 @@
             </div>
         </div>
         {% endif %}
+
+        <!-- Notification Settings -->
+        <div class="card mb-4 mt-4">
+          <div class="card-header">
+            <h5 class="mb-0">Notification Settings</h5>
+          </div>
+          <div class="card-body">
+            <div class="row align-items-end">
+              <div class="col-md-4">
+                <label for="thresholdInput" class="form-label">Low Balance Alert Threshold (฿)</label>
+                <input type="number" id="thresholdInput" class="form-control" min="0" step="1" placeholder="50">
+              </div>
+              <div class="col-md-2">
+                <button class="btn btn-primary" onclick="saveThreshold()">Save</button>
+              </div>
+              <div class="col-md-4">
+                <small id="thresholdMsg" class="text-muted"></small>
+              </div>
+            </div>
+          </div>
+        </div>
     </div>
 
     <!-- Load Balance Modal -->
@@ -1299,6 +1320,45 @@
         window.addEventListener('load', () => {
             PWA.updateOnlineStatus(navigator.onLine);
         });
+    </script>
+    <script>
+        // Load and save notification threshold
+        (function loadThreshold() {
+            fetch('/api/settings/threshold')
+                .then(r => r.json())
+                .then(data => { document.getElementById('thresholdInput').value = data.threshold || 50; })
+                .catch(() => {});
+        })();
+
+        function saveThreshold() {
+            const val = parseFloat(document.getElementById('thresholdInput').value);
+            if (isNaN(val) || val < 0) {
+                document.getElementById('thresholdMsg').textContent = 'Enter a valid amount';
+                document.getElementById('thresholdMsg').className = 'text-danger';
+                return;
+            }
+            fetch('/api/settings/threshold', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({threshold: val})
+            })
+            .then(r => r.json())
+            .then(data => {
+                const msg = document.getElementById('thresholdMsg');
+                if (data.threshold !== undefined) {
+                    msg.textContent = 'Saved!';
+                    msg.className = 'text-success';
+                } else {
+                    msg.textContent = data.error || 'Error saving';
+                    msg.className = 'text-danger';
+                }
+                setTimeout(() => { msg.textContent = ''; }, 3000);
+            })
+            .catch(() => {
+                document.getElementById('thresholdMsg').textContent = 'Network error';
+                document.getElementById('thresholdMsg').className = 'text-danger';
+            });
+        }
     </script>
 </body>
 </html>
