@@ -54,7 +54,13 @@ Plans:
   3. Global state variables in admin_dashboard.py are wrapped in a thread-safe class; concurrent card reads do not race
   4. The BankongSetonApp folder and all identified unused files are gone from the repository
   5. The project installs successfully with google-auth in place of oauth2client; no deprecation warnings from that dependency
-**Plans**: TBD
+**Plans**: 5 plans
+Plans:
+- [ ] 02-01-PLAN.md — Create backend/utils.py: normalize_card_uid + CardReaderState + concurrency tests
+- [ ] 02-02-PLAN.md — Fix errors.py console-only logging + archive dead code to _archive/
+- [ ] 02-03-PLAN.md — Migrate oauth2client → google-auth, pin requirements.txt, smoke test
+- [ ] 02-04-PLAN.md — Replace all print() with structured key=value logger calls across 6 files
+- [ ] 02-05-PLAN.md — Wire utils.py into admin_dashboard.py + cashier_routes.py + api_server.py
 
 ### Phase 3: Product Management
 **Goal**: Admin can maintain the canteen menu in the dashboard, and the cashier POS displays and sells those products in a single transaction
