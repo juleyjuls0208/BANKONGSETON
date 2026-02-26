@@ -9,16 +9,10 @@ project_home = '/home/bankoseton/FinanceDashboard'
 if project_home not in sys.path:
     sys.path.insert(0, project_home)
 
-# Set environment variables (optional - better to use .env file)
-# These are just defaults, .env file will override them
+# Set non-secret config defaults only.
+# All secrets (SECRET_KEY, FLASK_SECRET_KEY, credentials, API keys) MUST be set via
+# the .env file or PythonAnywhere environment variables dashboard — never hardcoded here.
 os.environ['GOOGLE_SHEETS_ID'] = '1S8GHhRCb8rztEAJK2XhPD7t6Oy_UL2fiNrOVgUPQ_P0'
-os.environ['SECRET_KEY'] = 'bangko-admin-secret-key-change-in-production'
-os.environ['FLASK_SECRET_KEY'] = 'bangko-admin-secret-key-change-in-production'
-os.environ['FINANCE_USERNAME'] = 'financedashboard'
-os.environ['FINANCE_PASSWORD'] = 'finance2025'
-os.environ['ADMIN_USERNAME'] = 'admindashboard'
-os.environ['ADMIN_PASSWORD'] = 'admin2025'
-os.environ['ARDUINO_API_KEY'] = 'bangko-arduino-bridge-secure-key-2026'
 os.environ['GOOGLE_CREDENTIALS_FILE'] = 'credentials.json'
 
 # Import the Flask app (WEB-ONLY version without Arduino)
