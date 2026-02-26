@@ -93,7 +93,14 @@ Plans:
   4. After a card tap at the cashier, the app balance refreshes to the new value within the next app open or background sync
   5. When a student's balance drops below the configured threshold, they receive a push notification on their Android device
   6. Admin can set the low-balance threshold globally or per student from the dashboard
-**Plans**: TBD
+**Plans**: 6 plans
+Plans:
+- [ ] 04-01-PLAN.md — Backend API fixes: FCM auth mismatch, offset pagination, balance_before in response + transaction log [APP-02, APP-03, APP-04, APP-05]
+- [ ] 04-02-PLAN.md — FCM sender + low-balance push notification wired into cashier transaction [NOTF-01]
+- [ ] 04-03-PLAN.md — Admin threshold settings: GET/POST /api/settings/threshold + dashboard UI [NOTF-02]
+- [ ] 04-04-PLAN.md — Android models/API client/LoginActivity FCM registration/SecureStorage last-balance [APP-01, APP-04, APP-05]
+- [ ] 04-05-PLAN.md — Android UI: HomeActivity refresh+persistence, TransactionsActivity infinite scroll, TransactionsAdapter color+receipt nav, ReceiptActivity [APP-01, APP-02, APP-03, APP-04, APP-05]
+- [ ] 04-06-PLAN.md — Human verification checkpoint: balance, transactions, receipt, threshold, FCM notification [APP-01, APP-02, APP-03, APP-04, APP-05, NOTF-01, NOTF-02]
 
 ### Phase 5: NFC Architecture Prep
 **Goal**: The backend exposes complete, documented NFC payment endpoints and persists VirtualCard state so the Android app can implement NFC in the next version without backend changes
@@ -131,6 +138,6 @@ Phase 4 depends on Phase 3. Phase 6 depends on Phase 5.
 | 1. Critical Fixes + Security | 5/5 | Complete | 2026-02-26 |
 | 2. Code Quality | 8/8 | Complete | 2026-02-26 |
 | 3. Product Management | 4/4 | Complete | 2026-02-26 |
-| 4. Student App + Notifications | 0/? | Not started | - |
+| 4. Student App + Notifications | 0/6 | Not started | - |
 | 5. NFC Architecture Prep | 0/? | Not started | - |
 | 6. Documentation | 0/? | Not started | - |
