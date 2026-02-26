@@ -19,6 +19,7 @@ try:
     logger = get_logger(__name__)
 except ImportError:
     logger = logging.getLogger(__name__)
+from utils import normalize_card_uid
 import time
 
 cashier_bp = Blueprint('cashier', __name__, 
@@ -234,7 +235,7 @@ def complete_sale():
         import sys
         sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
         
-        from admin_dashboard import get_sheets_client, normalize_card_uid, get_philippines_time
+        from admin_dashboard import get_sheets_client, get_philippines_time
         
         data = request.get_json()
         card_uid = data.get('card_uid', '').strip()

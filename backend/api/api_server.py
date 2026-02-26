@@ -26,6 +26,8 @@ try:
 except ImportError:
     logger = logging.getLogger(__name__)
 
+from utils import normalize_card_uid
+
 load_dotenv()
 
 # JWT Configuration
@@ -140,10 +142,6 @@ def require_auth(roles=None):
         
         return decorated_function
     return decorator
-
-def normalize_card_uid(uid):
-    """Normalize card UID by removing leading zeros"""
-    return str(uid).lstrip('0').upper()
 
 UID_PATTERN = re.compile(r'^[0-9A-Fa-f]{8}$')
 
