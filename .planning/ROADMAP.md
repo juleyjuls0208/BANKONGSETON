@@ -59,7 +59,7 @@ Plans:
 - [x] 02-01-PLAN.md — Create backend/utils.py: normalize_card_uid + CardReaderState + concurrency tests
 - [x] 02-02-PLAN.md — Fix errors.py console-only logging + archive dead code to _archive/
 - [x] 02-03-PLAN.md — Migrate oauth2client → google-auth, pin requirements.txt, smoke test
-- [ ] 02-04-PLAN.md — Replace all print() with structured key=value logger calls across 6 files
+- [x] 02-04-PLAN.md — Replace all print() with structured key=value logger calls across 6 files
 - [ ] 02-05-PLAN.md — Wire utils.py into admin_dashboard.py + cashier_routes.py + api_server.py
 
 ### Phase 3: Product Management
@@ -120,8 +120,8 @@ Phase 4 depends on Phase 3. Phase 6 depends on Phase 5.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Critical Fixes + Security | 1/5 | In progress | - |
-| 2. Code Quality | 3/5 | In Progress|  |
+| 1. Critical Fixes + Security | 5/5 | Complete | 2026-02-26 |
+| 2. Code Quality | 4/5 | In Progress|  |
 | 3. Product Management | 0/? | Not started | - |
 | 4. Student App + Notifications | 0/? | Not started | - |
 | 5. NFC Architecture Prep | 0/? | Not started | - |

@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-22)
 ## Current Position
 
 Phase: 2 of 6 (Code Quality)
-Plan: 3 of 5 completed in current phase
-Status: Phase 2 plan 03 complete
-Last activity: 2026-02-26 — Executed 02-03-PLAN.md: migrated all backend files from oauth2client to google-auth; pinned exact versions in requirements.txt; added smoke test
+Plan: 4 of 5 completed in current phase
+Status: Phase 2 plan 04 complete
+Last activity: 2026-02-26 — Executed 02-04-PLAN.md: replaced ~90 bare print() calls across 7 backend files with structured get_logger(__name__) event=key value logging
 
-Progress: [######----] 60% (phase 2)
+Progress: [########--] 80% (phase 2)
 
 ## Performance Metrics
 
@@ -67,7 +67,10 @@ Recent decisions affecting current work:
 - [02-03]: admin_dashboard.py and api_server.py were already migrated to google-auth before this plan — only config_validator.py and migrate_transactions.py required changes
 - [02-03]: Option A (explicit Credentials.from_service_account_file) used for config_validator.py to match existing pattern in _validate_google_sheets_connection
 - [02-03]: Option B (gspread.service_account shortcut) used for migrate_transactions.py — simplest migration, consistent with api_server.py
-- [02-03]: credentials.json format unchanged — google-auth uses identical service account JSON format as oauth2client
+- [02-04]: arduino_bridge.py was at backend/dashboard/ not backend/adapters/ as plan stated — found and fixed as Rule 3 (blocking path error)
+- [02-04]: email_service.py was out-of-scope but had 6 active print() calls — added as Rule 2 auto-fix to meet zero-print success criterion
+- [02-04]: test_phase1.py, test_phase3.py, generate_icons.py print() calls excluded (intentional test/utility output)
+- [02-04]: All log calls use lazy %s formatting (not f-strings); try/except ImportError pattern used for get_logger in all 7 files
 
 ### Pending Todos
 
@@ -83,5 +86,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Completed 02-03-PLAN.md (oauth2client → google-auth migration; requirements.txt pinned; smoke test).
+Stopped at: Completed 02-04-PLAN.md (replace print() with structured get_logger logging; zero print() in all active backend files; QUAL-01 complete).
 Resume file: None
