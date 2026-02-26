@@ -2,9 +2,9 @@
 Shared backend utility module.
 
 Exports:
-  - normalize_card_uid(uid) -> str
+  - normalize_card_uid(uid) -> str | None
       Canonical UID normalisation: strips whitespace, removes leading zeros,
-      uppercases. Returns "" for None / empty input.
+      uppercases. Returns None for None input, "" for empty/whitespace input.
 
   - CardReaderState
       Thread-safe wrapper around the four Arduino / card-reader globals
@@ -27,11 +27,11 @@ logger = logging.getLogger("bangko.utils")
 # UID normalisation
 # ---------------------------------------------------------------------------
 
-def normalize_card_uid(uid) -> str:
+def normalize_card_uid(uid) -> str | None:
     """Return a canonical card UID string.
 
     Rules (applied in order):
-      1. If *uid* is None or falsy-after-strip → return ""
+      1. If *uid* is None → return None
       2. Strip leading/trailing whitespace
       3. Strip leading zeros
       4. Uppercase
@@ -45,10 +45,10 @@ def normalize_card_uid(uid) -> str:
         uid: Raw UID value from card reader (may be None, str, bytes, int).
 
     Returns:
-        Normalised UID string, or "" when the input is empty/None.
+        Normalised UID string, or None when uid is None, or '' when uid is empty/whitespace-only.
     """
     if uid is None:
-        return ""
+        return None
     uid_str = str(uid).strip()
     if not uid_str:
         return ""
