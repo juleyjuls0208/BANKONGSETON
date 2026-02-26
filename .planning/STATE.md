@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-22)
 ## Current Position
 
 Phase: 4 of 6 (Student App + Notifications)
-Plan: 4 of 7 completed in current phase
+Plan: 5 of 7 completed in current phase
 Status: In progress
-Last activity: 2026-02-26 — Executed 04-04-PLAN.md: updated Android data layer — TransactionsResponse pagination (hasMore/total), Transaction.balanceBefore, offset-based getTransactions, FCM token registration post-login, and saveLastBalance/getLastBalance in SecureStorage; closes APP-01, APP-04, APP-05
+Last activity: 2026-02-26 — Executed 04-01-PLAN.md: fixed 4 blocking backend bugs (FCM 401 auth mismatch, missing offset pagination, missing balance_before, 8-column cashier log); closes APP-02, APP-03, APP-04, APP-05, NOTF-01
 
-Progress: [####------] 57% (phase 4, 4/7 plans)
+Progress: [#####-----] 71% (phase 4, 5/7 plans)
 
 ## Performance Metrics
 
