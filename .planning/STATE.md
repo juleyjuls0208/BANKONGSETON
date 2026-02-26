@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-22)
 ## Current Position
 
 Phase: 4 of 6 (Student App + Notifications)
-Plan: 5 of 7 completed in current phase
+Plan: 6 of 7 completed in current phase
 Status: In progress
-Last activity: 2026-02-26 — Executed 04-01-PLAN.md: fixed 4 blocking backend bugs (FCM 401 auth mismatch, missing offset pagination, missing balance_before, 8-column cashier log); closes APP-02, APP-03, APP-04, APP-05, NOTF-01
+Last activity: 2026-02-26 — Executed 04-05-PLAN.md: Android UI layer — HomeActivity balance spinner + persistence, TransactionsActivity infinite scroll, TransactionsAdapter color-coded rows, new ReceiptActivity with line items; closes APP-01, APP-02, APP-03, APP-04, APP-05
 
-Progress: [#####-----] 71% (phase 4, 5/7 plans)
+Progress: [######----] 85% (phase 4, 6/7 plans)
 
 ## Performance Metrics
 
@@ -37,6 +37,7 @@ Progress: [#####-----] 71% (phase 4, 5/7 plans)
 | Phase 04-student-app-notifications P03 | 30min | 2 tasks | 2 files |
 | Phase 04-student-app-notifications P04 | 1min | 2 tasks | 4 files |
 | Phase 04-student-app-notifications P02 | 1min | 2 tasks | 3 files |
+| Phase 04-student-app-notifications P05 | 3min | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -90,6 +91,8 @@ Recent decisions affecting current work:
 - [04-04]: Default page size for getTransactions changed 50→20 to match infinite scroll batch size in upcoming TransactionsActivity
 - [Phase 04-student-app-notifications]: Lazy firebase_admin import inside functions prevents crash when credentials file absent
 - [Phase 04-student-app-notifications]: Per-transaction Settings sheet read (not cached) allows admin threshold changes without restart
+- [Phase 04-student-app-notifications]: Created 5 missing XML layout files from scratch (activity_home, activity_transactions, activity_receipt, item_transaction, item_receipt_line) — res/layout/ was empty before Plan 05
+- [Phase 04-05]: Thai Baht symbol ฿ used throughout Android UI (fixed from ₱ in HomeActivity and TransactionsAdapter)
 
 ### Pending Todos
 
@@ -105,5 +108,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Completed 04-02-PLAN.md (fcm_sender.py + low-balance notification wired into cashier transaction flow; closes NOTF-01).
+Stopped at: Completed 04-05-PLAN.md (Android UI layer — HomeActivity spinner, TransactionsActivity infinite scroll, TransactionsAdapter color-coded rows, ReceiptActivity; closes APP-01-05). Plan 06 is human verification — no automated execution.
 Resume file: None
