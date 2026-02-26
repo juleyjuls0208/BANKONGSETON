@@ -10,32 +10,28 @@ See: .planning/PROJECT.md (updated 2026-02-22)
 ## Current Position
 
 Phase: 1 of 6 (Critical Fixes + Security)
-Plan: 3 of 3 completed in current phase
-Status: Phase 1 plan 03 complete
-Last activity: 2026-02-26 — Executed 01-03-PLAN.md: empty-credential guard, test secret cleanup, wsgi.py hardening
+Plan: 4 of 4 completed in current phase
+Status: Phase 1 plan 04 complete
+Last activity: 2026-02-26 — Executed 01-04-PLAN.md: card UID regex validation at all entry points (Arduino reader, API server, cashier POS)
 
 Progress: [##########] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
+- Total plans completed: 4
 - Average duration: 1-2min
-- Total execution time: 0.05 hours
+- Total execution time: 0.07 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01-critical-fixes-security | 3 | 5min | 2min |
+| 01-critical-fixes-security | 4 | 7min | 2min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (2min), 01-03 (1min)
-- Trend: -
-
-*Updated after each plan completion*
-| Phase 01-critical-fixes-security P02 | 2min | 1 tasks | 2 files |
-| Phase 01-critical-fixes-security P04 | 2min | 2 tasks | 3 files |
+- Last 5 plans: 01-01 (2min), 01-02 (2min), 01-03 (1min), 01-04 (2min)
+- Trend: Stable
 
 ## Accumulated Context
 
@@ -57,6 +53,7 @@ Recent decisions affecting current work:
 - [01-03]: wsgi.py retains only GOOGLE_SHEETS_ID/GOOGLE_CREDENTIALS_FILE as non-secret defaults
 - [Phase 01-02]: Used /cashier/api/products (JWT-protected) instead of /api/products/list (admin session required) to avoid auth mismatch
 - [Phase 01-02]: Added /cashier/api/logout route (missing from cashier_routes.py, called by template logout button)
+- [Phase 01-critical-fixes-security]: UID_PATTERN defined independently in each module to avoid cross-module import complexity given runtime sys.path.insert pattern in cashier_routes.py
 
 ### Pending Todos
 
@@ -72,5 +69,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Completed 01-03-PLAN.md (empty-credential guard, test secrets cleanup, wsgi.py hardening).
+Stopped at: Completed 01-04-PLAN.md (card UID regex validation at all entry points).
 Resume file: None
