@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-22)
 ## Current Position
 
 Phase: 2 of 6 (Code Quality)
-Plan: 4 of 5 completed in current phase
-Status: Phase 2 plan 04 complete
-Last activity: 2026-02-26 — Executed 02-04-PLAN.md: replaced ~90 bare print() calls across 7 backend files with structured get_logger(__name__) event=key value logging
+Plan: 5 of 5 completed in current phase
+Status: Phase 2 complete
+Last activity: 2026-02-26 — Executed 02-05-PLAN.md: wired utils.py into admin_dashboard, cashier_routes, api_server — 4 module globals replaced with CardReaderState singleton, normalize_card_uid consolidated
 
-Progress: [########--] 80% (phase 2)
+Progress: [##########] 100% (phase 2)
 
 ## Performance Metrics
 
@@ -70,7 +70,9 @@ Recent decisions affecting current work:
 - [02-04]: arduino_bridge.py was at backend/dashboard/ not backend/adapters/ as plan stated — found and fixed as Rule 3 (blocking path error)
 - [02-04]: email_service.py was out-of-scope but had 6 active print() calls — added as Rule 2 auto-fix to meet zero-print success criterion
 - [02-04]: test_phase1.py, test_phase3.py, generate_icons.py print() calls excluded (intentional test/utility output)
-- [02-04]: All log calls use lazy %s formatting (not f-strings); try/except ImportError pattern used for get_logger in all 7 files
+- [02-05]: Use card_reader_state.update() for atomic multi-key writes (pending_student_id + card_reading_active set together)
+- [02-05]: Keep get_sheets_client/get_philippines_time in cashier_routes inline admin_dashboard import — only normalize_card_uid moved to utils
+- [02-05]: api_server.py normalize_card_uid lacked None-safety; utils version adds None guard as correctness improvement
 
 ### Pending Todos
 
@@ -86,5 +88,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Completed 02-04-PLAN.md (replace print() with structured get_logger logging; zero print() in all active backend files; QUAL-01 complete).
+Stopped at: Completed 02-05-PLAN.md (wire utils.py into admin_dashboard, cashier_routes, api_server; Phase 2 complete).
 Resume file: None
