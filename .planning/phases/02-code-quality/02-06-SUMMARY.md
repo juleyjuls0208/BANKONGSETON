@@ -65,7 +65,7 @@ Each task was committed atomically:
 1. **Task 1: Fix get_logger() to return bangko.* child loggers** - `eabde84` (fix)
 2. **Task 2: Add setup_logging() calls to entry-point __main__ blocks** - `46a0e91` (fix)
 
-**Plan metadata:** `(pending docs commit)` (docs: complete plan)
+**Plan metadata:** `149d17a` (docs: complete plan)
 
 ## Files Created/Modified
 - `backend/errors.py` - get_logger() now prepends 'bangko.' for non-bangko names
