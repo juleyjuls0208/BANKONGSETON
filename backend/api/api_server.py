@@ -16,6 +16,7 @@ import secrets
 import jwt
 from functools import wraps
 import json
+import re
 
 load_dotenv()
 
@@ -140,6 +141,16 @@ def require_auth(roles=None):
 def normalize_card_uid(uid):
     """Normalize card UID by removing leading zeros"""
     return str(uid).lstrip('0').upper()
+
+UID_PATTERN = re.compile(r'^[0-9A-Fa-f]{8}$')
+
+def validate_card_uid(uid):
+    """Validate card UID format. Returns (is_valid, error_message)."""
+    if not uid:
+        return False, "Card UID is empty"
+    if not UID_PATTERN.match(uid):
+        return False, "Card UID format is invalid"
+    return True, ""
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
@@ -597,6 +608,11 @@ def process_cashier_transaction():
         
         if not card_uid or not items or total <= 0:
             return jsonify({'error': 'Invalid transaction data'}), 400
+        
+        # Validate card UID format before any Sheets query (BUG-02, SEC-04)
+        valid, err_msg = validate_card_uid(card_uid)
+        if not valid:
+            return jsonify({'error': err_msg}), 400
         
         # Normalize card UID
         normalized_card = normalize_card_uid(card_uid)

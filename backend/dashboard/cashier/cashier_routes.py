@@ -8,6 +8,7 @@ from functools import wraps
 import jwt
 import os
 import json
+import re
 
 cashier_bp = Blueprint('cashier', __name__, 
                        template_folder='templates',
@@ -16,6 +17,8 @@ cashier_bp = Blueprint('cashier', __name__,
 
 JWT_SECRET = os.getenv('JWT_SECRET', 'bangko-jwt-secret-2026')
 JWT_ALGORITHM = 'HS256'
+
+UID_PATTERN = re.compile(r'^[0-9A-Fa-f]{8}$')
 
 def jwt_required(roles=None):
     """Decorator to require JWT authentication"""
@@ -217,6 +220,10 @@ def complete_sale():
         
         if not card_uid:
             return jsonify({'error': 'Card UID required'}), 400
+        
+        # Validate card UID format before any Sheets query (BUG-02, SEC-04)
+        if not UID_PATTERN.match(card_uid):
+            return jsonify({'error': 'Card UID format is invalid -- please scan the card again'}), 400
         
         # Get pending transaction
         pending = flask_session.get('pending_transaction')
