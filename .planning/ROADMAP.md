@@ -60,7 +60,7 @@ Plans:
 - [x] 02-02-PLAN.md — Fix errors.py console-only logging + archive dead code to _archive/
 - [x] 02-03-PLAN.md — Migrate oauth2client → google-auth, pin requirements.txt, smoke test
 - [x] 02-04-PLAN.md — Replace all print() with structured key=value logger calls across 6 files
-- [ ] 02-05-PLAN.md — Wire utils.py into admin_dashboard.py + cashier_routes.py + api_server.py
+- [x] 02-05-PLAN.md — Wire utils.py into admin_dashboard.py + cashier_routes.py + api_server.py
 
 ### Phase 3: Product Management
 **Goal**: Admin can maintain the canteen menu in the dashboard, and the cashier POS displays and sells those products in a single transaction
