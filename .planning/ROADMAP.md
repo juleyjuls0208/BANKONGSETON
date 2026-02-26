@@ -18,7 +18,7 @@ the next begins.
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [ ] **Phase 1: Critical Fixes + Security** - System runs without critical bugs and is no longer a security liability
-- [ ] **Phase 2: Code Quality** - Codebase is clean, safe, and maintainable (gap closure in progress)
+- [ ] **Phase 2: Code Quality** - Codebase is clean, safe, and maintainable ✓ complete
 - [ ] **Phase 3: Product Management** - Admin can manage the canteen menu; cashier POS shows and sells products
 - [ ] **Phase 4: Student App + Notifications** - Students can see their balance and transaction history; low-balance alerts work
 - [ ] **Phase 5: NFC Architecture Prep** - Backend is ready for Android NFC integration in the next version
@@ -62,8 +62,8 @@ Plans:
 - [x] 02-04-PLAN.md — Replace all print() with structured key=value logger calls across 6 files
 - [x] 02-05-PLAN.md — Wire utils.py into admin_dashboard.py + cashier_routes.py + api_server.py
 - [x] 02-06-PLAN.md — Gap closure: fix get_logger() hierarchy + add setup_logging() to entry points
-- [ ] 02-07-PLAN.md — Gap closure: fix normalize_card_uid(None) to return None (QUAL-02)
-- [ ] 02-08-PLAN.md — Gap closure: install Flask runtime deps, verify structured server startup (QUAL-01)
+- [x] 02-07-PLAN.md — Gap closure: fix normalize_card_uid(None) to return None (QUAL-02)
+- [x] 02-08-PLAN.md — Gap closure: install Flask runtime deps, verify structured server startup (QUAL-01)
 
 ### Phase 3: Product Management
 **Goal**: Admin can maintain the canteen menu in the dashboard, and the cashier POS displays and sells those products in a single transaction
@@ -124,7 +124,7 @@ Phase 4 depends on Phase 3. Phase 6 depends on Phase 5.
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Critical Fixes + Security | 5/5 | Complete | 2026-02-26 |
-| 2. Code Quality | 7/8 | In Progress|  |
+| 2. Code Quality | 8/8 | Complete | 2026-02-26 |
 | 3. Product Management | 0/? | Not started | - |
 | 4. Student App + Notifications | 0/? | Not started | - |
 | 5. NFC Architecture Prep | 0/? | Not started | - |
