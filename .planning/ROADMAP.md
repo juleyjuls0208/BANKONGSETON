@@ -19,7 +19,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [ ] **Phase 1: Critical Fixes + Security** - System runs without critical bugs and is no longer a security liability
 - [ ] **Phase 2: Code Quality** - Codebase is clean, safe, and maintainable ✓ complete
-- [ ] **Phase 3: Product Management** - Admin can manage the canteen menu; cashier POS shows and sells products
+- [ ] **Phase 3: Product Management** - Admin can manage the canteen menu; cashier POS shows and sells products ✓ complete
 - [ ] **Phase 4: Student App + Notifications** - Students can see their balance and transaction history; low-balance alerts work
 - [ ] **Phase 5: NFC Architecture Prep** - Backend is ready for Android NFC integration in the next version
 - [ ] **Phase 6: Documentation** - System is fully documented and can be understood by any developer
@@ -77,10 +77,10 @@ Plans:
   5. Cashier can select multiple products, see the running total, and complete the transaction as one charge to the student card
 **Plans**: 4 plans
 Plans:
-- [ ] 03-01-PLAN.md — Backend: ensure_products_sheet(), merge-on-update, /api/products/toggle-status, resilience fixes
-- [ ] 03-02-PLAN.md — Admin UI: rewrite products.html with inline-edit table, always-visible add form, toggle, toasts
-- [ ] 03-03-PLAN.md — Cashier POS: fix category names (Snacks/Other), verify active filter and checkout flow
-- [ ] 03-04-PLAN.md — Human verification: end-to-end admin CRUD + cashier POS flow
+- [x] 03-01-PLAN.md — Backend: ensure_products_sheet(), merge-on-update, /api/products/toggle-status, resilience fixes
+- [x] 03-02-PLAN.md — Admin UI: rewrite products.html with inline-edit table, always-visible add form, toggle, toasts
+- [x] 03-03-PLAN.md — Cashier POS: fix category names (Snacks/Other), verify active filter and checkout flow
+- [x] 03-04-PLAN.md — Human verification: end-to-end admin CRUD + cashier POS flow
 
 ### Phase 4: Student App + Notifications
 **Goal**: Students can see their real balance and full transaction history in the app, with itemized receipts for canteen purchases, and receive a push notification when their balance is low
@@ -130,7 +130,7 @@ Phase 4 depends on Phase 3. Phase 6 depends on Phase 5.
 |-------|----------------|--------|-----------|
 | 1. Critical Fixes + Security | 5/5 | Complete | 2026-02-26 |
 | 2. Code Quality | 8/8 | Complete | 2026-02-26 |
-| 3. Product Management | 0/4 | Not started | - |
+| 3. Product Management | 4/4 | Complete | 2026-02-26 |
 | 4. Student App + Notifications | 0/? | Not started | - |
 | 5. NFC Architecture Prep | 0/? | Not started | - |
 | 6. Documentation | 0/? | Not started | - |

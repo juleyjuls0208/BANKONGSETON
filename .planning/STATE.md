@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-22)
 
 **Core value:** Students can pay for canteen food instantly by tapping their RFID card, with their balance always visible in the app
-**Current focus:** Phase 2 - Code Quality
+**Current focus:** Phase 4 - Student App + Notifications
 
 ## Current Position
 
-Phase: 2 of 6 (Code Quality)
-Plan: 8 of 8 completed in current phase
-Status: Phase 2 complete
-Last activity: 2026-02-26 — Executed 02-08-PLAN.md: installed Flask/gspread/pyserial/pyjwt/psutil/openpyxl/Flask-CORS/Flask-SocketIO/gunicorn system-wide; server starts with structured key=value log output; closes QUAL-01 environment gap
+Phase: 3 of 6 (Product Management)
+Plan: 4 of 4 completed in current phase
+Status: Phase 3 complete
+Last activity: 2026-02-26 — Executed 03-04-PLAN.md: human verification approved — admin product CRUD (add/inline-edit/toggle/toasts) and cashier POS (Food/Drinks/Snacks/Other tabs, active-only products, working cart) all confirmed working; closes PROD-01 through PROD-06
 
-Progress: [##########] 100% (phase 2)
+Progress: [##########] 100% (phase 3)
 
 ## Performance Metrics
 
@@ -75,6 +75,8 @@ Recent decisions affecting current work:
 - [02-05]: api_server.py normalize_card_uid lacked None-safety; utils version adds None guard as correctness improvement
 - [02-08]: No code changes required — requirements.txt was already complete; gap was uninstalled environment only
 - [02-08]: System-wide pip install maintained (consistent with 02-01 decision; no venv in this project)
+- [03-04]: Human verification gate required for visual/interactive UI concerns — toast notifications and inline edit state changes cannot be automated in CI
+- [03-04]: Automated pre-checks (syntax + HTML parse + category assertions) run before human checkpoint to eliminate trivial failures early
 
 ### Pending Todos
 
@@ -90,5 +92,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Completed 02-08-PLAN.md (install Flask runtime deps system-wide; server starts with structured log output; closes QUAL-01; Phase 2 fully complete — all 8 plans executed).
+Stopped at: Completed 03-04-PLAN.md (human verification approved — Phase 3 product management fully complete: admin CRUD + cashier POS visually confirmed; all 4 plans executed; closes PROD-01 through PROD-06).
 Resume file: None
