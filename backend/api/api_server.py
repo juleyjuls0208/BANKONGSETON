@@ -700,7 +700,35 @@ def process_cashier_transaction():
         ]
         
         trans_sheet.append_row(transaction_row)
-        
+
+        # Low-balance push notification — fires after transaction is committed
+        # Never blocks or rolls back the transaction response
+        try:
+            # Read threshold from admin-configured Settings sheet; fall back to env var
+            threshold = float(os.getenv('LOW_BALANCE_THRESHOLD', 50))
+            try:
+                settings_sheet = get_worksheet_with_retry('Settings')
+                settings_records = settings_sheet.get_all_records()
+                for row in settings_records:
+                    if str(row.get('Key', '')).strip().lower() == 'low_balance_threshold':
+                        threshold = float(row.get('Value', threshold))
+                        break
+            except Exception as settings_err:
+                logger.warning("event=settings_read_failed error=%s using_env_default=%.0f", settings_err, threshold)
+            if new_balance < threshold and student_id:
+                users_sheet2 = get_worksheet_with_retry('Users')
+                user_records2 = users_sheet2.get_all_records()
+                for user in user_records2:
+                    if str(user.get('StudentID')) == str(student_id):
+                        fcm_token = str(user.get('FCMToken', '')).strip()
+                        if fcm_token:
+                            from fcm_sender import send_low_balance_push
+                            send_low_balance_push(fcm_token, new_balance)
+                        break
+        except Exception as notif_error:
+            logger.warning("event=low_balance_notify_failed error=%s", notif_error)
+            # Never block the transaction response
+
         # Send email receipt (async with retry)
         if student_id:
             users_sheet = get_worksheet_with_retry('Users')
