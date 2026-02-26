@@ -443,6 +443,7 @@ def get_transactions():
                     'timestamp': record.get('Timestamp', ''),
                     'type': record.get('TransactionType', ''),
                     'amount': float(record.get('Amount', 0)),
+                    'balance_before': float(record.get('BalanceBefore', 0) or 0),  # NEW
                     'balance': float(record.get('BalanceAfter', 0)),
                     'description': f"{record.get('TransactionType', '')} - {record.get('Status', '')}",
                     'items': items  # Include itemized receipt
@@ -692,9 +693,10 @@ def process_cashier_transaction():
             normalized_card,
             'Purchase',
             -total,
-            new_balance,
+            current_balance,  # BalanceBefore (column 5) — NEW
+            new_balance,      # BalanceAfter (column 6)
             'Success',
-            json.dumps(items)  # ItemsJson as JSON string
+            json.dumps(items)  # ItemsJson (column 8)
         ]
         
         trans_sheet.append_row(transaction_row)
