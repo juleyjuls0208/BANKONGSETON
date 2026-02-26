@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-22)
 ## Current Position
 
 Phase: 2 of 6 (Code Quality)
-Plan: 2 of 5 completed in current phase
-Status: Phase 2 plan 02 complete
-Last activity: 2026-02-26 — Executed 02-02-PLAN.md: console-only key=value logging in errors.py; archived web_app_complete.py and mobile/BankongSetonApp to _archive/
+Plan: 3 of 5 completed in current phase
+Status: Phase 2 plan 03 complete
+Last activity: 2026-02-26 — Executed 02-03-PLAN.md: migrated all backend files from oauth2client to google-auth; pinned exact versions in requirements.txt; added smoke test
 
-Progress: [####------] 40% (phase 2)
+Progress: [######----] 60% (phase 2)
 
 ## Performance Metrics
 
@@ -28,10 +28,10 @@ Progress: [####------] 40% (phase 2)
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-critical-fixes-security | 4 | 7min | 2min |
-| 02-code-quality | 1 | 2min | 2min |
+| 02-code-quality | 3 | 7min | 2min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (2min), 01-02 (2min), 01-03 (1min), 01-04 (2min), 02-01 (2min)
+- Last 5 plans: 01-04 (2min), 02-01 (2min), 02-02 (2min), 02-03 (3min), —
 - Trend: Stable
 
 ## Accumulated Context
@@ -64,6 +64,10 @@ Recent decisions affecting current work:
 - [02-01]: threading.Lock (not RLock) for CardReaderState — re-entrant locking not needed since get/set/update do not call each other
 - [02-01]: No imports from errors.py in utils.py — avoids circular import risk given runtime sys.path.insert pattern
 - [02-01]: pytest + python-dotenv installed system-wide (no venv present in this project)
+- [02-03]: admin_dashboard.py and api_server.py were already migrated to google-auth before this plan — only config_validator.py and migrate_transactions.py required changes
+- [02-03]: Option A (explicit Credentials.from_service_account_file) used for config_validator.py to match existing pattern in _validate_google_sheets_connection
+- [02-03]: Option B (gspread.service_account shortcut) used for migrate_transactions.py — simplest migration, consistent with api_server.py
+- [02-03]: credentials.json format unchanged — google-auth uses identical service account JSON format as oauth2client
 
 ### Pending Todos
 
@@ -73,11 +77,11 @@ None yet.
 
 - ~~Phase 1: Cashier POS products bug root cause not yet confirmed~~ RESOLVED in 01-02: added /cashier/api/products and /cashier/api/logout routes
 - ~~Phase 1: Empty credential login (admin_dashboard.py line 221) appears intentional; needs user decision on replacement strategy~~ RESOLVED in 01-03
-- Phase 2: QUAL-05 (oauth2client -> google-auth) may require credential file format change — verify before executing
+- ~~Phase 2: QUAL-05 (oauth2client -> google-auth) may require credential file format change — verify before executing~~ RESOLVED in 02-03: credentials.json format unchanged; google-auth uses identical service account JSON
 - Phase 4: Push notifications require FCM setup; check if Android app already has FCM dependency before planning
 
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Completed 02-02-PLAN.md (console-only logging + dead code archive).
+Stopped at: Completed 02-03-PLAN.md (oauth2client → google-auth migration; requirements.txt pinned; smoke test).
 Resume file: None

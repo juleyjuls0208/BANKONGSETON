@@ -39,10 +39,10 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 5 plans
 Plans:
 - [x] 01-01-PLAN.md -- Startup hardening (secret key guard, CORS restriction, credential redaction) [SEC-01, SEC-02, SEC-03]
-- [ ] 01-02-PLAN.md -- Fix cashier POS blank screen (template corruption rewrite) [BUG-01]
-- [ ] 01-03-PLAN.md -- Empty credential login guard, test file secrets cleanup, wsgi.py fix [BUG-04, SEC-05]
-- [ ] 01-04-PLAN.md -- Card UID input validation (regex hex format check at all entry points) [BUG-02, SEC-04]
-- [ ] 01-05-PLAN.md -- Graceful Sheets error handling and transaction atomicity with retry/rollback [BUG-03, BUG-05]
+- [x] 01-02-PLAN.md -- Fix cashier POS blank screen (template corruption rewrite) [BUG-01]
+- [x] 01-03-PLAN.md -- Empty credential login guard, test file secrets cleanup, wsgi.py fix [BUG-04, SEC-05]
+- [x] 01-04-PLAN.md -- Card UID input validation (regex hex format check at all entry points) [BUG-02, SEC-04]
+- [x] 01-05-PLAN.md -- Graceful Sheets error handling and transaction atomicity with retry/rollback [BUG-03, BUG-05]
 
 ### Phase 2: Code Quality
 **Goal**: The codebase is safe to modify, with consistent logging, centralized utilities, and no dead code or deprecated dependencies
@@ -56,9 +56,9 @@ Plans:
   5. The project installs successfully with google-auth in place of oauth2client; no deprecation warnings from that dependency
 **Plans**: 5 plans
 Plans:
-- [ ] 02-01-PLAN.md — Create backend/utils.py: normalize_card_uid + CardReaderState + concurrency tests
-- [ ] 02-02-PLAN.md — Fix errors.py console-only logging + archive dead code to _archive/
-- [ ] 02-03-PLAN.md — Migrate oauth2client → google-auth, pin requirements.txt, smoke test
+- [x] 02-01-PLAN.md — Create backend/utils.py: normalize_card_uid + CardReaderState + concurrency tests
+- [x] 02-02-PLAN.md — Fix errors.py console-only logging + archive dead code to _archive/
+- [x] 02-03-PLAN.md — Migrate oauth2client → google-auth, pin requirements.txt, smoke test
 - [ ] 02-04-PLAN.md — Replace all print() with structured key=value logger calls across 6 files
 - [ ] 02-05-PLAN.md — Wire utils.py into admin_dashboard.py + cashier_routes.py + api_server.py
 
