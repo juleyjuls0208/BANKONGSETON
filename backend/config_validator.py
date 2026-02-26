@@ -6,7 +6,7 @@ import sys
 from typing import Dict, List, Optional, Tuple
 from dotenv import load_dotenv
 import gspread
-from oauth2client.service_account import ServiceAccountCredentials
+from google.oauth2.service_account import Credentials
 import serial.tools.list_ports
 
 # Load environment variables
@@ -167,13 +167,13 @@ class ConfigValidator:
                 self.results.append(result)
                 return
             
-            scope = [
-                'https://spreadsheets.google.com/feeds',
+            scopes = [
+                'https://www.googleapis.com/auth/spreadsheets',
                 'https://www.googleapis.com/auth/drive'
             ]
             
-            creds = ServiceAccountCredentials.from_json_keyfile_name(credentials_path, scope)
-            client = gspread.authorize(creds)
+            credentials = Credentials.from_service_account_file(credentials_path, scopes=scopes)
+            client = gspread.authorize(credentials)
             
             sheets_id = os.getenv('GOOGLE_SHEETS_ID')
             if not sheets_id:
@@ -217,13 +217,13 @@ class ConfigValidator:
             if not credentials_path:
                 return
             
-            scope = [
-                'https://spreadsheets.google.com/feeds',
+            scopes = [
+                'https://www.googleapis.com/auth/spreadsheets',
                 'https://www.googleapis.com/auth/drive'
             ]
             
-            creds = ServiceAccountCredentials.from_json_keyfile_name(credentials_path, scope)
-            client = gspread.authorize(creds)
+            credentials = Credentials.from_service_account_file(credentials_path, scopes=scopes)
+            client = gspread.authorize(credentials)
             spreadsheet = client.open_by_key(os.getenv('GOOGLE_SHEETS_ID'))
             
             # Required sheets and their columns
