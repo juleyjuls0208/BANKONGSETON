@@ -17,6 +17,9 @@ import jwt
 from functools import wraps
 import json
 import re
+import logging
+
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
@@ -235,11 +238,13 @@ def login():
             }
         })
         
+    except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
+            gspread.exceptions.WorksheetNotFound, ConnectionError, TimeoutError) as e:
+        logger.error(f"Google Sheets unavailable in login: {e}")
+        return jsonify({'error': 'Service unavailable, please try again'}), 503
     except Exception as e:
-        print(f"API Error: {e}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Unexpected error in login: {e}", exc_info=True)
+        return jsonify({'error': 'An unexpected error occurred'}), 500
 
 @app.route('/api/student/profile', methods=['GET'])
 def get_profile():
@@ -300,11 +305,13 @@ def get_profile():
             'date_registered': student.get('DateRegistered', '')
         })
         
+    except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
+            gspread.exceptions.WorksheetNotFound, ConnectionError, TimeoutError) as e:
+        logger.error(f"Google Sheets unavailable in get_profile: {e}")
+        return jsonify({'error': 'Service unavailable, please try again'}), 503
     except Exception as e:
-        print(f"API Error in get_profile: {e}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Unexpected error in get_profile: {e}", exc_info=True)
+        return jsonify({'error': 'An unexpected error occurred'}), 500
 
 @app.route('/api/student/balance', methods=['GET'])
 def get_balance():
@@ -361,11 +368,13 @@ def get_balance():
             'money_card': money_card
         })
         
+    except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
+            gspread.exceptions.WorksheetNotFound, ConnectionError, TimeoutError) as e:
+        logger.error(f"Google Sheets unavailable in get_balance: {e}")
+        return jsonify({'error': 'Service unavailable, please try again'}), 503
     except Exception as e:
-        print(f"API Error in get_balance: {e}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Unexpected error in get_balance: {e}", exc_info=True)
+        return jsonify({'error': 'An unexpected error occurred'}), 500
 
 @app.route('/api/student/transactions', methods=['GET'])
 def get_transactions():
@@ -449,9 +458,13 @@ def get_transactions():
             'count': len(transactions)
         })
         
+    except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
+            gspread.exceptions.WorksheetNotFound, ConnectionError, TimeoutError) as e:
+        logger.error(f"Google Sheets unavailable in get_transactions: {e}")
+        return jsonify({'error': 'Service unavailable, please try again'}), 503
     except Exception as e:
-        print(f"API Error: {e}")
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Unexpected error in get_transactions: {e}", exc_info=True)
+        return jsonify({'error': 'An unexpected error occurred'}), 500
 
 @app.route('/api/auth/logout', methods=['POST'])
 def logout():
@@ -468,9 +481,13 @@ def logout():
         
         return jsonify({'message': 'Logged out successfully'})
         
+    except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
+            gspread.exceptions.WorksheetNotFound, ConnectionError, TimeoutError) as e:
+        logger.error(f"Google Sheets unavailable in logout: {e}")
+        return jsonify({'error': 'Service unavailable, please try again'}), 503
     except Exception as e:
-        print(f"API Error: {e}")
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Unexpected error in logout: {e}", exc_info=True)
+        return jsonify({'error': 'An unexpected error occurred'}), 500
 
 # ==================== NEW PHASE 1 ENDPOINTS ====================
 
@@ -529,9 +546,13 @@ def get_products():
             else:
                 return jsonify({'products': [], 'count': 0})
     
+    except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
+            gspread.exceptions.WorksheetNotFound, ConnectionError, TimeoutError) as e:
+        logger.error(f"Google Sheets unavailable in get_products: {e}")
+        return jsonify({'error': 'Service unavailable, please try again'}), 503
     except Exception as e:
-        print(f"API Error: {e}")
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Unexpected error in get_products: {e}", exc_info=True)
+        return jsonify({'error': 'An unexpected error occurred'}), 500
 
 @app.route('/api/products', methods=['POST'])
 @require_auth(roles=['admin', 'cashier'])
@@ -580,11 +601,13 @@ def manage_product():
             products_sheet.append_row(product_data)
             return jsonify({'message': 'Product created', 'id': data['id']}), 201
     
+    except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
+            gspread.exceptions.WorksheetNotFound, ConnectionError, TimeoutError) as e:
+        logger.error(f"Google Sheets unavailable in manage_product: {e}")
+        return jsonify({'error': 'Service unavailable, please try again'}), 503
     except Exception as e:
-        print(f"API Error: {e}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Unexpected error in manage_product: {e}", exc_info=True)
+        return jsonify({'error': 'An unexpected error occurred'}), 500
 
 @app.route('/api/cashier/transaction', methods=['POST'])
 @require_auth(roles=['admin', 'cashier'])
@@ -698,11 +721,13 @@ def process_cashier_transaction():
             'timestamp': timestamp
         })
     
+    except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
+            gspread.exceptions.WorksheetNotFound, ConnectionError, TimeoutError) as e:
+        logger.error(f"Google Sheets unavailable in process_cashier_transaction: {e}")
+        return jsonify({'error': 'Service unavailable, please try again'}), 503
     except Exception as e:
-        print(f"API Error: {e}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Unexpected error in process_cashier_transaction: {e}", exc_info=True)
+        return jsonify({'error': 'An unexpected error occurred'}), 500
 
 @app.route('/api/users/fcm-token', methods=['POST'])
 @require_auth(roles=['student'])
@@ -746,11 +771,13 @@ def register_fcm_token():
         
         return jsonify({'message': 'FCM token registered'})
     
+    except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
+            gspread.exceptions.WorksheetNotFound, ConnectionError, TimeoutError) as e:
+        logger.error(f"Google Sheets unavailable in register_fcm_token: {e}")
+        return jsonify({'error': 'Service unavailable, please try again'}), 503
     except Exception as e:
-        print(f"API Error: {e}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Unexpected error in register_fcm_token: {e}", exc_info=True)
+        return jsonify({'error': 'An unexpected error occurred'}), 500
 
 if __name__ == '__main__':
     port = int(os.getenv('API_PORT', 5001))

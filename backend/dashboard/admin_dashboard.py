@@ -18,6 +18,9 @@ import pytz
 from functools import wraps
 import threading
 import re
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Import Phase 1 modules
 import sys
@@ -329,8 +332,13 @@ def get_products_list():
             })
         
         return jsonify({'products': products})
+    except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
+            gspread.exceptions.WorksheetNotFound, ConnectionError, TimeoutError) as e:
+        logger.error(f"Google Sheets unavailable in get_products_list: {e}")
+        return jsonify({'error': 'Service unavailable, please try again'}), 503
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Unexpected error in get_products_list: {e}", exc_info=True)
+        return jsonify({'error': 'An unexpected error occurred'}), 500
 
 @app.route('/api/products/update', methods=['POST'])
 @login_required
@@ -373,8 +381,13 @@ def update_product():
             products_sheet.append_row(product_data)
             return jsonify({'success': True, 'message': 'Product created'})
     
+    except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
+            gspread.exceptions.WorksheetNotFound, ConnectionError, TimeoutError) as e:
+        logger.error(f"Google Sheets unavailable in update_product: {e}")
+        return jsonify({'error': 'Service unavailable, please try again'}), 503
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Unexpected error in update_product: {e}", exc_info=True)
+        return jsonify({'error': 'An unexpected error occurred'}), 500
 
 @app.route('/api/products/delete', methods=['POST'])
 @login_required
@@ -397,8 +410,13 @@ def delete_product():
         
         return jsonify({'error': 'Product not found'}), 404
     
+    except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
+            gspread.exceptions.WorksheetNotFound, ConnectionError, TimeoutError) as e:
+        logger.error(f"Google Sheets unavailable in deactivate_product: {e}")
+        return jsonify({'error': 'Service unavailable, please try again'}), 503
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Unexpected error in deactivate_product: {e}", exc_info=True)
+        return jsonify({'error': 'An unexpected error occurred'}), 500
 
 @app.route('/transactions')
 @login_required
@@ -416,11 +434,13 @@ def health_check():
     try:
         health_status = get_health_status()
         return jsonify(health_status), 200
+    except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
+            gspread.exceptions.WorksheetNotFound, ConnectionError, TimeoutError) as e:
+        logger.error(f"Google Sheets unavailable in health_check: {e}")
+        return jsonify({'status': 'error', 'message': 'Service unavailable, please try again'}), 503
     except Exception as e:
-        return jsonify({
-            'status': 'error',
-            'message': str(e)
-        }), 500
+        logger.error(f"Unexpected error in health_check: {e}", exc_info=True)
+        return jsonify({'status': 'error', 'message': 'An unexpected error occurred'}), 500
 
 @app.route('/api/uptime', methods=['GET'])
 @login_required
@@ -429,8 +449,13 @@ def get_uptime():
     try:
         uptime_stats = get_uptime_stats()
         return jsonify(uptime_stats), 200
+    except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
+            gspread.exceptions.WorksheetNotFound, ConnectionError, TimeoutError) as e:
+        logger.error(f"Google Sheets unavailable in get_uptime: {e}")
+        return jsonify({'error': 'Service unavailable, please try again'}), 503
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Unexpected error in get_uptime: {e}", exc_info=True)
+        return jsonify({'error': 'An unexpected error occurred'}), 500
 
 @app.route('/api/cache/stats', methods=['GET'])
 @login_required
@@ -439,8 +464,13 @@ def cache_stats():
     try:
         stats = get_cache_stats()
         return jsonify(stats), 200
+    except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
+            gspread.exceptions.WorksheetNotFound, ConnectionError, TimeoutError) as e:
+        logger.error(f"Google Sheets unavailable in cache_stats: {e}")
+        return jsonify({'error': 'Service unavailable, please try again'}), 503
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Unexpected error in cache_stats: {e}", exc_info=True)
+        return jsonify({'error': 'An unexpected error occurred'}), 500
 
 @app.route('/api/queue/status', methods=['GET'])
 @login_required
@@ -449,8 +479,13 @@ def queue_status():
     try:
         status = get_queue_status()
         return jsonify(status), 200
+    except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
+            gspread.exceptions.WorksheetNotFound, ConnectionError, TimeoutError) as e:
+        logger.error(f"Google Sheets unavailable in queue_status: {e}")
+        return jsonify({'error': 'Service unavailable, please try again'}), 503
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Unexpected error in queue_status: {e}", exc_info=True)
+        return jsonify({'error': 'An unexpected error occurred'}), 500
 
 # ============= ANALYTICS & REPORTS (PHASE 3) =============
 
@@ -470,8 +505,13 @@ def analytics_summary():
         
         summary = get_analytics_summary(transactions, accounts)
         return jsonify(summary), 200
+    except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
+            gspread.exceptions.WorksheetNotFound, ConnectionError, TimeoutError) as e:
+        logger.error(f"Google Sheets unavailable in analytics_summary: {e}")
+        return jsonify({'error': 'Service unavailable, please try again'}), 503
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Unexpected error in analytics_summary: {e}", exc_info=True)
+        return jsonify({'error': 'An unexpected error occurred'}), 500
 
 @app.route('/api/analytics/spending', methods=['GET'])
 @login_required
@@ -493,8 +533,13 @@ def analytics_spending():
             'period': period,
             'totals': totals
         }), 200
+    except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
+            gspread.exceptions.WorksheetNotFound, ConnectionError, TimeoutError) as e:
+        logger.error(f"Google Sheets unavailable in analytics_spending: {e}")
+        return jsonify({'error': 'Service unavailable, please try again'}), 503
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Unexpected error in analytics_spending: {e}", exc_info=True)
+        return jsonify({'error': 'An unexpected error occurred'}), 500
 
 @app.route('/api/analytics/top-spenders', methods=['GET'])
 @login_required
@@ -518,8 +563,13 @@ def top_spenders():
             'limit': limit,
             'period_days': days
         }), 200
+    except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
+            gspread.exceptions.WorksheetNotFound, ConnectionError, TimeoutError) as e:
+        logger.error(f"Google Sheets unavailable in top_spenders: {e}")
+        return jsonify({'error': 'Service unavailable, please try again'}), 503
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Unexpected error in top_spenders: {e}", exc_info=True)
+        return jsonify({'error': 'An unexpected error occurred'}), 500
 
 @app.route('/api/analytics/low-balance', methods=['GET'])
 @login_required
@@ -545,8 +595,13 @@ def low_balance_students():
             'threshold': threshold,
             'count': len(low_balance)
         }), 200
+    except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
+            gspread.exceptions.WorksheetNotFound, ConnectionError, TimeoutError) as e:
+        logger.error(f"Google Sheets unavailable in low_balance_students: {e}")
+        return jsonify({'error': 'Service unavailable, please try again'}), 503
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Unexpected error in low_balance_students: {e}", exc_info=True)
+        return jsonify({'error': 'An unexpected error occurred'}), 500
 
 @app.route('/api/export/transactions', methods=['GET'])
 @login_required
@@ -576,8 +631,13 @@ def export_transactions_route():
         response.headers['Content-Disposition'] = f'attachment; filename={filename}'
         
         return response
+    except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
+            gspread.exceptions.WorksheetNotFound, ConnectionError, TimeoutError) as e:
+        logger.error(f"Google Sheets unavailable in export_transactions_route: {e}")
+        return jsonify({'error': 'Service unavailable, please try again'}), 503
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Unexpected error in export_transactions_route: {e}", exc_info=True)
+        return jsonify({'error': 'An unexpected error occurred'}), 500
 
 @app.route('/api/export/students', methods=['GET'])
 @login_required
@@ -600,8 +660,13 @@ def export_students_route():
         response.headers['Content-Disposition'] = f'attachment; filename={filename}'
         
         return response
+    except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
+            gspread.exceptions.WorksheetNotFound, ConnectionError, TimeoutError) as e:
+        logger.error(f"Google Sheets unavailable in export_students_route: {e}")
+        return jsonify({'error': 'Service unavailable, please try again'}), 503
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Unexpected error in export_students_route: {e}", exc_info=True)
+        return jsonify({'error': 'An unexpected error occurred'}), 500
 
 @app.route('/api/statement/<student_id>', methods=['GET'])
 @login_required
@@ -636,8 +701,13 @@ def monthly_statement(student_id):
         response.headers['Content-Disposition'] = f'attachment; filename=statement_{student_id}_{month or "current"}.txt'
         
         return response
+    except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
+            gspread.exceptions.WorksheetNotFound, ConnectionError, TimeoutError) as e:
+        logger.error(f"Google Sheets unavailable in monthly_statement: {e}")
+        return jsonify({'error': 'Service unavailable, please try again'}), 503
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Unexpected error in monthly_statement: {e}", exc_info=True)
+        return jsonify({'error': 'An unexpected error occurred'}), 500
 
 # ============= API ROUTES =============
 
@@ -665,9 +735,13 @@ def get_stats():
             'today_transactions': len(today_transactions),
             'active_students': len([u for u in users if u.get('Status') == 'Active'])
         })
+    except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
+            gspread.exceptions.WorksheetNotFound, ConnectionError, TimeoutError) as e:
+        logger.error(f"Google Sheets unavailable in get_stats: {e}")
+        return jsonify({'error': 'Service unavailable, please try again'}), 503
     except Exception as e:
-        print(f"Error in dashboard stats: {e}")
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Unexpected error in get_stats: {e}", exc_info=True)
+        return jsonify({'error': 'An unexpected error occurred'}), 500
 
 @app.route('/api/students', methods=['GET'])
 @login_required
@@ -695,9 +769,13 @@ def get_students():
             student['Balance'] = balance_map.get(card_number, 0.00)
         
         return jsonify({'students': students})
+    except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
+            gspread.exceptions.WorksheetNotFound, ConnectionError, TimeoutError) as e:
+        logger.error(f"Google Sheets unavailable in get_students: {e}")
+        return jsonify({'error': 'Service unavailable, please try again'}), 503
     except Exception as e:
-        print(f"Error in get_students: {e}")
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Unexpected error in get_students: {e}", exc_info=True)
+        return jsonify({'error': 'An unexpected error occurred'}), 500
 
 @app.route('/api/students/search', methods=['GET'])
 @login_required
@@ -741,8 +819,13 @@ def search_students():
             students = filtered
         
         return jsonify({'students': students})
+    except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
+            gspread.exceptions.WorksheetNotFound, ConnectionError, TimeoutError) as e:
+        logger.error(f"Google Sheets unavailable in search_students: {e}")
+        return jsonify({'error': 'Service unavailable, please try again'}), 503
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Unexpected error in search_students: {e}", exc_info=True)
+        return jsonify({'error': 'An unexpected error occurred'}), 500
 
 @app.route('/api/students/<student_id>', methods=['GET'])
 @login_required
@@ -782,8 +865,13 @@ def get_student_details(student_id):
             'balance': balance,
             'account_status': account_status
         })
+    except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
+            gspread.exceptions.WorksheetNotFound, ConnectionError, TimeoutError) as e:
+        logger.error(f"Google Sheets unavailable in get_student_details: {e}")
+        return jsonify({'error': 'Service unavailable, please try again'}), 503
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Unexpected error in get_student_details: {e}", exc_info=True)
+        return jsonify({'error': 'An unexpected error occurred'}), 500
 
 # Money card registration removed - Finance Dashboard only loads balance
 
@@ -895,8 +983,13 @@ def load_balance():
             'new_balance': new_balance,
             'student_name': student_name
         })
+    except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
+            gspread.exceptions.WorksheetNotFound, ConnectionError, TimeoutError) as e:
+        logger.error(f"Google Sheets unavailable in load_balance: {e}")
+        return jsonify({'error': 'Service unavailable, please try again'}), 503
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Unexpected error in load_balance: {e}", exc_info=True)
+        return jsonify({'error': 'An unexpected error occurred'}), 500
 
 @app.route('/api/transactions/recent', methods=['GET'])
 @login_required
@@ -943,8 +1036,13 @@ def get_recent_transactions():
         enriched_transactions.sort(key=lambda x: x.get('Date', ''), reverse=True)
         
         return jsonify({'transactions': enriched_transactions[:limit]})
+    except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
+            gspread.exceptions.WorksheetNotFound, ConnectionError, TimeoutError) as e:
+        logger.error(f"Google Sheets unavailable in get_recent_transactions: {e}")
+        return jsonify({'error': 'Service unavailable, please try again'}), 503
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Unexpected error in get_recent_transactions: {e}", exc_info=True)
+        return jsonify({'error': 'An unexpected error occurred'}), 500
 
 # ============= ADMIN-ONLY FEATURES =============
 # Serial Port Management, Card Registration, Lost Card Management
@@ -974,8 +1072,12 @@ def get_serial_ports():
         ports = serial.tools.list_ports.comports()
         port_list = [{'port': p.device, 'description': p.description} for p in ports]
         return jsonify({'ports': port_list})
+    except (ConnectionError, TimeoutError) as e:
+        logger.error(f"Serial port error in get_serial_ports: {e}")
+        return jsonify({'error': 'Service unavailable, please try again'}), 503
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Unexpected error in get_serial_ports: {e}", exc_info=True)
+        return jsonify({'error': 'An unexpected error occurred'}), 500
 
 @app.route('/api/serial/connect', methods=['POST'])
 @desktop_features
@@ -1003,8 +1105,12 @@ def connect_serial():
         
         socketio.emit('status', {'type': 'success', 'message': f'Connected to {port}'})
         return jsonify({'success': True})
+    except (ConnectionError, TimeoutError) as e:
+        logger.error(f"Serial connection error in connect_serial: {e}")
+        return jsonify({'error': 'Service unavailable, please try again'}), 503
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Unexpected error in connect_serial: {e}", exc_info=True)
+        return jsonify({'error': 'An unexpected error occurred'}), 500
 
 @app.route('/api/serial/disconnect', methods=['POST'])
 @desktop_features
@@ -1019,8 +1125,12 @@ def disconnect_serial():
             arduino.close()
             arduino = None
         return jsonify({'success': True})
+    except (ConnectionError, TimeoutError) as e:
+        logger.error(f"Serial connection error in disconnect_serial: {e}")
+        return jsonify({'error': 'Service unavailable, please try again'}), 503
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Unexpected error in disconnect_serial: {e}", exc_info=True)
+        return jsonify({'error': 'An unexpected error occurred'}), 500
 
 @app.route('/api/card/start-register', methods=['POST'])
 @desktop_features
@@ -1365,12 +1475,15 @@ def register_student():
         })
         
         return jsonify({'success': True})
+    except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
+            gspread.exceptions.WorksheetNotFound, ConnectionError, TimeoutError) as e:
+        logger.error(f"Google Sheets unavailable in register_student: {e}")
+        socketio.emit('card_error', {'message': 'Service unavailable, please try again'})
+        return jsonify({'error': 'Service unavailable, please try again'}), 503
     except Exception as e:
-        print(f"[ERROR] Registration error: {e}")
-        import traceback
-        traceback.print_exc()
-        socketio.emit('card_error', {'message': str(e)})
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Unexpected error in register_student: {e}", exc_info=True)
+        socketio.emit('card_error', {'message': 'An unexpected error occurred'})
+        return jsonify({'error': 'An unexpected error occurred'}), 500
 
 @app.route('/api/students/without-cards', methods=['GET'])
 @desktop_features
@@ -1394,8 +1507,13 @@ def search_students_without_cards():
                     })
         
         return jsonify({'students': results})
+    except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
+            gspread.exceptions.WorksheetNotFound, ConnectionError, TimeoutError) as e:
+        logger.error(f"Google Sheets unavailable in search_students_without_cards: {e}")
+        return jsonify({'error': 'Service unavailable, please try again'}), 503
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Unexpected error in search_students_without_cards: {e}", exc_info=True)
+        return jsonify({'error': 'An unexpected error occurred'}), 500
 
 @app.route('/api/students/with-cards', methods=['GET'])
 @admin_only
@@ -1438,8 +1556,13 @@ def search_students_with_cards():
                         })
         
         return jsonify({'students': results})
+    except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
+            gspread.exceptions.WorksheetNotFound, ConnectionError, TimeoutError) as e:
+        logger.error(f"Google Sheets unavailable in search_students_with_cards: {e}")
+        return jsonify({'error': 'Service unavailable, please try again'}), 503
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Unexpected error in search_students_with_cards: {e}", exc_info=True)
+        return jsonify({'error': 'An unexpected error occurred'}), 500
 
 @app.route('/api/card/report-lost', methods=['POST'])
 @admin_only
@@ -1540,11 +1663,13 @@ def report_lost_card():
             'balance': current_balance
         })
         
+    except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
+            gspread.exceptions.WorksheetNotFound, ConnectionError, TimeoutError) as e:
+        logger.error(f"Google Sheets unavailable in report_lost_card: {e}")
+        return jsonify({'error': 'Service unavailable, please try again'}), 503
     except Exception as e:
-        print(f"Error reporting lost card: {e}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Unexpected error in report_lost_card: {e}", exc_info=True)
+        return jsonify({'error': 'An unexpected error occurred'}), 500
 
 @app.route('/api/card/replace-lost', methods=['POST'])
 @admin_only
@@ -1779,11 +1904,13 @@ def get_students_with_lost_reports():
                 })
         
         return jsonify({'students': results})
+    except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
+            gspread.exceptions.WorksheetNotFound, ConnectionError, TimeoutError) as e:
+        logger.error(f"Google Sheets unavailable in get_students_with_lost_reports: {e}")
+        return jsonify({'error': 'Service unavailable, please try again'}), 503
     except Exception as e:
-        print(f"ERROR in get_students_with_lost_reports: {e}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Unexpected error in get_students_with_lost_reports: {e}", exc_info=True)
+        return jsonify({'error': 'An unexpected error occurred'}), 500
 
 # ============= SOCKET.IO EVENTS =============
 

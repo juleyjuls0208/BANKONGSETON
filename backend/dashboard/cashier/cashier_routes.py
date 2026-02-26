@@ -9,6 +9,11 @@ import jwt
 import os
 import json
 import re
+import gspread
+import logging
+import time
+
+logger = logging.getLogger(__name__)
 
 cashier_bp = Blueprint('cashier', __name__, 
                        template_folder='templates',
@@ -86,8 +91,12 @@ def get_ports():
         import serial.tools.list_ports
         ports = [port.device for port in serial.tools.list_ports.comports()]
         return jsonify({'ports': ports})
+    except (ConnectionError, TimeoutError) as e:
+        logger.error(f"Serial port error in get_ports: {e}")
+        return jsonify({'error': 'Service unavailable, please try again'}), 503
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Unexpected error in get_ports: {e}", exc_info=True)
+        return jsonify({'error': 'An unexpected error occurred'}), 500
 
 @cashier_bp.route('/api/connect-arduino', methods=['POST'])
 @jwt_required(roles=['cashier', 'admin'])
@@ -126,8 +135,12 @@ def connect_arduino():
         else:
             return jsonify({'error': 'Arduino bridge not available'}), 500
             
+    except (ConnectionError, TimeoutError) as e:
+        logger.error(f"Serial connection error in connect_arduino: {e}")
+        return jsonify({'error': 'Service unavailable, please try again'}), 503
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Unexpected error in connect_arduino: {e}", exc_info=True)
+        return jsonify({'error': 'An unexpected error occurred'}), 500
 
 @cashier_bp.route('/api/products', methods=['GET'])
 @jwt_required(roles=['cashier', 'admin'])
@@ -198,11 +211,13 @@ def process_sale():
             'message': 'Please tap student card'
         })
     
+    except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
+            gspread.exceptions.WorksheetNotFound, ConnectionError, TimeoutError) as e:
+        logger.error(f"Google Sheets unavailable in process_sale: {e}")
+        return jsonify({'error': 'Service unavailable, please try again'}), 503
     except Exception as e:
-        print(f"Error initiating sale: {e}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Unexpected error in process_sale: {e}", exc_info=True)
+        return jsonify({'error': 'An unexpected error occurred'}), 500
 
 @cashier_bp.route('/api/complete-sale', methods=['POST'])
 @jwt_required(roles=['cashier', 'admin'])
@@ -265,25 +280,61 @@ def complete_sale():
                 'required': total
             }), 400
         
-        # Deduct balance
+        # Deduct balance and log transaction with retry + rollback
+        MAX_RETRIES = 3
         new_balance = current_balance - total
-        money_sheet.update_cell(account_row, 3, new_balance)
-        
-        # Log transaction
-        trans_sheet = db.worksheet('Transactions Log')
+        balance_deducted = False
+        last_error = None
         timestamp = get_philippines_time().strftime('%Y-%m-%d %H:%M:%S')
-        
-        transaction_row = [
-            timestamp,
-            normalized_card,
-            'Purchase',
-            -total,
-            new_balance,
-            'Success',
-            json.dumps(items)
-        ]
-        
-        trans_sheet.append_row(transaction_row)
+
+        for attempt in range(1, MAX_RETRIES + 1):
+            try:
+                if not balance_deducted:
+                    # Step 1: Deduct balance
+                    money_sheet.update_cell(account_row, 3, new_balance)
+                    balance_deducted = True
+
+                # Step 2: Log transaction
+                trans_sheet = db.worksheet('Transactions Log')
+
+                transaction_row = [
+                    timestamp,
+                    normalized_card,
+                    'Purchase',
+                    -total,
+                    new_balance,
+                    'Success',
+                    json.dumps(items)
+                ]
+
+                trans_sheet.append_row(transaction_row)
+                last_error = None
+                break  # Success
+
+            except (gspread.exceptions.APIError, ConnectionError, TimeoutError) as e:
+                last_error = e
+                logger.warning(f"complete_sale attempt {attempt}/{MAX_RETRIES} failed: {e}")
+                if attempt < MAX_RETRIES:
+                    time.sleep(2 ** attempt)  # Exponential backoff: 2s, 4s
+                else:
+                    # All retries exhausted — attempt rollback if balance was deducted
+                    if balance_deducted:
+                        try:
+                            money_sheet.update_cell(account_row, 3, current_balance)
+                            logger.error(
+                                f"complete_sale: all {MAX_RETRIES} attempts failed; "
+                                f"balance rolled back to {current_balance} for card {normalized_card}. Error: {e}"
+                            )
+                        except Exception as rollback_err:
+                            logger.error(
+                                f"complete_sale: CRITICAL — rollback also failed for card {normalized_card}. "
+                                f"Balance may be incorrect. Rollback error: {rollback_err}. Original error: {e}"
+                            )
+                    return jsonify({'error': 'Service unavailable, please try again'}), 503
+
+        if last_error:
+            # Should not reach here, but guard just in case
+            return jsonify({'error': 'Service unavailable, please try again'}), 503
         
         # Clear pending transaction
         flask_session.pop('pending_transaction', None)
@@ -317,9 +368,11 @@ def complete_sale():
             'timestamp': timestamp
         })
     
+    except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
+            gspread.exceptions.WorksheetNotFound, ConnectionError, TimeoutError) as e:
+        logger.error(f"Google Sheets unavailable in complete_sale: {e}")
+        return jsonify({'error': 'Service unavailable, please try again'}), 503
     except Exception as e:
-        print(f"Error completing sale: {e}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Unexpected error in complete_sale: {e}", exc_info=True)
+        return jsonify({'error': 'An unexpected error occurred'}), 500
 
