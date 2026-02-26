@@ -12,7 +12,7 @@ Requirements for this milestone. Backend-first, then mobile improvements, then d
 - [ ] **BUG-01**: Cashier POS app displays the product menu correctly (currently broken — no products shown)
 - [ ] **BUG-02**: Null/empty card UID is rejected at input boundary (not silently treated as valid)
 - [ ] **BUG-03**: Google Sheets API failures return graceful error responses (not 500 crashes)
-- [ ] **BUG-04**: Admin login requires non-empty credentials (empty string is not a valid login)
+- [x] **BUG-04**: Admin login requires non-empty credentials (empty string is not a valid login)
 - [ ] **BUG-05**: Transaction balance deduction is protected against partial failure (no half-committed state)
 
 ### Security
@@ -21,7 +21,7 @@ Requirements for this milestone. Backend-first, then mobile improvements, then d
 - [x] **SEC-02**: FLASK_SECRET_KEY is required non-empty (system refuses to start with default key)
 - [x] **SEC-03**: CORS is restricted to known origins (no wildcard `*` in production)
 - [ ] **SEC-04**: Card UIDs are validated (regex format check) before use in Sheets queries
-- [ ] **SEC-05**: Test files do not contain hardcoded secrets (JWT keys, passwords use env vars)
+- [x] **SEC-05**: Test files do not contain hardcoded secrets (JWT keys, passwords use env vars)
 
 ### Code Quality
 
@@ -106,13 +106,13 @@ Deferred to next version (not in current roadmap).
 | BUG-01 | Phase 1 - Critical Fixes + Security | Pending |
 | BUG-02 | Phase 1 - Critical Fixes + Security | Pending |
 | BUG-03 | Phase 1 - Critical Fixes + Security | Pending |
-| BUG-04 | Phase 1 - Critical Fixes + Security | Pending |
+| BUG-04 | Phase 1 - Critical Fixes + Security | Complete |
 | BUG-05 | Phase 1 - Critical Fixes + Security | Pending |
 | SEC-01 | Phase 1 - Critical Fixes + Security | Complete |
 | SEC-02 | Phase 1 - Critical Fixes + Security | Complete |
 | SEC-03 | Phase 1 - Critical Fixes + Security | Complete |
 | SEC-04 | Phase 1 - Critical Fixes + Security | Pending |
-| SEC-05 | Phase 1 - Critical Fixes + Security | Pending |
+| SEC-05 | Phase 1 - Critical Fixes + Security | Complete |
 | QUAL-01 | Phase 2 - Code Quality | Pending |
 | QUAL-02 | Phase 2 - Code Quality | Pending |
 | QUAL-03 | Phase 2 - Code Quality | Pending |

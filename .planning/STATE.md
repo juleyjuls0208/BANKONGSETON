@@ -10,27 +10,27 @@ See: .planning/PROJECT.md (updated 2026-02-22)
 ## Current Position
 
 Phase: 1 of 6 (Critical Fixes + Security)
-Plan: 1 of 1 in current phase (complete)
-Status: Phase 1 complete
-Last activity: 2026-02-23 — Executed 01-01-PLAN.md: startup hardening (secret key guard, CORS restriction, credential redaction)
+Plan: 3 of 3 completed in current phase
+Status: Phase 1 plan 03 complete
+Last activity: 2026-02-26 — Executed 01-03-PLAN.md: empty-credential guard, test secret cleanup, wsgi.py hardening
 
 Progress: [##########] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 1
-- Average duration: 2min
-- Total execution time: 0.03 hours
+- Total plans completed: 3
+- Average duration: 1-2min
+- Total execution time: 0.05 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01-critical-fixes-security | 1 | 2min | 2min |
+| 01-critical-fixes-security | 3 | 5min | 2min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (2min)
+- Last 5 plans: 01-01 (2min), 01-03 (1min)
 - Trend: -
 
 *Updated after each plan completion*
@@ -49,6 +49,10 @@ Recent decisions affecting current work:
 - [01-01]: Startup guard at module level (not __main__) so it fires on import too
 - [01-01]: CORS dev-mode auto-allows localhost origins when FLASK_ENV=development or CORS_ORIGINS is empty
 - [01-01]: Used plain print() for redacted startup messages since get_logger import can fail
+- [01-03]: Field-specific 400 errors for empty username/password (not a single generic error)
+- [01-03]: and admin_user truthy check appended to credential comparison (not separate block)
+- [01-03]: Test credentials use obviously-fake strings not env vars (tests run against live server)
+- [01-03]: wsgi.py retains only GOOGLE_SHEETS_ID/GOOGLE_CREDENTIALS_FILE as non-secret defaults
 
 ### Pending Todos
 
@@ -57,12 +61,12 @@ None yet.
 ### Blockers/Concerns
 
 - Phase 1: Cashier POS products bug root cause not yet confirmed — plan-phase must investigate cashier_routes.py before writing fix
-- Phase 1: Empty credential login (admin_dashboard.py line 221) appears intentional; needs user decision on replacement strategy
+- ~~Phase 1: Empty credential login (admin_dashboard.py line 221) appears intentional; needs user decision on replacement strategy~~ RESOLVED in 01-03
 - Phase 2: QUAL-05 (oauth2client -> google-auth) may require credential file format change — verify before executing
 - Phase 4: Push notifications require FCM setup; check if Android app already has FCM dependency before planning
 
 ## Session Continuity
 
-Last session: 2026-02-23
-Stopped at: Completed 01-01-PLAN.md (startup hardening). Phase 1 has 1 plan and it is complete.
+Last session: 2026-02-26
+Stopped at: Completed 01-03-PLAN.md (empty-credential guard, test secrets cleanup, wsgi.py hardening).
 Resume file: None
