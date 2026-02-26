@@ -36,6 +36,7 @@ Progress: [#####-----] 71% (phase 4, 5/7 plans)
 | Phase 04-student-app-notifications P01 | 2min | 3 tasks | 1 files |
 | Phase 04-student-app-notifications P03 | 30min | 2 tasks | 2 files |
 | Phase 04-student-app-notifications P04 | 1min | 2 tasks | 4 files |
+| Phase 04-student-app-notifications P02 | 1min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -87,6 +88,8 @@ Recent decisions affecting current work:
 - [04-04]: FCM registration is fire-and-forget — login flow does not wait for FCM; both success and failure callbacks are silent no-ops
 - [04-04]: getLastBalance() uses Float sentinel (-1f) in EncryptedSharedPreferences to distinguish stored zero from absent value
 - [04-04]: Default page size for getTransactions changed 50→20 to match infinite scroll batch size in upcoming TransactionsActivity
+- [Phase 04-student-app-notifications]: Lazy firebase_admin import inside functions prevents crash when credentials file absent
+- [Phase 04-student-app-notifications]: Per-transaction Settings sheet read (not cached) allows admin threshold changes without restart
 
 ### Pending Todos
 
@@ -102,5 +105,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Completed 04-01-PLAN.md (4 backend bug fixes: FCM auth, offset pagination, balance_before, 8-col cashier log; closes APP-02 through APP-05, NOTF-01).
+Stopped at: Completed 04-02-PLAN.md (fcm_sender.py + low-balance notification wired into cashier transaction flow; closes NOTF-01).
 Resume file: None
