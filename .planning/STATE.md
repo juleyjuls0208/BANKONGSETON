@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-02-22)
 
 ## Current Position
 
-Phase: 3 of 6 (Product Management)
-Plan: 4 of 4 completed in current phase
-Status: Phase 3 complete
-Last activity: 2026-02-26 — Executed 03-04-PLAN.md: human verification approved — admin product CRUD (add/inline-edit/toggle/toasts) and cashier POS (Food/Drinks/Snacks/Other tabs, active-only products, working cart) all confirmed working; closes PROD-01 through PROD-06
+Phase: 4 of 6 (Student App + Notifications)
+Plan: 4 of 7 completed in current phase
+Status: In progress
+Last activity: 2026-02-26 — Executed 04-04-PLAN.md: updated Android data layer — TransactionsResponse pagination (hasMore/total), Transaction.balanceBefore, offset-based getTransactions, FCM token registration post-login, and saveLastBalance/getLastBalance in SecureStorage; closes APP-01, APP-04, APP-05
 
-Progress: [##########] 100% (phase 3)
+Progress: [####------] 57% (phase 4, 4/7 plans)
 
 ## Performance Metrics
 
@@ -33,6 +33,9 @@ Progress: [##########] 100% (phase 3)
 **Recent Trend:**
 - Last 5 plans: 01-04 (2min), 02-01 (2min), 02-02 (2min), 02-03 (3min), —
 - Trend: Stable
+| Phase 04-student-app-notifications P01 | 2min | 3 tasks | 1 files |
+| Phase 04-student-app-notifications P03 | 30min | 2 tasks | 2 files |
+| Phase 04-student-app-notifications P04 | 1min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -77,6 +80,13 @@ Recent decisions affecting current work:
 - [02-08]: System-wide pip install maintained (consistent with 02-01 decision; no venv in this project)
 - [03-04]: Human verification gate required for visual/interactive UI concerns — toast notifications and inline edit state changes cannot be automated in CI
 - [03-04]: Automated pre-checks (syntax + HTML parse + category assertions) run before human checkpoint to eliminate trivial failures early
+- [Phase 04-01]: Use active_sessions auth (not JWT) for register_fcm_token — consistent with all other student endpoints
+- [Phase 04-01]: Replace chr(64+fcm_col_idx) column-letter conversion with update_cell() to avoid off-by-one bug for columns > Z
+- [Phase 04-01]: Insert BalanceBefore at transaction_row index 4 (before BalanceAfter) — matches Transactions Log sheet column spec
+- [Phase 04-student-app-notifications]: Settings stored in Google Sheets Settings sheet with Key/Value columns — no new DB table needed
+- [04-04]: FCM registration is fire-and-forget — login flow does not wait for FCM; both success and failure callbacks are silent no-ops
+- [04-04]: getLastBalance() uses Float sentinel (-1f) in EncryptedSharedPreferences to distinguish stored zero from absent value
+- [04-04]: Default page size for getTransactions changed 50→20 to match infinite scroll batch size in upcoming TransactionsActivity
 
 ### Pending Todos
 
@@ -92,5 +102,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Completed 03-04-PLAN.md (human verification approved — Phase 3 product management fully complete: admin CRUD + cashier POS visually confirmed; all 4 plans executed; closes PROD-01 through PROD-06).
+Stopped at: Completed 04-03-PLAN.md (GET/POST /api/settings/threshold + Notification Settings UI in dashboard.html; closes NOTF-02).
 Resume file: None
