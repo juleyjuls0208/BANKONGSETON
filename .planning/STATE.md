@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-02-28T11:13:00Z"
+last_updated: "2026-02-28T11:22:37.394Z"
 progress:
-  total_phases: 6
+  total_phases: 5
   completed_phases: 4
-  total_plans: 24
-  completed_plans: 24
+  total_plans: 26
+  completed_plans: 25
 ---
 
 # Project State
@@ -23,9 +23,9 @@ See: .planning/PROJECT.md (updated 2026-02-22)
 ## Current Position
 
 Phase: 5 of 6 (NFC Architecture Prep)
-Plan: 1 of N completed in current phase
+Plan: 2 of N completed in current phase
 Status: In progress
-Last activity: 2026-02-28 — Executed 05-01-PLAN.md: Rewrote nfc_payments.py with Sheets-backed NFCService — UUID v4 tokens, secrets device tokens, one-card-per-student silent replace, IsActive filtering; closes NFC-02
+Last activity: 2026-02-28 — Executed 05-02-PLAN.md: Added POST /api/nfc/register (active_sessions auth) and POST /api/nfc/pay (dual JWT + X-Device-Token auth) to api_server.py; updated CORS allow_headers with X-Device-Token; closes NFC-01, NFC-03, NFC-04
 
 Progress: [########--] 80%
 
@@ -52,6 +52,8 @@ Progress: [########--] 80%
 | Phase 04-student-app-notifications P02 | 1min | 2 tasks | 3 files |
 | Phase 04-student-app-notifications P05 | 3min | 3 tasks | 10 files |
 | Phase 05-nfc-architecture-prep P01 | 5min | 1 task | 1 file |
+| Phase 05-nfc-architecture-prep P02 | 3min | 2 tasks | 1 file |
+| Phase 05-nfc-architecture-prep P02 | 3min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -109,7 +111,9 @@ Recent decisions affecting current work:
 - [Phase 04-05]: Thai Baht symbol ฿ used throughout Android UI (fixed from ₱ in HomeActivity and TransactionsAdapter)
 - [05-01]: Clean rewrite (not patch) of nfc_payments.py — NFCPaymentManager removed; NFCService is stateless with db parameter
 - [05-01]: get_philippines_time() replicated locally in nfc_payments.py to avoid circular import from api_server.py
-- [05-01]: ensure_virtual_cards_sheet uses db.worksheet() direct call — avoids importing get_worksheet_with_retry across modules
+  - [05-02]: Used active_sessions (not @require_auth) for nfc_register — consistent with all student endpoints; critical correctness (not JWT-based)
+  - [05-02]: X-Device-Token validated inside nfc_pay handler body (after JWT decorator) — clean separation of dual auth layers
+  - [05-02]: TransactionType='NFC Purchase' distinct from 'Purchase' for Android transaction filtering
 
 ### Pending Todos
 
@@ -125,5 +129,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-28
-Stopped at: Completed 05-01-PLAN.md (NFCService Sheets-backed rewrite — register_virtual_card, get_virtual_card_by_tokens, ensure_virtual_cards_sheet; closes NFC-02)
+Stopped at: Completed 05-02-PLAN.md (NFC Flask endpoints: /api/nfc/register + /api/nfc/pay with dual auth + CORS X-Device-Token; closes NFC-01, NFC-03, NFC-04)
 Resume file: None
