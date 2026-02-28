@@ -27,6 +27,8 @@ except ImportError:
     logger = logging.getLogger(__name__)
 
 from utils import normalize_card_uid
+from nfc_payments import NFCService, ensure_virtual_cards_sheet
+nfc_service = NFCService()
 
 load_dotenv()
 
@@ -56,7 +58,7 @@ def get_cors_origins():
         ]
     return origins
 
-CORS(app, origins=get_cors_origins())
+CORS(app, origins=get_cors_origins(), allow_headers=['Authorization', 'Content-Type', 'X-Device-Token'])
 
 # Google Sheets Setup
 
@@ -491,6 +493,163 @@ def logout():
     except Exception as e:
         logger.error(f"Unexpected error in logout: {e}", exc_info=True)
         return jsonify({'error': 'An unexpected error occurred'}), 500
+
+@app.route('/api/nfc/register', methods=['POST'])
+def nfc_register():
+    """Register a virtual NFC card for the logged-in student.
+
+    Uses active_sessions auth (same as /api/student/* endpoints).
+    Returns virtual_card_token (UUID v4) and device_token for Android to store.
+    Re-registration silently replaces any existing active virtual card.
+
+    Returns:
+        200: { virtual_card_token, device_token, money_card, message }
+        401: Invalid or expired session token
+        403: Student has no registered RFID money card
+        503: Google Sheets unavailable
+    """
+    try:
+        token = request.headers.get('Authorization', '').replace('Bearer ', '')
+        if token not in active_sessions:
+            return jsonify({'error': 'Invalid or expired token'}), 401
+
+        session = active_sessions[token]
+        student_id = session['student_id']
+
+        db = get_sheets_client()
+
+        # Look up the student's linked RFID money card
+        money_sheet = get_worksheet_with_retry('Money Accounts')
+        money_records = money_sheet.get_all_records()
+        money_card = None
+        for r in money_records:
+            if str(r.get('StudentID', '')).strip() == str(student_id).strip():
+                money_card = str(r.get('MoneyCardNumber', '')).strip()
+                break
+
+        if not money_card:
+            return jsonify({'error': 'No money card registered'}), 403
+
+        result = nfc_service.register_virtual_card(student_id, money_card, db)
+        logger.info(f"event=nfc_register_success student_id={student_id}")
+        return jsonify({
+            'virtual_card_token': result['virtual_card_token'],
+            'device_token': result['device_token'],
+            'money_card': result['money_card'],
+            'message': 'Virtual card registered'
+        }), 200
+
+    except Exception as e:
+        logger.error(f"event=nfc_register_error error={str(e)}")
+        return jsonify({'error': 'Service unavailable, please try again'}), 503
+
+
+@app.route('/api/nfc/pay', methods=['POST'])
+@require_auth(roles=['admin', 'cashier'])
+def nfc_pay():
+    """Process an NFC virtual card payment.
+
+    Requires cashier/admin JWT (via require_auth) AND X-Device-Token header.
+    The X-Device-Token is issued during /api/nfc/register and stored by Android.
+    Both tokens are verified against the VirtualCards sheet (Pitfall: must check IsActive).
+
+    Request body: { virtual_card_token, items, total }
+    Returns:
+        200: { success: true, new_balance, timestamp }
+        400: Invalid transaction data or insufficient funds
+        401: Missing/invalid X-Device-Token or virtual card token mismatch
+        503: Google Sheets unavailable
+    """
+    try:
+        # Step 1: Validate X-Device-Token header (in addition to JWT checked by decorator)
+        device_token = request.headers.get('X-Device-Token', '').strip()
+        if not device_token:
+            return jsonify({'error': 'X-Device-Token header required'}), 401
+
+        # Step 2: Validate request body
+        data = request.get_json() or {}
+        virtual_card_token = str(data.get('virtual_card_token', '')).strip()
+        items = data.get('items', [])
+        try:
+            total = float(data.get('total', 0))
+        except (TypeError, ValueError):
+            return jsonify({'error': 'Invalid transaction data'}), 400
+
+        if not virtual_card_token or not items or total <= 0:
+            return jsonify({'error': 'Invalid transaction data'}), 400
+
+        # Step 3: Look up VirtualCard by both tokens (must be active)
+        db = get_sheets_client()
+        matched = nfc_service.get_virtual_card_by_tokens(virtual_card_token, device_token, db)
+        if not matched:
+            return jsonify({'error': 'Invalid virtual card token or device token'}), 401
+
+        money_card_number = str(matched.get('MoneyCardNumber', '')).strip()
+
+        # Step 4: Debit balance from Money Accounts sheet
+        money_sheet = get_worksheet_with_retry('Money Accounts')
+        money_records = money_sheet.get_all_records()
+        balance_row_idx = None
+        current_balance = None
+        for idx, r in enumerate(money_records, start=2):
+            if str(r.get('MoneyCardNumber', '')).strip() == money_card_number:
+                balance_row_idx = idx
+                try:
+                    current_balance = float(r.get('Balance', 0))
+                except (TypeError, ValueError):
+                    current_balance = 0.0
+                break
+
+        if balance_row_idx is None:
+            return jsonify({'error': 'Invalid virtual card token or device token'}), 401
+
+        if current_balance < total:
+            return jsonify({'error': 'Insufficient funds', 'balance': current_balance}), 400
+
+        new_balance = round(current_balance - total, 2)
+
+        # Find Balance column index (1-based) in Money Accounts
+        header_row = money_sheet.row_values(1)
+        try:
+            balance_col_idx = header_row.index('Balance') + 1
+        except ValueError:
+            balance_col_idx = 3  # fallback: column C
+
+        money_sheet.update_cell(balance_row_idx, balance_col_idx, new_balance)
+
+        # Step 5: Log to Transactions Log sheet
+        timestamp = get_philippines_time()
+        timestamp_str = timestamp.strftime('%Y-%m-%d %H:%M:%S')
+        trans_sheet = get_worksheet_with_retry('Transactions Log')
+
+        # Build items summary for receipt (same format as cashier transactions)
+        items_summary = '; '.join(
+            f"{item.get('name','?')} x{item.get('qty',1)} @{item.get('price',0)}"
+            for item in items
+        )
+
+        trans_sheet.append_row([
+            timestamp_str,                    # Timestamp
+            money_card_number,                # MoneyCardNumber (RFID UID linked to virtual card)
+            'NFC Purchase',                   # TransactionType (distinct from 'Purchase' for RFID)
+            -total,                           # Amount (negative = debit)
+            current_balance,                  # BalanceBefore
+            new_balance,                      # BalanceAfter
+            items_summary,                    # Items
+        ])
+
+        logger.info(f"event=nfc_pay_success money_card={money_card_number} total={total} new_balance={new_balance}")
+
+        return jsonify({
+            'success': True,
+            'new_balance': new_balance,
+            'timestamp': timestamp_str
+        }), 200
+
+    except Exception as e:
+        logger.error(f"event=nfc_pay_error error={str(e)}")
+        return jsonify({'error': 'Service unavailable, please try again'}), 503
+
 
 # ==================== NEW PHASE 1 ENDPOINTS ====================
 
