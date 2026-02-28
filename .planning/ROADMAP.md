@@ -112,7 +112,11 @@ Plans:
   3. A payment request that supplies an NFC virtual card token instead of an RFID UID is accepted and debits the same student account
   4. The NFC endpoints authenticate via a device token header in addition to the existing JWT flow
   5. docs/nfc-integration-guide.md exists and contains the exact API calls, token format, and HCE flow an Android developer needs to implement NFC in v2
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 05-01-PLAN.md — NFCService + Google Sheets VirtualCards persistence (nfc_payments.py rewrite)
+- [ ] 05-02-PLAN.md — NFC endpoints: POST /api/nfc/register + POST /api/nfc/pay + CORS update
+- [ ] 05-03-PLAN.md — NFC integration guide: docs/nfc-integration-guide.md
 
 ### Phase 6: Documentation
 **Goal**: Every major system component has a clear Markdown document in docs/ so any developer can understand, set up, and extend the system without asking the original author
