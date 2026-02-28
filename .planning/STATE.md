@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-02-27T10:44:15.389Z"
+last_updated: "2026-02-28T11:13:00Z"
 progress:
-  total_phases: 4
+  total_phases: 6
   completed_phases: 4
-  total_plans: 23
-  completed_plans: 23
+  total_plans: 24
+  completed_plans: 24
 ---
 
 # Project State
@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-22)
 
 **Core value:** Students can pay for canteen food instantly by tapping their RFID card, with their balance always visible in the app
-**Current focus:** Phase 4 - Student App + Notifications
+**Current focus:** Phase 5 - NFC Architecture Prep
 
 ## Current Position
 
-Phase: 4 of 6 (Student App + Notifications)
-Plan: 6 of 7 completed in current phase
+Phase: 5 of 6 (NFC Architecture Prep)
+Plan: 1 of N completed in current phase
 Status: In progress
-Last activity: 2026-02-26 — Executed 04-05-PLAN.md: Android UI layer — HomeActivity balance spinner + persistence, TransactionsActivity infinite scroll, TransactionsAdapter color-coded rows, new ReceiptActivity with line items; closes APP-01, APP-02, APP-03, APP-04, APP-05
+Last activity: 2026-02-28 — Executed 05-01-PLAN.md: Rewrote nfc_payments.py with Sheets-backed NFCService — UUID v4 tokens, secrets device tokens, one-card-per-student silent replace, IsActive filtering; closes NFC-02
 
-Progress: [######----] 85% (phase 4, 6/7 plans)
+Progress: [########--] 80%
 
 ## Performance Metrics
 
@@ -51,6 +51,7 @@ Progress: [######----] 85% (phase 4, 6/7 plans)
 | Phase 04-student-app-notifications P04 | 1min | 2 tasks | 4 files |
 | Phase 04-student-app-notifications P02 | 1min | 2 tasks | 3 files |
 | Phase 04-student-app-notifications P05 | 3min | 3 tasks | 10 files |
+| Phase 05-nfc-architecture-prep P01 | 5min | 1 task | 1 file |
 
 ## Accumulated Context
 
@@ -106,6 +107,9 @@ Recent decisions affecting current work:
 - [Phase 04-student-app-notifications]: Per-transaction Settings sheet read (not cached) allows admin threshold changes without restart
 - [Phase 04-student-app-notifications]: Created 5 missing XML layout files from scratch (activity_home, activity_transactions, activity_receipt, item_transaction, item_receipt_line) — res/layout/ was empty before Plan 05
 - [Phase 04-05]: Thai Baht symbol ฿ used throughout Android UI (fixed from ₱ in HomeActivity and TransactionsAdapter)
+- [05-01]: Clean rewrite (not patch) of nfc_payments.py — NFCPaymentManager removed; NFCService is stateless with db parameter
+- [05-01]: get_philippines_time() replicated locally in nfc_payments.py to avoid circular import from api_server.py
+- [05-01]: ensure_virtual_cards_sheet uses db.worksheet() direct call — avoids importing get_worksheet_with_retry across modules
 
 ### Pending Todos
 
@@ -120,6 +124,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-26
-Stopped at: Completed 04-05-PLAN.md (Android UI layer — HomeActivity spinner, TransactionsActivity infinite scroll, TransactionsAdapter color-coded rows, ReceiptActivity; closes APP-01-05). Plan 06 is human verification — no automated execution.
+Last session: 2026-02-28
+Stopped at: Completed 05-01-PLAN.md (NFCService Sheets-backed rewrite — register_virtual_card, get_virtual_card_by_tokens, ensure_virtual_cards_sheet; closes NFC-02)
 Resume file: None

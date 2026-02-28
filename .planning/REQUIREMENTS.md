@@ -56,7 +56,7 @@ Requirements for this milestone. Backend-first, then mobile improvements, then d
 ### NFC Architecture Preparation (Backend Only)
 
 - [ ] **NFC-01**: NFC payment API endpoints exist and are documented (`/api/nfc/register`, `/api/nfc/pay`)
-- [ ] **NFC-02**: VirtualCard model in nfc_payments.py is fully integrated with Google Sheets (persisted, not just in-memory)
+- [x] **NFC-02**: VirtualCard model in nfc_payments.py is fully integrated with Google Sheets (persisted, not just in-memory)
 - [ ] **NFC-03**: Transaction flow accepts both RFID card UID and NFC virtual card token as payment sources
 - [ ] **NFC-04**: API authentication supports NFC device token alongside JWT (ready for Android HCE integration)
 - [ ] **NFC-05**: NFC integration guide written in docs/ explaining exactly what the Android app needs to implement for v2
@@ -132,7 +132,7 @@ Deferred to next version (not in current roadmap).
 | NOTF-01 | Phase 4 - Student App + Notifications | Complete |
 | NOTF-02 | Phase 4 - Student App + Notifications | Complete |
 | NFC-01 | Phase 5 - NFC Architecture Prep | Pending |
-| NFC-02 | Phase 5 - NFC Architecture Prep | Pending |
+| NFC-02 | Phase 5 - NFC Architecture Prep | Complete |
 | NFC-03 | Phase 5 - NFC Architecture Prep | Pending |
 | NFC-04 | Phase 5 - NFC Architecture Prep | Pending |
 | NFC-05 | Phase 5 - NFC Architecture Prep | Pending |
