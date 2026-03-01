@@ -52,6 +52,7 @@ class TransactionsAdapter : RecyclerView.Adapter<TransactionsAdapter.Transaction
             balanceText.text = "Balance: ฿%.2f".format(transaction.balance)
 
             val isPurchase = transaction.type.equals("Purchase", ignoreCase = true)
+                    || transaction.type.equals("NFC Purchase", ignoreCase = true)
             val isTopUp = transaction.type.equals("Top-Up", ignoreCase = true)
                     || transaction.type.equals("TopUp", ignoreCase = true)
 
