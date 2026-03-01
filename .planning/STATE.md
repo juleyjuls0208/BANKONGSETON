@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: unknown
-last_updated: "2026-03-01T16:18:22Z"
+status: active
+last_updated: "2026-03-02T00:00:00.000Z"
 progress:
   total_phases: 11
-  completed_phases: 9
-  total_plans: 41
-  completed_plans: 41
+  completed_phases: 10
+  total_plans: 42
+  completed_plans: 43
 ---
 
 # Project State
@@ -23,11 +23,11 @@ See: .planning/PROJECT.md (updated 2026-02-22)
 ## Current Position
 
 Phase: 09 of 11 (NFC Android Compat)
-Plan: 1 of 1 completed in current phase — Phase 09 Plan 01 COMPLETE
-Status: Phase 09 Plan 01 complete — isPurchase extended to include NFC Purchase; NFC-03 closed
-Last activity: 2026-03-01 — Executed 09-01-PLAN.md: TransactionsAdapter.kt isPurchase OR clause added for NFC Purchase; red color + down-arrow + ReceiptActivity navigation now applies to NFC tap transactions
+Plan: 2 of 2 completed in current phase — Phase 09 COMPLETE
+Status: Phase 09 Plan 02 complete — GET /api/nfc/status + POST /api/nfc/unregister added; StudentData.id SerializedName fixed; NFC-04, NFC-05 closed
+Last activity: 2026-03-02 — Executed 09-02-PLAN.md: backend NFC status/unregister endpoints + Android SerializedName fix + guide documentation
 
-Progress: [##########] 100% (Phase 09 Plan 01 complete)
+Progress: [##########] 100% (Phase 09 complete — all 2 plans done)
 
 ## Performance Metrics
 
@@ -70,6 +70,7 @@ Progress: [##########] 100% (Phase 09 Plan 01 complete)
 | Phase 07.1-web-deployable-dashboard P04 | 15min | 3 tasks | 3 files |
 | Phase 08-security-reliability-fixes P02 | 1min | 1 tasks | 1 files |
 | Phase 08-security-reliability-fixes P01 | 1min | 2 tasks | 2 files |
+| Phase 09-nfc-android-compat P02 | 3min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -163,8 +164,8 @@ Recent decisions affecting current work:
  - [08-01]: JWT_SECRET guard blocks empty/missing only (no insecure-default check) — matches locked CONTEXT.md decision
  - [08-01]: Removed secrets.token_urlsafe(32) random fallback — it silently bypassed guard and broke JWT verification across restarts
  - [08-01]: exc_info=True added only to card_read_error (was missing); other 3 card_error handlers already had it
-- [09-01]: isPurchase extended with || clause matching isTopUp style — single definition, no downstream changes needed
-- [09-01]: No changes to ReceiptActivity — NFC Purchase transaction data structure identical to Purchase
+- [09-02]: device_id body param in nfc_unregister accepted but not cross-validated against sheet — student session is auth source of truth (per CONTEXT.md 'Backend behavior: Claude's discretion')
+- [09-02]: ensure_virtual_cards_sheet() imported inside function body (not top-level) — avoids circular import risk consistent with existing lazy-import sys.path.insert pattern
 
 ### Roadmap Evolution
 
@@ -183,6 +184,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-01
-Stopped at: Completed 09-01-PLAN.md: isPurchase in TransactionsAdapter.kt extended to include NFC Purchase; NFC-03 closed; Phase 09 Plan 01 complete
+Last session: 2026-03-02
+Stopped at: Completed 09-02-PLAN.md: GET /api/nfc/status + POST /api/nfc/unregister added to api_server.py; StudentData.id SerializedName fixed in ApiClient.kt; NFC endpoints documented in nfc-integration-guide.md; NFC-04 + NFC-05 closed; Phase 09 complete
 Resume file: None
