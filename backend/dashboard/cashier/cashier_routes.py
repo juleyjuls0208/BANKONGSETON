@@ -189,6 +189,54 @@ def api_logout():
     return response
 
 
+@cashier_bp.route('/api/lookup-student')
+@jwt_required(roles=['cashier', 'admin'])
+def lookup_student():
+    """Search students by name or student ID for manual (web) mode checkout"""
+    q = request.args.get('q', '').strip().lower()
+    if len(q) < 2:
+        return jsonify({'students': []})
+    try:
+        try:
+            from web_app import get_sheets_client
+        except ImportError:
+            from admin_dashboard import get_sheets_client
+        from utils import normalize_card_uid as _normalize
+        db = get_sheets_client()
+        users_sheet = db.worksheet('Users')
+        rows = users_sheet.get_all_records()
+        money_sheet = db.worksheet('Money Accounts')
+        money_rows = money_sheet.get_all_records()
+        # Build balance lookup dict keyed by normalized card UID
+        balance_map = {}
+        for m in money_rows:
+            card = _normalize(m.get('MoneyCardNumber', ''))
+            if card:
+                balance_map[card] = float(m.get('Balance', 0))
+        matches = []
+        for r in rows:
+            student_id = str(r.get('StudentID', ''))
+            name = str(r.get('Name', ''))
+            if q in student_id.lower() or q in name.lower():
+                card_uid = _normalize(r.get('MoneyCardNumber', '')) or ''
+                matches.append({
+                    'id': student_id,
+                    'name': name,
+                    'balance': balance_map.get(card_uid, 0.0),
+                    'card_uid': card_uid
+                })
+                if len(matches) >= 10:
+                    break
+        return jsonify({'students': matches})
+    except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
+            gspread.exceptions.WorksheetNotFound, ConnectionError, TimeoutError) as e:
+        logger.error("event=lookup_student_sheets_error error=%s", e)
+        return jsonify({'error': 'Service unavailable, please try again'}), 503
+    except Exception as e:
+        logger.error("event=lookup_student_error error=%s", e, exc_info=True)
+        return jsonify({'error': 'An unexpected error occurred'}), 500
+
+
 @cashier_bp.route('/api/process-sale', methods=['POST'])
 @jwt_required(roles=['cashier', 'admin'])
 def process_sale():
@@ -245,12 +293,13 @@ def complete_sale():
         
         data = request.get_json()
         card_uid = data.get('card_uid', '').strip()
+        manual_student_id = data.get('manual_student_id', '').strip()
         
-        if not card_uid:
-            return jsonify({'error': 'Card UID required'}), 400
+        if not manual_student_id and not card_uid:
+            return jsonify({'error': 'Card UID or student ID required'}), 400
         
-        # Validate card UID format before any Sheets query (BUG-02, SEC-04)
-        if not UID_PATTERN.match(card_uid):
+        # Validate card UID format (skip in manual mode — no card UID present)
+        if not manual_student_id and card_uid and not UID_PATTERN.match(card_uid):
             return jsonify({'error': 'Card UID format is invalid -- please scan the card again'}), 400
         
         # Get pending transaction
@@ -262,6 +311,26 @@ def complete_sale():
         total = pending['total']
         
         normalized_card = normalize_card_uid(card_uid)
+
+        # In manual mode: resolve card_uid from StudentID via Users sheet
+        if manual_student_id:
+            try:
+                _db = get_sheets_client()
+                _users = _db.worksheet('Users').get_all_records()
+                _student = next(
+                    (r for r in _users if str(r.get('StudentID', '')) == manual_student_id),
+                    None
+                )
+                if not _student:
+                    return jsonify({'error': 'Student not found'}), 404
+                card_uid = str(_student.get('MoneyCardNumber', '')).strip()
+                if not card_uid:
+                    return jsonify({'error': 'Student has no card assigned'}), 400
+                normalized_card = normalize_card_uid(card_uid)
+            except Exception as e:
+                logger.error("event=manual_lookup_error error=%s", e)
+                return jsonify({'error': 'Failed to look up student'}), 500
+
         db = get_sheets_client()
         
         # Find money account
@@ -298,6 +367,7 @@ def complete_sale():
         new_balance = current_balance - total
         balance_deducted = False
         last_error = None
+        transaction_type = 'Manual' if manual_student_id else 'Purchase'
         timestamp = get_philippines_time().strftime('%Y-%m-%d %H:%M:%S')
 
         for attempt in range(1, MAX_RETRIES + 1):
@@ -313,7 +383,7 @@ def complete_sale():
                 transaction_row = [
                     timestamp,         # col 0: Timestamp
                     normalized_card,   # col 1: MoneyCardNumber
-                    'Purchase',        # col 2: TransactionType
+                    transaction_type,  # col 2: TransactionType
                     -total,            # col 3: Amount
                     current_balance,   # col 4: BalanceBefore  ← ADDED
                     new_balance,       # col 5: BalanceAfter
