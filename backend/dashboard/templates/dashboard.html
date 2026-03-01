@@ -230,6 +230,9 @@
     <div class="sidebar">
         <div class="sidebar-brand">
             Banko ng Seton
+            {% if not arduino_available %}
+            <span style="display:inline-block; margin-left:8px; background:rgba(255,255,255,0.2); color:white; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:500; vertical-align:middle; letter-spacing:0.3px;">Web Mode</span>
+            {% endif %}
         </div>
         <ul class="sidebar-menu">
             <li><a href="/dashboard" class="active"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
