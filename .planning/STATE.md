@@ -25,7 +25,7 @@ See: .planning/PROJECT.md (updated 2026-02-22)
 Phase: 09 of 11 (NFC Android Compat)
 Plan: 2 of 2 completed in current phase — Phase 09 COMPLETE
 Status: Phase 09 Plan 02 complete — GET /api/nfc/status + POST /api/nfc/unregister added; StudentData.id SerializedName fixed; NFC-04, NFC-05 closed
-Last activity: 2026-03-02 — Executed 09-02-PLAN.md: backend NFC status/unregister endpoints + Android SerializedName fix + guide documentation
+Last activity: 2026-03-01 - Completed quick task 1: notification when user loads money or purchases
 
 Progress: [##########] 100% (Phase 09 complete — all 2 plans done)
 
@@ -181,6 +181,12 @@ None yet.
 - ~~Phase 1: Empty credential login (admin_dashboard.py line 221) appears intentional; needs user decision on replacement strategy~~ RESOLVED in 01-03
 - ~~Phase 2: QUAL-05 (oauth2client -> google-auth) may require credential file format change — verify before executing~~ RESOLVED in 02-03: credentials.json format unchanged; google-auth uses identical service account JSON
 - Phase 4: Push notifications require FCM setup; check if Android app already has FCM dependency before planning
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 1 | notification when user loads money or purchases | 2026-03-01 | 3efd04d | [1-notification-when-user-loads-money-or-pu](./quick/1-notification-when-user-loads-money-or-pu/) |
 
 ## Session Continuity
 
