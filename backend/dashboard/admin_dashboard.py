@@ -1235,8 +1235,8 @@ def read_card_thread(card_type):
             
             time.sleep(0.1)
         except Exception as e:
-            logger.error("event=card_read_error error=%s", e)
-            socketio.emit('card_error', {'message': str(e)})
+            logger.error("event=card_read_error error=%s", e, exc_info=True)
+            socketio.emit('card_error', {'message': 'Card scan failed — please try again'})
             card_reader_state.set('card_reading_active', False)
             return
     
@@ -1293,7 +1293,7 @@ def handle_id_card(uid):
     except Exception as e:
         logger.error("event=id_card_check_error error=%s", e, exc_info=True)
         send_error("Error")
-        socketio.emit('card_error', {'message': str(e)})
+        socketio.emit('card_error', {'message': 'Card scan failed — please try again'})
 
 def handle_money_card(uid):
     """Handle money card linking - check for duplicates in BOTH ID and money cards"""
@@ -1406,7 +1406,7 @@ def handle_money_card(uid):
     except Exception as e:
         logger.error("event=money_card_link_error error=%s", e, exc_info=True)
         send_error("Error")
-        socketio.emit('card_error', {'message': str(e)})
+        socketio.emit('card_error', {'message': 'Card scan failed — please try again'})
 
 @app.route('/api/student/register', methods=['POST'])
 @desktop_features
@@ -1869,7 +1869,7 @@ def handle_replace_card(uid):
     except Exception as e:
         logger.error("event=replace_card_error error=%s", e, exc_info=True)
         send_error("Error")
-        socketio.emit('card_error', {'message': str(e)})
+        socketio.emit('card_error', {'message': 'Card scan failed — please try again'})
 
 @app.route('/api/students/with-lost-reports', methods=['GET'])
 @admin_only
