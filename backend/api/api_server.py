@@ -22,6 +22,7 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 try:
     from errors import setup_logging, get_logger
+    setup_logging()  # activate structured logging whether run directly or via WSGI
     logger = get_logger(__name__)
 except ImportError:
     logger = logging.getLogger(__name__)
@@ -32,8 +33,15 @@ nfc_service = NFCService()
 
 load_dotenv()
 
-# JWT Configuration
-JWT_SECRET = os.getenv('JWT_SECRET', secrets.token_urlsafe(32))
+# --- JWT_SECRET startup guard ---
+JWT_SECRET = os.getenv('JWT_SECRET', '').strip()
+if not JWT_SECRET:
+    logger.critical(
+        "event=startup_aborted reason=missing_jwt_secret "
+        "message=\"JWT_SECRET is not set or is empty. Set a strong random key in your .env file. "
+        "Generate one with: python -c 'import secrets; print(secrets.token_urlsafe(32))'\""
+    )
+    sys.exit(1)
 JWT_ALGORITHM = 'HS256'
 JWT_EXPIRY_HOURS = 24
 
@@ -980,7 +988,6 @@ def register_fcm_token():
         return jsonify({'error': 'An unexpected error occurred'}), 500
 
 if __name__ == '__main__':
-    setup_logging()  # activate bangko StreamHandler before first log call
     port = int(os.getenv('API_PORT', 5001))
     debug = os.getenv('API_DEBUG', 'False') == 'True'
     
