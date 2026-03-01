@@ -44,8 +44,8 @@ Requirements for this milestone. Backend-first, then mobile improvements, then d
 
 - [x] **APP-01**: Student can see their current card balance on the home screen
 - [ ] **APP-02**: Student can see a scrollable list of all their transactions (date, amount, type)
-- [ ] **APP-03**: Student can tap a canteen purchase transaction and see the itemized receipt (what was bought, price per item, total)
-- [ ] **APP-04**: Student app shows balance update immediately after a transaction is processed
+- [x] **APP-03**: Student can tap a canteen purchase transaction and see the itemized receipt (what was bought, price per item, total)
+- [x] **APP-04**: Student app shows balance update immediately after a transaction is processed
 - [x] **APP-05**: Student app handles API errors gracefully (shows error message, not crash)
 
 ### Notifications
@@ -126,8 +126,8 @@ Deferred to next version (not in current roadmap).
 | PROD-06 | Phase 3 - Product Management | Pending |
 | APP-01 | Phase 4 - Student App + Notifications | Complete |
 | APP-02 | Phase 7 - Fix Cashier Payment Path | Pending |
-| APP-03 | Phase 7 - Fix Cashier Payment Path | Pending |
-| APP-04 | Phase 7 - Fix Cashier Payment Path | Pending |
+| APP-03 | Phase 7 - Fix Cashier Payment Path | Complete |
+| APP-04 | Phase 7 - Fix Cashier Payment Path | Complete |
 | APP-05 | Phase 4 - Student App + Notifications | Complete |
 | NOTF-01 | Phase 7 - Fix Cashier Payment Path | Pending |
 | NOTF-02 | Phase 4 - Student App + Notifications | Complete |
