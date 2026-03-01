@@ -846,29 +846,56 @@ def nfc_pay():
         # Step 5: Log to Transactions Log sheet
         timestamp = get_philippines_time()
         timestamp_str = timestamp.strftime("%Y-%m-%d %H:%M:%S")
+        transaction_id = f"TXN-{timestamp.strftime('%Y%m%d%H%M%S')}"
         trans_sheet = get_worksheet_with_retry("Transactions Log")
 
-        # Build items summary for receipt (same format as cashier transactions)
-        items_summary = "; ".join(
-            f"{item.get('name', '?')} x{item.get('qty', 1)} @{item.get('price', 0)}"
-            for item in items
-        )
+        # Look up StudentID from Users sheet via MoneyCardNumber
+        nfc_student_id = ""
+        try:
+            users_sheet_nfc = get_worksheet_with_retry("Users")
+            for u in users_sheet_nfc.get_all_records():
+                if normalize_card_uid(
+                    str(u.get("MoneyCardNumber", ""))
+                ) == normalize_card_uid(money_card_number):
+                    nfc_student_id = str(u.get("StudentID", ""))
+                    break
+        except Exception:
+            pass  # Non-fatal: student_id will be blank
 
         trans_sheet.append_row(
             [
+                transaction_id,  # TransactionID
                 timestamp_str,  # Timestamp
-                money_card_number,  # MoneyCardNumber (RFID UID linked to virtual card)
-                "NFC Purchase",  # TransactionType (distinct from 'Purchase' for RFID)
-                -total,  # Amount (negative = debit)
+                nfc_student_id,  # StudentID
+                money_card_number,  # MoneyCardNumber
+                "NFC Purchase",  # TransactionType
+                total,  # Amount (positive deduction value)
                 current_balance,  # BalanceBefore
                 new_balance,  # BalanceAfter
-                items_summary,  # Items
+                "Completed",  # Status
+                "",  # ErrorMessage
+                json.dumps(items),  # ItemsJson
             ]
         )
 
         logger.info(
             f"event=nfc_pay_success money_card={money_card_number} total={total} new_balance={new_balance}"
         )
+
+        # Purchase push notification — fires after transaction committed, never blocks
+        try:
+            if nfc_student_id:
+                users_sheet_notif = get_worksheet_with_retry("Users")
+                for u in users_sheet_notif.get_all_records():
+                    if str(u.get("StudentID", "")) == nfc_student_id:
+                        fcm_token = str(u.get("FCMToken", "")).strip()
+                        if fcm_token:
+                            from fcm_sender import send_purchase_push
+
+                            send_purchase_push(fcm_token, total, new_balance)
+                        break
+        except Exception as notif_err:
+            logger.warning("event=nfc_purchase_notify_failed error=%s", notif_err)
 
         return jsonify(
             {"success": True, "new_balance": new_balance, "timestamp": timestamp_str}
@@ -1091,48 +1118,56 @@ def process_cashier_transaction():
         # Log transaction with ItemsJson
         trans_sheet = get_worksheet_with_retry("Transactions Log")
         timestamp = get_philippines_time().strftime("%Y-%m-%d %H:%M:%S")
+        transaction_id = f"TXN-{get_philippines_time().strftime('%Y%m%d%H%M%S')}"
 
         transaction_row = [
-            timestamp,
-            normalized_card,
-            "Purchase",
-            -total,
-            current_balance,  # BalanceBefore (column 5) — NEW
-            new_balance,  # BalanceAfter (column 6)
-            "Success",
-            json.dumps(items),  # ItemsJson (column 8)
+            transaction_id,  # TransactionID
+            timestamp,  # Timestamp
+            student_id or "",  # StudentID
+            normalized_card,  # MoneyCardNumber
+            "Purchase",  # TransactionType
+            total,  # Amount (positive deduction value, matches cashier_routes)
+            current_balance,  # BalanceBefore
+            new_balance,  # BalanceAfter
+            "Completed",  # Status
+            "",  # ErrorMessage
+            json.dumps(items),  # ItemsJson
         ]
 
         trans_sheet.append_row(transaction_row)
 
-        # Low-balance push notification — fires after transaction is committed
+        # Purchase push notification (always) + low-balance push (if threshold breached)
         # Never blocks or rolls back the transaction response
         try:
-            # Read threshold from admin-configured Settings sheet; fall back to env var
-            threshold = float(os.getenv("LOW_BALANCE_THRESHOLD", 50))
-            try:
-                settings_sheet = get_worksheet_with_retry("Settings")
-                settings_records = settings_sheet.get_all_records()
-                for row in settings_records:
-                    if (
-                        str(row.get("Key", "")).strip().lower()
-                        == "low_balance_threshold"
-                    ):
-                        threshold = float(row.get("Value", threshold))
-                        break
-            except Exception as settings_err:
-                logger.warning(
-                    "event=settings_read_failed error=%s using_env_default=%.0f",
-                    settings_err,
-                    threshold,
-                )
-            if new_balance < threshold and student_id:
+            if student_id:
                 users_sheet2 = get_worksheet_with_retry("Users")
                 user_records2 = users_sheet2.get_all_records()
                 for user in user_records2:
                     if str(user.get("StudentID")) == str(student_id):
                         fcm_token = str(user.get("FCMToken", "")).strip()
                         if fcm_token:
+                            from fcm_sender import send_purchase_push
+
+                            send_purchase_push(fcm_token, total, new_balance)
+                        # Low-balance check
+                        threshold = float(os.getenv("LOW_BALANCE_THRESHOLD", 50))
+                        try:
+                            settings_sheet = get_worksheet_with_retry("Settings")
+                            settings_records = settings_sheet.get_all_records()
+                            for row in settings_records:
+                                if (
+                                    str(row.get("Key", "")).strip().lower()
+                                    == "low_balance_threshold"
+                                ):
+                                    threshold = float(row.get("Value", threshold))
+                                    break
+                        except Exception as settings_err:
+                            logger.warning(
+                                "event=settings_read_failed error=%s using_env_default=%.0f",
+                                settings_err,
+                                threshold,
+                            )
+                        if new_balance < threshold and fcm_token:
                             from fcm_sender import send_low_balance_push
 
                             send_low_balance_push(fcm_token, new_balance)
