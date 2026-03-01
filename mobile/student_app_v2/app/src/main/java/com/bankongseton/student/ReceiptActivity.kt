@@ -41,21 +41,21 @@ class ReceiptActivity : AppCompatActivity() {
 
     private fun formatDate(timestamp: String): String {
         return try {
-            val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
-            val date = sdf.parse(timestamp) ?: return timestamp
-            SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(date)
+            val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+            val date = sdf.parse(timestamp) ?: return "Invalid date"
+            SimpleDateFormat("MMM d, yyyy", Locale.getDefault()).format(date)
         } catch (e: Exception) {
-            timestamp.substringBefore("T")
+            "Invalid date"
         }
     }
 
     private fun formatTime(timestamp: String): String {
         return try {
-            val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
-            val date = sdf.parse(timestamp) ?: return timestamp
-            SimpleDateFormat("HH:mm", Locale.getDefault()).format(date)
+            val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+            val date = sdf.parse(timestamp) ?: return "Invalid date"
+            SimpleDateFormat("h:mm a", Locale.getDefault()).format(date)
         } catch (e: Exception) {
-            timestamp.substringAfter("T").take(5)
+            "Invalid date"
         }
     }
 
