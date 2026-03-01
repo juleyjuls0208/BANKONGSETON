@@ -18,14 +18,14 @@ Requirements for this milestone. Backend-first, then mobile improvements, then d
 ### Security
 
 - [x] **SEC-01**: Credentials (admin username/password) are never printed to stdout or logs at startup
-- [ ] **SEC-02**: FLASK_SECRET_KEY is required non-empty (system refuses to start with default key)
+- [x] **SEC-02**: FLASK_SECRET_KEY is required non-empty (system refuses to start with default key)
 - [x] **SEC-03**: CORS is restricted to known origins (no wildcard `*` in production)
 - [x] **SEC-04**: Card UIDs are validated (regex format check) before use in Sheets queries
 - [x] **SEC-05**: Test files do not contain hardcoded secrets (JWT keys, passwords use env vars)
 
 ### Code Quality
 
-- [ ] **QUAL-01**: All 60+ debug print() statements replaced with structured logging (get_logger())
+- [x] **QUAL-01**: All 60+ debug print() statements replaced with structured logging (get_logger())
 - [x] **QUAL-02**: Card UID normalization centralized in a single utility function (backend/utils.py)
 - [x] **QUAL-03**: Global state in admin_dashboard.py wrapped in thread-safe singleton with locking
 - [x] **QUAL-04**: Dead code removed (BankongSetonApp folder, unused files)
@@ -109,11 +109,11 @@ Deferred to next version (not in current roadmap).
 | BUG-04 | Phase 1 - Critical Fixes + Security | Complete |
 | BUG-05 | Phase 1 - Critical Fixes + Security | Complete |
 | SEC-01 | Phase 1 - Critical Fixes + Security | Complete |
-| SEC-02 | Phase 8 - Security + Reliability Fixes | Pending |
+| SEC-02 | Phase 8 - Security + Reliability Fixes | Complete |
 | SEC-03 | Phase 1 - Critical Fixes + Security | Complete |
 | SEC-04 | Phase 1 - Critical Fixes + Security | Complete |
 | SEC-05 | Phase 1 - Critical Fixes + Security | Complete |
-| QUAL-01 | Phase 8 - Security + Reliability Fixes | Pending |
+| QUAL-01 | Phase 8 - Security + Reliability Fixes | Complete |
 | QUAL-02 | Phase 2 - Code Quality | Complete |
 | QUAL-03 | Phase 2 - Code Quality | Complete |
 | QUAL-04 | Phase 2 - Code Quality | Complete |
