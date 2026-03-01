@@ -158,6 +158,19 @@ Plans:
 - [ ] 07-02-PLAN.md — Fix cashier_routes.py complete_sale: add balance_before column, fix timestamp format, call send_low_balance_push(), call migrate_users_schema() at startup [APP-02, APP-03, APP-04, NOTF-01]
 - [ ] 07-03-PLAN.md — Human verification: card tap → payment → correct receipt → FCM notification [BUG-01, APP-02, APP-03, APP-04, NOTF-01]
 
+### Phase 07.1: Web-Deployable Dashboard (INSERTED)
+
+**Goal:** Make the admin dashboard accessible as a publicly hosted website. Hardware-dependent features (COM port, NFC card tap, physical cashier terminal) may be conditionally disabled or stubbed out for web mode; wherever feasible, implement web-friendly alternatives.
+**Requirements**: WEB-01, WEB-02, WEB-03, WEB-04
+**Depends on:** Phase 7
+**Plans:** 4 plans
+
+Plans:
+- [ ] 07.1-01-PLAN.md — Create web_app.py: hardware-free copy of admin_dashboard.py (pyserial stripped, arduino_available=False, read_card_thread removed) [WEB-01]
+- [ ] 07.1-02-PLAN.md — Update wsgi.py: correct PythonAnywhere path, dotenv loading, absolute credentials path [WEB-02]
+- [ ] 07.1-03-PLAN.md — Cashier backend: fix imports, add pyserial ImportError guard, add lookup-student endpoint, extend complete_sale for manual_student_id [WEB-03]
+- [ ] 07.1-04-PLAN.md — Cashier frontend: auto-detect manual mode, student lookup modal; dashboard Web Mode badge [WEB-04]
+
 ### Phase 8: Security + Reliability Fixes
 **Goal**: api_server.py requires a real JWT secret at startup; WebSocket error emissions no longer expose exception text to clients; cashier routes use the resilient ensure_products_sheet() helper instead of direct worksheet access
 **Depends on**: Phase 7
@@ -219,6 +232,7 @@ Phase 7 depends on Phase 1 and Phase 4 (FCM). Phase 8 depends on Phase 7. Phase 
 | 5. NFC Architecture Prep | 1/3 | In Progress|  |
 | 6. Documentation | 5/5 | Complete   | 2026-03-01 |
 | 7. Fix Cashier Payment Path | 3/3 | Complete   | 2026-03-01 |
+| 7.1. Web-Deployable Dashboard | 0/4 | Planned |  |
 | 8. Security + Reliability Fixes | 0/2 | Pending |  |
 | 9. NFC Android Compatibility | 0/2 | Pending |  |
 | 10. Documentation Gaps | 0/1 | Pending |  |
