@@ -19,7 +19,7 @@ data class LoginResponse(
 )
 
 data class StudentData(
-    @com.google.gson.annotations.SerializedName("student_id")
+    @com.google.gson.annotations.SerializedName("id")
     val id: String,
     val name: String,
     val id_card: String,

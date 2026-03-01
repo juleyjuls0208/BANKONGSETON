@@ -6,6 +6,8 @@ BankongSeton supports NFC payments via Android Host Card Emulation (HCE). When a
 
 **What is already built (backend, v1):**
 - `POST /api/nfc/register` — student app calls this to get virtual card tokens after login
+- `GET /api/nfc/status` — check if student has an active virtual card
+- `POST /api/nfc/unregister` — deactivate the student's active virtual card
 - `POST /api/nfc/pay` — cashier POS calls this after reading the NFC payload
 - `VirtualCards` Google Sheet — stores one active virtual card per student
 
@@ -98,6 +100,84 @@ Authorization: Bearer <session_token>
 | 503 | `{"error": "Service unavailable, please try again"}` | Google Sheets unreachable | Retry with exponential backoff |
 
 **Store tokens in EncryptedSharedPreferences** (key names: `virtual_card_token`, `device_token`) so `BankoHceService` can read them at NFC tap time.
+
+---
+
+## NFC Status
+
+### Endpoint: `GET /api/nfc/status`
+
+Check whether the student currently has an active virtual NFC card registered.
+
+**Authentication:** Session Bearer token (same token from `POST /api/auth/login`).
+
+```
+Authorization: Bearer <session_token>
+```
+
+**Request body:** None.
+
+**Success response — HTTP 200:**
+```json
+{
+  "is_registered": true,
+  "device_id": "abc123xyz_url_safe_44_char_string",
+  "registered_at": "2026-03-01T14:32:00+08:00"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `is_registered` | boolean | `true` if the student has an active virtual card; `false` otherwise. |
+| `device_id` | string \| null | The device token issued at registration. `null` when `is_registered` is `false`. |
+| `registered_at` | string \| null | ISO 8601 timestamp of registration. `null` when `is_registered` is `false`. |
+
+**Error responses:**
+
+| HTTP | Body | Cause | Fix |
+|------|------|-------|-----|
+| 401 | `{"error": "Invalid or expired token"}` | Session token missing or expired | Re-login |
+| 503 | `{"error": "Service unavailable, please try again"}` | Google Sheets unreachable | Retry with exponential backoff |
+
+---
+
+## NFC Unregister
+
+### Endpoint: `POST /api/nfc/unregister`
+
+Deactivate the student's current virtual NFC card. The card can no longer be used for payments after this call.
+
+**Authentication:** Session Bearer token (same token from `POST /api/auth/login`).
+
+```
+Authorization: Bearer <session_token>
+```
+
+**Request body:**
+```json
+{
+  "device_id": "abc123xyz_url_safe_44_char_string"
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `device_id` | string | yes | The device token stored at registration. |
+
+**Success response — HTTP 200:**
+```json
+{
+  "message": "Virtual card unregistered"
+}
+```
+
+**Error responses:**
+
+| HTTP | Body | Cause | Fix |
+|------|------|-------|-----|
+| 401 | `{"error": "Invalid or expired token"}` | Session token missing or expired | Re-login |
+| 404 | `{"error": "No active virtual card found"}` | Student has no active virtual card | Nothing to unregister |
+| 503 | `{"error": "Service unavailable, please try again"}` | Google Sheets unreachable | Retry with exponential backoff |
 
 ---
 
