@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-22)
 
 **Core value:** Students can pay for canteen food instantly by tapping their RFID card, with their balance always visible in the app
-**Current focus:** Phase 7 - Cashier Payment Fix (COMPLETE)
+**Current focus:** Phase 07.1 - Web-Deployable Dashboard (IN PROGRESS)
 
 ## Current Position
 
-Phase: 7 of 10 (Cashier Payment Fix)
-Plan: 3 of 3 completed in current phase
-Status: Phase 7 complete — all plans done, human verification approved
-Last activity: 2026-03-01 — Executed 07-03-PLAN.md: Human verification of Phase 7 cashier payment fixes approved — card-tap flow, 8-col Sheets row, FCM, Android receipt timestamps confirmed
+Phase: 07.1 of 10 (Web-Deployable Dashboard)
+Plan: 1 of 4 completed in current phase
+Status: Phase 07.1 in progress — plan 01 complete (web_app.py created)
+Last activity: 2026-03-01 — Executed 07.1-01-PLAN.md: Created web_app.py hardware-free dashboard — pyserial import guarded, read_card_thread removed, JWT_SECRET startup guard added, arduino_available=False
 
-Progress: [##########] 100%
+Progress: [##########] 100% (Phase 7 done; Phase 07.1 plan 1/4 in progress)
 
 ## Performance Metrics
 
@@ -138,6 +138,10 @@ Recent decisions affecting current work:
 - [07-01]: lambda uid: None callback intentional — ArduinoBridge already emits card_read/card_timeout/card_error internally; no additional callback logic
 - [07-01]: sys.path.insert to backend/api/ inside FCM try block mirrors existing cashier_routes email_service pattern
 - [07-01]: WebSocket broadcast-then-re-emit pattern: server emits cashier_request_card broadcast → client re-emits back → @socketio.on handler fires → arduino_bridge.read_card_with_timeout()
+- [07.1-01]: Wrapped serial import in try/except ImportError rather than removing it — allows web_app.py to run locally with hardware if pyserial is available
+- [07.1-01]: Kept Flask-SocketIO in web_app.py — silently rejected WebSocket upgrades on PythonAnywhere are acceptable; no crash
+- [07.1-01]: Removed emit() calls only from HTTP route handlers, not @socketio.on handlers — preserves real-time UI for local/desktop use
+- [07.1-01]: JWT_SECRET insecure default 'bangko-jwt-secret-2026' added to startup guard so deploying without rotating key aborts cleanly
 
 ### Roadmap Evolution
 
@@ -157,5 +161,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-01
-Stopped at: Completed 07-03-PLAN.md: human verification approved — Phase 7 cashier payment fix fully complete
+Stopped at: Completed 07.1-01-PLAN.md: web_app.py hardware-free dashboard created — 1960 lines, serial import guarded, JWT_SECRET guard added, arduino_available=False
 Resume file: None
