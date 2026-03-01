@@ -98,9 +98,9 @@ def get_ports():
         import serial.tools.list_ports
         ports = [port.device for port in serial.tools.list_ports.comports()]
         return jsonify({'ports': ports})
-    except (ConnectionError, TimeoutError) as e:
-        logger.error(f"Serial port error in get_ports: {e}")
-        return jsonify({'error': 'Service unavailable, please try again'}), 503
+    except (ImportError, ConnectionError, TimeoutError) as e:
+        logger.warning("event=serial_unavailable error=%s returning_empty_ports=True", e)
+        return jsonify({'ports': []})
     except Exception as e:
         logger.error(f"Unexpected error in get_ports: {e}", exc_info=True)
         return jsonify({'error': 'An unexpected error occurred'}), 500
@@ -156,7 +156,10 @@ def get_products():
     try:
         import sys
         sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
-        from admin_dashboard import get_sheets_client
+        try:
+            from web_app import get_sheets_client
+        except ImportError:
+            from admin_dashboard import get_sheets_client
 
         db = get_sheets_client()
         products_sheet = db.worksheet('Products')
@@ -235,7 +238,10 @@ def complete_sale():
         import sys
         sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
         
-        from admin_dashboard import get_sheets_client, get_philippines_time
+        try:
+            from web_app import get_sheets_client, get_philippines_time
+        except ImportError:
+            from admin_dashboard import get_sheets_client, get_philippines_time
         
         data = request.get_json()
         card_uid = data.get('card_uid', '').strip()
