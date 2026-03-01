@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-03-01T13:43:16.074Z"
+last_updated: "2026-03-01T15:07:00.100Z"
 progress:
   total_phases: 11
   completed_phases: 8
-  total_plans: 38
-  completed_plans: 38
+  total_plans: 40
+  completed_plans: 39
 ---
 
 # Project State
@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-22)
 
 **Core value:** Students can pay for canteen food instantly by tapping their RFID card, with their balance always visible in the app
-**Current focus:** Phase 07.1 - Web-Deployable Dashboard (IN PROGRESS)
+**Current focus:** Phase 08 - Security and Reliability Fixes (IN PROGRESS)
 
 ## Current Position
 
-Phase: 07.1 of 10 (Web-Deployable Dashboard)
-Plan: 4 of 4 completed in current phase — Phase 07.1 COMPLETE
-Status: Phase 07.1 complete — all 4 plans executed; web-deployable dashboard ready
-Last activity: 2026-03-01 — Executed 07.1-04-PLAN.md: cashier_index.html auto-detects ports and enters manual mode; Web Mode badge in dashboard.html; Sheets transaction row fixed (TXN-ID, correct column order, positive amount, Completed status)
+Phase: 08 of 11 (Security and Reliability Fixes)
+Plan: 2 of 2 executed in current phase (1 summary created — 08-02 complete; 08-01 pending)
+Status: Phase 08 in progress — 08-02 executed; ensure_products_sheet() added to cashier_routes.py
+Last activity: 2026-03-01 — Executed 08-02-PLAN.md: ensure_products_sheet() + get_worksheet_with_retry() added to cashier_routes.py; PROD-04 and PROD-05 closed
 
-Progress: [##########] 100% (Phase 07.1 complete)
+Progress: [########--] 80% (Phase 08 plan 2 of 2 committed)
 
 ## Performance Metrics
 
@@ -68,6 +68,7 @@ Progress: [##########] 100% (Phase 07.1 complete)
 | Phase 07.1-web-deployable-dashboard P03 | 2min | 2 tasks | 1 files |
 
 | Phase 07.1-web-deployable-dashboard P04 | 15min | 3 tasks | 3 files |
+| Phase 08-security-reliability-fixes P02 | 1min | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -155,6 +156,9 @@ Recent decisions affecting current work:
  - [07.1-04]: Transaction row format: TXN-ID + 10 correct columns matches admin_dashboard.py load pattern; status='Completed' not 'Success'
  - [07.1-04]: StudentID resolved for RFID path via Users sheet lookup — all rows have StudentID populated
  - [07.1-04]: Auto-detect serial ports on DOMContentLoaded; initWebSocket() skipped in manual mode
+ - [08-02]: No global db in cashier helpers — use _get_parent_app_module().get_sheets_client() instead; cashier_routes.py has no module-level db variable
+ - [08-02]: import time as _time inside function body — consistent with lazy-load sys.path.insert pattern in codebase
+ - [08-02]: _db (not db) used as local variable in helpers to avoid confusion with outer scope
 
 ### Roadmap Evolution
 
@@ -174,5 +178,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-01
-Stopped at: Completed 07.1-04-PLAN.md: cashier manual mode UI + Web Mode badge + Sheets row fix
+Stopped at: Completed 08-02-PLAN.md: ensure_products_sheet() + get_worksheet_with_retry() added to cashier_routes.py; PROD-04 + PROD-05 closed
 Resume file: None

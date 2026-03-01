@@ -36,8 +36,8 @@ Requirements for this milestone. Backend-first, then mobile improvements, then d
 - [ ] **PROD-01**: Admin can add a canteen product (name, price, category)
 - [ ] **PROD-02**: Admin can edit an existing product (name, price, category)
 - [ ] **PROD-03**: Admin can delete/deactivate a product
-- [ ] **PROD-04**: Cashier POS displays all active products in a grid with name and price
-- [ ] **PROD-05**: Products are stored in Google Sheets (a dedicated Products sheet)
+- [x] **PROD-04**: Cashier POS displays all active products in a grid with name and price
+- [x] **PROD-05**: Products are stored in Google Sheets (a dedicated Products sheet)
 - [ ] **PROD-06**: Cashier can select multiple products and process them as one transaction
 
 ### Student App — Balance & History
@@ -121,8 +121,8 @@ Deferred to next version (not in current roadmap).
 | PROD-01 | Phase 3 - Product Management | Pending |
 | PROD-02 | Phase 3 - Product Management | Pending |
 | PROD-03 | Phase 3 - Product Management | Pending |
-| PROD-04 | Phase 8 - Security + Reliability Fixes | Pending |
-| PROD-05 | Phase 8 - Security + Reliability Fixes | Pending |
+| PROD-04 | Phase 8 - Security + Reliability Fixes | Complete |
+| PROD-05 | Phase 8 - Security + Reliability Fixes | Complete |
 | PROD-06 | Phase 3 - Product Management | Pending |
 | APP-01 | Phase 4 - Student App + Notifications | Complete |
 | APP-02 | Phase 7 - Fix Cashier Payment Path | Complete |
