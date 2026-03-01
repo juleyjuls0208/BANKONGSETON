@@ -23,6 +23,10 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 4: Student App + Notifications** - Students can see their balance and transaction history; low-balance alerts work
 - [ ] **Phase 5: NFC Architecture Prep** - Backend is ready for Android NFC integration in the next version
 - [x] **Phase 6: Documentation** - System is fully documented and can be understood by any developer (completed 2026-03-01)
+- [ ] **Phase 7: Fix Cashier Payment Path** - RFID card payment executes end-to-end; receipts show correct balances; FCM notifications fire from cashier POS (gap closure)
+- [ ] **Phase 8: Security + Reliability Fixes** - JWT secret guard added to api_server; exception text no longer leaked via WebSocket; cashier routes use ensure_products_sheet (gap closure)
+- [ ] **Phase 9: NFC Android Compatibility** - NFC Purchase transactions navigable to receipt; missing NFC endpoints added; mobile/android field mapping corrected (gap closure)
+- [ ] **Phase 10: Documentation Gaps** - Cashier blueprint endpoints documented; cashier-guide updated with FCM operational note (gap closure)
 
 ## Phase Details
 
@@ -136,12 +140,75 @@ Plans:
 - [x] 06-04-PLAN.md — Write docs/student-app.md + docs/nfc-integration-guide.md (app and NFC guides)
 - [ ] 06-05-PLAN.md — Write docs/README.md index + archive all 29 existing docs to docs/archive/
 
+### Phase 7: Fix Cashier Payment Path
+**Goal**: The RFID card payment path executes completely end-to-end — card tap triggers ArduinoBridge, the transaction Sheets row includes all 8 columns (BalanceBefore present), FCM low-balance notifications fire from the cashier POS, and receipts display correctly formatted timestamps
+**Depends on**: Phase 1, Phase 4 (FCM infrastructure)
+**Requirements**: BUG-01, APP-02, APP-03, APP-04, NOTF-01
+**Gap Closure**: Closes gaps from v1.0 audit (TD-01, TD-02, TD-03, TD-04)
+**Success Criteria** (what must be TRUE):
+  1. Student taps card at cashier POS → `cashier_request_card` WebSocket event is handled → `arduino_bridge.read_card_with_timeout()` is called and returns a card UID
+  2. `cashier_routes.py complete_sale` writes an 8-column row `[ts, uid, name, type, amount, balance_before, new_balance, 'Success']` to the Transactions sheet
+  3. Receipt timestamps in the Android app display as a readable date/time string (not raw `"2026-02-28 14:32:00"`)
+  4. Balance history in student app shows the correct pre-transaction balance (not ₱0.00) for cashier POS transactions
+  5. When a cashier POS transaction drops a student's balance below the threshold, a push notification is sent via FCM
+  6. `migrate_users_schema()` is called at api_server startup so fresh deployments register FCM tokens correctly
+**Plans**: 3 plans
+Plans:
+- [ ] 07-01-PLAN.md — Add `cashier_request_card` WebSocket handler in cashier_routes.py + wire ArduinoBridge.read_card_with_timeout() [BUG-01]
+- [ ] 07-02-PLAN.md — Fix cashier_routes.py complete_sale: add balance_before column, fix timestamp format, call send_low_balance_push(), call migrate_users_schema() at startup [APP-02, APP-03, APP-04, NOTF-01]
+- [ ] 07-03-PLAN.md — Human verification: card tap → payment → correct receipt → FCM notification [BUG-01, APP-02, APP-03, APP-04, NOTF-01]
+
+### Phase 8: Security + Reliability Fixes
+**Goal**: api_server.py requires a real JWT secret at startup; WebSocket error emissions no longer expose exception text to clients; cashier routes use the resilient ensure_products_sheet() helper instead of direct worksheet access
+**Depends on**: Phase 7
+**Requirements**: SEC-02, QUAL-01, PROD-04, PROD-05
+**Gap Closure**: Closes gaps from v1.0 audit (TD-07, TD-08, TD-09)
+**Success Criteria** (what must be TRUE):
+  1. api_server.py refuses to start if `JWT_SECRET` env var is empty or missing, matching the guard in admin_dashboard.py
+  2. All 4 `socketio.emit('card_error', ...)` calls emit a generic user-facing message; full exception is logged server-side only
+  3. cashier_routes.py calls `ensure_products_sheet()` for the Products sheet instead of `db.worksheet('Products')` directly
+  4. Cashier `/cashier/api/products` returns a valid product list (not 503) even if the Products sheet does not exist yet
+**Plans**: 2 plans
+Plans:
+- [ ] 08-01-PLAN.md — Add JWT_SECRET startup guard to api_server.py; fix exception text leak in 4 WebSocket emissions [SEC-02, QUAL-01]
+- [ ] 08-02-PLAN.md — Replace db.worksheet('Products') with ensure_products_sheet() in cashier_routes.py [PROD-04, PROD-05]
+
+### Phase 9: NFC Android Compatibility
+**Goal**: NFC Purchase transactions are navigable to receipt in TransactionsAdapter; the missing /api/nfc/unregister and /api/nfc/status endpoints exist; mobile/android field mapping corrected
+**Depends on**: Phase 5
+**Requirements**: NFC-03, NFC-04, NFC-05
+**Gap Closure**: Closes gaps from v1.0 audit (TD-05, TD-06, TD-12)
+**Success Criteria** (what must be TRUE):
+  1. Tapping an `"NFC Purchase"` transaction in TransactionsActivity navigates to ReceiptActivity (same as `"Purchase"`)
+  2. `GET /api/nfc/status` and `DELETE /api/nfc/unregister` endpoints exist in api_server.py and return documented responses
+  3. `mobile/android` LoginResponse correctly maps the `id` field from backend login response (not `student_id`)
+  4. NFC integration guide accurately reflects all available endpoints including the new ones
+**Plans**: 2 plans
+Plans:
+- [ ] 09-01-PLAN.md — Add "NFC Purchase" to TransactionsAdapter.kt navigation condition [NFC-03]
+- [ ] 09-02-PLAN.md — Add /api/nfc/unregister + /api/nfc/status endpoints to api_server.py; fix mobile/android LoginResponse field mapping; update NFC guide [NFC-04, NFC-05]
+
+### Phase 10: Documentation Gaps
+**Goal**: api-reference.md documents all cashier blueprint endpoints; cashier-guide.md includes an operational note that cashier POS does not trigger FCM push notifications
+**Depends on**: Phase 7 (FCM clarification confirmed by fix)
+**Requirements**: DOC-02, DOC-04
+**Gap Closure**: Closes gaps from v1.0 audit (TD-10, TD-11)
+**Success Criteria** (what must be TRUE):
+  1. `docs/api-reference.md` documents all `/cashier/api/*` endpoints with request format, response format, and auth requirement
+  2. `docs/cashier-guide.md` includes a note clarifying that FCM push notifications are triggered by api_server.py (student-side), not by the cashier POS path
+**Plans**: 1 plan
+Plans:
+- [ ] 10-01-PLAN.md — Document /cashier/api/* endpoints in api-reference.md; add FCM operational note to cashier-guide.md [DOC-02, DOC-04]
+
 ## Progress
 
 **Execution Order:**
 Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 Note: Phases 2, 3, and 5 all depend on Phase 1 and can be started independently once Phase 1 is complete.
 Phase 4 depends on Phase 3. Phase 6 depends on Phase 5.
+
+**Gap Closure Phases (post-audit):**
+Phase 7 depends on Phase 1 and Phase 4 (FCM). Phase 8 depends on Phase 7. Phase 9 depends on Phase 5. Phase 10 depends on Phase 7.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -151,3 +218,7 @@ Phase 4 depends on Phase 3. Phase 6 depends on Phase 5.
 | 4. Student App + Notifications | 3/6 | In Progress|  |
 | 5. NFC Architecture Prep | 1/3 | In Progress|  |
 | 6. Documentation | 5/5 | Complete   | 2026-03-01 |
+| 7. Fix Cashier Payment Path | 0/3 | Pending |  |
+| 8. Security + Reliability Fixes | 0/2 | Pending |  |
+| 9. NFC Android Compatibility | 0/2 | Pending |  |
+| 10. Documentation Gaps | 0/1 | Pending |  |

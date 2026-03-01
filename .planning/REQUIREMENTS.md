@@ -9,7 +9,7 @@ Requirements for this milestone. Backend-first, then mobile improvements, then d
 
 ### Bug Fixes
 
-- [x] **BUG-01**: Cashier POS app displays the product menu correctly (currently broken — no products shown)
+- [ ] **BUG-01**: Cashier POS app displays the product menu correctly (currently broken — no products shown)
 - [x] **BUG-02**: Null/empty card UID is rejected at input boundary (not silently treated as valid)
 - [x] **BUG-03**: Google Sheets API failures return graceful error responses (not 500 crashes)
 - [x] **BUG-04**: Admin login requires non-empty credentials (empty string is not a valid login)
@@ -18,14 +18,14 @@ Requirements for this milestone. Backend-first, then mobile improvements, then d
 ### Security
 
 - [x] **SEC-01**: Credentials (admin username/password) are never printed to stdout or logs at startup
-- [x] **SEC-02**: FLASK_SECRET_KEY is required non-empty (system refuses to start with default key)
+- [ ] **SEC-02**: FLASK_SECRET_KEY is required non-empty (system refuses to start with default key)
 - [x] **SEC-03**: CORS is restricted to known origins (no wildcard `*` in production)
 - [x] **SEC-04**: Card UIDs are validated (regex format check) before use in Sheets queries
 - [x] **SEC-05**: Test files do not contain hardcoded secrets (JWT keys, passwords use env vars)
 
 ### Code Quality
 
-- [x] **QUAL-01**: All 60+ debug print() statements replaced with structured logging (get_logger())
+- [ ] **QUAL-01**: All 60+ debug print() statements replaced with structured logging (get_logger())
 - [x] **QUAL-02**: Card UID normalization centralized in a single utility function (backend/utils.py)
 - [x] **QUAL-03**: Global state in admin_dashboard.py wrapped in thread-safe singleton with locking
 - [x] **QUAL-04**: Dead code removed (BankongSetonApp folder, unused files)
@@ -43,30 +43,30 @@ Requirements for this milestone. Backend-first, then mobile improvements, then d
 ### Student App — Balance & History
 
 - [x] **APP-01**: Student can see their current card balance on the home screen
-- [x] **APP-02**: Student can see a scrollable list of all their transactions (date, amount, type)
-- [x] **APP-03**: Student can tap a canteen purchase transaction and see the itemized receipt (what was bought, price per item, total)
-- [x] **APP-04**: Student app shows balance update immediately after a transaction is processed
+- [ ] **APP-02**: Student can see a scrollable list of all their transactions (date, amount, type)
+- [ ] **APP-03**: Student can tap a canteen purchase transaction and see the itemized receipt (what was bought, price per item, total)
+- [ ] **APP-04**: Student app shows balance update immediately after a transaction is processed
 - [x] **APP-05**: Student app handles API errors gracefully (shows error message, not crash)
 
 ### Notifications
 
-- [x] **NOTF-01**: Student receives a push notification when their balance drops below a configurable threshold
+- [ ] **NOTF-01**: Student receives a push notification when their balance drops below a configurable threshold
 - [x] **NOTF-02**: Admin can configure the low-balance threshold value per student or globally
 
 ### NFC Architecture Preparation (Backend Only)
 
 - [x] **NFC-01**: NFC payment API endpoints exist and are documented (`/api/nfc/register`, `/api/nfc/pay`)
 - [x] **NFC-02**: VirtualCard model in nfc_payments.py is fully integrated with Google Sheets (persisted, not just in-memory)
-- [x] **NFC-03**: Transaction flow accepts both RFID card UID and NFC virtual card token as payment sources
-- [x] **NFC-04**: API authentication supports NFC device token alongside JWT (ready for Android HCE integration)
-- [x] **NFC-05**: NFC integration guide written in docs/ explaining exactly what the Android app needs to implement for v2
+- [ ] **NFC-03**: Transaction flow accepts both RFID card UID and NFC virtual card token as payment sources
+- [ ] **NFC-04**: API authentication supports NFC device token alongside JWT (ready for Android HCE integration)
+- [ ] **NFC-05**: NFC integration guide written in docs/ explaining exactly what the Android app needs to implement for v2
 
 ### Documentation
 
 - [x] **DOC-01**: `docs/architecture.md` — system overview, layers, data flow, entry points
-- [x] **DOC-02**: `docs/api-reference.md` — all REST API endpoints, request/response format, auth
+- [ ] **DOC-02**: `docs/api-reference.md` — all REST API endpoints, request/response format, auth
 - [x] **DOC-03**: `docs/google-sheets-schema.md` — all Sheets structure (columns, purpose, relationships)
-- [x] **DOC-04**: `docs/cashier-guide.md` — how cashier POS works, Arduino setup, card reading flow
+- [ ] **DOC-04**: `docs/cashier-guide.md` — how cashier POS works, Arduino setup, card reading flow
 - [x] **DOC-05**: `docs/student-app.md` — Android app architecture, screens, API calls
 - [x] **DOC-06**: `docs/nfc-integration-guide.md` — step-by-step guide for implementing NFC in Android (v2 prep)
 - [x] **DOC-07**: `docs/admin-guide.md` — admin dashboard features, roles, product management
@@ -103,17 +103,17 @@ Deferred to next version (not in current roadmap).
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| BUG-01 | Phase 1 - Critical Fixes + Security | Complete |
+| BUG-01 | Phase 7 - Fix Cashier Payment Path | Pending |
 | BUG-02 | Phase 1 - Critical Fixes + Security | Complete |
 | BUG-03 | Phase 1 - Critical Fixes + Security | Complete |
 | BUG-04 | Phase 1 - Critical Fixes + Security | Complete |
 | BUG-05 | Phase 1 - Critical Fixes + Security | Complete |
 | SEC-01 | Phase 1 - Critical Fixes + Security | Complete |
-| SEC-02 | Phase 1 - Critical Fixes + Security | Complete |
+| SEC-02 | Phase 8 - Security + Reliability Fixes | Pending |
 | SEC-03 | Phase 1 - Critical Fixes + Security | Complete |
 | SEC-04 | Phase 1 - Critical Fixes + Security | Complete |
 | SEC-05 | Phase 1 - Critical Fixes + Security | Complete |
-| QUAL-01 | Phase 2 - Code Quality | Complete |
+| QUAL-01 | Phase 8 - Security + Reliability Fixes | Pending |
 | QUAL-02 | Phase 2 - Code Quality | Complete |
 | QUAL-03 | Phase 2 - Code Quality | Complete |
 | QUAL-04 | Phase 2 - Code Quality | Complete |
@@ -121,25 +121,25 @@ Deferred to next version (not in current roadmap).
 | PROD-01 | Phase 3 - Product Management | Pending |
 | PROD-02 | Phase 3 - Product Management | Pending |
 | PROD-03 | Phase 3 - Product Management | Pending |
-| PROD-04 | Phase 3 - Product Management | Pending |
-| PROD-05 | Phase 3 - Product Management | Pending |
+| PROD-04 | Phase 8 - Security + Reliability Fixes | Pending |
+| PROD-05 | Phase 8 - Security + Reliability Fixes | Pending |
 | PROD-06 | Phase 3 - Product Management | Pending |
 | APP-01 | Phase 4 - Student App + Notifications | Complete |
-| APP-02 | Phase 4 - Student App + Notifications | Complete |
-| APP-03 | Phase 4 - Student App + Notifications | Complete |
-| APP-04 | Phase 4 - Student App + Notifications | Complete |
+| APP-02 | Phase 7 - Fix Cashier Payment Path | Pending |
+| APP-03 | Phase 7 - Fix Cashier Payment Path | Pending |
+| APP-04 | Phase 7 - Fix Cashier Payment Path | Pending |
 | APP-05 | Phase 4 - Student App + Notifications | Complete |
-| NOTF-01 | Phase 4 - Student App + Notifications | Complete |
+| NOTF-01 | Phase 7 - Fix Cashier Payment Path | Pending |
 | NOTF-02 | Phase 4 - Student App + Notifications | Complete |
 | NFC-01 | Phase 5 - NFC Architecture Prep | Complete |
 | NFC-02 | Phase 5 - NFC Architecture Prep | Complete |
-| NFC-03 | Phase 5 - NFC Architecture Prep | Complete |
-| NFC-04 | Phase 5 - NFC Architecture Prep | Complete |
-| NFC-05 | Phase 5 - NFC Architecture Prep | Complete |
+| NFC-03 | Phase 9 - NFC Android Compatibility | Pending |
+| NFC-04 | Phase 9 - NFC Android Compatibility | Pending |
+| NFC-05 | Phase 9 - NFC Android Compatibility | Pending |
 | DOC-01 | Phase 6 - Documentation | Complete |
-| DOC-02 | Phase 6 - Documentation | Complete |
+| DOC-02 | Phase 10 - Documentation Gaps | Pending |
 | DOC-03 | Phase 6 - Documentation | Complete |
-| DOC-04 | Phase 6 - Documentation | Complete |
+| DOC-04 | Phase 10 - Documentation Gaps | Pending |
 | DOC-05 | Phase 6 - Documentation | Complete |
 | DOC-06 | Phase 6 - Documentation | Complete |
 | DOC-07 | Phase 6 - Documentation | Complete |
@@ -149,7 +149,9 @@ Deferred to next version (not in current roadmap).
 - v1 requirements: 41 total
 - Mapped to phases: 41
 - Unmapped: 0
+- Pending (gap closure phases 7–10): 14
+- Complete: 27
 
 ---
 *Requirements defined: 2026-02-22*
-*Last updated: 2026-02-22 — Traceability finalized after roadmap creation*
+*Last updated: 2026-03-01 — Reset 14 requirements to Pending after v1.0 audit; assigned to gap closure phases 7–10*
