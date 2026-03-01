@@ -163,7 +163,7 @@ Plans:
 **Goal:** Make the admin dashboard accessible as a publicly hosted website. Hardware-dependent features (COM port, NFC card tap, physical cashier terminal) may be conditionally disabled or stubbed out for web mode; wherever feasible, implement web-friendly alternatives.
 **Requirements**: WEB-01, WEB-02, WEB-03, WEB-04
 **Depends on:** Phase 7
-**Plans:** 2/4 plans executed
+**Plans:** 3/4 plans executed
 
 Plans:
 - [ ] 07.1-01-PLAN.md — Create web_app.py: hardware-free copy of admin_dashboard.py (pyserial stripped, arduino_available=False, read_card_thread removed) [WEB-01]
