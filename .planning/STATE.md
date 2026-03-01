@@ -139,6 +139,10 @@ Recent decisions affecting current work:
 - [07-01]: sys.path.insert to backend/api/ inside FCM try block mirrors existing cashier_routes email_service pattern
 - [07-01]: WebSocket broadcast-then-re-emit pattern: server emits cashier_request_card broadcast → client re-emits back → @socketio.on handler fires → arduino_bridge.read_card_with_timeout()
 
+### Roadmap Evolution
+
+- Phase 07.1 inserted after Phase 7: Web-Deployable Dashboard (URGENT) — make admin dashboard hostable as a public website; hardware-dependent features (COM port, NFC, physical cashier terminal) may be conditionally disabled or stubbed for web mode
+
 ### Pending Todos
 
 None yet.
