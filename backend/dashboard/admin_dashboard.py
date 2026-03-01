@@ -1980,6 +1980,18 @@ def set_threshold():
 
 # ============= SOCKET.IO EVENTS =============
 
+@socketio.on('cashier_request_card')
+def handle_cashier_request_card(data):
+    """Trigger ArduinoBridge card read for cashier POS (5s timeout)."""
+    arduino_bridge = getattr(app, 'arduino_bridge', None)
+    if not arduino_bridge:
+        socketio.emit('card_error', {'message': 'Arduino not connected'})
+        return
+    # Callback is invoked from a background thread — do NOT write to flask_session.
+    # ArduinoBridge already emits 'card_read' with uid on success,
+    # 'card_timeout' on timeout, 'card_error' on error. No additional emit needed.
+    arduino_bridge.read_card_with_timeout(lambda uid: None, timeout=5)
+
 @socketio.on('connect')
 def handle_connect():
     logger.debug("event=client_connected")
