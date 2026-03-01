@@ -150,4 +150,4 @@ Phase 4 depends on Phase 3. Phase 6 depends on Phase 5.
 | 3. Product Management | 4/4 | Complete | 2026-02-26 |
 | 4. Student App + Notifications | 3/6 | In Progress|  |
 | 5. NFC Architecture Prep | 1/3 | In Progress|  |
-| 6. Documentation | 0/? | Not started | - |
+| 6. Documentation | 3/5 | In Progress|  |
