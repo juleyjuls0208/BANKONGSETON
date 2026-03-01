@@ -19,9 +19,10 @@ import re
 import logging
 import sys
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 try:
     from errors import setup_logging, get_logger
+
     setup_logging()  # activate structured logging whether run directly or via WSGI
     logger = get_logger(__name__)
 except ImportError:
@@ -29,61 +30,78 @@ except ImportError:
 
 from utils import normalize_card_uid
 from nfc_payments import NFCService, ensure_virtual_cards_sheet
+
 nfc_service = NFCService()
 
 load_dotenv()
 
 # --- JWT_SECRET startup guard ---
-JWT_SECRET = os.getenv('JWT_SECRET', '').strip()
+JWT_SECRET = os.getenv("JWT_SECRET", "").strip()
 if not JWT_SECRET:
     logger.critical(
         "event=startup_aborted reason=missing_jwt_secret "
-        "message=\"JWT_SECRET is not set or is empty. Set a strong random key in your .env file. "
+        'message="JWT_SECRET is not set or is empty. Set a strong random key in your .env file. '
         "Generate one with: python -c 'import secrets; print(secrets.token_urlsafe(32))'\""
     )
     sys.exit(1)
-JWT_ALGORITHM = 'HS256'
+JWT_ALGORITHM = "HS256"
 JWT_EXPIRY_HOURS = 24
 
 # Timezone configuration
-PHILIPPINES_TZ = pytz.timezone('Asia/Manila')
+PHILIPPINES_TZ = pytz.timezone("Asia/Manila")
+
 
 def get_philippines_time():
     """Get current time in Philippine timezone"""
     return datetime.now(PHILIPPINES_TZ)
 
+
 app = Flask(__name__)
+
 
 def get_cors_origins():
     """Parse CORS_ORIGINS env var into a list of allowed origins."""
-    flask_env = os.getenv('FLASK_ENV', 'production')
-    origins_str = os.getenv('CORS_ORIGINS', '')
-    origins = [o.strip() for o in origins_str.split(',') if o.strip()]
-    if flask_env == 'development' or not origins:
+    flask_env = os.getenv("FLASK_ENV", "production")
+    origins_str = os.getenv("CORS_ORIGINS", "")
+    origins = [o.strip() for o in origins_str.split(",") if o.strip()]
+    if flask_env == "development" or not origins:
         origins = origins + [
-            'http://localhost', 'http://localhost:3000', 'http://localhost:5001',
-            'http://127.0.0.1', 'http://127.0.0.1:5001', 'http://127.0.0.1:5003'
+            "http://localhost",
+            "http://localhost:3000",
+            "http://localhost:5001",
+            "http://127.0.0.1",
+            "http://127.0.0.1:5001",
+            "http://127.0.0.1:5003",
         ]
     return origins
 
-CORS(app, origins=get_cors_origins(), allow_headers=['Authorization', 'Content-Type', 'X-Device-Token'])
+
+CORS(
+    app,
+    origins=get_cors_origins(),
+    allow_headers=["Authorization", "Content-Type", "X-Device-Token"],
+)
 
 # Google Sheets Setup
+
 
 def get_sheets_client():
     """Get or refresh Google Sheets client"""
     try:
         # Look for credentials in config folder
-        credentials_path = os.path.join(os.path.dirname(__file__), '..', '..', 'config', 'credentials.json')
+        credentials_path = os.path.join(
+            os.path.dirname(__file__), "..", "..", "config", "credentials.json"
+        )
         if not os.path.exists(credentials_path):
             # Fallback to current directory for backward compatibility
-            credentials_path = 'credentials.json'
-        
+            credentials_path = "credentials.json"
+
         gc = gspread.service_account(filename=credentials_path)
-        return gc.open_by_key(os.getenv('GOOGLE_SHEETS_ID'))
+        return gc.open_by_key(os.getenv("GOOGLE_SHEETS_ID"))
     except Exception as e:
         logger.error("event=sheets_init_failed error=%s", e)
         raise
+
 
 # Initialize connection
 db = get_sheets_client()
@@ -91,9 +109,11 @@ db = get_sheets_client()
 # Run schema migration at startup (idempotent — skips if all columns exist)
 try:
     from migrate_transactions import migrate_users_schema
+
     migrate_users_schema()
 except Exception as _mig_err:
     logger.warning("event=migrate_users_startup_failed error=%s", _mig_err)
+
 
 def get_worksheet_with_retry(sheet_name, retries=2):
     """Get worksheet with retry logic for connection errors"""
@@ -103,27 +123,36 @@ def get_worksheet_with_retry(sheet_name, retries=2):
             return db.worksheet(sheet_name)
         except Exception as e:
             if attempt < retries:
-                logger.warning("event=worksheet_retry attempt=%d retries=%d sheet=%s", attempt + 1, retries, sheet_name)
+                logger.warning(
+                    "event=worksheet_retry attempt=%d retries=%d sheet=%s",
+                    attempt + 1,
+                    retries,
+                    sheet_name,
+                )
                 db = get_sheets_client()
             else:
                 raise e
 
+
 # Simple token storage (in production, use Redis or database)
 active_sessions = {}
+
 
 def generate_token():
     """Generate secure session token"""
     return secrets.token_urlsafe(32)
 
-def generate_jwt_token(user_id, role='student'):
+
+def generate_jwt_token(user_id, role="student"):
     """Generate JWT token for authenticated users"""
     payload = {
-        'user_id': user_id,
-        'role': role,
-        'exp': datetime.utcnow() + timedelta(hours=JWT_EXPIRY_HOURS),
-        'iat': datetime.utcnow()
+        "user_id": user_id,
+        "role": role,
+        "exp": datetime.utcnow() + timedelta(hours=JWT_EXPIRY_HOURS),
+        "iat": datetime.utcnow(),
     }
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+
 
 def verify_jwt_token(token):
     """Verify and decode JWT token"""
@@ -135,32 +164,37 @@ def verify_jwt_token(token):
     except jwt.InvalidTokenError:
         return None
 
+
 def require_auth(roles=None):
     """Decorator to require JWT authentication with optional role check"""
+
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
-            token = request.headers.get('Authorization', '').replace('Bearer ', '')
-            
+            token = request.headers.get("Authorization", "").replace("Bearer ", "")
+
             if not token:
-                return jsonify({'error': 'No token provided'}), 401
-            
+                return jsonify({"error": "No token provided"}), 401
+
             payload = verify_jwt_token(token)
             if not payload:
-                return jsonify({'error': 'Invalid or expired token'}), 401
-            
+                return jsonify({"error": "Invalid or expired token"}), 401
+
             # Check role if specified
-            if roles and payload.get('role') not in roles:
-                return jsonify({'error': 'Insufficient permissions'}), 403
-            
+            if roles and payload.get("role") not in roles:
+                return jsonify({"error": "Insufficient permissions"}), 403
+
             # Add payload to request context
             request.user = payload
             return f(*args, **kwargs)
-        
+
         return decorated_function
+
     return decorator
 
-UID_PATTERN = re.compile(r'^[0-9A-Fa-f]{8}$')
+
+UID_PATTERN = re.compile(r"^[0-9A-Fa-f]{8}$")
+
 
 def validate_card_uid(uid):
     """Validate card UID format. Returns (is_valid, error_message)."""
@@ -170,16 +204,16 @@ def validate_card_uid(uid):
         return False, "Card UID format is invalid"
     return True, ""
 
-@app.route('/api/health', methods=['GET'])
+
+@app.route("/api/health", methods=["GET"])
 def health_check():
     """API health check"""
-    return jsonify({
-        'status': 'ok',
-        'service': 'Bangko ng Seton API',
-        'version': '1.0.0'
-    })
+    return jsonify(
+        {"status": "ok", "service": "Bangko ng Seton API", "version": "1.0.0"}
+    )
 
-@app.route('/api/auth/login', methods=['POST'])
+
+@app.route("/api/auth/login", methods=["POST"])
 def login():
     """
     Login with Student ID
@@ -188,80 +222,98 @@ def login():
     """
     try:
         data = request.get_json()
-        student_id = data.get('student_id', '').strip()
-        
+        student_id = data.get("student_id", "").strip()
+
         if not student_id:
-            return jsonify({'error': 'Student ID required'}), 400
-        
+            return jsonify({"error": "Student ID required"}), 400
+
         # Search for student in Users sheet
-        users_sheet = get_worksheet_with_retry('Users')
+        users_sheet = get_worksheet_with_retry("Users")
         records = users_sheet.get_all_records()
-        
+
         student = None
-        
+
         for record in records:
-            if str(record.get('StudentID', '')) == student_id:
+            if str(record.get("StudentID", "")) == student_id:
                 student = record
                 break
-        
+
         if not student:
-            return jsonify({'error': 'Student ID not found'}), 404
-        
+            return jsonify({"error": "Student ID not found"}), 404
+
         # Check if student has account status
-        if student.get('Status', '').lower() == 'inactive':
-            return jsonify({'error': 'Account is inactive. Please contact admin.'}), 403
-        
+        if student.get("Status", "").lower() == "inactive":
+            return jsonify({"error": "Account is inactive. Please contact admin."}), 403
+
         # Check if student has a money card
-        money_card_number = student.get('MoneyCardNumber', '').strip()
+        money_card_number = student.get("MoneyCardNumber", "").strip()
         if not money_card_number:
-            return jsonify({'error': 'No money card registered. Please register a money card first.'}), 403
-        
+            return jsonify(
+                {
+                    "error": "No money card registered. Please register a money card first."
+                }
+            ), 403
+
         # Check if money card is lost or inactive
-        money_sheet = get_worksheet_with_retry('Money Accounts')
+        money_sheet = get_worksheet_with_retry("Money Accounts")
         money_records = money_sheet.get_all_records()
-        
+
         normalized_card = normalize_card_uid(money_card_number)
         card_status = None
-        
+
         for record in money_records:
-            if normalize_card_uid(record.get('MoneyCardNumber', '')) == normalized_card:
-                card_status = record.get('Status', '').strip()
+            if normalize_card_uid(record.get("MoneyCardNumber", "")) == normalized_card:
+                card_status = record.get("Status", "").strip()
                 break
-        
-        if card_status and card_status.lower() == 'lost':
-            return jsonify({'error': 'Your money card has been reported as lost. Please contact admin to get a replacement card.'}), 403
-        
-        if card_status and card_status.lower() != 'active':
-            return jsonify({'error': f'Your money card is {card_status}. Please contact admin.'}), 403
-        
+
+        if card_status and card_status.lower() == "lost":
+            return jsonify(
+                {
+                    "error": "Your money card has been reported as lost. Please contact admin to get a replacement card."
+                }
+            ), 403
+
+        if card_status and card_status.lower() != "active":
+            return jsonify(
+                {"error": f"Your money card is {card_status}. Please contact admin."}
+            ), 403
+
         # Generate session token
         token = generate_token()
         active_sessions[token] = {
-            'student_id': student['StudentID'],
-            'card_number': student['IDCardNumber'],
-            'login_time': get_philippines_time().isoformat()
+            "student_id": student["StudentID"],
+            "card_number": student["IDCardNumber"],
+            "login_time": get_philippines_time().isoformat(),
         }
-        
-        return jsonify({
-            'token': token,
-            'student': {
-                'id': student['StudentID'],
-                'name': student['Name'],
-                'id_card': student['IDCardNumber'],
-                'money_card': money_card_number,
-                'status': student.get('Status', 'Active')
+
+        return jsonify(
+            {
+                "token": token,
+                "student": {
+                    "id": student["StudentID"],
+                    "name": student["Name"],
+                    "id_card": student["IDCardNumber"],
+                    "money_card": money_card_number,
+                    "status": student.get("Status", "Active"),
+                },
             }
-        })
-        
-    except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
-            gspread.exceptions.WorksheetNotFound, ConnectionError, TimeoutError) as e:
+        )
+
+    except (
+        gspread.exceptions.APIError,
+        gspread.exceptions.SpreadsheetNotFound,
+        gspread.exceptions.WorksheetNotFound,
+        ConnectionError,
+        TimeoutError,
+    ) as e:
         logger.error(f"Google Sheets unavailable in login: {e}")
-        return jsonify({'error': 'Service unavailable, please try again'}), 503
+        return jsonify({"error": "Service unavailable, please try again"}), 503
     except Exception as e:
         logger.error(f"Unexpected error in login: {e}", exc_info=True)
-        return jsonify({'error': 'An unexpected error occurred'}), 500
+        return jsonify({"error": "An unexpected error occurred"}), 500
 
-@app.route('/api/student/profile', methods=['GET'])
+
+@app.route("/api/student/profile", methods=["GET"])
 def get_profile():
     """
     Get student profile
@@ -269,66 +321,79 @@ def get_profile():
     Header: Authorization: Bearer <token>
     """
     try:
-        token = request.headers.get('Authorization', '').replace('Bearer ', '')
-        
+        token = request.headers.get("Authorization", "").replace("Bearer ", "")
+
         if token not in active_sessions:
-            return jsonify({'error': 'Invalid or expired token'}), 401
-        
+            return jsonify({"error": "Invalid or expired token"}), 401
+
         session = active_sessions[token]
-        student_id = session['student_id']
-        
+        student_id = session["student_id"]
+
         # Get student data
-        users_sheet = get_worksheet_with_retry('Users')
+        users_sheet = get_worksheet_with_retry("Users")
         records = users_sheet.get_all_records()
-        
+
         student = None
         for record in records:
-            if record['StudentID'] == student_id:
+            if record["StudentID"] == student_id:
                 student = record
                 break
-        
+
         if not student:
-            return jsonify({'error': 'Student not found'}), 404
-        
+            return jsonify({"error": "Student not found"}), 404
+
         # Check if money card is lost
-        money_card = student.get('MoneyCardNumber', '')
+        money_card = student.get("MoneyCardNumber", "")
         if money_card:
-            money_sheet = get_worksheet_with_retry('Money Accounts')
+            money_sheet = get_worksheet_with_retry("Money Accounts")
             money_records = money_sheet.get_all_records()
-            
+
             normalized_card = normalize_card_uid(money_card)
             for money_record in money_records:
-                card = normalize_card_uid(money_record.get('MoneyCardNumber', ''))
+                card = normalize_card_uid(money_record.get("MoneyCardNumber", ""))
                 if card == normalized_card:
-                    card_status = money_record.get('Status', '').strip()
-                    if card_status and card_status.lower() == 'lost':
+                    card_status = money_record.get("Status", "").strip()
+                    if card_status and card_status.lower() == "lost":
                         # Invalidate session
                         if token in active_sessions:
                             del active_sessions[token]
-                        return jsonify({'error': 'CARD_LOST', 'message': 'Your money card has been reported as lost. Please contact admin to get a replacement.'}), 403
+                        return jsonify(
+                            {
+                                "error": "CARD_LOST",
+                                "message": "Your money card has been reported as lost. Please contact admin to get a replacement.",
+                            }
+                        ), 403
                     break
-        
+
         logger.debug("event=profile_request student_id=%s", student_id)
-        
-        return jsonify({
-            'student_id': student['StudentID'],
-            'name': student['Name'],
-            'id_card': student['IDCardNumber'],
-            'money_card': student.get('MoneyCardNumber', ''),
-            'status': student.get('Status', 'Active'),
-            'parent_email': student.get('ParentEmail', ''),
-            'date_registered': student.get('DateRegistered', '')
-        })
-        
-    except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
-            gspread.exceptions.WorksheetNotFound, ConnectionError, TimeoutError) as e:
+
+        return jsonify(
+            {
+                "student_id": student["StudentID"],
+                "name": student["Name"],
+                "id_card": student["IDCardNumber"],
+                "money_card": student.get("MoneyCardNumber", ""),
+                "status": student.get("Status", "Active"),
+                "parent_email": student.get("ParentEmail", ""),
+                "date_registered": student.get("DateRegistered", ""),
+            }
+        )
+
+    except (
+        gspread.exceptions.APIError,
+        gspread.exceptions.SpreadsheetNotFound,
+        gspread.exceptions.WorksheetNotFound,
+        ConnectionError,
+        TimeoutError,
+    ) as e:
         logger.error(f"Google Sheets unavailable in get_profile: {e}")
-        return jsonify({'error': 'Service unavailable, please try again'}), 503
+        return jsonify({"error": "Service unavailable, please try again"}), 503
     except Exception as e:
         logger.error(f"Unexpected error in get_profile: {e}", exc_info=True)
-        return jsonify({'error': 'An unexpected error occurred'}), 500
+        return jsonify({"error": "An unexpected error occurred"}), 500
 
-@app.route('/api/student/balance', methods=['GET'])
+
+@app.route("/api/student/balance", methods=["GET"])
 def get_balance():
     """
     Get current balance
@@ -336,62 +401,70 @@ def get_balance():
     Header: Authorization: Bearer <token>
     """
     try:
-        token = request.headers.get('Authorization', '').replace('Bearer ', '')
-        
+        token = request.headers.get("Authorization", "").replace("Bearer ", "")
+
         if token not in active_sessions:
-            return jsonify({'error': 'Invalid or expired token'}), 401
-        
+            return jsonify({"error": "Invalid or expired token"}), 401
+
         session = active_sessions[token]
-        
+
         # Get student's money card
-        users_sheet = get_worksheet_with_retry('Users')
+        users_sheet = get_worksheet_with_retry("Users")
         records = users_sheet.get_all_records()
-        
+
         money_card = None
         for record in records:
-            if record['StudentID'] == session['student_id']:
-                money_card = record.get('MoneyCardNumber')
+            if record["StudentID"] == session["student_id"]:
+                money_card = record.get("MoneyCardNumber")
                 break
-        
+
         if not money_card:
-            return jsonify({'error': 'No money card registered'}), 404
-        
+            return jsonify({"error": "No money card registered"}), 404
+
         # Get balance from Money Accounts
-        money_sheet = get_worksheet_with_retry('Money Accounts')
+        money_sheet = get_worksheet_with_retry("Money Accounts")
         money_records = money_sheet.get_all_records()
-        
+
         normalized_card = normalize_card_uid(money_card)
         balance = 0.0
         card_status = None
-        
+
         for record in money_records:
-            card = normalize_card_uid(record.get('MoneyCardNumber', ''))
+            card = normalize_card_uid(record.get("MoneyCardNumber", ""))
             if card == normalized_card:
-                balance = float(record.get('Balance', 0))
-                card_status = record.get('Status', '').strip()
+                balance = float(record.get("Balance", 0))
+                card_status = record.get("Status", "").strip()
                 break
-        
+
         # Check if card is lost
-        if card_status and card_status.lower() == 'lost':
+        if card_status and card_status.lower() == "lost":
             # Invalidate session
             if token in active_sessions:
                 del active_sessions[token]
-            return jsonify({'error': 'CARD_LOST', 'message': 'Your card has been reported as lost. Please contact admin.'}), 403
-        
-        return jsonify({
-            'balance': balance,
-            'money_card': money_card
-        })
-        
-    except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
-            gspread.exceptions.WorksheetNotFound, ConnectionError, TimeoutError) as e:
+            return jsonify(
+                {
+                    "error": "CARD_LOST",
+                    "message": "Your card has been reported as lost. Please contact admin.",
+                }
+            ), 403
+
+        return jsonify({"balance": balance, "money_card": money_card})
+
+    except (
+        gspread.exceptions.APIError,
+        gspread.exceptions.SpreadsheetNotFound,
+        gspread.exceptions.WorksheetNotFound,
+        ConnectionError,
+        TimeoutError,
+    ) as e:
         logger.error(f"Google Sheets unavailable in get_balance: {e}")
-        return jsonify({'error': 'Service unavailable, please try again'}), 503
+        return jsonify({"error": "Service unavailable, please try again"}), 503
     except Exception as e:
         logger.error(f"Unexpected error in get_balance: {e}", exc_info=True)
-        return jsonify({'error': 'An unexpected error occurred'}), 500
+        return jsonify({"error": "An unexpected error occurred"}), 500
 
-@app.route('/api/student/transactions', methods=['GET'])
+
+@app.route("/api/student/transactions", methods=["GET"])
 def get_transactions():
     """
     Get transaction history with offset pagination
@@ -399,94 +472,115 @@ def get_transactions():
     Header: Authorization: Bearer <token>
     """
     try:
-        token = request.headers.get('Authorization', '').replace('Bearer ', '')
-        
+        token = request.headers.get("Authorization", "").replace("Bearer ", "")
+
         if token not in active_sessions:
-            return jsonify({'error': 'Invalid or expired token'}), 401
-        
+            return jsonify({"error": "Invalid or expired token"}), 401
+
         session = active_sessions[token]
-        limit = int(request.args.get('limit', 50))
-        offset = int(request.args.get('offset', 0))
-        
+        limit = int(request.args.get("limit", 50))
+        offset = int(request.args.get("offset", 0))
+
         # Get student's money card
-        users_sheet = get_worksheet_with_retry('Users')
+        users_sheet = get_worksheet_with_retry("Users")
         records = users_sheet.get_all_records()
-        
+
         money_card = None
         for record in records:
-            if record['StudentID'] == session['student_id']:
-                money_card = record.get('MoneyCardNumber')
+            if record["StudentID"] == session["student_id"]:
+                money_card = record.get("MoneyCardNumber")
                 break
-        
+
         if not money_card:
-            return jsonify({'error': 'No money card registered'}), 404
-        
+            return jsonify({"error": "No money card registered"}), 404
+
         # Check if money card is lost
-        money_sheet = get_worksheet_with_retry('Money Accounts')
+        money_sheet = get_worksheet_with_retry("Money Accounts")
         money_records = money_sheet.get_all_records()
-        
+
         normalized_card = normalize_card_uid(money_card)
         for money_record in money_records:
-            card = normalize_card_uid(money_record.get('MoneyCardNumber', ''))
+            card = normalize_card_uid(money_record.get("MoneyCardNumber", ""))
             if card == normalized_card:
-                card_status = money_record.get('Status', '').strip()
-                if card_status and card_status.lower() == 'lost':
+                card_status = money_record.get("Status", "").strip()
+                if card_status and card_status.lower() == "lost":
                     # Invalidate session
                     if token in active_sessions:
                         del active_sessions[token]
-                    return jsonify({'error': 'CARD_LOST', 'message': 'Your money card has been reported as lost. Please contact admin.'}), 403
+                    return jsonify(
+                        {
+                            "error": "CARD_LOST",
+                            "message": "Your money card has been reported as lost. Please contact admin.",
+                        }
+                    ), 403
                 break
-        
+
         # Get transactions
-        trans_sheet = get_worksheet_with_retry('Transactions Log')
+        trans_sheet = get_worksheet_with_retry("Transactions Log")
         trans_records = trans_sheet.get_all_records()
-        
+
         normalized_card = normalize_card_uid(money_card)
         transactions = []
-        
+
         for record in trans_records:
-            card = normalize_card_uid(record.get('MoneyCardNumber', ''))
+            card = normalize_card_uid(record.get("MoneyCardNumber", ""))
             if card == normalized_card:
                 # Parse ItemsJson if available
-                items_json = record.get('ItemsJson', '')
+                items_json = record.get("ItemsJson", "")
                 items = []
                 if items_json:
                     try:
-                        items = json.loads(items_json) if isinstance(items_json, str) else items_json
+                        items = (
+                            json.loads(items_json)
+                            if isinstance(items_json, str)
+                            else items_json
+                        )
                     except:
                         items = []
-                
-                transactions.append({
-                    'timestamp': record.get('Timestamp', ''),
-                    'type': record.get('TransactionType', ''),
-                    'amount': float(record.get('Amount', 0)),
-                    'balance_before': float(record.get('BalanceBefore', 0) or 0),  # NEW
-                    'balance': float(record.get('BalanceAfter', 0)),
-                    'description': f"{record.get('TransactionType', '')} - {record.get('Status', '')}",
-                    'items': items  # Include itemized receipt
-                })
-        
+
+                transactions.append(
+                    {
+                        "timestamp": record.get("Timestamp", ""),
+                        "type": record.get("TransactionType", ""),
+                        "amount": float(record.get("Amount", 0)),
+                        "balance_before": float(
+                            record.get("BalanceBefore", 0) or 0
+                        ),  # NEW
+                        "balance": float(record.get("BalanceAfter", 0)),
+                        "description": f"{record.get('TransactionType', '')} - {record.get('Status', '')}",
+                        "items": items,  # Include itemized receipt
+                    }
+                )
+
         # Sort by timestamp descending, apply offset pagination
-        transactions.sort(key=lambda x: x['timestamp'], reverse=True)
+        transactions.sort(key=lambda x: x["timestamp"], reverse=True)
         total = len(transactions)
-        transactions = transactions[offset:offset + limit]
-        
-        return jsonify({
-            'transactions': transactions,
-            'count': len(transactions),
-            'total': total,
-            'has_more': (offset + limit) < total
-        })
-        
-    except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
-            gspread.exceptions.WorksheetNotFound, ConnectionError, TimeoutError) as e:
+        transactions = transactions[offset : offset + limit]
+
+        return jsonify(
+            {
+                "transactions": transactions,
+                "count": len(transactions),
+                "total": total,
+                "has_more": (offset + limit) < total,
+            }
+        )
+
+    except (
+        gspread.exceptions.APIError,
+        gspread.exceptions.SpreadsheetNotFound,
+        gspread.exceptions.WorksheetNotFound,
+        ConnectionError,
+        TimeoutError,
+    ) as e:
         logger.error(f"Google Sheets unavailable in get_transactions: {e}")
-        return jsonify({'error': 'Service unavailable, please try again'}), 503
+        return jsonify({"error": "Service unavailable, please try again"}), 503
     except Exception as e:
         logger.error(f"Unexpected error in get_transactions: {e}", exc_info=True)
-        return jsonify({'error': 'An unexpected error occurred'}), 500
+        return jsonify({"error": "An unexpected error occurred"}), 500
 
-@app.route('/api/auth/logout', methods=['POST'])
+
+@app.route("/api/auth/logout", methods=["POST"])
 def logout():
     """
     Logout and invalidate token
@@ -494,22 +588,28 @@ def logout():
     Header: Authorization: Bearer <token>
     """
     try:
-        token = request.headers.get('Authorization', '').replace('Bearer ', '')
-        
+        token = request.headers.get("Authorization", "").replace("Bearer ", "")
+
         if token in active_sessions:
             del active_sessions[token]
-        
-        return jsonify({'message': 'Logged out successfully'})
-        
-    except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
-            gspread.exceptions.WorksheetNotFound, ConnectionError, TimeoutError) as e:
+
+        return jsonify({"message": "Logged out successfully"})
+
+    except (
+        gspread.exceptions.APIError,
+        gspread.exceptions.SpreadsheetNotFound,
+        gspread.exceptions.WorksheetNotFound,
+        ConnectionError,
+        TimeoutError,
+    ) as e:
         logger.error(f"Google Sheets unavailable in logout: {e}")
-        return jsonify({'error': 'Service unavailable, please try again'}), 503
+        return jsonify({"error": "Service unavailable, please try again"}), 503
     except Exception as e:
         logger.error(f"Unexpected error in logout: {e}", exc_info=True)
-        return jsonify({'error': 'An unexpected error occurred'}), 500
+        return jsonify({"error": "An unexpected error occurred"}), 500
 
-@app.route('/api/nfc/register', methods=['POST'])
+
+@app.route("/api/nfc/register", methods=["POST"])
 def nfc_register():
     """Register a virtual NFC card for the logged-in student.
 
@@ -524,43 +624,150 @@ def nfc_register():
         503: Google Sheets unavailable
     """
     try:
-        token = request.headers.get('Authorization', '').replace('Bearer ', '')
+        token = request.headers.get("Authorization", "").replace("Bearer ", "")
         if token not in active_sessions:
-            return jsonify({'error': 'Invalid or expired token'}), 401
+            return jsonify({"error": "Invalid or expired token"}), 401
 
         session = active_sessions[token]
-        student_id = session['student_id']
+        student_id = session["student_id"]
 
         db = get_sheets_client()
 
         # Look up the student's linked RFID money card
-        money_sheet = get_worksheet_with_retry('Money Accounts')
+        money_sheet = get_worksheet_with_retry("Money Accounts")
         money_records = money_sheet.get_all_records()
         money_card = None
         for r in money_records:
-            if str(r.get('StudentID', '')).strip() == str(student_id).strip():
-                money_card = str(r.get('MoneyCardNumber', '')).strip()
+            if str(r.get("StudentID", "")).strip() == str(student_id).strip():
+                money_card = str(r.get("MoneyCardNumber", "")).strip()
                 break
 
         if not money_card:
-            return jsonify({'error': 'No money card registered'}), 403
+            return jsonify({"error": "No money card registered"}), 403
 
         result = nfc_service.register_virtual_card(student_id, money_card, db)
         logger.info(f"event=nfc_register_success student_id={student_id}")
-        return jsonify({
-            'virtual_card_token': result['virtual_card_token'],
-            'device_token': result['device_token'],
-            'money_card': result['money_card'],
-            'message': 'Virtual card registered'
-        }), 200
+        return jsonify(
+            {
+                "virtual_card_token": result["virtual_card_token"],
+                "device_token": result["device_token"],
+                "money_card": result["money_card"],
+                "message": "Virtual card registered",
+            }
+        ), 200
 
     except Exception as e:
         logger.error(f"event=nfc_register_error error={str(e)}")
-        return jsonify({'error': 'Service unavailable, please try again'}), 503
+        return jsonify({"error": "Service unavailable, please try again"}), 503
 
 
-@app.route('/api/nfc/pay', methods=['POST'])
-@require_auth(roles=['admin', 'cashier'])
+@app.route("/api/nfc/status", methods=["GET"])
+def nfc_status():
+    """Return the NFC registration status for the logged-in student.
+
+    Auth: session token (Bearer) — same as /api/nfc/register.
+    Returns:
+        200: { is_registered: bool, device_id: str|null, registered_at: str|null }
+        401: Invalid or expired session token
+        503: Google Sheets unavailable
+    """
+    try:
+        token = request.headers.get("Authorization", "").replace("Bearer ", "")
+        if token not in active_sessions:
+            return jsonify({"error": "Invalid or expired token"}), 401
+
+        session = active_sessions[token]
+        student_id = session["student_id"]
+
+        db = get_sheets_client()
+        from nfc_payments import ensure_virtual_cards_sheet
+
+        vc_sheet = ensure_virtual_cards_sheet(db)
+        records = vc_sheet.get_all_records()
+
+        active_card = None
+        for r in records:
+            if (
+                str(r.get("StudentID", "")).strip() == str(student_id).strip()
+                and str(r.get("IsActive", "")).upper() == "TRUE"
+            ):
+                active_card = r
+                break
+
+        if active_card:
+            return jsonify(
+                {
+                    "is_registered": True,
+                    "device_id": str(active_card.get("DeviceToken", "")),
+                    "registered_at": str(active_card.get("CreatedAt", "")),
+                }
+            ), 200
+        else:
+            return jsonify(
+                {
+                    "is_registered": False,
+                    "device_id": None,
+                    "registered_at": None,
+                }
+            ), 200
+
+    except Exception as e:
+        logger.error(f"event=nfc_status_error error={str(e)}")
+        return jsonify({"error": "Service unavailable, please try again"}), 503
+
+
+@app.route("/api/nfc/unregister", methods=["POST"])
+def nfc_unregister():
+    """Deactivate the student's active virtual NFC card.
+
+    Auth: session token (Bearer) — same as /api/nfc/register.
+    Request body: { "device_id": "..." }
+    Returns:
+        200: { "message": "Virtual card unregistered" }
+        401: Invalid or expired session token
+        404: No active virtual card found for this student
+        503: Google Sheets unavailable
+    """
+    try:
+        token = request.headers.get("Authorization", "").replace("Bearer ", "")
+        if token not in active_sessions:
+            return jsonify({"error": "Invalid or expired token"}), 401
+
+        session = active_sessions[token]
+        student_id = session["student_id"]
+
+        data = request.get_json() or {}
+        device_id = str(data.get("device_id", "")).strip()
+
+        db = get_sheets_client()
+        from nfc_payments import ensure_virtual_cards_sheet
+
+        vc_sheet = ensure_virtual_cards_sheet(db)
+        records = vc_sheet.get_all_records()
+
+        deactivated = False
+        for idx, r in enumerate(records, start=2):
+            if (
+                str(r.get("StudentID", "")).strip() == str(student_id).strip()
+                and str(r.get("IsActive", "")).upper() == "TRUE"
+            ):
+                vc_sheet.update_cell(idx, 6, "FALSE")  # Column 6 = IsActive
+                deactivated = True
+                logger.info(f"event=nfc_unregister_success student_id={student_id}")
+                break
+
+        if not deactivated:
+            return jsonify({"error": "No active virtual card found"}), 404
+
+        return jsonify({"message": "Virtual card unregistered"}), 200
+
+    except Exception as e:
+        logger.error(f"event=nfc_unregister_error error={str(e)}")
+        return jsonify({"error": "Service unavailable, please try again"}), 503
+
+
+@app.route("/api/nfc/pay", methods=["POST"])
+@require_auth(roles=["admin", "cashier"])
 def nfc_pay():
     """Process an NFC virtual card payment.
 
@@ -577,56 +784,60 @@ def nfc_pay():
     """
     try:
         # Step 1: Validate X-Device-Token header (in addition to JWT checked by decorator)
-        device_token = request.headers.get('X-Device-Token', '').strip()
+        device_token = request.headers.get("X-Device-Token", "").strip()
         if not device_token:
-            return jsonify({'error': 'X-Device-Token header required'}), 401
+            return jsonify({"error": "X-Device-Token header required"}), 401
 
         # Step 2: Validate request body
         data = request.get_json() or {}
-        virtual_card_token = str(data.get('virtual_card_token', '')).strip()
-        items = data.get('items', [])
+        virtual_card_token = str(data.get("virtual_card_token", "")).strip()
+        items = data.get("items", [])
         try:
-            total = float(data.get('total', 0))
+            total = float(data.get("total", 0))
         except (TypeError, ValueError):
-            return jsonify({'error': 'Invalid transaction data'}), 400
+            return jsonify({"error": "Invalid transaction data"}), 400
 
         if not virtual_card_token or not items or total <= 0:
-            return jsonify({'error': 'Invalid transaction data'}), 400
+            return jsonify({"error": "Invalid transaction data"}), 400
 
         # Step 3: Look up VirtualCard by both tokens (must be active)
         db = get_sheets_client()
-        matched = nfc_service.get_virtual_card_by_tokens(virtual_card_token, device_token, db)
+        matched = nfc_service.get_virtual_card_by_tokens(
+            virtual_card_token, device_token, db
+        )
         if not matched:
-            return jsonify({'error': 'Invalid virtual card token or device token'}), 401
+            return jsonify({"error": "Invalid virtual card token or device token"}), 401
 
-        money_card_number = str(matched.get('MoneyCardNumber', '')).strip()
+        money_card_number = str(matched.get("MoneyCardNumber", "")).strip()
 
         # Step 4: Debit balance from Money Accounts sheet
-        money_sheet = get_worksheet_with_retry('Money Accounts')
+        money_sheet = get_worksheet_with_retry("Money Accounts")
         money_records = money_sheet.get_all_records()
         balance_row_idx = None
         current_balance = None
         for idx, r in enumerate(money_records, start=2):
-            if str(r.get('MoneyCardNumber', '')).strip() == money_card_number:
+            if str(r.get("MoneyCardNumber", "")).strip() == money_card_number:
                 balance_row_idx = idx
                 try:
-                    current_balance = float(r.get('Balance', 0))
+                    current_balance = float(r.get("Balance", 0))
                 except (TypeError, ValueError):
                     current_balance = 0.0
                 break
 
         if balance_row_idx is None:
-            return jsonify({'error': 'Invalid virtual card token or device token'}), 401
+            return jsonify({"error": "Invalid virtual card token or device token"}), 401
 
         if current_balance < total:
-            return jsonify({'error': 'Insufficient funds', 'balance': current_balance}), 400
+            return jsonify(
+                {"error": "Insufficient funds", "balance": current_balance}
+            ), 400
 
         new_balance = round(current_balance - total, 2)
 
         # Find Balance column index (1-based) in Money Accounts
         header_row = money_sheet.row_values(1)
         try:
-            balance_col_idx = header_row.index('Balance') + 1
+            balance_col_idx = header_row.index("Balance") + 1
         except ValueError:
             balance_col_idx = 3  # fallback: column C
 
@@ -634,105 +845,110 @@ def nfc_pay():
 
         # Step 5: Log to Transactions Log sheet
         timestamp = get_philippines_time()
-        timestamp_str = timestamp.strftime('%Y-%m-%d %H:%M:%S')
-        trans_sheet = get_worksheet_with_retry('Transactions Log')
+        timestamp_str = timestamp.strftime("%Y-%m-%d %H:%M:%S")
+        trans_sheet = get_worksheet_with_retry("Transactions Log")
 
         # Build items summary for receipt (same format as cashier transactions)
-        items_summary = '; '.join(
-            f"{item.get('name','?')} x{item.get('qty',1)} @{item.get('price',0)}"
+        items_summary = "; ".join(
+            f"{item.get('name', '?')} x{item.get('qty', 1)} @{item.get('price', 0)}"
             for item in items
         )
 
-        trans_sheet.append_row([
-            timestamp_str,                    # Timestamp
-            money_card_number,                # MoneyCardNumber (RFID UID linked to virtual card)
-            'NFC Purchase',                   # TransactionType (distinct from 'Purchase' for RFID)
-            -total,                           # Amount (negative = debit)
-            current_balance,                  # BalanceBefore
-            new_balance,                      # BalanceAfter
-            items_summary,                    # Items
-        ])
+        trans_sheet.append_row(
+            [
+                timestamp_str,  # Timestamp
+                money_card_number,  # MoneyCardNumber (RFID UID linked to virtual card)
+                "NFC Purchase",  # TransactionType (distinct from 'Purchase' for RFID)
+                -total,  # Amount (negative = debit)
+                current_balance,  # BalanceBefore
+                new_balance,  # BalanceAfter
+                items_summary,  # Items
+            ]
+        )
 
-        logger.info(f"event=nfc_pay_success money_card={money_card_number} total={total} new_balance={new_balance}")
+        logger.info(
+            f"event=nfc_pay_success money_card={money_card_number} total={total} new_balance={new_balance}"
+        )
 
-        return jsonify({
-            'success': True,
-            'new_balance': new_balance,
-            'timestamp': timestamp_str
-        }), 200
+        return jsonify(
+            {"success": True, "new_balance": new_balance, "timestamp": timestamp_str}
+        ), 200
 
     except Exception as e:
         logger.error(f"event=nfc_pay_error error={str(e)}")
-        return jsonify({'error': 'Service unavailable, please try again'}), 503
+        return jsonify({"error": "Service unavailable, please try again"}), 503
 
 
 # ==================== NEW PHASE 1 ENDPOINTS ====================
 
-@app.route('/api/products', methods=['GET'])
+
+@app.route("/api/products", methods=["GET"])
 def get_products():
     """
     Get list of active products
     GET /api/products?category=Food
     """
     try:
-        category = request.args.get('category', None)
-        
+        category = request.args.get("category", None)
+
         # Try to get products from Products sheet first
         try:
-            products_sheet = get_worksheet_with_retry('Products')
+            products_sheet = get_worksheet_with_retry("Products")
             records = products_sheet.get_all_records()
-            
+
             products = []
             for record in records:
                 # Only include active products
-                if str(record.get('Active', '')).upper() == 'TRUE':
+                if str(record.get("Active", "")).upper() == "TRUE":
                     product = {
-                        'id': record.get('ID', ''),
-                        'name': record.get('Name', ''),
-                        'category': record.get('Category', ''),
-                        'price': float(record.get('Price', 0)),
-                        'image_url': record.get('ImageURL', '')
+                        "id": record.get("ID", ""),
+                        "name": record.get("Name", ""),
+                        "category": record.get("Category", ""),
+                        "price": float(record.get("Price", 0)),
+                        "image_url": record.get("ImageURL", ""),
                     }
-                    
+
                     # Filter by category if specified
-                    if category is None or product['category'] == category:
+                    if category is None or product["category"] == category:
                         products.append(product)
-            
-            return jsonify({
-                'products': products,
-                'count': len(products)
-            })
-        
+
+            return jsonify({"products": products, "count": len(products)})
+
         except Exception as sheet_error:
             # Fallback to products.json
             logger.warning("event=products_sheet_fallback error=%s", sheet_error)
-            products_file = os.path.join(os.path.dirname(__file__), '..', 'data', 'products.json')
-            
+            products_file = os.path.join(
+                os.path.dirname(__file__), "..", "data", "products.json"
+            )
+
             if os.path.exists(products_file):
-                with open(products_file, 'r') as f:
+                with open(products_file, "r") as f:
                     products = json.load(f)
-                
+
                 # Filter by category if specified
                 if category:
-                    products = [p for p in products if p.get('category') == category]
-                
-                return jsonify({
-                    'products': products,
-                    'count': len(products)
-                })
+                    products = [p for p in products if p.get("category") == category]
+
+                return jsonify({"products": products, "count": len(products)})
             else:
-                return jsonify({'products': [], 'count': 0})
-    
-    except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
-            gspread.exceptions.WorksheetNotFound, ConnectionError, TimeoutError) as e:
+                return jsonify({"products": [], "count": 0})
+
+    except (
+        gspread.exceptions.APIError,
+        gspread.exceptions.SpreadsheetNotFound,
+        gspread.exceptions.WorksheetNotFound,
+        ConnectionError,
+        TimeoutError,
+    ) as e:
         logger.error(f"Google Sheets unavailable in get_products: {e}")
-        return jsonify({'error': 'Service unavailable, please try again'}), 503
+        return jsonify({"error": "Service unavailable, please try again"}), 503
     except Exception as e:
         logger.error(f"Unexpected error in get_products: {e}", exc_info=True)
-        return jsonify({'error': 'An unexpected error occurred'}), 500
+        return jsonify({"error": "An unexpected error occurred"}), 500
 
-@app.route('/api/products', methods=['POST'])
-@require_auth(roles=['admin', 'cashier'])
+
+@app.route("/api/products", methods=["POST"])
+@require_auth(roles=["admin", "cashier"])
 def manage_product():
     """
     Create or update a product (Admin/Cashier only)
@@ -742,52 +958,60 @@ def manage_product():
     """
     try:
         data = request.get_json()
-        
+
         # Validate required fields
-        required = ['id', 'name', 'category', 'price']
+        required = ["id", "name", "category", "price"]
         for field in required:
             if field not in data:
-                return jsonify({'error': f'Missing required field: {field}'}), 400
-        
-        products_sheet = get_worksheet_with_retry('Products')
+                return jsonify({"error": f"Missing required field: {field}"}), 400
+
+        products_sheet = get_worksheet_with_retry("Products")
         records = products_sheet.get_all_records()
-        
+
         # Check if product exists
         product_row = None
         for idx, record in enumerate(records, start=2):  # Start at 2 (skip header)
-            if record.get('ID') == data['id']:
+            if record.get("ID") == data["id"]:
                 product_row = idx
                 break
-        
+
         product_data = [
-            data['id'],
-            data['name'],
-            data['category'],
-            float(data['price']),
-            data.get('image_url', ''),
-            'TRUE' if data.get('active', True) else 'FALSE',
-            get_philippines_time().strftime('%Y-%m-%d %H:%M:%S') if not product_row else ''
+            data["id"],
+            data["name"],
+            data["category"],
+            float(data["price"]),
+            data.get("image_url", ""),
+            "TRUE" if data.get("active", True) else "FALSE",
+            get_philippines_time().strftime("%Y-%m-%d %H:%M:%S")
+            if not product_row
+            else "",
         ]
-        
+
         if product_row:
             # Update existing product
-            products_sheet.update(f'A{product_row}:G{product_row}', [product_data])
-            return jsonify({'message': 'Product updated', 'id': data['id']})
+            products_sheet.update(f"A{product_row}:G{product_row}", [product_data])
+            return jsonify({"message": "Product updated", "id": data["id"]})
         else:
             # Add new product
             products_sheet.append_row(product_data)
-            return jsonify({'message': 'Product created', 'id': data['id']}), 201
-    
-    except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
-            gspread.exceptions.WorksheetNotFound, ConnectionError, TimeoutError) as e:
+            return jsonify({"message": "Product created", "id": data["id"]}), 201
+
+    except (
+        gspread.exceptions.APIError,
+        gspread.exceptions.SpreadsheetNotFound,
+        gspread.exceptions.WorksheetNotFound,
+        ConnectionError,
+        TimeoutError,
+    ) as e:
         logger.error(f"Google Sheets unavailable in manage_product: {e}")
-        return jsonify({'error': 'Service unavailable, please try again'}), 503
+        return jsonify({"error": "Service unavailable, please try again"}), 503
     except Exception as e:
         logger.error(f"Unexpected error in manage_product: {e}", exc_info=True)
-        return jsonify({'error': 'An unexpected error occurred'}), 500
+        return jsonify({"error": "An unexpected error occurred"}), 500
 
-@app.route('/api/cashier/transaction', methods=['POST'])
-@require_auth(roles=['admin', 'cashier'])
+
+@app.route("/api/cashier/transaction", methods=["POST"])
+@require_auth(roles=["admin", "cashier"])
 def process_cashier_transaction():
     """
     Process a cashier purchase transaction with itemized receipt
@@ -801,102 +1025,116 @@ def process_cashier_transaction():
     """
     try:
         data = request.get_json()
-        
-        card_uid = data.get('card_uid', '').strip()
-        items = data.get('items', [])
-        total = float(data.get('total', 0))
-        
+
+        card_uid = data.get("card_uid", "").strip()
+        items = data.get("items", [])
+        total = float(data.get("total", 0))
+
         if not card_uid or not items or total <= 0:
-            return jsonify({'error': 'Invalid transaction data'}), 400
-        
+            return jsonify({"error": "Invalid transaction data"}), 400
+
         # Validate card UID format before any Sheets query (BUG-02, SEC-04)
         valid, err_msg = validate_card_uid(card_uid)
         if not valid:
-            return jsonify({'error': err_msg}), 400
-        
+            return jsonify({"error": err_msg}), 400
+
         # Normalize card UID
         normalized_card = normalize_card_uid(card_uid)
-        
+
         # Find the money account
-        money_sheet = get_worksheet_with_retry('Money Accounts')
+        money_sheet = get_worksheet_with_retry("Money Accounts")
         money_records = money_sheet.get_all_records()
-        
+
         account_row = None
         current_balance = 0.0
         student_id = None
-        
+
         for idx, record in enumerate(money_records, start=2):
-            if normalize_card_uid(record.get('MoneyCardNumber', '')) == normalized_card:
+            if normalize_card_uid(record.get("MoneyCardNumber", "")) == normalized_card:
                 account_row = idx
-                current_balance = float(record.get('Balance', 0))
-                card_status = record.get('Status', '').strip().lower()
-                
+                current_balance = float(record.get("Balance", 0))
+                card_status = record.get("Status", "").strip().lower()
+
                 # Check card status
-                if card_status == 'lost':
-                    return jsonify({'error': 'Card reported as lost'}), 403
-                if card_status != 'active':
-                    return jsonify({'error': f'Card is {card_status}'}), 403
-                
+                if card_status == "lost":
+                    return jsonify({"error": "Card reported as lost"}), 403
+                if card_status != "active":
+                    return jsonify({"error": f"Card is {card_status}"}), 403
+
                 # Get student ID from associated user
-                student_id_card = record.get('StudentIDCard', '')
-                users_sheet = get_worksheet_with_retry('Users')
+                student_id_card = record.get("StudentIDCard", "")
+                users_sheet = get_worksheet_with_retry("Users")
                 user_records = users_sheet.get_all_records()
                 for user in user_records:
-                    if normalize_card_uid(user.get('IDCardNumber', '')) == normalize_card_uid(student_id_card):
-                        student_id = user.get('StudentID')
+                    if normalize_card_uid(
+                        user.get("IDCardNumber", "")
+                    ) == normalize_card_uid(student_id_card):
+                        student_id = user.get("StudentID")
                         break
                 break
-        
+
         if not account_row:
-            return jsonify({'error': 'Card not found'}), 404
-        
+            return jsonify({"error": "Card not found"}), 404
+
         # Check sufficient balance
         if current_balance < total:
-            return jsonify({'error': 'Insufficient funds', 'balance': current_balance}), 400
-        
+            return jsonify(
+                {"error": "Insufficient funds", "balance": current_balance}
+            ), 400
+
         # Deduct balance
         new_balance = current_balance - total
-        money_sheet.update(f'C{account_row}', [[new_balance]])  # Assuming Balance is column C
-        
+        money_sheet.update(
+            f"C{account_row}", [[new_balance]]
+        )  # Assuming Balance is column C
+
         # Log transaction with ItemsJson
-        trans_sheet = get_worksheet_with_retry('Transactions Log')
-        timestamp = get_philippines_time().strftime('%Y-%m-%d %H:%M:%S')
-        
+        trans_sheet = get_worksheet_with_retry("Transactions Log")
+        timestamp = get_philippines_time().strftime("%Y-%m-%d %H:%M:%S")
+
         transaction_row = [
             timestamp,
             normalized_card,
-            'Purchase',
+            "Purchase",
             -total,
             current_balance,  # BalanceBefore (column 5) — NEW
-            new_balance,      # BalanceAfter (column 6)
-            'Success',
-            json.dumps(items)  # ItemsJson (column 8)
+            new_balance,  # BalanceAfter (column 6)
+            "Success",
+            json.dumps(items),  # ItemsJson (column 8)
         ]
-        
+
         trans_sheet.append_row(transaction_row)
 
         # Low-balance push notification — fires after transaction is committed
         # Never blocks or rolls back the transaction response
         try:
             # Read threshold from admin-configured Settings sheet; fall back to env var
-            threshold = float(os.getenv('LOW_BALANCE_THRESHOLD', 50))
+            threshold = float(os.getenv("LOW_BALANCE_THRESHOLD", 50))
             try:
-                settings_sheet = get_worksheet_with_retry('Settings')
+                settings_sheet = get_worksheet_with_retry("Settings")
                 settings_records = settings_sheet.get_all_records()
                 for row in settings_records:
-                    if str(row.get('Key', '')).strip().lower() == 'low_balance_threshold':
-                        threshold = float(row.get('Value', threshold))
+                    if (
+                        str(row.get("Key", "")).strip().lower()
+                        == "low_balance_threshold"
+                    ):
+                        threshold = float(row.get("Value", threshold))
                         break
             except Exception as settings_err:
-                logger.warning("event=settings_read_failed error=%s using_env_default=%.0f", settings_err, threshold)
+                logger.warning(
+                    "event=settings_read_failed error=%s using_env_default=%.0f",
+                    settings_err,
+                    threshold,
+                )
             if new_balance < threshold and student_id:
-                users_sheet2 = get_worksheet_with_retry('Users')
+                users_sheet2 = get_worksheet_with_retry("Users")
                 user_records2 = users_sheet2.get_all_records()
                 for user in user_records2:
-                    if str(user.get('StudentID')) == str(student_id):
-                        fcm_token = str(user.get('FCMToken', '')).strip()
+                    if str(user.get("StudentID")) == str(student_id):
+                        fcm_token = str(user.get("FCMToken", "")).strip()
                         if fcm_token:
                             from fcm_sender import send_low_balance_push
+
                             send_low_balance_push(fcm_token, new_balance)
                         break
         except Exception as notif_error:
@@ -905,37 +1143,53 @@ def process_cashier_transaction():
 
         # Send email receipt (async with retry)
         if student_id:
-            users_sheet = get_worksheet_with_retry('Users')
+            users_sheet = get_worksheet_with_retry("Users")
             user_records = users_sheet.get_all_records()
             for user in user_records:
-                if user.get('StudentID') == student_id:
-                    parent_email = user.get('ParentEmail', '')
-                    student_email = user.get('Email', '')
-                    student_name = user.get('Name', 'Student')
-                    
+                if user.get("StudentID") == student_id:
+                    parent_email = user.get("ParentEmail", "")
+                    student_email = user.get("Email", "")
+                    student_name = user.get("Name", "Student")
+
                     # Import email service
                     import sys
-                    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'services'))
-                    from email_service import email_service
-                    
-                    email_service.send_receipt(parent_email, student_email, student_name, items, total, new_balance)
-                    break
-        
-        return jsonify({
-            'success': True,
-            'new_balance': new_balance,
-            'timestamp': timestamp
-        })
-    
-    except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
-            gspread.exceptions.WorksheetNotFound, ConnectionError, TimeoutError) as e:
-        logger.error(f"Google Sheets unavailable in process_cashier_transaction: {e}")
-        return jsonify({'error': 'Service unavailable, please try again'}), 503
-    except Exception as e:
-        logger.error(f"Unexpected error in process_cashier_transaction: {e}", exc_info=True)
-        return jsonify({'error': 'An unexpected error occurred'}), 500
 
-@app.route('/api/users/fcm-token', methods=['POST'])
+                    sys.path.insert(
+                        0, os.path.join(os.path.dirname(__file__), "..", "services")
+                    )
+                    from email_service import email_service
+
+                    email_service.send_receipt(
+                        parent_email,
+                        student_email,
+                        student_name,
+                        items,
+                        total,
+                        new_balance,
+                    )
+                    break
+
+        return jsonify(
+            {"success": True, "new_balance": new_balance, "timestamp": timestamp}
+        )
+
+    except (
+        gspread.exceptions.APIError,
+        gspread.exceptions.SpreadsheetNotFound,
+        gspread.exceptions.WorksheetNotFound,
+        ConnectionError,
+        TimeoutError,
+    ) as e:
+        logger.error(f"Google Sheets unavailable in process_cashier_transaction: {e}")
+        return jsonify({"error": "Service unavailable, please try again"}), 503
+    except Exception as e:
+        logger.error(
+            f"Unexpected error in process_cashier_transaction: {e}", exc_info=True
+        )
+        return jsonify({"error": "An unexpected error occurred"}), 500
+
+
+@app.route("/api/users/fcm-token", methods=["POST"])
 def register_fcm_token():
     """
     Register FCM token for push notifications
@@ -944,55 +1198,61 @@ def register_fcm_token():
     Body: { "fcm_token": "..." }
     """
     try:
-        token = request.headers.get('Authorization', '').replace('Bearer ', '')
+        token = request.headers.get("Authorization", "").replace("Bearer ", "")
         if token not in active_sessions:
-            return jsonify({'error': 'Invalid or expired token'}), 401
+            return jsonify({"error": "Invalid or expired token"}), 401
         session = active_sessions[token]
-        student_id = session['student_id']
-        
+        student_id = session["student_id"]
+
         data = request.get_json()
-        fcm_token = data.get('fcm_token', '').strip()
-        
+        fcm_token = data.get("fcm_token", "").strip()
+
         if not fcm_token:
-            return jsonify({'error': 'FCM token required'}), 400
-        
+            return jsonify({"error": "FCM token required"}), 400
+
         # Update user's FCM token
-        users_sheet = get_worksheet_with_retry('Users')
+        users_sheet = get_worksheet_with_retry("Users")
         records = users_sheet.get_all_records()
-        
+
         user_row = None
         for idx, record in enumerate(records, start=2):
-            if str(record.get('StudentID')) == str(student_id):
+            if str(record.get("StudentID")) == str(student_id):
                 user_row = idx
                 break
-        
+
         if not user_row:
-            return jsonify({'error': 'User not found'}), 404
-        
+            return jsonify({"error": "User not found"}), 404
+
         # Find FCMToken column index
         headers = users_sheet.row_values(1)
-        if 'FCMToken' not in headers:
-            return jsonify({'error': 'FCMToken column not found. Run migration first.'}), 500
-        
-        fcm_col_idx = headers.index('FCMToken') + 1  # +1 for 1-based indexing
+        if "FCMToken" not in headers:
+            return jsonify(
+                {"error": "FCMToken column not found. Run migration first."}
+            ), 500
+
+        fcm_col_idx = headers.index("FCMToken") + 1  # +1 for 1-based indexing
         users_sheet.update_cell(user_row, fcm_col_idx, fcm_token)
-        
-        return jsonify({'message': 'FCM token registered'})
-    
-    except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
-            gspread.exceptions.WorksheetNotFound, ConnectionError, TimeoutError) as e:
+
+        return jsonify({"message": "FCM token registered"})
+
+    except (
+        gspread.exceptions.APIError,
+        gspread.exceptions.SpreadsheetNotFound,
+        gspread.exceptions.WorksheetNotFound,
+        ConnectionError,
+        TimeoutError,
+    ) as e:
         logger.error(f"Google Sheets unavailable in register_fcm_token: {e}")
-        return jsonify({'error': 'Service unavailable, please try again'}), 503
+        return jsonify({"error": "Service unavailable, please try again"}), 503
     except Exception as e:
         logger.error(f"Unexpected error in register_fcm_token: {e}", exc_info=True)
-        return jsonify({'error': 'An unexpected error occurred'}), 500
+        return jsonify({"error": "An unexpected error occurred"}), 500
 
-if __name__ == '__main__':
-    port = int(os.getenv('API_PORT', 5001))
-    debug = os.getenv('API_DEBUG', 'False') == 'True'
-    
+
+if __name__ == "__main__":
+    port = int(os.getenv("API_PORT", 5001))
+    debug = os.getenv("API_DEBUG", "False") == "True"
+
     logger.info("event=api_starting port=%d debug=%s", port, debug)
-    
-    app.run(host='0.0.0.0', port=port, debug=debug)
 
-
+    app.run(host="0.0.0.0", port=port, debug=debug)
