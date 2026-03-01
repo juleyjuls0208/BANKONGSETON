@@ -198,8 +198,8 @@ Plans:
   4. NFC integration guide accurately reflects all available endpoints including the new ones
 **Plans**: 2 plans
 Plans:
-- [ ] 09-01-PLAN.md — Add "NFC Purchase" to TransactionsAdapter.kt navigation condition [NFC-03]
-- [ ] 09-02-PLAN.md — Add /api/nfc/unregister + /api/nfc/status endpoints to api_server.py; fix mobile/android LoginResponse field mapping; update NFC guide [NFC-04, NFC-05]
+- [ ] 09-01-PLAN.md — Extend isPurchase in TransactionsAdapter.kt to include "NFC Purchase" [NFC-03]
+- [ ] 09-02-PLAN.md — Add GET /api/nfc/status + POST /api/nfc/unregister to api_server.py; fix StudentData.id @SerializedName; update nfc-integration-guide.md [NFC-04, NFC-05]
 
 ### Phase 10: Documentation Gaps
 **Goal**: api-reference.md documents all cashier blueprint endpoints; cashier-guide.md includes an operational note that cashier POS does not trigger FCM push notifications
