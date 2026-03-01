@@ -7,7 +7,6 @@ from flask import Blueprint, render_template, jsonify, request, redirect, url_fo
 from functools import wraps
 import jwt
 import os
-import json
 import re
 import gspread
 import logging
@@ -368,6 +367,19 @@ def complete_sale():
                 'required': total
             }), 400
         
+        # Resolve student_id for transaction log
+        # Manual mode: student_id is already known; RFID mode: look it up from Users sheet
+        resolved_student_id = manual_student_id if manual_student_id else ''
+        if not manual_student_id:
+            try:
+                _users_for_id = db.worksheet('Users').get_all_records()
+                for _u in _users_for_id:
+                    if normalize_card_uid(_u.get('MoneyCardNumber', '')) == normalized_card:
+                        resolved_student_id = str(_u.get('StudentID', ''))
+                        break
+            except Exception as _uid_err:
+                logger.warning("event=student_id_lookup_failed error=%s", _uid_err)
+
         # Deduct balance and log transaction with retry + rollback
         MAX_RETRIES = 3
         new_balance = current_balance - total
@@ -375,6 +387,7 @@ def complete_sale():
         last_error = None
         transaction_type = 'Manual' if manual_student_id else 'Purchase'
         timestamp = get_philippines_time().strftime('%Y-%m-%d %H:%M:%S')
+        transaction_id = f"TXN-{get_philippines_time().strftime('%Y%m%d%H%M%S')}"
 
         for attempt in range(1, MAX_RETRIES + 1):
             try:
@@ -387,14 +400,16 @@ def complete_sale():
                 trans_sheet = db.worksheet('Transactions Log')
 
                 transaction_row = [
-                    timestamp,         # col 0: Timestamp
-                    normalized_card,   # col 1: MoneyCardNumber
-                    transaction_type,  # col 2: TransactionType
-                    -total,            # col 3: Amount
-                    current_balance,   # col 4: BalanceBefore  ← ADDED
-                    new_balance,       # col 5: BalanceAfter
-                    'Success',         # col 6: Status
-                    json.dumps(items)  # col 7: ItemsJson
+                    transaction_id,       # TransactionID (TXN-...)
+                    timestamp,            # Timestamp
+                    resolved_student_id,  # StudentID
+                    normalized_card,      # MoneyCardNumber
+                    transaction_type,     # TransactionType ('Manual' or 'Purchase')
+                    total,                # Amount (positive deduction value)
+                    current_balance,      # BalanceBefore
+                    new_balance,          # BalanceAfter
+                    'Completed',          # Status
+                    ''                    # ErrorMessage
                 ]
 
                 trans_sheet.append_row(transaction_row)
