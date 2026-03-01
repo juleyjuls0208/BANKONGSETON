@@ -56,7 +56,8 @@
                 <select class="port-selector" id="portSelector">
                     <option value="">Select COM Port</option>
                 </select>
-                <button class="connect-btn" onclick="connectArduino()">Connect</button>
+                <button class="connect-btn" id="connectBtn" onclick="connectArduino()">Connect</button>
+                <span id="manual-mode-badge" style="display:none; background:#e67e22; color:white; padding:4px 10px; border-radius:12px; font-size:12px; font-weight:600;">Manual Mode</span>
             </div>
             <button class="logout-btn" onclick="logout()">Logout</button>
         </div>
@@ -92,6 +93,17 @@
         </div>
     </div>
 
+    <!-- Manual Student Lookup Modal -->
+    <div id="manualLookupModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center;">
+      <div style="background:white; border-radius:12px; padding:24px; width:90%; max-width:400px; box-shadow:0 4px 20px rgba(0,0,0,0.3);">
+        <h3 style="margin-bottom:16px;">Find Student</h3>
+        <input type="text" id="studentSearchInput" placeholder="Type student name or ID..." oninput="searchStudents()"
+          style="width:100%; padding:10px; border:1px solid #ddd; border-radius:6px; font-size:15px; margin-bottom:12px; box-sizing:border-box;">
+        <div id="studentSearchResults" style="max-height:200px; overflow-y:auto; margin-bottom:12px;"></div>
+        <button onclick="closeManualModal()" style="width:100%; padding:10px; background:#ccc; border:none; border-radius:6px; cursor:pointer; font-size:14px;">Cancel</button>
+      </div>
+    </div>
+
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <script>
         let products = [];
@@ -99,12 +111,17 @@
         let selectedCategory = 'All';
         let socket = null;
         let arduinoConnected = false;
+        window.manualMode = false;
+        window.selectedStudent = null;
 
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
-            loadPorts();
-            loadProducts();
-            initWebSocket();
+            loadPorts().then(function() {
+                if (!window.manualMode) {
+                    initWebSocket();
+                }
+                loadProducts();
+            });
         });
 
         // --- Arduino / Port Management ---
@@ -113,17 +130,38 @@
             try {
                 const response = await fetch('/cashier/api/ports');
                 const data = await response.json();
-                const selector = document.getElementById('portSelector');
-                selector.innerHTML = '<option value="">Select COM Port</option>';
-                data.ports.forEach(port => {
-                    const option = document.createElement('option');
-                    option.value = port;
-                    option.textContent = port;
-                    selector.appendChild(option);
-                });
+                const ports = data.ports || [];
+                if (ports.length > 0) {
+                    const selector = document.getElementById('portSelector');
+                    selector.innerHTML = '<option value="">Select COM Port</option>';
+                    ports.forEach(port => {
+                        const option = document.createElement('option');
+                        option.value = port;
+                        option.textContent = port;
+                        selector.appendChild(option);
+                    });
+                } else {
+                    enterManualMode();
+                }
             } catch (error) {
                 console.error('Failed to load ports:', error);
+                enterManualMode();
             }
+        }
+
+        function enterManualMode() {
+            window.manualMode = true;
+            // Hide port selector and connect button
+            var portSelector = document.getElementById('portSelector');
+            if (portSelector) portSelector.style.display = 'none';
+            var connectBtn = document.getElementById('connectBtn');
+            if (connectBtn) connectBtn.style.display = 'none';
+            // Show manual mode badge
+            var badge = document.getElementById('manual-mode-badge');
+            if (badge) badge.style.display = 'inline-block';
+            // Enable checkout button immediately (no Arduino needed)
+            var checkoutBtn = document.getElementById('checkoutBtn');
+            if (checkoutBtn) checkoutBtn.disabled = false;
         }
 
         async function connectArduino() {
@@ -248,7 +286,10 @@
         function renderCart() {
             if (cart.length === 0) {
                 document.getElementById('cartItems').innerHTML = '<p style="text-align: center; color: #999;">Cart is empty</p>';
-                document.getElementById('checkoutBtn').disabled = true;
+                // Only disable if not in manual mode (manual mode keeps it enabled when cart is empty too)
+                if (!window.manualMode) {
+                    document.getElementById('checkoutBtn').disabled = true;
+                }
             } else {
                 document.getElementById('cartItems').innerHTML = cart.map(item => `
                     <div class="cart-item">
@@ -303,13 +344,18 @@
         // --- Checkout / Payment ---
 
         async function checkout() {
+            if (cart.length === 0) return;
+
+            if (window.manualMode) {
+                openManualLookupModal();
+                return;
+            }
+
             // Arduino connection is required for card reading; this guard is intentional
             if (!arduinoConnected) {
                 alert('Arduino not connected! Please connect to a COM port first.');
                 return;
             }
-
-            if (cart.length === 0) return;
 
             const items = cart.map(item => ({
                 name: item.name,
@@ -361,6 +407,98 @@
                     cart = [];
                     renderCart();
 
+                    setTimeout(function() { closeModal(); }, 2000);
+                }
+            } catch (error) {
+                document.getElementById('modalTitle').textContent = 'Error';
+                document.getElementById('modalMessage').textContent = error.message;
+            }
+        }
+
+        // --- Manual Mode Helpers ---
+
+        function openManualLookupModal() {
+            window.selectedStudent = null;
+            document.getElementById('studentSearchInput').value = '';
+            document.getElementById('studentSearchResults').innerHTML = '';
+            document.getElementById('manualLookupModal').style.display = 'flex';
+            document.getElementById('studentSearchInput').focus();
+        }
+
+        function closeManualModal() {
+            document.getElementById('manualLookupModal').style.display = 'none';
+        }
+
+        async function searchStudents() {
+            const q = document.getElementById('studentSearchInput').value.trim();
+            if (q.length < 2) {
+                document.getElementById('studentSearchResults').innerHTML = '';
+                return;
+            }
+            try {
+                const response = await fetch('/cashier/api/lookup-student?q=' + encodeURIComponent(q));
+                const data = await response.json();
+                const resultsDiv = document.getElementById('studentSearchResults');
+                if (!data.students || data.students.length === 0) {
+                    resultsDiv.innerHTML = '<p style="color:#999; padding:8px;">No students found</p>';
+                    return;
+                }
+                resultsDiv.innerHTML = data.students.map(function(s) {
+                    return '<div onclick="selectStudentAndPay(\'' + s.id + '\',\'' + s.name.replace(/'/g, "\\'") + '\',' + s.balance + ')"' +
+                      ' style="padding:10px; border:1px solid #eee; border-radius:6px; margin-bottom:6px; cursor:pointer; transition:background 0.15s;"' +
+                      ' onmouseover="this.style.background=\'#f0f0f0\'" onmouseout="this.style.background=\'white\'">' +
+                      '<strong>' + s.name + '</strong> <span style="color:#888; font-size:13px;">(' + s.id + ')</span><br>' +
+                      '<span style="color:#27ae60;">Balance: \u0E3F' + s.balance.toFixed(2) + '</span>' +
+                      '</div>';
+                }).join('');
+            } catch (error) {
+                console.error('Search failed:', error);
+            }
+        }
+
+        async function selectStudentAndPay(studentId, studentName, studentBalance) {
+            closeManualModal();
+            const total = cart.reduce(function(sum, item) { return sum + (item.price * item.qty); }, 0);
+            if (studentBalance < total) {
+                alert('Insufficient funds. Balance: \u0E3F' + studentBalance.toFixed(2) + ', Required: \u0E3F' + total.toFixed(2));
+                return;
+            }
+
+            // Show payment modal
+            document.getElementById('paymentModal').style.display = 'flex';
+            document.getElementById('modalTitle').textContent = 'Processing...';
+            document.getElementById('modalMessage').textContent = 'Charging ' + studentName + '...';
+
+            try {
+                var items = cart.map(function(item) { return {name: item.name, price: item.price, qty: item.qty}; });
+
+                // Step 1: Store pending transaction in session via process-sale
+                var processResponse = await fetch('/cashier/api/process-sale', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({items: items, total: total})
+                });
+                if (!processResponse.ok) {
+                    var processData = await processResponse.json();
+                    throw new Error(processData.error || 'Failed to initiate sale');
+                }
+
+                // Step 2: Complete sale with manual_student_id
+                var response = await fetch('/cashier/api/complete-sale', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({manual_student_id: studentId})
+                });
+                var data = await response.json();
+                if (data.error) {
+                    document.getElementById('modalTitle').textContent = 'Payment Failed';
+                    document.getElementById('modalMessage').textContent = data.error;
+                } else {
+                    document.getElementById('modalTitle').textContent = 'Success!';
+                    document.getElementById('modalMessage').textContent =
+                        'Payment received!\nNew Balance: \u20B1' + data.new_balance.toFixed(2);
+                    cart = [];
+                    renderCart();
                     setTimeout(function() { closeModal(); }, 2000);
                 }
             } catch (error) {
