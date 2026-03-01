@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-03-01T08:20:14.752Z"
+last_updated: "2026-03-01T08:21:02.498Z"
 progress:
   total_phases: 10
   completed_phases: 6
   total_plans: 34
-  completed_plans: 32
+  completed_plans: 33
 ---
 
 # Project State
@@ -18,14 +18,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-22)
 
 **Core value:** Students can pay for canteen food instantly by tapping their RFID card, with their balance always visible in the app
-**Current focus:** Phase 6 - Documentation (Complete)
+**Current focus:** Phase 7 - Cashier Payment Fix
 
 ## Current Position
 
-Phase: 6 of 6 (Documentation)
-Plan: 3 of 3 completed in current phase
+Phase: 7 of 10 (Cashier Payment Fix)
+Plan: 1 of 1 completed in current phase
 Status: Phase complete — all plans done
-Last activity: 2026-03-01 — Executed 06-04-PLAN.md: Wrote docs/student-app.md (306 lines, 5 screens) and rewrote docs/nfc-integration-guide.md (414 lines) from Android Kotlin source; closes DOC-05 and DOC-06
+Last activity: 2026-03-01 — Executed 07-01-PLAN.md: Wired cashier POS RFID card-read path end-to-end; fixed 8-column transaction row with BalanceBefore; added FCM low-balance push notification
 
 Progress: [##########] 100%
 
@@ -61,6 +61,7 @@ Progress: [##########] 100%
 | Phase 06-documentation P01 | 5min | 2 tasks | 2 files |
 | Phase 06-documentation P05 | 3min | 2 tasks | 28 files |
 | Phase 07-cashier-payment-fix P02 | 5min | 2 tasks | 2 files |
+| Phase 07-cashier-payment-fix P01 | 2min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -132,6 +133,9 @@ Recent decisions affecting current work:
 - [Phase 06-01]: Windows case-insensitive fs: ARCHITECTURE.md and architecture.md treated as same file by archive script; manually rescued new content after move
 - [07-02]: Non-fatal try/except wraps migrate_users_schema() so Sheets API outage at startup logs warning but never crashes server
 - [07-02]: SimpleDateFormat retained (not DateTimeFormatter) in ReceiptActivity — already imported, works across all Android API levels
+- [07-01]: lambda uid: None callback intentional — ArduinoBridge already emits card_read/card_timeout/card_error internally; no additional callback logic
+- [07-01]: sys.path.insert to backend/api/ inside FCM try block mirrors existing cashier_routes email_service pattern
+- [07-01]: WebSocket broadcast-then-re-emit pattern: server emits cashier_request_card broadcast → client re-emits back → @socketio.on handler fires → arduino_bridge.read_card_with_timeout()
 
 ### Pending Todos
 
@@ -147,5 +151,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-01
-Stopped at: Completed 07-02-PLAN.md: migrate_users_schema() startup call in api_server.py + ReceiptActivity timestamp fix (space format, 12h output)
+Stopped at: Completed 07-01-PLAN.md: wired cashier POS card-read WebSocket path, fixed 8-col transaction row (BalanceBefore), added FCM low-balance push to cashier complete_sale
 Resume file: None
