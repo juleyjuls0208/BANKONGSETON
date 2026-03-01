@@ -281,6 +281,10 @@
         function initWebSocket() {
             socket = io();
 
+            socket.on('cashier_request_card', function(data) {
+                socket.emit('cashier_request_card', data);
+            });
+
             socket.on('card_read', function(data) {
                 completeSale(data.uid);
             });

@@ -305,13 +305,14 @@ def complete_sale():
                 trans_sheet = db.worksheet('Transactions Log')
 
                 transaction_row = [
-                    timestamp,
-                    normalized_card,
-                    'Purchase',
-                    -total,
-                    new_balance,
-                    'Success',
-                    json.dumps(items)
+                    timestamp,         # col 0: Timestamp
+                    normalized_card,   # col 1: MoneyCardNumber
+                    'Purchase',        # col 2: TransactionType
+                    -total,            # col 3: Amount
+                    current_balance,   # col 4: BalanceBefore  ← ADDED
+                    new_balance,       # col 5: BalanceAfter
+                    'Success',         # col 6: Status
+                    json.dumps(items)  # col 7: ItemsJson
                 ]
 
                 trans_sheet.append_row(transaction_row)
@@ -345,6 +346,33 @@ def complete_sale():
         
         # Clear pending transaction
         flask_session.pop('pending_transaction', None)
+
+        # FCM low-balance push notification — fires after transaction committed
+        # Never blocks or rolls back the transaction response
+        try:
+            threshold = float(os.getenv('LOW_BALANCE_THRESHOLD', 50))
+            try:
+                settings_sheet = db.worksheet('Settings')
+                settings_records = settings_sheet.get_all_records()
+                for row in settings_records:
+                    if str(row.get('Key', '')).strip().lower() == 'low_balance_threshold':
+                        threshold = float(row.get('Value', threshold))
+                        break
+            except Exception as settings_err:
+                logger.warning("event=settings_read_failed error=%s using_env_default=%.0f", settings_err, threshold)
+            if new_balance < threshold:
+                users_sheet2 = db.worksheet('Users')
+                user_records2 = users_sheet2.get_all_records()
+                for user in user_records2:
+                    if normalize_card_uid(user.get('MoneyCardNumber', '')) == normalized_card:
+                        fcm_token = str(user.get('FCMToken', '')).strip()
+                        if fcm_token:
+                            sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'api'))
+                            from fcm_sender import send_low_balance_push
+                            send_low_balance_push(fcm_token, new_balance)
+                        break
+        except Exception as notif_error:
+            logger.warning("event=low_balance_notify_failed error=%s", notif_error)
         
         # Send email (async)
         try:
