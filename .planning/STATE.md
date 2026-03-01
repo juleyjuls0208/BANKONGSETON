@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-03-01T10:20:37.605Z"
+last_updated: "2026-03-01T11:47:25.050Z"
 progress:
-  total_phases: 10
+  total_phases: 11
   completed_phases: 7
-  total_plans: 34
-  completed_plans: 34
+  total_plans: 38
+  completed_plans: 36
 ---
 
 # Project State
@@ -23,9 +23,9 @@ See: .planning/PROJECT.md (updated 2026-02-22)
 ## Current Position
 
 Phase: 07.1 of 10 (Web-Deployable Dashboard)
-Plan: 1 of 4 completed in current phase
-Status: Phase 07.1 in progress — plan 01 complete (web_app.py created)
-Last activity: 2026-03-01 — Executed 07.1-01-PLAN.md: Created web_app.py hardware-free dashboard — pyserial import guarded, read_card_thread removed, JWT_SECRET startup guard added, arduino_available=False
+Plan: 2 of 4 completed in current phase
+Status: Phase 07.1 in progress — plan 02 complete (wsgi.py deployment fix)
+Last activity: 2026-03-01 — Executed 07.1-02-PLAN.md: Rewrote wsgi.py — BANKONGSETON path, dotenv loading before import, absolute credentials path via os.path.join, deployment checklist added
 
 Progress: [##########] 100% (Phase 7 done; Phase 07.1 plan 1/4 in progress)
 
@@ -64,6 +64,7 @@ Progress: [##########] 100% (Phase 7 done; Phase 07.1 plan 1/4 in progress)
 | Phase 07-cashier-payment-fix P01 | 2min | 2 tasks | 3 files |
 | Phase 07-cashier-payment-fix P03 | 1min | 1 tasks | 0 files |
 | Phase 07-cashier-payment-fix P03 | 21min | 2 tasks | 0 files |
+| Phase 07.1-web-deployable-dashboard P02 | 1min | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -141,7 +142,9 @@ Recent decisions affecting current work:
 - [07.1-01]: Wrapped serial import in try/except ImportError rather than removing it — allows web_app.py to run locally with hardware if pyserial is available
 - [07.1-01]: Kept Flask-SocketIO in web_app.py — silently rejected WebSocket upgrades on PythonAnywhere are acceptable; no crash
 - [07.1-01]: Removed emit() calls only from HTTP route handlers, not @socketio.on handlers — preserves real-time UI for local/desktop use
-- [07.1-01]: JWT_SECRET insecure default 'bangko-jwt-secret-2026' added to startup guard so deploying without rotating key aborts cleanly
+- [07.1-02]: load_dotenv() called before from web_app import — startup guards in web_app.py fire at import time; dotenv must populate env vars first
+- [07.1-02]: os.environ.setdefault() used in wsgi.py so .env values take precedence over built-in defaults
+- [07.1-02]: GOOGLE_CREDENTIALS_FILE uses os.path.join(project_home, 'config', 'credentials.json') — absolute path avoids CWD-relative resolution on PythonAnywhere
 
 ### Roadmap Evolution
 
@@ -161,5 +164,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-01
-Stopped at: Completed 07.1-01-PLAN.md: web_app.py hardware-free dashboard created — 1960 lines, serial import guarded, JWT_SECRET guard added, arduino_available=False
+Stopped at: Completed 07.1-02-PLAN.md: wsgi.py rewritten — BANKONGSETON path, dotenv before import, absolute credentials path, deployment checklist
 Resume file: None
