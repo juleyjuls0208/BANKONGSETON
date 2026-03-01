@@ -128,7 +128,13 @@ Plans:
   3. docs/google-sheets-schema.md describes every sheet, every column, and the relationships between sheets
   4. docs/cashier-guide.md explains the full card-tap-to-transaction flow including Arduino wiring and serial protocol
   5. docs/architecture.md, docs/student-app.md, docs/admin-guide.md, and docs/nfc-integration-guide.md all exist and are accurate to the shipped code
-**Plans**: TBD
+**Plans**: 5 plans
+Plans:
+- [ ] 06-01-PLAN.md — Write docs/architecture.md + docs/setup.md (system overview, developer onboarding)
+- [ ] 06-02-PLAN.md — Write docs/api-reference.md + docs/google-sheets-schema.md (API and database reference)
+- [ ] 06-03-PLAN.md — Write docs/cashier-guide.md + docs/admin-guide.md (operational guides)
+- [ ] 06-04-PLAN.md — Write docs/student-app.md + docs/nfc-integration-guide.md (app and NFC guides)
+- [ ] 06-05-PLAN.md — Write docs/README.md index + archive all 29 existing docs to docs/archive/
 
 ## Progress
 
