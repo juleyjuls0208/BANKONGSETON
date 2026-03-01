@@ -44,6 +44,33 @@ def _get_parent_app_module():
         "Neither web_app nor admin_dashboard found in sys.modules with get_sheets_client"
     )
 
+def get_worksheet_with_retry(sheet_name, retries=2):
+    """Get worksheet with retry logic for the cashier blueprint."""
+    import time as _time
+    parent = _get_parent_app_module()
+    _db = parent.get_sheets_client()
+    for attempt in range(retries + 1):
+        try:
+            return _db.worksheet(sheet_name)
+        except Exception as e:
+            if attempt < retries:
+                logger.warning("event=worksheet_retry attempt=%d retries=%d sheet=%s", attempt + 1, retries, sheet_name)
+                _time.sleep(2)
+                _db = parent.get_sheets_client()
+            else:
+                raise e
+
+def ensure_products_sheet():
+    """Get Products worksheet, creating it with correct headers if missing."""
+    try:
+        return get_worksheet_with_retry('Products')
+    except gspread.exceptions.WorksheetNotFound:
+        _db = _get_parent_app_module().get_sheets_client()
+        sheet = _db.add_worksheet(title='Products', rows=100, cols=7)
+        sheet.update('A1:G1', [['ID', 'Name', 'Category', 'Price', 'ImageURL', 'Active', 'DateAdded']])
+        logger.info("event=products_sheet_created message=Products sheet did not exist, created with headers")
+        return sheet
+
 JWT_SECRET = os.getenv('JWT_SECRET', 'bangko-jwt-secret-2026')
 JWT_ALGORITHM = 'HS256'
 
@@ -171,9 +198,7 @@ def connect_arduino():
 def get_products():
     """Get active products for the cashier POS grid"""
     try:
-        get_sheets_client = _get_parent_app_module().get_sheets_client
-        db = get_sheets_client()
-        products_sheet = db.worksheet('Products')
+        products_sheet = ensure_products_sheet()
         records = products_sheet.get_all_records()
 
         products = []
