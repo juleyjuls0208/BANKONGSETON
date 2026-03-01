@@ -80,6 +80,13 @@ def get_sheets_client():
 # Initialize connection
 db = get_sheets_client()
 
+# Run schema migration at startup (idempotent — skips if all columns exist)
+try:
+    from migrate_transactions import migrate_users_schema
+    migrate_users_schema()
+except Exception as _mig_err:
+    logger.warning("event=migrate_users_startup_failed error=%s", _mig_err)
+
 def get_worksheet_with_retry(sheet_name, retries=2):
     """Get worksheet with retry logic for connection errors"""
     global db
