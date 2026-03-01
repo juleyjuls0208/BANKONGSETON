@@ -27,6 +27,24 @@ cashier_bp = Blueprint('cashier', __name__,
                        static_folder='static',
                        url_prefix='/cashier')
 
+def _get_parent_app_module():
+    """
+    Return the already-loaded parent app module (web_app or admin_dashboard).
+
+    When run as ``python web_app.py`` the module lives in sys.modules['__main__'],
+    not sys.modules['web_app'].  When run via wsgi.py it lives in
+    sys.modules['web_app'].  This helper tries all known names so the cashier
+    blueprint works in every entrypoint without re-importing the module from disk
+    (which would re-trigger startup guards and sys.exit calls).
+    """
+    for name in ('web_app', 'admin_dashboard', '__main__'):
+        mod = sys.modules.get(name)
+        if mod is not None and hasattr(mod, 'get_sheets_client'):
+            return mod
+    raise ImportError(
+        "Neither web_app nor admin_dashboard found in sys.modules with get_sheets_client"
+    )
+
 JWT_SECRET = os.getenv('JWT_SECRET', 'bangko-jwt-secret-2026')
 JWT_ALGORITHM = 'HS256'
 
@@ -154,13 +172,7 @@ def connect_arduino():
 def get_products():
     """Get active products for the cashier POS grid"""
     try:
-        import sys
-        sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
-        try:
-            from web_app import get_sheets_client
-        except ImportError:
-            from admin_dashboard import get_sheets_client
-
+        get_sheets_client = _get_parent_app_module().get_sheets_client
         db = get_sheets_client()
         products_sheet = db.worksheet('Products')
         records = products_sheet.get_all_records()
@@ -197,10 +209,7 @@ def lookup_student():
     if len(q) < 2:
         return jsonify({'students': []})
     try:
-        try:
-            from web_app import get_sheets_client
-        except ImportError:
-            from admin_dashboard import get_sheets_client
+        get_sheets_client = _get_parent_app_module().get_sheets_client
         from utils import normalize_card_uid as _normalize
         db = get_sheets_client()
         users_sheet = db.worksheet('Users')
@@ -283,13 +292,10 @@ def complete_sale():
     """Complete sale after card is read"""
     try:
         from flask import session as flask_session, current_app
-        import sys
-        sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
-        
-        try:
-            from web_app import get_sheets_client, get_philippines_time
-        except ImportError:
-            from admin_dashboard import get_sheets_client, get_philippines_time
+
+        _parent = _get_parent_app_module()
+        get_sheets_client = _parent.get_sheets_client
+        get_philippines_time = _parent.get_philippines_time
         
         data = request.get_json()
         card_uid = data.get('card_uid', '').strip()
