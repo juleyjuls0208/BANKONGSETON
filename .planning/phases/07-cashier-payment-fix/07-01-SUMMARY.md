@@ -73,7 +73,18 @@ Each task was committed atomically:
 1. **Task 1: Add cashier_request_card WebSocket handler in admin_dashboard.py** - `bc00c3f` (feat)
 2. **Task 2: Fix cashier_routes.py — 8-column row, FCM block, frontend WebSocket re-emit** - `6d17437` (fix)
 
-**Plan metadata:** (docs commit — see below)
+**Plan metadata:** `30a7327` (docs: complete plan)
+
+## Self-Check: PASSED
+
+- ✅ `.planning/phases/07-cashier-payment-fix/07-01-SUMMARY.md` exists
+- ✅ `bc00c3f` (Task 1 commit) found in git log
+- ✅ `6d17437` (Task 2 commit) found in git log
+- ✅ All Python files parse without syntax errors
+- ✅ `handle_cashier_request_card` present in admin_dashboard.py
+- ✅ `current_balance, # col 4` present in cashier_routes.py
+- ✅ `send_low_balance_push` call present in cashier_routes.py
+- ✅ `cashier_request_card` re-emit handler present in cashier_index.html
 
 ## Files Created/Modified
 
