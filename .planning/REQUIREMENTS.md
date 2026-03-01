@@ -63,14 +63,14 @@ Requirements for this milestone. Backend-first, then mobile improvements, then d
 
 ### Documentation
 
-- [ ] **DOC-01**: `docs/architecture.md` — system overview, layers, data flow, entry points
+- [x] **DOC-01**: `docs/architecture.md` — system overview, layers, data flow, entry points
 - [x] **DOC-02**: `docs/api-reference.md` — all REST API endpoints, request/response format, auth
 - [x] **DOC-03**: `docs/google-sheets-schema.md` — all Sheets structure (columns, purpose, relationships)
 - [x] **DOC-04**: `docs/cashier-guide.md` — how cashier POS works, Arduino setup, card reading flow
-- [ ] **DOC-05**: `docs/student-app.md` — Android app architecture, screens, API calls
-- [ ] **DOC-06**: `docs/nfc-integration-guide.md` — step-by-step guide for implementing NFC in Android (v2 prep)
+- [x] **DOC-05**: `docs/student-app.md` — Android app architecture, screens, API calls
+- [x] **DOC-06**: `docs/nfc-integration-guide.md` — step-by-step guide for implementing NFC in Android (v2 prep)
 - [x] **DOC-07**: `docs/admin-guide.md` — admin dashboard features, roles, product management
-- [ ] **DOC-08**: `docs/setup.md` — environment setup, Google Sheets creation, credentials, first run
+- [x] **DOC-08**: `docs/setup.md` — environment setup, Google Sheets creation, credentials, first run
 
 ## v2 Requirements
 
@@ -136,14 +136,14 @@ Deferred to next version (not in current roadmap).
 | NFC-03 | Phase 5 - NFC Architecture Prep | Complete |
 | NFC-04 | Phase 5 - NFC Architecture Prep | Complete |
 | NFC-05 | Phase 5 - NFC Architecture Prep | Complete |
-| DOC-01 | Phase 6 - Documentation | Pending |
+| DOC-01 | Phase 6 - Documentation | Complete |
 | DOC-02 | Phase 6 - Documentation | Complete |
 | DOC-03 | Phase 6 - Documentation | Complete |
 | DOC-04 | Phase 6 - Documentation | Complete |
-| DOC-05 | Phase 6 - Documentation | Pending |
-| DOC-06 | Phase 6 - Documentation | Pending |
+| DOC-05 | Phase 6 - Documentation | Complete |
+| DOC-06 | Phase 6 - Documentation | Complete |
 | DOC-07 | Phase 6 - Documentation | Complete |
-| DOC-08 | Phase 6 - Documentation | Pending |
+| DOC-08 | Phase 6 - Documentation | Complete |
 
 **Coverage:**
 - v1 requirements: 41 total

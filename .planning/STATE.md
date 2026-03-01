@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-03-01T05:05:00.000Z"
+last_updated: "2026-03-01T05:11:09.844Z"
 progress:
   total_phases: 6
   completed_phases: 6
@@ -58,6 +58,8 @@ Progress: [##########] 100%
 | Phase 06-documentation P02 | 3min | 2 tasks | 2 files |
 | Phase 06-documentation P04 | 3min | 2 tasks | 2 files |
 | Phase 06-documentation P03 | 5min | 2 tasks | 2 files |
+| Phase 06-documentation P01 | 5min | 2 tasks | 2 files |
+| Phase 06-documentation P05 | 3min | 2 tasks | 28 files |
 
 ## Accumulated Context
 
@@ -126,6 +128,7 @@ Recent decisions affecting current work:
  - [06-04]: SettingsActivity documented as 5th screen (not in original plan's 4-screen spec) — found in HomeActivity.kt
  - [06-04]: NFC Purchase receipt navigation noted as not yet implemented (TransactionsAdapter only launches ReceiptActivity for type='Purchase', not 'NFC Purchase')
  - [06-04]: BankoHceService Kotlin snippet preserved verbatim from Phase 5 nfc-integration-guide.md in rewrite
+- [Phase 06-01]: Windows case-insensitive fs: ARCHITECTURE.md and architecture.md treated as same file by archive script; manually rescued new content after move
 
 ### Pending Todos
 
@@ -141,5 +144,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-01
-Stopped at: Completed 06-04-PLAN.md (student-app.md 306 lines, nfc-integration-guide.md 414 lines; closes DOC-05 and DOC-06)
+Stopped at: Completed 06-05-PLAN.md: docs/README.md index + archived 26 old docs; all 5 Phase 6 plans complete; docs/ root has exactly 9 .md files + archive/
 Resume file: None
