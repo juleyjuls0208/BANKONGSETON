@@ -133,7 +133,7 @@ Plans:
 - [ ] 06-01-PLAN.md — Write docs/architecture.md + docs/setup.md (system overview, developer onboarding)
 - [ ] 06-02-PLAN.md — Write docs/api-reference.md + docs/google-sheets-schema.md (API and database reference)
 - [ ] 06-03-PLAN.md — Write docs/cashier-guide.md + docs/admin-guide.md (operational guides)
-- [ ] 06-04-PLAN.md — Write docs/student-app.md + docs/nfc-integration-guide.md (app and NFC guides)
+- [x] 06-04-PLAN.md — Write docs/student-app.md + docs/nfc-integration-guide.md (app and NFC guides)
 - [ ] 06-05-PLAN.md — Write docs/README.md index + archive all 29 existing docs to docs/archive/
 
 ## Progress
@@ -150,4 +150,4 @@ Phase 4 depends on Phase 3. Phase 6 depends on Phase 5.
 | 3. Product Management | 4/4 | Complete | 2026-02-26 |
 | 4. Student App + Notifications | 3/6 | In Progress|  |
 | 5. NFC Architecture Prep | 1/3 | In Progress|  |
-| 6. Documentation | 3/5 | In Progress|  |
+| 6. Documentation | 4/5 | In Progress|  |

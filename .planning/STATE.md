@@ -25,7 +25,7 @@ See: .planning/PROJECT.md (updated 2026-02-22)
 Phase: 6 of 6 (Documentation)
 Plan: 3 of 3 completed in current phase
 Status: Phase complete — all plans done
-Last activity: 2026-03-01 — Executed 06-03-PLAN.md: Wrote docs/cashier-guide.md (183 lines) and docs/admin-guide.md (295 lines) — operational role guides from source code; closes DOC-04 and DOC-07
+Last activity: 2026-03-01 — Executed 06-04-PLAN.md: Wrote docs/student-app.md (306 lines, 5 screens) and rewrote docs/nfc-integration-guide.md (414 lines) from Android Kotlin source; closes DOC-05 and DOC-06
 
 Progress: [##########] 100%
 
@@ -123,6 +123,9 @@ Recent decisions affecting current work:
 
  - [06-03]: docs written from source code (cashier_routes.py, arduino_bridge.py, admin_dashboard.py) — not from plan descriptions
  - [06-03]: 3.3V written without space to match plan verification regex
+ - [06-04]: SettingsActivity documented as 5th screen (not in original plan's 4-screen spec) — found in HomeActivity.kt
+ - [06-04]: NFC Purchase receipt navigation noted as not yet implemented (TransactionsAdapter only launches ReceiptActivity for type='Purchase', not 'NFC Purchase')
+ - [06-04]: BankoHceService Kotlin snippet preserved verbatim from Phase 5 nfc-integration-guide.md in rewrite
 
 ### Pending Todos
 
@@ -138,5 +141,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-01
-Stopped at: Completed 06-03-PLAN.md (cashier guide 183 lines, admin guide 295 lines; closes DOC-04 and DOC-07)
+Stopped at: Completed 06-04-PLAN.md (student-app.md 306 lines, nfc-integration-guide.md 414 lines; closes DOC-05 and DOC-06)
 Resume file: None
