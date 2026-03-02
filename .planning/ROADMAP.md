@@ -26,7 +26,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 7: Fix Cashier Payment Path** - RFID card payment executes end-to-end; receipts show correct balances; FCM notifications fire from cashier POS (gap closure) (completed 2026-03-01)
 - [ ] **Phase 8: Security + Reliability Fixes** - JWT secret guard added to api_server; exception text no longer leaked via WebSocket; cashier routes use ensure_products_sheet (gap closure)
 - [ ] **Phase 9: NFC Android Compatibility** - NFC Purchase transactions navigable to receipt; missing NFC endpoints added; mobile/android field mapping corrected (gap closure)
-- [ ] **Phase 10: Documentation Gaps** - Cashier blueprint endpoints documented; cashier-guide updated with FCM operational note (gap closure)
+- [x] **Phase 10: Documentation Gaps** - Cashier blueprint endpoints documented; cashier-guide updated with FCM operational note (gap closure) (completed 2026-03-02)
 
 ## Phase Details
 
@@ -235,4 +235,4 @@ Phase 7 depends on Phase 1 and Phase 4 (FCM). Phase 8 depends on Phase 7. Phase 
 | 7.1. Web-Deployable Dashboard | 0/4 | Planned |  |
 | 8. Security + Reliability Fixes | 0/2 | Pending |  |
 | 9. NFC Android Compatibility | 0/2 | Pending |  |
-| 10. Documentation Gaps | 0/1 | Pending |  |
+| 10. Documentation Gaps | 1/1 | Complete   | 2026-03-02 |

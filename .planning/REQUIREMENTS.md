@@ -64,9 +64,9 @@ Requirements for this milestone. Backend-first, then mobile improvements, then d
 ### Documentation
 
 - [x] **DOC-01**: `docs/architecture.md` — system overview, layers, data flow, entry points
-- [ ] **DOC-02**: `docs/api-reference.md` — all REST API endpoints, request/response format, auth
+- [x] **DOC-02**: `docs/api-reference.md` — all REST API endpoints, request/response format, auth
 - [x] **DOC-03**: `docs/google-sheets-schema.md` — all Sheets structure (columns, purpose, relationships)
-- [ ] **DOC-04**: `docs/cashier-guide.md` — how cashier POS works, Arduino setup, card reading flow
+- [x] **DOC-04**: `docs/cashier-guide.md` — how cashier POS works, Arduino setup, card reading flow
 - [x] **DOC-05**: `docs/student-app.md` — Android app architecture, screens, API calls
 - [x] **DOC-06**: `docs/nfc-integration-guide.md` — step-by-step guide for implementing NFC in Android (v2 prep)
 - [x] **DOC-07**: `docs/admin-guide.md` — admin dashboard features, roles, product management
@@ -137,9 +137,9 @@ Deferred to next version (not in current roadmap).
 | NFC-04 | Phase 9 - NFC Android Compatibility | Complete |
 | NFC-05 | Phase 9 - NFC Android Compatibility | Complete |
 | DOC-01 | Phase 6 - Documentation | Complete |
-| DOC-02 | Phase 10 - Documentation Gaps | Pending |
+| DOC-02 | Phase 10 - Documentation Gaps | Complete |
 | DOC-03 | Phase 6 - Documentation | Complete |
-| DOC-04 | Phase 10 - Documentation Gaps | Pending |
+| DOC-04 | Phase 10 - Documentation Gaps | Complete |
 | DOC-05 | Phase 6 - Documentation | Complete |
 | DOC-06 | Phase 6 - Documentation | Complete |
 | DOC-07 | Phase 6 - Documentation | Complete |
