@@ -298,5 +298,5 @@ Phase 11 depends on Phase 8. Phase 12 depends on Phase 7. Phase 13 depends on Ph
 | 10. Documentation Gaps | 1/1 | Complete    | 2026-03-02 |
 | 11. Cashier Security Hardening | 2/2 | Complete    | 2026-03-02 |
 | 12. Receipt & FCM Wiring | 2/2 | Complete    | 2026-03-02 |
-| 13. NFC Payment Contract Fix | 2/2 | Complete   | 2026-03-02 |
+| 13. NFC Payment Contract Fix | 2/2 | Complete    | 2026-03-02 |
 | 14. NFC Simulation UI | 0/1 | Planned | |
