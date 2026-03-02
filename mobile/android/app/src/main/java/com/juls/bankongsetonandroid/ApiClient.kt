@@ -47,7 +47,7 @@ data class NfcRegistrationRequest(
 )
 
 data class NfcRegistrationResponse(
-    val virtual_token: String,
+    val virtual_card_token: String,
     val expires_at: String
 )
 
