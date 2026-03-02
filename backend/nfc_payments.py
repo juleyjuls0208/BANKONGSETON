@@ -7,6 +7,7 @@ Implements the locked VirtualCard design:
   - One active card per student (silent replace on re-register)
   - No expiry, no PIN, no biometrics
 """
+
 import uuid
 import secrets
 from datetime import datetime
@@ -26,21 +27,21 @@ logger = get_logger(__name__)
 # Sheet constants
 # ---------------------------------------------------------------------------
 
-VIRTUAL_CARDS_SHEET_NAME = 'VirtualCards'
+VIRTUAL_CARDS_SHEET_NAME = "VirtualCards"
 VIRTUAL_CARDS_HEADERS = [
-    'StudentID',
-    'VirtualCardToken',
-    'DeviceToken',
-    'MoneyCardNumber',
-    'CreatedAt',
-    'IsActive',
+    "StudentID",
+    "VirtualCardToken",
+    "DeviceToken",
+    "MoneyCardNumber",
+    "CreatedAt",
+    "IsActive",
 ]
 
 # ---------------------------------------------------------------------------
 # Time helper (replicated from api_server.py — no import to avoid circular ref)
 # ---------------------------------------------------------------------------
 
-PHILIPPINES_TZ = pytz.timezone('Asia/Manila')
+PHILIPPINES_TZ = pytz.timezone("Asia/Manila")
 
 
 def get_philippines_time() -> datetime:
@@ -51,6 +52,7 @@ def get_philippines_time() -> datetime:
 # ---------------------------------------------------------------------------
 # Sheet bootstrap
 # ---------------------------------------------------------------------------
+
 
 def ensure_virtual_cards_sheet(db):
     """Return the VirtualCards worksheet, creating it with headers if missing.
@@ -65,14 +67,15 @@ def ensure_virtual_cards_sheet(db):
             rows=200,
             cols=6,
         )
-        sheet.update('A1:F1', [VIRTUAL_CARDS_HEADERS])
-        logger.info('event=virtual_cards_sheet_created')
+        sheet.update("A1:F1", [VIRTUAL_CARDS_HEADERS])
+        logger.info("event=virtual_cards_sheet_created")
         return sheet
 
 
 # ---------------------------------------------------------------------------
 # NFCService
 # ---------------------------------------------------------------------------
+
 
 class NFCService:
     """Stateless service layer for VirtualCard operations backed by Google Sheets.
@@ -105,11 +108,11 @@ class NFCService:
         # Deactivate any existing active row for this student.
         for idx, r in enumerate(records, start=2):
             if (
-                str(r.get('StudentID')) == str(student_id)
-                and str(r.get('IsActive', '')).upper() == 'TRUE'
+                str(r.get("StudentID")) == str(student_id)
+                and str(r.get("IsActive", "")).upper() == "TRUE"
             ):
                 # Column 6 = IsActive (A=1, …, F=6)
-                vc_sheet.update_cell(idx, 6, 'FALSE')
+                vc_sheet.update_cell(idx, 6, "FALSE")
 
         # Generate new tokens.
         virtual_card_token = str(uuid.uuid4())
@@ -118,15 +121,22 @@ class NFCService:
 
         # Append new active row.
         vc_sheet.append_row(
-            [student_id, virtual_card_token, device_token, money_card_number, timestamp, 'TRUE']
+            [
+                student_id,
+                virtual_card_token,
+                device_token,
+                money_card_number,
+                timestamp,
+                "TRUE",
+            ]
         )
 
-        logger.info(f'event=virtual_card_registered student_id={student_id}')
+        logger.info(f"event=virtual_card_registered student_id={student_id}")
 
         return {
-            'virtual_card_token': virtual_card_token,
-            'device_token': device_token,
-            'money_card': money_card_number,
+            "virtual_card_token": virtual_card_token,
+            "device_token": device_token,
+            "money_card": money_card_number,
         }
 
     # ------------------------------------------------------------------
@@ -149,9 +159,33 @@ class NFCService:
 
         for r in records:
             if (
-                r.get('VirtualCardToken') == virtual_card_token
-                and r.get('DeviceToken') == device_token
-                and str(r.get('IsActive', '')).upper() == 'TRUE'
+                r.get("VirtualCardToken") == virtual_card_token
+                and r.get("DeviceToken") == device_token
+                and str(r.get("IsActive", "")).upper() == "TRUE"
+            ):
+                return r
+
+        return None
+
+    def get_virtual_card_by_token(
+        self,
+        virtual_card_token: str,
+        db,
+    ) -> Optional[dict]:
+        """Return the active VirtualCard row matching ``virtual_card_token`` alone.
+
+        Used by the payment terminal flow where the client cannot supply
+        ``X-Device-Token`` (e.g. Android HCE APDU response contains only the
+        virtual card token).  Only rows where IsActive == 'TRUE'
+        (case-insensitive) are considered.
+        """
+        vc_sheet = ensure_virtual_cards_sheet(db)
+        records = vc_sheet.get_all_records()
+
+        for r in records:
+            if (
+                r.get("VirtualCardToken") == virtual_card_token
+                and str(r.get("IsActive", "")).upper() == "TRUE"
             ):
                 return r
 
