@@ -32,6 +32,31 @@ cashier_bp = Blueprint(
     url_prefix="/cashier",
 )
 
+# Module-level credential placeholders — populated at app-registration time
+_CASHIER_USERNAME = None
+_CASHIER_PASSWORD = None
+
+
+def _init_cashier_credentials(state):
+    """
+    Read CASHIER_USERNAME / CASHIER_PASSWORD from the environment and cache
+    them in module-level variables.  Called via ``cashier_bp.record_once``
+    so it runs *after* load_dotenv() in the parent application module.
+    Aborts startup if either variable is missing or empty.
+    """
+    global _CASHIER_USERNAME, _CASHIER_PASSWORD
+    _CASHIER_USERNAME = os.getenv("CASHIER_USERNAME", "").strip()
+    _CASHIER_PASSWORD = os.getenv("CASHIER_PASSWORD", "").strip()
+    if not _CASHIER_USERNAME or not _CASHIER_PASSWORD:
+        logger.critical(
+            "event=startup_aborted reason=missing_cashier_credentials "
+            'message="CASHIER_USERNAME and CASHIER_PASSWORD must be set in your .env file."'
+        )
+        sys.exit(1)
+
+
+cashier_bp.record_once(_init_cashier_credentials)
+
 
 def _get_parent_app_module():
     """
@@ -136,7 +161,7 @@ def api_login():
     username = data.get("username", "").strip()
     password = data.get("password", "").strip()
 
-    if username == "cashier" and password == "cashier123":
+    if username == _CASHIER_USERNAME and password == _CASHIER_PASSWORD:
         from datetime import datetime, timedelta
 
         payload = {
