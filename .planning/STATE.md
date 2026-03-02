@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-03-02T06:15:42.649Z"
+last_updated: "2026-03-02T06:34:46.888Z"
 progress:
   total_phases: 15
-  completed_phases: 12
-  total_plans: 47
-  completed_plans: 46
+  completed_phases: 13
+  total_plans: 49
+  completed_plans: 48
 ---
 
 # Project State
@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-22)
 
 **Core value:** Students can pay for canteen food instantly by tapping their RFID card, with their balance always visible in the app
-**Current focus:** Phase 12 - Receipt & FCM Wiring (COMPLETE)
+**Current focus:** Phase 13 - NFC Payment Contract Fix (In Progress)
 
 ## Current Position
 
-Phase: 12 of 15 (Receipt & FCM Wiring)
-Plan: 2 of 2 completed in current phase — Phase 12 COMPLETE
-Status: Phase 12 complete — APP-03 and NOTF-01 VERIFIED; config_validator.py updated to 11-column Transactions Log schema; Integration Audit corrected
-Last activity: 2026-03-02 - Phase 12 plans 01+02 executed; static inspection confirmed Phase 7 fixes intact; migrate_users_schema() startup call confirmed at api_server.py:109-115
+Phase: 13 of 15 (NFC Payment Contract Fix)
+Plan: 2 of 2 completed in current phase — Phase 13 COMPLETE
+Status: Phase 13 complete — NFC-03 and NFC-04 both resolved; Android virtual_card_token field aligned with Python backend; X-Device-Token removed from /api/nfc/pay
+Last activity: 2026-03-02 - Phase 13 plans 01+02 executed; NfcRegistrationResponse.virtual_card_token fix; NfcManager KEY_VIRTUAL_CARD_TOKEN constant; get_virtual_card_by_token() in NFCService
 
-Progress: [##########] 100% (Phase 12 complete — all 2 plans done)
+Progress: [##########] 100% (Phase 13 complete — all 2 plans done)
 
 ## Performance Metrics
 
@@ -76,6 +76,7 @@ Progress: [##########] 100% (Phase 12 complete — all 2 plans done)
 | Phase 11 P02 | 10 | 3 tasks | 3 files |
 | Phase 12-receipt-fcm-wiring P01 | 5min | 3 tasks | 2 files |
 | Phase 12-receipt-fcm-wiring P02 | 2min | 2 tasks | 1 file |
+| Phase 13-nfc-payment-contract-fix P01 | 3min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -180,6 +181,8 @@ Recent decisions affecting current work:
 - [Phase 12]: config_validator.py updated from 10-col to 11-col Transactions Log schema to match runtime writes
 - [Phase 12]: migrate_users_schema() confirmed at api_server.py:109-115 in non-fatal try/except
 - [Phase 12]: Integration Audit contradiction resolved — Phase 7 did fix both APP-03 and NOTF-01; audit predated Phase 7
+- [13-02]: get_virtual_card_by_token() added as new method (backward compatible) — get_virtual_card_by_tokens() kept intact for any future two-token paths
+- [13-02]: nfc_pay() now uses single-token lookup; X-Device-Token fully removed from handler and CORS allow_headers
 
 ### Roadmap Evolution
 

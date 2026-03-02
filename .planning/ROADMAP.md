@@ -29,7 +29,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 10: Documentation Gaps** - Cashier blueprint endpoints documented; cashier-guide updated with FCM operational note (gap closure) (completed 2026-03-02)
 - [x] **Phase 11: Cashier Security Hardening** - cashier_routes.py no longer uses hardcoded credentials or JWT secret (gap closure) (completed 2026-03-02)
 - [x] **Phase 12: Receipt & FCM Wiring** - BalanceBefore (APP-03) and FCM notification (NOTF-01) verified present in cashier_routes.py; fixed if audit contradictions are confirmed (gap closure) (completed 2026-03-02)
-- [ ] **Phase 13: NFC Payment Contract Fix** - NfcRegistrationResponse field name corrected; /api/nfc/pay accepts card token without requiring X-Device-Token header (gap closure)
+- [x] **Phase 13: NFC Payment Contract Fix** - NfcRegistrationResponse field name corrected; /api/nfc/pay accepts card token without requiring X-Device-Token header (gap closure) (completed 2026-03-02)
 - [ ] **Phase 14: NFC Simulation UI** - Dashboard includes NFC simulation panel wired to existing simulate endpoint; WEB-02 fulfilled (gap closure)
 
 ## Phase Details
@@ -298,5 +298,5 @@ Phase 11 depends on Phase 8. Phase 12 depends on Phase 7. Phase 13 depends on Ph
 | 10. Documentation Gaps | 1/1 | Complete    | 2026-03-02 |
 | 11. Cashier Security Hardening | 2/2 | Complete    | 2026-03-02 |
 | 12. Receipt & FCM Wiring | 2/2 | Complete    | 2026-03-02 |
-| 13. NFC Payment Contract Fix | 0/2 | Planned | |
+| 13. NFC Payment Contract Fix | 2/2 | Complete   | 2026-03-02 |
 | 14. NFC Simulation UI | 0/1 | Planned | |
