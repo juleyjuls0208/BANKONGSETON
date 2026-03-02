@@ -100,6 +100,22 @@ if not _secret_key or _secret_key == _INSECURE_DEFAULT:
     )
     sys.exit(1)
 
+# --- CASHIER_USERNAME / CASHIER_PASSWORD startup guard (SEC-01) ---
+_cashier_username = os.getenv("CASHIER_USERNAME", "").strip()
+_cashier_password = os.getenv("CASHIER_PASSWORD", "").strip()
+if not _cashier_username:
+    logger.critical(
+        "event=startup_aborted reason=missing_cashier_username "
+        'message="CASHIER_USERNAME must be set in your .env file."'
+    )
+    sys.exit(1)
+if not _cashier_password:
+    logger.critical(
+        "event=startup_aborted reason=missing_cashier_password "
+        'message="CASHIER_PASSWORD must be set in your .env file."'
+    )
+    sys.exit(1)
+
 # Timezone configuration
 PHILIPPINES_TZ = pytz.timezone("Asia/Manila")
 
