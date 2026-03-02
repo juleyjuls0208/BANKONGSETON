@@ -35,16 +35,17 @@ cashier_bp = Blueprint(
 # Module-level credential placeholders — populated at app-registration time
 _CASHIER_USERNAME = None
 _CASHIER_PASSWORD = None
+JWT_SECRET = None
 
 
 def _init_cashier_credentials(state):
     """
-    Read CASHIER_USERNAME / CASHIER_PASSWORD from the environment and cache
-    them in module-level variables.  Called via ``cashier_bp.record_once``
+    Read CASHIER_USERNAME / CASHIER_PASSWORD / JWT_SECRET from the environment
+    and cache them in module-level variables.  Called via ``cashier_bp.record_once``
     so it runs *after* load_dotenv() in the parent application module.
-    Aborts startup if either variable is missing or empty.
+    Aborts startup if any required variable is missing, empty, or uses an insecure default.
     """
-    global _CASHIER_USERNAME, _CASHIER_PASSWORD
+    global _CASHIER_USERNAME, _CASHIER_PASSWORD, JWT_SECRET
     _CASHIER_USERNAME = os.getenv("CASHIER_USERNAME", "").strip()
     _CASHIER_PASSWORD = os.getenv("CASHIER_PASSWORD", "").strip()
     if not _CASHIER_USERNAME or not _CASHIER_PASSWORD:
@@ -53,6 +54,17 @@ def _init_cashier_credentials(state):
             'message="CASHIER_USERNAME and CASHIER_PASSWORD must be set in your .env file."'
         )
         sys.exit(1)
+    _jwt_secret = os.getenv("JWT_SECRET", "").strip()
+    _INSECURE_JWT_DEFAULT = "bangko-jwt-secret-2026"
+    if not _jwt_secret or _jwt_secret == _INSECURE_JWT_DEFAULT:
+        logger.critical(
+            "event=startup_aborted reason=insecure_jwt_secret "
+            'message="JWT_SECRET is not set or is using the insecure default. '
+            "Set a strong random key in your .env file. "
+            "Generate one with: python -c 'import secrets; print(secrets.token_urlsafe(32))'\""
+        )
+        sys.exit(1)
+    JWT_SECRET = _jwt_secret
 
 
 cashier_bp.record_once(_init_cashier_credentials)
@@ -117,7 +129,6 @@ def ensure_products_sheet():
         return sheet
 
 
-JWT_SECRET = os.getenv("JWT_SECRET", "bangko-jwt-secret-2026")
 JWT_ALGORITHM = "HS256"
 
 UID_PATTERN = re.compile(r"^[0-9A-Fa-f]{8}$")

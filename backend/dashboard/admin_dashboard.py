@@ -116,6 +116,18 @@ if not _cashier_password:
     )
     sys.exit(1)
 
+# --- JWT_SECRET startup guard (SEC-02) ---
+_jwt_secret = os.getenv("JWT_SECRET", "").strip()
+_INSECURE_JWT_DEFAULT = "bangko-jwt-secret-2026"
+if not _jwt_secret or _jwt_secret == _INSECURE_JWT_DEFAULT:
+    logger.critical(
+        "event=startup_aborted reason=insecure_jwt_secret "
+        'message="JWT_SECRET is not set or is using the insecure default. '
+        "Set a strong random key in your .env file. "
+        "Generate one with: python -c 'import secrets; print(secrets.token_urlsafe(32))'\""
+    )
+    sys.exit(1)
+
 # Timezone configuration
 PHILIPPINES_TZ = pytz.timezone("Asia/Manila")
 
