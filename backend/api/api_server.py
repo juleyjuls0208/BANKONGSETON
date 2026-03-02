@@ -79,7 +79,7 @@ def get_cors_origins():
 CORS(
     app,
     origins=get_cors_origins(),
-    allow_headers=["Authorization", "Content-Type", "X-Device-Token"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
 # Google Sheets Setup
@@ -771,24 +771,18 @@ def nfc_unregister():
 def nfc_pay():
     """Process an NFC virtual card payment.
 
-    Requires cashier/admin JWT (via require_auth) AND X-Device-Token header.
-    The X-Device-Token is issued during /api/nfc/register and stored by Android.
+    Requires cashier/admin JWT (via require_auth). Card token is validated server-side.
     Both tokens are verified against the VirtualCards sheet (Pitfall: must check IsActive).
 
     Request body: { virtual_card_token, items, total }
     Returns:
         200: { success: true, new_balance, timestamp }
         400: Invalid transaction data or insufficient funds
-        401: Missing/invalid X-Device-Token or virtual card token mismatch
+        401: Invalid or inactive virtual card token
         503: Google Sheets unavailable
     """
     try:
-        # Step 1: Validate X-Device-Token header (in addition to JWT checked by decorator)
-        device_token = request.headers.get("X-Device-Token", "").strip()
-        if not device_token:
-            return jsonify({"error": "X-Device-Token header required"}), 401
-
-        # Step 2: Validate request body
+        # Step 1: Validate request body
         data = request.get_json() or {}
         virtual_card_token = str(data.get("virtual_card_token", "")).strip()
         items = data.get("items", [])
@@ -800,13 +794,11 @@ def nfc_pay():
         if not virtual_card_token or not items or total <= 0:
             return jsonify({"error": "Invalid transaction data"}), 400
 
-        # Step 3: Look up VirtualCard by both tokens (must be active)
+        # Step 2: Look up VirtualCard by token (must be active)
         db = get_sheets_client()
-        matched = nfc_service.get_virtual_card_by_tokens(
-            virtual_card_token, device_token, db
-        )
+        matched = nfc_service.get_virtual_card_by_token(virtual_card_token, db)
         if not matched:
-            return jsonify({"error": "Invalid virtual card token or device token"}), 401
+            return jsonify({"error": "Invalid or inactive virtual card token"}), 401
 
         money_card_number = str(matched.get("MoneyCardNumber", "")).strip()
 
