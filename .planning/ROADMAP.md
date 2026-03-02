@@ -228,7 +228,7 @@ Plans:
   3. Cashier login still succeeds when the correct credentials are supplied via environment variables
 **Plans**: 2 plans
 Plans:
-- [ ] 11-01-PLAN.md — Remove hardcoded cashier username/password from cashier_routes.py; wire to env vars [SEC-01]
+- [x] 11-01-PLAN.md — Remove hardcoded cashier username/password from cashier_routes.py; wire to env vars [SEC-01]
 - [ ] 11-02-PLAN.md — Replace hardcoded JWT_SECRET fallback in cashier_routes.py with os.environ.get("JWT_SECRET") [SEC-02]
 
 ### Phase 12: Receipt & FCM Wiring
@@ -296,7 +296,7 @@ Phase 11 depends on Phase 8. Phase 12 depends on Phase 7. Phase 13 depends on Ph
 | 8. Security + Reliability Fixes | 0/2 | Pending |  |
 | 9. NFC Android Compatibility | 0/2 | Pending |  |
 | 10. Documentation Gaps | 1/1 | Complete    | 2026-03-02 |
-| 11. Cashier Security Hardening | 0/2 | Planned | |
+| 11. Cashier Security Hardening | 1/2 | In Progress|  |
 | 12. Receipt & FCM Wiring | 0/2 | Planned | |
 | 13. NFC Payment Contract Fix | 0/2 | Planned | |
 | 14. NFC Simulation UI | 0/1 | Planned | |

@@ -22,12 +22,12 @@ See: .planning/PROJECT.md (updated 2026-02-22)
 
 ## Current Position
 
-Phase: 10 of 11 (Documentation Gaps)
-Plan: 1 of 1 completed in current phase — Phase 10 COMPLETE
-Status: Phase 10 complete — DOC-02 closed (cashier blueprint API documented in api-reference.md); DOC-04 closed (cashier-guide: lookup-student added, txn schema corrected 7→11 cols, FCM note added)
-Last activity: 2026-03-02 - Phase 10 documentation tasks executed; both docs committed
+Phase: 11 of 11 (Cashier Security Hardening)
+Plan: 1 of 1 completed in current phase — Phase 11 COMPLETE
+Status: Phase 11 complete — SEC-01 closed (hardcoded cashier credentials replaced with env-var-backed login + startup guard)
+Last activity: 2026-03-02 - Phase 11 cashier security hardening executed; credentials moved to env vars
 
-Progress: [##########] 100% (Phase 09 complete — all 2 plans done)
+Progress: [##########] 100% (Phase 11 complete — all 1 plan done)
 
 ## Performance Metrics
 
@@ -72,6 +72,7 @@ Progress: [##########] 100% (Phase 09 complete — all 2 plans done)
 | Phase 08-security-reliability-fixes P01 | 1min | 2 tasks | 2 files |
 | Phase 09-nfc-android-compat P02 | 3min | 2 tasks | 3 files |
 | Phase 10-documentation-gaps P01 | 5min | 2 tasks | 2 files |
+| Phase 11-cashier-security-hardening P01 | 10min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -168,6 +169,9 @@ Recent decisions affecting current work:
 - [09-02]: device_id body param in nfc_unregister accepted but not cross-validated against sheet — student session is auth source of truth (per CONTEXT.md 'Backend behavior: Claude's discretion')
 - [09-02]: ensure_virtual_cards_sheet() imported inside function body (not top-level) — avoids circular import risk consistent with existing lazy-import sys.path.insert pattern
 
+- [11-01]: Used cashier_bp.record_once() for credential loading in cashier_routes.py — blueprint is imported before load_dotenv() runs, so module-level os.getenv would read empty env; record_once defers until app registration
+- [11-01]: Dual guard pattern (record_once in cashier_routes + startup guard in admin_dashboard) — belt-and-suspenders; admin_dashboard guard enforces fail-fast at server boot independent of blueprint registration order
+
 ### Roadmap Evolution
 
 - Phase 07.1 inserted after Phase 7: Web-Deployable Dashboard (URGENT) — make admin dashboard hostable as a public website; hardware-dependent features (COM port, NFC, physical cashier terminal) may be conditionally disabled or stubbed for web mode
@@ -192,5 +196,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-02
-Stopped at: Completed 10-01-PLAN.md: Cashier Blueprint API documented in api-reference.md (10 endpoints, JWT cookie, port 5003); cashier-guide updated with lookup-student, 11-col txn schema, FCM fire-and-forget note; DOC-02 + DOC-04 closed; Phase 10 complete
+Stopped at: Completed 11-01-PLAN.md: Cashier credentials moved from hardcoded strings to CASHIER_USERNAME/CASHIER_PASSWORD env vars; record_once guard in cashier_routes.py; startup guard in admin_dashboard.py; SEC-01 closed; Phase 11 complete
 Resume file: None
