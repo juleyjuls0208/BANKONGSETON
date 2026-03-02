@@ -116,23 +116,37 @@ format. Any deviation in the output format will cause card reads to fail.
     - Deducts the sale total from the **Balance** column (column C).
     - Writes a transaction row to the **Transactions Log** sheet.
     - Sends an email receipt via `EmailService` (if configured).
+    - Sends FCM push notifications to the student's registered Android device (fire-and-forget; see [Push Notifications](#push-notifications) below).
 13. The POS displays **"Sale Complete"** with the student's remaining balance.
 
 ### Transaction Record Written to Sheets
 
-Each completed sale appends a 7-column row to the Transactions Log sheet
-(note: no `BalanceBefore` in this write path — it is only present in the
-admin Load Balance write path):
+Each completed sale appends an **11-column row** to the Transactions Log sheet:
 
-| Column | Field            | Example Value                     |
-|--------|------------------|-----------------------------------|
-| 1      | Timestamp        | `2026-02-28T10:30:00`             |
-| 2      | MoneyCardNumber  | `ABCD1234`                        |
-| 3      | TransactionType  | `Purchase`                        |
-| 4      | Amount           | `-25.0` (negative = deduction)    |
-| 5      | BalanceAfter     | `75.0`                            |
-| 6      | Status           | `Success`                         |
-| 7      | ItemsJson        | `[{"name":"Rice","price":20}]`    |
+| Column | Field            | Example Value                               |
+|--------|------------------|---------------------------------------------|
+| 1      | TransactionID    | `TXN-20260228143200`                        |
+| 2      | Timestamp        | `2026-02-28 14:32:00`                       |
+| 3      | StudentID        | `202501`                                    |
+| 4      | MoneyCardNumber  | `ABCD1234`                                  |
+| 5      | TransactionType  | `Purchase` or `Manual`                      |
+| 6      | Amount           | `25.0` (positive deduction value)           |
+| 7      | BalanceBefore    | `275.0`                                     |
+| 8      | BalanceAfter     | `250.0`                                     |
+| 9      | Status           | `Completed`                                 |
+| 10     | ErrorMessage     | `""` (empty on success)                     |
+| 11     | ItemsJson        | `[{"name":"Rice","price":20,"qty":1}]`      |
+
+### Push Notifications
+
+After a sale is completed, the cashier POS **does** send FCM push notifications to the student's registered Android device:
+
+- **Purchase notification** — always sent after a successful `complete-sale` call.
+- **Low-balance notification** — additionally sent if the student's new balance falls below the configured `LOW_BALANCE_THRESHOLD` (default: ₱50).
+
+Both notifications are **fire-and-forget**: a failure to deliver the push never blocks the transaction or causes a rollback. If the student has not logged into the Android app (and therefore has no FCM token registered), no notification is sent — this is expected and silent.
+
+> **Note:** FCM requires the student's `FCMToken` column to be populated in the Users sheet. Tokens are registered automatically when a student logs into the Android app for the first time via `POST /api/users/fcm-token`.
 
 ---
 
@@ -142,14 +156,15 @@ All endpoints are under the `/cashier/` prefix.
 
 | Method | Path                            | Auth Required | Description                                      |
 |--------|---------------------------------|---------------|--------------------------------------------------|
-| GET    | `/cashier/login`                | No            | Renders the cashier login page                   |
-| POST   | `/cashier/api/login`            | No            | Authenticates with hardcoded cashier credentials |
-| POST   | `/cashier/api/logout`           | Session       | Logs out and clears the cashier session          |
-| GET    | `/cashier/api/ports`            | Session       | Returns list of available serial COM ports       |
-| POST   | `/cashier/api/connect-arduino`  | Session       | Connects to the specified serial port            |
-| GET    | `/cashier/api/products`         | JWT + Session | Returns active products for the POS grid         |
-| POST   | `/cashier/api/process-sale`     | Session       | Initiates a sale; triggers card-read request     |
-| POST   | `/cashier/api/complete-sale`    | Session       | Finalises a sale using the scanned card UID      |
+| GET    | `/cashier/login`                | None          | Renders the cashier login page                   |
+| POST   | `/cashier/api/login`            | None          | Authenticates with hardcoded cashier credentials |
+| POST   | `/cashier/api/logout`           | None          | Logs out and deletes the JWT cookie              |
+| GET    | `/cashier/api/ports`            | JWT cookie    | Returns list of available serial COM ports       |
+| POST   | `/cashier/api/connect-arduino`  | JWT cookie    | Connects to the specified serial port            |
+| GET    | `/cashier/api/products`         | JWT cookie    | Returns all products for the POS grid            |
+| GET    | `/cashier/api/lookup-student`   | JWT cookie    | Search students by name or ID (manual web mode)  |
+| POST   | `/cashier/api/process-sale`     | JWT cookie    | Initiates a sale; triggers card-read request     |
+| POST   | `/cashier/api/complete-sale`    | JWT cookie    | Finalises a sale using the scanned card UID      |
 
 ---
 
