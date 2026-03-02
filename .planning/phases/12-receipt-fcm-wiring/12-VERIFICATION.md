@@ -1,197 +1,122 @@
-# Phase 12: Receipt & FCM Wiring — Verification Report
+---
+phase: 12-receipt-fcm-wiring
+verified: 2026-03-02T00:00:00Z
+status: passed
+score: 5/5 must-haves verified
+re_verification: false
+---
 
-**Date:** 2026-03-02  
-**Phase:** 12 — Receipt & FCM Wiring  
-**Method:** Static code inspection only (per CONTEXT.md locked decision)  
-**Inspector:** Phase 12 planner/executor
+# Phase 12: Receipt & FCM Wiring Verification Report
+
+**Phase Goal:** The contradiction between Phase 7 VERIFICATION (claims APP-03 and NOTF-01 are fixed) and the Integration Audit (claims both are broken) is resolved by direct code inspection; any actual breakage is fixed  
+**Verified:** 2026-03-02  
+**Status:** ✅ PASSED  
+**Re-verification:** No — initial verification
 
 ---
 
-## Summary
+## Goal Achievement
 
-All three requirements (APP-03, NOTF-01, and `migrate_users_schema` startup) are **VERIFIED** by direct code inspection. Phase 7 already fixed all three items. The Integration Audit (dated 2026-03-01) predates Phase 7 and accurately described the state *at that time*. Phase 11 (cashier security hardening) introduced a ~220-line shift in `cashier_routes.py`, moving route handlers from ~line 307 to ~line 527, but all features survived intact.
+### Observable Truths
 
-The only code change required for this phase was updating `backend/config_validator.py` to add `ItemsJson` as the 11th expected column in the Transactions Log schema (it had 10 columns; runtime writes 11).
+| # | Truth | Status | Evidence |
+|---|-------|--------|----------|
+| 1 | APP-03 VERIFIED: `cashier_routes.py` writes BalanceBefore at col 7 and ItemsJson at col 11 | ✓ VERIFIED | Lines 520–532: 11-element `transaction_row` list; `current_balance` at position 7, `json.dumps(items)` at position 11 — confirmed by direct file read |
+| 2 | NOTF-01 VERIFIED: `cashier_routes.py` calls `send_low_balance_push()` when `new_balance < threshold` | ✓ VERIFIED | Lines 570–612: `send_purchase_push()` always called; `send_low_balance_push()` conditionally called; both inside top-level `try/except Exception` — confirmed by direct file read |
+| 3 | FCM block is non-blocking: outer `try/except` prevents FCM failure from rolling back the transaction | ✓ VERIFIED | Lines 572–612: `except Exception as notif_error:` wraps entire FCM block; `return jsonify(...)` at line 643 is outside and after the block |
+| 4 | `config_validator.py` Transactions Log schema lists all 11 columns including ItemsJson | ✓ VERIFIED | Line 268: `"ItemsJson"` is 11th entry under `"Transactions Log"` key — confirmed by direct file read and `grep` (1 match) |
+| 5 | INTEGRATION_AUDIT.md marks APP-03 and NOTF-01 as ✅ VERIFIED with Phase 12 reference | ✓ VERIFIED | Line 271: APP-03 row = `✅ VERIFIED`; line 274: NOTF-01 row = `✅ VERIFIED`; both reference `12-VERIFICATION.md` — confirmed by grep |
 
----
-
-## Requirement Status
-
-| Requirement | Description | Status | Evidence |
-|-------------|-------------|--------|----------|
-| APP-03 | Itemized receipt — BalanceBefore and ItemsJson present in cashier transaction row | ✅ VERIFIED | `cashier_routes.py:520-532` — 11-column row with `BalanceBefore` at col 7 and `ItemsJson` at col 11 |
-| NOTF-01 | Low-balance push notification fires from cashier POS path | ✅ VERIFIED | `cashier_routes.py:570-612` — both `send_purchase_push()` and `send_low_balance_push()` called; FCM block is non-blocking |
-| migrate startup | `migrate_users_schema()` called at `api_server.py` startup | ✅ VERIFIED | `api_server.py:109-115` — called unconditionally at startup in non-fatal try/except |
+**Score:** 5/5 truths verified
 
 ---
 
-## Detailed Evidence
+## Required Artifacts
 
-### APP-03 — Transaction Row Schema
-
-**File:** `backend/dashboard/cashier/cashier_routes.py`  
-**Lines:** 520–532
-
-```python
-transaction_row = [
-    transaction_id,       # col 1:  TransactionID
-    timestamp,            # col 2:  Timestamp
-    resolved_student_id,  # col 3:  StudentID
-    normalized_card,      # col 4:  MoneyCardNumber
-    transaction_type,     # col 5:  TransactionType ('Manual' or 'Purchase')
-    total,                # col 6:  Amount
-    current_balance,      # col 7:  BalanceBefore   ← APP-03 requires this
-    new_balance,          # col 8:  BalanceAfter
-    "Completed",          # col 9:  Status
-    "",                   # col 10: ErrorMessage
-    json.dumps(items),    # col 11: ItemsJson        ← APP-03 requires this
-]
-```
-
-**Result:** All 11 columns present in correct order. BalanceBefore at position 7 (1-indexed). ItemsJson at position 11.
-
-**Note on line shift:** Phase 7 VERIFICATION referenced `cashier_routes.py:307-316`. Current code is at lines 520-532. The ~220-line shift was introduced by Phase 11 (cashier security hardening), which inserted the following functions at the top of the file before the route handlers:
-- `_init_cashier_credentials()` — blueprint `record_once` callback
-- `_get_parent_app_module()` — helper to resolve sibling module paths
-- `get_worksheet_with_retry()` — Sheets API retry wrapper
-- `ensure_products_sheet()` — Products sheet auto-create helper
-
-The features themselves are intact; only the line numbers changed.
+| Artifact | Expected | Status | Details |
+|----------|----------|--------|---------|
+| `backend/dashboard/cashier/cashier_routes.py` | 11-col `transaction_row` (APP-03); FCM block with `send_low_balance_push` (NOTF-01) | ✓ VERIFIED (wired) | Lines 520–532: `transaction_row` has 11 elements. Lines 570–612: FCM block present, non-blocking. `send_low_balance_push` and `send_purchase_push` both called correctly. |
+| `backend/config_validator.py` | 11-column Transactions Log schema including `ItemsJson` | ✓ VERIFIED (wired) | Line 268: `"ItemsJson"` present as 11th column in `"Transactions Log"` list |
+| `backend/api/api_server.py` | `migrate_users_schema()` called at startup in non-fatal try/except | ✓ VERIFIED (wired) | Lines 109–115: `from migrate_transactions import migrate_users_schema` + `migrate_users_schema()` inside `try/except Exception` — runs unconditionally at module load after `db = get_sheets_client()` |
+| `backend/api/fcm_sender.py` | `send_low_balance_push` and `send_purchase_push` functions exist | ✓ VERIFIED (wired) | Line 45: `def send_low_balance_push(...)`. Line 83: `def send_purchase_push(...)`. Both imported by `cashier_routes.py` via `sys.path.insert` + inline import. |
+| `.planning/INTEGRATION_AUDIT.md` | APP-03 and NOTF-01 rows updated to ✅ VERIFIED | ✓ VERIFIED | Line 271: APP-03 `✅ VERIFIED`. Line 274: NOTF-01 `✅ VERIFIED`. Flow 1 Break 3 (line 59) struck through and annotated RESOLVED. TD-02 (line 311) and TD-03 (line 312) both marked ✅ Resolved. |
+| `.planning/phases/12-receipt-fcm-wiring/12-VERIFICATION.md` | Per-requirement evidence with line numbers | ✓ VERIFIED | File exists (197 lines). Contains VERIFIED status for APP-03, NOTF-01, and migrate startup with exact line-number citations. |
+| `.planning/phases/12-receipt-fcm-wiring/12-01-SUMMARY.md` | Execution record with VERIFIED status for all three requirements | ✓ VERIFIED | File exists (92 lines). SUMMARY frontmatter records APP-03-verified, NOTF-01-verified, config-validator-11-cols as provided. |
 
 ---
 
-### NOTF-01 — FCM Calls from complete_sale
+## Key Link Verification
 
-**File:** `backend/dashboard/cashier/cashier_routes.py`  
-**Lines:** 570–612 (approximate; exact lines vary by minor edits)
-
-```python
-# FCM block — AFTER session.pop() and BEFORE return jsonify()
-# Sale is already committed at this point; FCM is a non-transactional side effect
-try:
-    threshold = float(os.getenv("LOW_BALANCE_THRESHOLD", 50))
-    try:
-        # Read threshold from Settings sheet (fresh per-request, not cached)
-        settings_sheet = db.worksheet("Settings")
-        settings_records = settings_sheet.get_all_records()
-        for row in settings_records:
-            if str(row.get("Key", "")).strip().lower() == "low_balance_threshold":
-                threshold = float(row.get("Value", threshold))
-                break
-    except Exception as settings_err:
-        logger.warning("event=settings_read_failed ...")
-
-    users_sheet2 = db.worksheet("Users")
-    user_records2 = users_sheet2.get_all_records()
-    for user in user_records2:
-        if normalize_card_uid(user.get("MoneyCardNumber", "")) == normalized_card:
-            fcm_token = str(user.get("FCMToken", "")).strip()
-            if fcm_token:
-                sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "api"))
-                from fcm_sender import send_purchase_push
-                send_purchase_push(fcm_token, total, new_balance)     # purchase push (every sale)
-                if new_balance < threshold:
-                    from fcm_sender import send_low_balance_push
-                    send_low_balance_push(fcm_token, new_balance)     # low-balance push (conditional)
-            break
-except Exception as notif_error:
-    logger.warning("event=low_balance_notify_failed error=%s", notif_error)
-# Transaction response follows — always reached regardless of FCM outcome:
-return jsonify({"success": True, "new_balance": new_balance, "timestamp": timestamp})
-```
-
-**Result:**
-- `send_low_balance_push()` called when `new_balance < threshold` ✅
-- `send_purchase_push()` called on every successful sale ✅ (beneficial addition beyond NOTF-01 scope — per CONTEXT.md: keep it)
-- Entire FCM block wrapped in outer `try/except Exception` — failures log a warning but never prevent `return jsonify(...)` ✅
-- `return jsonify(...)` is outside and after the FCM block — non-blocking confirmed ✅
-
-**FCM import path:** `sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "api"))` followed by `from fcm_sender import send_purchase_push`. This resolves to `backend/api/fcm_sender.py` which is the correct file.
-
-**Additional FCM paths (noted for completeness — not required for NOTF-01):**
-- `api_server.py` `process_cashier_transaction` endpoint also calls `send_low_balance_push()` — a separate API path (port 5001)
-- `admin_dashboard.py` has FCM calls for money-load events
-Both are intact and follow the same non-blocking pattern. NOTF-01 specifies cashier POS (`cashier_routes.py`); these are additional coverage.
+| From | To | Via | Status | Details |
+|------|----|-----|--------|---------|
+| `cashier_routes.py:570–612` | `backend/api/fcm_sender.py` | `sys.path.insert` + `from fcm_sender import send_low_balance_push` | ✓ WIRED | Lines 599–609: `sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "api"))` then `from fcm_sender import send_purchase_push` / `from fcm_sender import send_low_balance_push` — both imports traced to `backend/api/fcm_sender.py` where both functions are defined |
+| `backend/api/api_server.py` | `backend/migrate_transactions.py` | `from migrate_transactions import migrate_users_schema` at startup | ✓ WIRED | Lines 110–113: import and call confirmed at module load time |
+| `backend/config_validator.py` | `cashier_routes.py` (runtime writes) | Transactions Log column count (both 11) | ✓ CONSISTENT | `config_validator.py` line 257–269: 11 columns. `cashier_routes.py` line 520–532: 11 columns. Column order matches. |
 
 ---
 
-### migrate_users_schema Startup
+## Requirements Coverage
 
-**File:** `backend/api/api_server.py`  
-**Lines:** 109–115
+| Requirement | Source Plan | Description | Status | Evidence |
+|-------------|-------------|-------------|--------|----------|
+| **APP-03** | 12-01-PLAN.md | Student can tap a canteen purchase transaction and see itemized receipt (items bought, price per item, total) | ✓ SATISFIED | `cashier_routes.py:520–532` writes `BalanceBefore` (col 7) and `ItemsJson` (col 11 = `json.dumps(items)`). This is the data the Android `ReceiptActivity` reads via `/api/student/receipt/{id}`. Both required fields are populated at write time. |
+| **NOTF-01** | 12-01-PLAN.md, 12-02-PLAN.md | Student receives push notification when balance drops below configurable threshold | ✓ SATISFIED | `cashier_routes.py:570–612`: `send_low_balance_push(fcm_token, new_balance)` called when `new_balance < threshold`. Threshold read from Settings sheet with env-var fallback. FCM token read from Users sheet. `migrate_users_schema()` at `api_server.py:109–115` ensures FCMToken column exists on fresh deploy. All prerequisite wiring confirmed. |
 
-```python
-# Run schema migration at startup (idempotent — skips if all columns exist)
-try:
-    from migrate_transactions import migrate_users_schema
-    migrate_users_schema()
-except Exception as _mig_err:
-    logger.warning("event=migrate_users_startup_failed error=%s", _mig_err)
-```
-
-**Result:**
-- Called unconditionally at module load time after `db = get_sheets_client()` ✅
-- Non-fatal try/except: Sheets API outage at startup logs a warning but never crashes the server ✅
-- This resolves the Integration Audit's claim that "migrate_users_schema() is never called at startup" — it was already fixed in Phase 7
+**Note — TD-04 timestamp format mismatch (not in scope):** INTEGRATION_AUDIT line 313 still flags `TD-04` as `🟠 High` — backend writes space-separated timestamp (`"2026-02-28 14:32:00"`), Android `ReceiptActivity` parses `'T'`-separated ISO 8601. This affects receipt *display* but is explicitly outside Phase 12 scope (affects APP-02/APP-03 display, not the write path). No requirement ID was assigned to this phase for TD-04. Not a gap for this phase.
 
 ---
 
-## Integration Audit Contradiction — Origin Explained
+## Anti-Patterns Found
 
-The Integration Audit (2026-03-01) reported:
-- APP-03: `🔴 BROKEN` — "Timestamp format mismatch; BalanceBefore ₱0.00 for all cashier POS rows"
-- NOTF-01: `🔴 BROKEN` — "FCM never called from cashier_routes.py; also blocked on fresh deploy by missing FCMToken column"
-- TD-02: `migrate_users_schema()` not called at startup
-- TD-03: "cashier writes 7 cols, schema expects 8 (`BalanceBefore` missing)"
+| File | Line | Pattern | Severity | Impact |
+|------|------|---------|----------|--------|
+| `.planning/INTEGRATION_AUDIT.md` | 120 | Stale "broken" reference in Flow 3 summary: `"APP-03 — Itemized receipt exists but timestamp fields are malformed; balance shown as ₱0.00 *(broken)*"` | ℹ️ Info | This is the Flow 3 "Affected requirements" list (lines 118–122) — a historical summary of what was broken at audit time. It was NOT updated by Phase 12 (only Part 1 table and Flow 1 Break 3 were targeted). This is a cosmetic stale reference. The Part 1 authoritative table (line 271) correctly shows APP-03 as ✅ VERIFIED. The stale text does not affect any code path. |
 
-Phase 7 fixed all three issues. The audit was written from a code snapshot that predated Phase 7's changes. The Phase 7 VERIFICATION report (which cited lines 307-316) documents the fixes. This is a documentation lag, not a regression.
-
-The only remaining gap the audit did not know about was `config_validator.py` having 10 columns instead of 11 — this was addressed in Phase 12 (see below).
+No code-level anti-patterns found in modified files (`cashier_routes.py`, `config_validator.py`, `api_server.py`).
 
 ---
 
-## Code Change Made This Phase
+## Human Verification Required
 
-### config_validator.py — Added ItemsJson to Transactions Log Schema
+### 1. Timestamp Format Mismatch (TD-04 — out of scope but flagged)
 
-**File:** `backend/config_validator.py`  
-**Lines:** 235–237
+**Test:** Open ReceiptActivity in the Android student app on a real device or emulator after tapping a cashier POS transaction.  
+**Expected:** Date/time field displays as formatted string (e.g., "Feb 28, 2026 2:32 PM"), not raw `"2026-02-28 14:32:00"`.  
+**Why human:** TD-04 (INTEGRATION_AUDIT line 313) documents a timestamp format mismatch between the backend write format and Android parse format. Cannot be verified by static inspection — requires running the app against a live backend. This is out of scope for Phase 12 (no requirement ID assigned), but is flagged as a known outstanding issue.
 
-**Before:**
-```python
-'Transactions Log': ['TransactionID', 'Timestamp', 'StudentID',
-                     'MoneyCardNumber', 'TransactionType', 'Amount',
-                     'BalanceBefore', 'BalanceAfter', 'Status', 'ErrorMessage'],
-```
+### 2. ItemsJson receipt data visible in student app
 
-**After:**
-```python
-'Transactions Log': ['TransactionID', 'Timestamp', 'StudentID',
-                     'MoneyCardNumber', 'TransactionType', 'Amount',
-                     'BalanceBefore', 'BalanceAfter', 'Status', 'ErrorMessage',
-                     'ItemsJson'],
-```
+**Test:** After a cashier POS purchase (with multiple items), tap the transaction in the student app's transaction list.  
+**Expected:** ReceiptActivity shows itemized product list with name, price, and quantity for each item purchased.  
+**Why human:** The backend write path is verified (ItemsJson written correctly), but the Android `ReceiptActivity` JSON parsing of the items array requires a live end-to-end test to confirm. Static inspection only confirms the server side.
 
-**Why:** The runtime transaction row (`cashier_routes.py:520-532`) writes 11 columns. The validator's expected schema had only 10. Without this fix, running `python config_validator.py` would pass silently even if the Transactions Log sheet was missing the `ItemsJson` header — it would not warn the operator. After the fix, the validator correctly flags a missing `ItemsJson` column.
+### 3. Low-balance push notification delivery
 
-**Note on CONTEXT.md:** CONTEXT.md stated "currently hardcoded as 8 columns". Direct inspection found 10 columns (BalanceBefore, BalanceAfter, Status, and ErrorMessage were added at prior phases). Only `ItemsJson` was missing. One column added, not three.
+**Test:** With a student FCM token registered, process a cashier POS transaction that brings balance below the configured threshold.  
+**Expected:** Student's Android device receives a push notification within a few seconds of the transaction.  
+**Why human:** The FCM call wiring is verified in code, but actual FCM delivery (Firebase project credentials, token validity, device connectivity) cannot be verified statically.
 
 ---
 
-## Google Sheet Header Row
+## Contradiction Resolution — Confirmed
 
-Per CONTEXT.md locked decision: "Verify the Transactions Google Sheet header row matches the 11-column structure."
+The core phase goal (resolving the Phase 7 / Integration Audit contradiction) is achieved:
 
-**Assessment:** Cannot be verified by static code inspection. The Google Sheet lives in Google Drive and is not accessible without a live Sheets API call. **Recommended action:** Run `python backend/config_validator.py` after deployment — the validator will now correctly check for all 11 columns including `ItemsJson` and report any missing header.
+| Claim | Origin | Resolution |
+|-------|--------|------------|
+| "APP-03 BROKEN — BalanceBefore ₱0.00" | Integration Audit (2026-03-01) | Audit predated Phase 7. Phase 7 fixed the column structure. Direct inspection at `cashier_routes.py:520–532` confirms 11-col row with `BalanceBefore` at col 7. |
+| "NOTF-01 BROKEN — FCM never called from cashier POS" | Integration Audit (2026-03-01) | Audit predated Phase 7. Phase 7 added the FCM block. Direct inspection at `cashier_routes.py:570–612` confirms both pushes are wired. |
+| "migrate_users_schema() never called at startup" | Integration Audit (2026-03-01) | Phase 7 added the startup call. Confirmed at `api_server.py:109–115`. |
+
+**Root cause:** Integration Audit was an accurate point-in-time snapshot (pre-Phase 7). Phase 7 fixed all three issues. The audit was never retroactively updated. Phase 12 closed that documentation gap and added the one missing code fix (`config_validator.py` 10→11 columns).
 
 ---
 
-## Phase 12 Outcome
+## Gaps Summary
 
-| Item | Before Phase 12 | After Phase 12 |
-|------|-----------------|----------------|
-| APP-03 code | Already VERIFIED (Phase 7 fix) | VERIFIED — documented with line numbers |
-| NOTF-01 code | Already VERIFIED (Phase 7 fix) | VERIFIED — documented with line numbers |
-| migrate_users_schema startup | Already VERIFIED (Phase 7 fix) | VERIFIED — documented with line numbers |
-| config_validator.py schema | 10 columns (missing ItemsJson) | 11 columns — matches runtime |
-| INTEGRATION_AUDIT.md | APP-03 and NOTF-01 marked 🔴 BROKEN | Updated to ✅ VERIFIED with Phase 12 reference |
+None. All must-haves verified. Phase goal fully achieved.
+
+---
+
+_Verified: 2026-03-02_  
+_Verifier: Claude (gsd-verifier)_

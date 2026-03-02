@@ -28,7 +28,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 9: NFC Android Compatibility** - NFC Purchase transactions navigable to receipt; missing NFC endpoints added; mobile/android field mapping corrected (gap closure)
 - [x] **Phase 10: Documentation Gaps** - Cashier blueprint endpoints documented; cashier-guide updated with FCM operational note (gap closure) (completed 2026-03-02)
 - [x] **Phase 11: Cashier Security Hardening** - cashier_routes.py no longer uses hardcoded credentials or JWT secret (gap closure) (completed 2026-03-02)
-- [ ] **Phase 12: Receipt & FCM Wiring** - BalanceBefore (APP-03) and FCM notification (NOTF-01) verified present in cashier_routes.py; fixed if audit contradictions are confirmed (gap closure)
+- [x] **Phase 12: Receipt & FCM Wiring** - BalanceBefore (APP-03) and FCM notification (NOTF-01) verified present in cashier_routes.py; fixed if audit contradictions are confirmed (gap closure) (completed 2026-03-02)
 - [ ] **Phase 13: NFC Payment Contract Fix** - NfcRegistrationResponse field name corrected; /api/nfc/pay accepts card token without requiring X-Device-Token header (gap closure)
 - [ ] **Phase 14: NFC Simulation UI** - Dashboard includes NFC simulation panel wired to existing simulate endpoint; WEB-02 fulfilled (gap closure)
 
