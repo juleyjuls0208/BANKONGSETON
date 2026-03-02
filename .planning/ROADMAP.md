@@ -27,6 +27,10 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 8: Security + Reliability Fixes** - JWT secret guard added to api_server; exception text no longer leaked via WebSocket; cashier routes use ensure_products_sheet (gap closure)
 - [ ] **Phase 9: NFC Android Compatibility** - NFC Purchase transactions navigable to receipt; missing NFC endpoints added; mobile/android field mapping corrected (gap closure)
 - [x] **Phase 10: Documentation Gaps** - Cashier blueprint endpoints documented; cashier-guide updated with FCM operational note (gap closure) (completed 2026-03-02)
+- [ ] **Phase 11: Cashier Security Hardening** - cashier_routes.py no longer uses hardcoded credentials or JWT secret (gap closure)
+- [ ] **Phase 12: Receipt & FCM Wiring** - BalanceBefore (APP-03) and FCM notification (NOTF-01) verified present in cashier_routes.py; fixed if audit contradictions are confirmed (gap closure)
+- [ ] **Phase 13: NFC Payment Contract Fix** - NfcRegistrationResponse field name corrected; /api/nfc/pay accepts card token without requiring X-Device-Token header (gap closure)
+- [ ] **Phase 14: NFC Simulation UI** - Dashboard includes NFC simulation panel wired to existing simulate endpoint; WEB-02 fulfilled (gap closure)
 
 ## Phase Details
 
@@ -213,6 +217,61 @@ Plans:
 Plans:
 - [ ] 10-01-PLAN.md — Document /cashier/api/* endpoints in api-reference.md; add FCM operational note to cashier-guide.md [DOC-02, DOC-04]
 
+### Phase 11: Cashier Security Hardening
+**Goal**: cashier_routes.py no longer uses hardcoded cashier credentials or a hardcoded JWT secret; both are sourced from environment variables matching the pattern already used in api_server.py
+**Depends on**: Phase 8
+**Requirements**: SEC-01, SEC-02
+**Gap Closure**: Closes gaps from v1.0 audit (SEC-01 cashier creds, SEC-02 cashier JWT secret)
+**Success Criteria** (what must be TRUE):
+  1. cashier_routes.py contains no hardcoded username/password strings (`cashier`/`cashier123` or equivalent)
+  2. cashier_routes.py sources JWT_SECRET exclusively from `os.environ.get("JWT_SECRET")`; no fallback string literal exists
+  3. Cashier login still succeeds when the correct credentials are supplied via environment variables
+**Plans**: 2 plans
+Plans:
+- [ ] 11-01-PLAN.md — Remove hardcoded cashier username/password from cashier_routes.py; wire to env vars [SEC-01]
+- [ ] 11-02-PLAN.md — Replace hardcoded JWT_SECRET fallback in cashier_routes.py with os.environ.get("JWT_SECRET") [SEC-02]
+
+### Phase 12: Receipt & FCM Wiring
+**Goal**: The contradiction between Phase 7 VERIFICATION (claims APP-03 and NOTF-01 are fixed) and the Integration Audit (claims both are broken) is resolved by direct code inspection; any actual breakage is fixed
+**Depends on**: Phase 7
+**Requirements**: APP-03, NOTF-01
+**Gap Closure**: Closes gaps from v1.0 audit (APP-03 BalanceBefore column, NOTF-01 FCM not called from cashier)
+**Success Criteria** (what must be TRUE):
+  1. cashier_routes.py `complete_sale` writes an 8-column transaction row with BalanceBefore as the 6th column
+  2. `migrate_users_schema()` is called at api_server startup (confirmed in code, not just claimed)
+  3. cashier_routes.py `complete_sale` calls the FCM send function when balance drops below threshold
+**Plans**: 2 plans
+Plans:
+- [ ] 12-01-PLAN.md — Inspect and fix cashier_routes.py complete_sale: confirm/add BalanceBefore column (APP-03) and FCM call (NOTF-01)
+- [ ] 12-02-PLAN.md — Inspect and confirm migrate_users_schema() is called at api_server startup; fix if missing [NOTF-01]
+
+### Phase 13: NFC Payment Contract Fix
+**Goal**: The Android HCE service can complete an NFC payment end-to-end — the registration response uses the field name the app expects, and the payment endpoint does not require the app to supply a device token it cannot obtain
+**Depends on**: Phase 9
+**Requirements**: NFC-03, NFC-04
+**Gap Closure**: Closes gaps from v1.0 audit (NFC-03 field name mismatch, NFC-04 X-Device-Token contract)
+**Success Criteria** (what must be TRUE):
+  1. `NfcRegistrationResponse` (Python) returns `virtual_card_token` (not `virtual_token`); Android `NfcRegistrationResponse.kt` deserializes it correctly
+  2. `/api/nfc/pay` accepts the card token and performs device-token lookup server-side; client does not need to supply `X-Device-Token` header
+  3. A simulated end-to-end NFC pay call (register → pay with card token only) returns a successful payment response
+**Plans**: 2 plans
+Plans:
+- [ ] 13-01-PLAN.md — Fix NfcRegistrationResponse: rename virtual_token → virtual_card_token in Python response and Android model [NFC-03]
+- [ ] 13-02-PLAN.md — Modify /api/nfc/pay: accept card token, look up device token server-side, remove X-Device-Token header requirement [NFC-04]
+
+### Phase 14: NFC Simulation UI
+**Goal**: The admin dashboard includes a panel that allows a developer or tester to simulate an NFC card tap without physical hardware, completing the WEB-02 requirement that Phase 7.1 left unimplemented
+**Depends on**: Phase 7.1, Phase 13
+**Requirements**: WEB-02
+**Gap Closure**: Closes gap from v1.0 audit (WEB-02 NFC simulation UI never built — Phase 7.1 mislabeled wsgi.py fix as WEB-02)
+**Success Criteria** (what must be TRUE):
+  1. The admin dashboard contains an NFC Simulation panel with a student selector and a "Simulate Tap" button
+  2. Clicking Simulate Tap calls the backend simulate endpoint and displays the result (success or error) in the UI
+  3. The simulation panel is only visible when the server is running in web mode (hardware-free)
+**Plans**: 1 plan
+Plans:
+- [ ] 14-01-PLAN.md — Add NFC simulation panel to dashboard template; wire to /api/nfc/simulate endpoint [WEB-02]
+
 ## Progress
 
 **Execution Order:**
@@ -222,6 +281,7 @@ Phase 4 depends on Phase 3. Phase 6 depends on Phase 5.
 
 **Gap Closure Phases (post-audit):**
 Phase 7 depends on Phase 1 and Phase 4 (FCM). Phase 8 depends on Phase 7. Phase 9 depends on Phase 5. Phase 10 depends on Phase 7.
+Phase 11 depends on Phase 8. Phase 12 depends on Phase 7. Phase 13 depends on Phase 9. Phase 14 depends on Phase 7.1 and Phase 13.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -236,3 +296,7 @@ Phase 7 depends on Phase 1 and Phase 4 (FCM). Phase 8 depends on Phase 7. Phase 
 | 8. Security + Reliability Fixes | 0/2 | Pending |  |
 | 9. NFC Android Compatibility | 0/2 | Pending |  |
 | 10. Documentation Gaps | 1/1 | Complete    | 2026-03-02 |
+| 11. Cashier Security Hardening | 0/2 | Planned | |
+| 12. Receipt & FCM Wiring | 0/2 | Planned | |
+| 13. NFC Payment Contract Fix | 0/2 | Planned | |
+| 14. NFC Simulation UI | 0/1 | Planned | |

@@ -17,8 +17,8 @@ Requirements for this milestone. Backend-first, then mobile improvements, then d
 
 ### Security
 
-- [x] **SEC-01**: Credentials (admin username/password) are never printed to stdout or logs at startup
-- [x] **SEC-02**: FLASK_SECRET_KEY is required non-empty (system refuses to start with default key)
+- [ ] **SEC-01**: Credentials (admin username/password) are never printed to stdout or logs at startup
+- [ ] **SEC-02**: FLASK_SECRET_KEY is required non-empty (system refuses to start with default key)
 - [x] **SEC-03**: CORS is restricted to known origins (no wildcard `*` in production)
 - [x] **SEC-04**: Card UIDs are validated (regex format check) before use in Sheets queries
 - [x] **SEC-05**: Test files do not contain hardcoded secrets (JWT keys, passwords use env vars)
@@ -33,32 +33,32 @@ Requirements for this milestone. Backend-first, then mobile improvements, then d
 
 ### Product Management
 
-- [ ] **PROD-01**: Admin can add a canteen product (name, price, category)
-- [ ] **PROD-02**: Admin can edit an existing product (name, price, category)
-- [ ] **PROD-03**: Admin can delete/deactivate a product
+- [x] **PROD-01**: Admin can add a canteen product (name, price, category)
+- [x] **PROD-02**: Admin can edit an existing product (name, price, category)
+- [x] **PROD-03**: Admin can delete/deactivate a product
 - [x] **PROD-04**: Cashier POS displays all active products in a grid with name and price
 - [x] **PROD-05**: Products are stored in Google Sheets (a dedicated Products sheet)
-- [ ] **PROD-06**: Cashier can select multiple products and process them as one transaction
+- [x] **PROD-06**: Cashier can select multiple products and process them as one transaction
 
 ### Student App — Balance & History
 
 - [x] **APP-01**: Student can see their current card balance on the home screen
 - [x] **APP-02**: Student can see a scrollable list of all their transactions (date, amount, type)
-- [x] **APP-03**: Student can tap a canteen purchase transaction and see the itemized receipt (what was bought, price per item, total)
+- [ ] **APP-03**: Student can tap a canteen purchase transaction and see the itemized receipt (what was bought, price per item, total)
 - [x] **APP-04**: Student app shows balance update immediately after a transaction is processed
 - [x] **APP-05**: Student app handles API errors gracefully (shows error message, not crash)
 
 ### Notifications
 
-- [x] **NOTF-01**: Student receives a push notification when their balance drops below a configurable threshold
+- [ ] **NOTF-01**: Student receives a push notification when their balance drops below a configurable threshold
 - [x] **NOTF-02**: Admin can configure the low-balance threshold value per student or globally
 
 ### NFC Architecture Preparation (Backend Only)
 
 - [x] **NFC-01**: NFC payment API endpoints exist and are documented (`/api/nfc/register`, `/api/nfc/pay`)
 - [x] **NFC-02**: VirtualCard model in nfc_payments.py is fully integrated with Google Sheets (persisted, not just in-memory)
-- [x] **NFC-03**: Transaction flow accepts both RFID card UID and NFC virtual card token as payment sources
-- [x] **NFC-04**: API authentication supports NFC device token alongside JWT (ready for Android HCE integration)
+- [ ] **NFC-03**: Transaction flow accepts both RFID card UID and NFC virtual card token as payment sources
+- [ ] **NFC-04**: API authentication supports NFC device token alongside JWT (ready for Android HCE integration)
 - [x] **NFC-05**: NFC integration guide written in docs/ explaining exactly what the Android app needs to implement for v2
 
 ### Documentation
@@ -108,8 +108,8 @@ Deferred to next version (not in current roadmap).
 | BUG-03 | Phase 1 - Critical Fixes + Security | Complete |
 | BUG-04 | Phase 1 - Critical Fixes + Security | Complete |
 | BUG-05 | Phase 1 - Critical Fixes + Security | Complete |
-| SEC-01 | Phase 1 - Critical Fixes + Security | Complete |
-| SEC-02 | Phase 8 - Security + Reliability Fixes | Complete |
+| SEC-01 | Phase 11 - Cashier Security Hardening | Pending |
+| SEC-02 | Phase 11 - Cashier Security Hardening | Pending |
 | SEC-03 | Phase 1 - Critical Fixes + Security | Complete |
 | SEC-04 | Phase 1 - Critical Fixes + Security | Complete |
 | SEC-05 | Phase 1 - Critical Fixes + Security | Complete |
@@ -118,23 +118,23 @@ Deferred to next version (not in current roadmap).
 | QUAL-03 | Phase 2 - Code Quality | Complete |
 | QUAL-04 | Phase 2 - Code Quality | Complete |
 | QUAL-05 | Phase 2 - Code Quality | Complete |
-| PROD-01 | Phase 3 - Product Management | Pending |
-| PROD-02 | Phase 3 - Product Management | Pending |
-| PROD-03 | Phase 3 - Product Management | Pending |
+| PROD-01 | Phase 3 - Product Management | Complete |
+| PROD-02 | Phase 3 - Product Management | Complete |
+| PROD-03 | Phase 3 - Product Management | Complete |
 | PROD-04 | Phase 8 - Security + Reliability Fixes | Complete |
 | PROD-05 | Phase 8 - Security + Reliability Fixes | Complete |
-| PROD-06 | Phase 3 - Product Management | Pending |
+| PROD-06 | Phase 3 - Product Management | Complete |
 | APP-01 | Phase 4 - Student App + Notifications | Complete |
 | APP-02 | Phase 7 - Fix Cashier Payment Path | Complete |
-| APP-03 | Phase 7 - Fix Cashier Payment Path | Complete |
+| APP-03 | Phase 12 - Receipt & FCM Wiring | Pending |
 | APP-04 | Phase 7 - Fix Cashier Payment Path | Complete |
 | APP-05 | Phase 4 - Student App + Notifications | Complete |
-| NOTF-01 | Phase 7 - Fix Cashier Payment Path | Complete |
+| NOTF-01 | Phase 12 - Receipt & FCM Wiring | Pending |
 | NOTF-02 | Phase 4 - Student App + Notifications | Complete |
 | NFC-01 | Phase 5 - NFC Architecture Prep | Complete |
 | NFC-02 | Phase 5 - NFC Architecture Prep | Complete |
-| NFC-03 | Phase 9 - NFC Android Compatibility | Complete |
-| NFC-04 | Phase 9 - NFC Android Compatibility | Complete |
+| NFC-03 | Phase 13 - NFC Payment Contract Fix | Pending |
+| NFC-04 | Phase 13 - NFC Payment Contract Fix | Pending |
 | NFC-05 | Phase 9 - NFC Android Compatibility | Complete |
 | DOC-01 | Phase 6 - Documentation | Complete |
 | DOC-02 | Phase 10 - Documentation Gaps | Complete |
@@ -149,9 +149,9 @@ Deferred to next version (not in current roadmap).
 - v1 requirements: 41 total
 - Mapped to phases: 41
 - Unmapped: 0
-- Pending (gap closure phases 7–10): 14
-- Complete: 27
+- Pending (gap closure phases 11–14): 6
+- Complete: 35
 
 ---
 *Requirements defined: 2026-02-22*
-*Last updated: 2026-03-01 — Reset 14 requirements to Pending after v1.0 audit; assigned to gap closure phases 7–10*
+*Last updated: 2026-03-02 — Reset 6 requirements to Pending after second audit pass; assigned to gap closure phases 11–14*
