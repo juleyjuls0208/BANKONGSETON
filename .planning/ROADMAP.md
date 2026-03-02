@@ -242,8 +242,8 @@ Plans:
   3. cashier_routes.py `complete_sale` calls the FCM send function when balance drops below threshold
 **Plans**: 2 plans
 Plans:
-- [ ] 12-01-PLAN.md — Inspect and fix cashier_routes.py complete_sale: confirm/add BalanceBefore column (APP-03) and FCM call (NOTF-01)
-- [ ] 12-02-PLAN.md — Inspect and confirm migrate_users_schema() is called at api_server startup; fix if missing [NOTF-01]
+- [ ] 12-01-PLAN.md — Confirm APP-03 (transaction_row 11 cols) and NOTF-01 (FCM block) in cashier_routes.py; fix config_validator.py schema; update INTEGRATION_AUDIT.md [APP-03, NOTF-01]
+- [ ] 12-02-PLAN.md — Confirm migrate_users_schema() startup call in api_server.py; write phase SUMMARY and mark complete [NOTF-01]
 
 ### Phase 13: NFC Payment Contract Fix
 **Goal**: The Android HCE service can complete an NFC payment end-to-end — the registration response uses the field name the app expects, and the payment endpoint does not require the app to supply a device token it cannot obtain
