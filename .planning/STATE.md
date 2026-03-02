@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-03-02T01:00:58.727Z"
+last_updated: "2026-03-02T05:03:08.126Z"
 progress:
-  total_phases: 11
-  completed_phases: 11
-  total_plans: 43
-  completed_plans: 43
+  total_phases: 15
+  completed_phases: 12
+  total_plans: 45
+  completed_plans: 45
 ---
 
 # Project State
@@ -23,9 +23,9 @@ See: .planning/PROJECT.md (updated 2026-02-22)
 ## Current Position
 
 Phase: 11 of 11 (Cashier Security Hardening)
-Plan: 1 of 1 completed in current phase — Phase 11 COMPLETE
-Status: Phase 11 complete — SEC-01 closed (hardcoded cashier credentials replaced with env-var-backed login + startup guard)
-Last activity: 2026-03-02 - Phase 11 cashier security hardening executed; credentials moved to env vars
+Plan: 2 of 2 completed in current phase — Phase 11 COMPLETE
+Status: Phase 11 complete — SEC-01 and SEC-02 closed (hardcoded credentials replaced with env-var-backed startup guards for cashier creds and JWT secret)
+Last activity: 2026-03-02 - Phase 11 plan 02 executed; JWT_SECRET hardcoded fallback removed, startup guards added to both dashboards
 
 Progress: [##########] 100% (Phase 11 complete — all 1 plan done)
 
@@ -73,6 +73,7 @@ Progress: [##########] 100% (Phase 11 complete — all 1 plan done)
 | Phase 09-nfc-android-compat P02 | 3min | 2 tasks | 3 files |
 | Phase 10-documentation-gaps P01 | 5min | 2 tasks | 2 files |
 | Phase 11-cashier-security-hardening P01 | 10min | 3 tasks | 3 files |
+| Phase 11 P02 | 10 | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -171,6 +172,7 @@ Recent decisions affecting current work:
 
 - [11-01]: Used cashier_bp.record_once() for credential loading in cashier_routes.py — blueprint is imported before load_dotenv() runs, so module-level os.getenv would read empty env; record_once defers until app registration
 - [11-01]: Dual guard pattern (record_once in cashier_routes + startup guard in admin_dashboard) — belt-and-suspenders; admin_dashboard guard enforces fail-fast at server boot independent of blueprint registration order
+- [Phase 11]: JWT_SECRET validation moved into _init_cashier_credentials callback so it runs post-load_dotenv; None placeholder at module level replaced only after guard passes
 
 ### Roadmap Evolution
 

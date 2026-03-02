@@ -18,7 +18,7 @@ Requirements for this milestone. Backend-first, then mobile improvements, then d
 ### Security
 
 - [x] **SEC-01**: Credentials (admin username/password) are never printed to stdout or logs at startup
-- [ ] **SEC-02**: FLASK_SECRET_KEY is required non-empty (system refuses to start with default key)
+- [x] **SEC-02**: FLASK_SECRET_KEY is required non-empty (system refuses to start with default key)
 - [x] **SEC-03**: CORS is restricted to known origins (no wildcard `*` in production)
 - [x] **SEC-04**: Card UIDs are validated (regex format check) before use in Sheets queries
 - [x] **SEC-05**: Test files do not contain hardcoded secrets (JWT keys, passwords use env vars)
@@ -109,7 +109,7 @@ Deferred to next version (not in current roadmap).
 | BUG-04 | Phase 1 - Critical Fixes + Security | Complete |
 | BUG-05 | Phase 1 - Critical Fixes + Security | Complete |
 | SEC-01 | Phase 11 - Cashier Security Hardening | Complete |
-| SEC-02 | Phase 11 - Cashier Security Hardening | Pending |
+| SEC-02 | Phase 11 - Cashier Security Hardening | Complete |
 | SEC-03 | Phase 1 - Critical Fixes + Security | Complete |
 | SEC-04 | Phase 1 - Critical Fixes + Security | Complete |
 | SEC-05 | Phase 1 - Critical Fixes + Security | Complete |
