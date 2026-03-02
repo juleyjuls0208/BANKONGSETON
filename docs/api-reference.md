@@ -60,6 +60,8 @@ X-Device-Token: <device_token>
 | POST | `/api/nfc/register` | Session Token | Register virtual NFC card |
 | POST | `/api/nfc/pay` | JWT + X-Device-Token | Process NFC virtual card payment |
 
+> **Cashier Blueprint endpoints** (`/cashier/api/*`) are served by the **dashboard server** (port 5003), not this API. See [Cashier Blueprint API](#cashier-blueprint-api) below.
+
 ---
 
 ## Endpoints
@@ -237,7 +239,7 @@ Get paginated transaction history for the student's money card from the Transact
 }
 ```
 
-> **Note:** `balance_before` may be `0` for rows written by `cashier_routes.py` (7-column write path). See [Google Sheets Schema](google-sheets-schema.md) for details on the dual-write discrepancy.
+> **Note:** `balance_before` may be `0` for rows written before Phase 7. See [Google Sheets Schema](google-sheets-schema.md) for details.
 
 **Error Responses:**
 
@@ -553,6 +555,322 @@ Physical RFID card UIDs must be **8 hexadecimal characters, uppercase, no dashes
 - **Regex:** `^[0-9A-Fa-f]{8}$`
 
 All endpoints that accept a card UID validate this format and return `400` if it does not match.
+
+---
+
+## Cashier Blueprint API
+
+The cashier POS is served by the **dashboard server** (`backend/dashboard/app.py`), which runs on a separate port (default `5003`). These endpoints are **not** part of `api_server.py` (port `5001`) — they are a distinct Flask Blueprint registered under the `/cashier/` prefix.
+
+**Base URL:** `http://<server-ip>:5003`
+
+### Authentication
+
+The cashier blueprint uses a **JWT stored in an HttpOnly cookie** named `jwt_token`. This is different from the `Authorization: Bearer` header used by the student REST API above.
+
+- Cookie is set by `POST /cashier/api/login` and expires after **8 hours**.
+- Protected routes check for `jwt_token` via `request.cookies.get("jwt_token")` using the `@jwt_required` decorator.
+- If the cookie is missing or expired, the server redirects to `/cashier/login` (HTML routes) or returns `401` (API routes).
+
+### Cashier Endpoint Index
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/cashier/login` | None | Render cashier login page |
+| POST | `/cashier/api/login` | None | Authenticate; receive JWT cookie |
+| GET | `/cashier/` | JWT cookie | Render POS page |
+| GET | `/cashier/api/ports` | JWT cookie | List available serial COM ports |
+| POST | `/cashier/api/connect-arduino` | JWT cookie | Connect to Arduino on specified port |
+| GET | `/cashier/api/products` | JWT cookie | List all products |
+| POST | `/cashier/api/logout` | None | Log out; delete JWT cookie |
+| GET | `/cashier/api/lookup-student` | JWT cookie | Search students by name or ID |
+| POST | `/cashier/api/process-sale` | JWT cookie | Queue a pending sale; request card tap |
+| POST | `/cashier/api/complete-sale` | JWT cookie | Finalise sale; deduct balance; write transaction |
+
+---
+
+### GET /cashier/login
+
+Render the cashier login HTML page.
+
+**Auth:** None
+
+**Response 200:** HTML login page
+
+---
+
+### POST /cashier/api/login
+
+Authenticate with hardcoded cashier credentials. On success, sets a `jwt_token` HttpOnly cookie valid for 8 hours.
+
+**Auth:** None
+
+**Request Body:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `username` | string | Yes | Cashier username (hardcoded: `cashier`) |
+| `password` | string | Yes | Cashier password (hardcoded: `cashier123`) |
+
+**Request Example:**
+```json
+{
+  "username": "cashier",
+  "password": "cashier123"
+}
+```
+
+**Response 200:**
+```json
+{ "success": true }
+```
+Sets `jwt_token` HttpOnly cookie (8h expiry).
+
+**Error Responses:**
+
+| Status | Condition |
+|--------|-----------|
+| 401 | Invalid username or password |
+
+> ⚠️ **Security:** Credentials are hardcoded in `cashier_routes.py`. Change them before deploying to production.
+
+---
+
+### GET /cashier/
+
+Render the POS HTML page. Requires a valid `jwt_token` cookie; redirects to `/cashier/login` if missing or expired.
+
+**Auth:** JWT cookie (`cashier` or `admin` role)
+
+**Response 200:** HTML POS page  
+**Response 302:** Redirect to `/cashier/login` if not authenticated
+
+---
+
+### GET /cashier/api/ports
+
+List the serial COM ports available on the server machine. Used by the POS to populate the port-selection dropdown.
+
+**Auth:** JWT cookie
+
+**Response 200:**
+```json
+{ "ports": ["COM3", "COM4"] }
+```
+
+Returns `{"ports": []}` when `pyserial` is not installed (web/cloud mode without physical Arduino).
+
+---
+
+### POST /cashier/api/connect-arduino
+
+Open a serial connection to the Arduino RFID reader on the specified COM port.
+
+**Auth:** JWT cookie
+
+**Request Body:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `port` | string | Yes | COM port name (e.g. `"COM3"`, `"/dev/ttyUSB0"`) |
+
+**Request Example:**
+```json
+{ "port": "COM3" }
+```
+
+**Response 200:**
+```json
+{ "success": true, "message": "Connected to COM3" }
+```
+
+**Error Responses:**
+
+| Status | Condition |
+|--------|-----------|
+| 400 | `port` field is missing |
+| 500 | Serial connection failed (reason in `error` field) |
+| 500 | Arduino bridge module not available |
+| 503 | Service unavailable — try again |
+
+---
+
+### GET /cashier/api/products
+
+List all products. Returns both active and inactive products; the POS frontend filters by the `active` flag to show only available items.
+
+**Auth:** JWT cookie
+
+**Response 200:**
+```json
+{
+  "products": [
+    { "id": "PROD-001", "name": "Fried Rice", "category": "Food", "price": 25.0, "active": true }
+  ]
+}
+```
+
+**Error Responses:**
+
+| Status | Condition |
+|--------|-----------|
+| 503 | Google Sheets unavailable |
+
+---
+
+### POST /cashier/api/logout
+
+Log out the cashier. Deletes the `jwt_token` cookie. Always succeeds — no authentication check.
+
+**Auth:** None
+
+**Request Body:** None
+
+**Response 200:**
+```json
+{ "success": true }
+```
+
+---
+
+### GET /cashier/api/lookup-student
+
+Search for students by name or student ID. Used in **manual web mode** when the cashier processes a sale without an Arduino (student identified by name/ID instead of card tap).
+
+**Auth:** JWT cookie
+
+**Query Parameters:**
+
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| `q` | string | Yes | Search string — minimum 2 characters |
+
+**Response 200:**
+```json
+{
+  "students": [
+    { "id": "202501", "name": "Juan dela Cruz", "balance": 250.0, "card_uid": "ABCD1234" }
+  ]
+}
+```
+
+Returns an empty `students` array if `q` is fewer than 2 characters. Returns up to **10 matches**.
+
+**Error Responses:**
+
+| Status | Condition |
+|--------|-----------|
+| 500 | Student lookup failed (Sheets error) |
+| 503 | Google Sheets unavailable |
+
+---
+
+### POST /cashier/api/process-sale
+
+Store the current cart as a pending transaction in the Flask session and emit a WebSocket event requesting the student to tap their card.
+
+**Auth:** JWT cookie
+
+**Request Body:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `items` | array | Yes | Array of cart items — see item schema below |
+| `total` | number | Yes | Total sale amount in Thai Baht |
+
+**Item Schema:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | string | Product name |
+| `price` | number | Unit price |
+| `qty` | integer | Quantity |
+
+**Request Example:**
+```json
+{
+  "items": [{ "name": "Rice", "price": 20.0, "qty": 1 }],
+  "total": 20.0
+}
+```
+
+**Response 200:**
+```json
+{ "status": "waiting_for_card", "message": "Please tap student card" }
+```
+
+**Side effect:** Emits WebSocket event `cashier_request_card` with `{"timeout": 5000, "total": <total>}`.
+
+**Error Responses:**
+
+| Status | Condition |
+|--------|-----------|
+| 400 | Missing or invalid sale data |
+
+---
+
+### POST /cashier/api/complete-sale
+
+Finalise the pending sale. Validates the student's card or identity, deducts the balance, writes an 11-column transaction row to the Transactions Log sheet, sends an email receipt, and sends FCM push notifications (fire-and-forget).
+
+**Auth:** JWT cookie
+
+**Request Body (RFID card mode):**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `card_uid` | string | Yes | 8-character hex card UID from Arduino (e.g. `"ABCD1234"`) |
+
+**Request Body (manual web mode — no Arduino):**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `manual_student_id` | string | Yes | Student ID to identify the student directly |
+
+Exactly one of `card_uid` or `manual_student_id` must be provided.
+
+**Response 200:**
+```json
+{
+  "success": true,
+  "new_balance": 200.0,
+  "timestamp": "2026-02-28 14:32:00"
+}
+```
+
+**Transaction row written to Transactions Log (11 columns):**
+
+| Column | Field | Example |
+|--------|-------|---------|
+| 1 | TransactionID | `TXN-20260228143200` |
+| 2 | Timestamp | `2026-02-28 14:32:00` |
+| 3 | StudentID | `202501` |
+| 4 | MoneyCardNumber | `ABCD1234` |
+| 5 | TransactionType | `Purchase` or `Manual` |
+| 6 | Amount | `25.0` (positive deduction value) |
+| 7 | BalanceBefore | `275.0` |
+| 8 | BalanceAfter | `250.0` |
+| 9 | Status | `Completed` |
+| 10 | ErrorMessage | `""` (empty on success) |
+| 11 | ItemsJson | `[{"name":"Rice","price":20,"qty":1}]` |
+
+**Error Responses:**
+
+| Status | Condition |
+|--------|-----------|
+| 400 | Neither `card_uid` nor `manual_student_id` provided |
+| 400 | `card_uid` format invalid (must match `^[0-9A-Fa-f]{8}$`) |
+| 400 | No pending transaction in session (call `process-sale` first) |
+| 400 | Insufficient funds (`{"error": "Insufficient funds", "balance": ..., "required": ...}`) |
+| 400 | Student has no card assigned (manual mode) |
+| 403 | Card has been reported as lost |
+| 403 | Card status is not Active |
+| 404 | Card UID not found in Money Accounts sheet |
+| 404 | Student not found (manual mode) |
+| 500 | Manual student lookup failed |
+| 503 | Google Sheets unavailable |
+
+> **Note:** FCM push notifications (`send_purchase_push`, `send_low_balance_push`) are sent after the transaction is recorded. They are **fire-and-forget** — a notification failure never affects the transaction result.
 
 ---
 
