@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-03-02T05:09:08.694Z"
+last_updated: "2026-03-02T06:00:00.000Z"
 progress:
   total_phases: 15
   completed_phases: 12
-  total_plans: 45
-  completed_plans: 45
+  total_plans: 47
+  completed_plans: 47
 ---
 
 # Project State
@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-22)
 
 **Core value:** Students can pay for canteen food instantly by tapping their RFID card, with their balance always visible in the app
-**Current focus:** Phase 10 - Documentation Gaps (COMPLETE)
+**Current focus:** Phase 12 - Receipt & FCM Wiring (COMPLETE)
 
 ## Current Position
 
-Phase: 11 of 11 (Cashier Security Hardening)
-Plan: 2 of 2 completed in current phase — Phase 11 COMPLETE
-Status: Phase 11 complete — SEC-01 and SEC-02 closed (hardcoded credentials replaced with env-var-backed startup guards for cashier creds and JWT secret)
-Last activity: 2026-03-02 - Phase 11 plan 02 executed; JWT_SECRET hardcoded fallback removed, startup guards added to both dashboards
+Phase: 12 of 15 (Receipt & FCM Wiring)
+Plan: 2 of 2 completed in current phase — Phase 12 COMPLETE
+Status: Phase 12 complete — APP-03 and NOTF-01 VERIFIED; config_validator.py updated to 11-column Transactions Log schema; Integration Audit corrected
+Last activity: 2026-03-02 - Phase 12 plans 01+02 executed; static inspection confirmed Phase 7 fixes intact; migrate_users_schema() startup call confirmed at api_server.py:109-115
 
-Progress: [##########] 100% (Phase 11 complete — all 1 plan done)
+Progress: [##########] 100% (Phase 12 complete — all 2 plans done)
 
 ## Performance Metrics
 
@@ -74,6 +74,8 @@ Progress: [##########] 100% (Phase 11 complete — all 1 plan done)
 | Phase 10-documentation-gaps P01 | 5min | 2 tasks | 2 files |
 | Phase 11-cashier-security-hardening P01 | 10min | 3 tasks | 3 files |
 | Phase 11 P02 | 10 | 3 tasks | 3 files |
+| Phase 12-receipt-fcm-wiring P01 | 5min | 3 tasks | 2 files |
+| Phase 12-receipt-fcm-wiring P02 | 2min | 2 tasks | 1 file |
 
 ## Accumulated Context
 
@@ -173,6 +175,11 @@ Recent decisions affecting current work:
 - [11-01]: Used cashier_bp.record_once() for credential loading in cashier_routes.py — blueprint is imported before load_dotenv() runs, so module-level os.getenv would read empty env; record_once defers until app registration
 - [11-01]: Dual guard pattern (record_once in cashier_routes + startup guard in admin_dashboard) — belt-and-suspenders; admin_dashboard guard enforces fail-fast at server boot independent of blueprint registration order
 - [Phase 11]: JWT_SECRET validation moved into _init_cashier_credentials callback so it runs post-load_dotenv; None placeholder at module level replaced only after guard passes
+- [Phase 12]: APP-03 VERIFIED at cashier_routes.py:520-532 (11-col transaction_row with BalanceBefore at col 7, ItemsJson at col 11)
+- [Phase 12]: NOTF-01 VERIFIED at cashier_routes.py:570-612 (send_low_balance_push in non-blocking try/except)
+- [Phase 12]: config_validator.py updated from 10-col to 11-col Transactions Log schema to match runtime writes
+- [Phase 12]: migrate_users_schema() confirmed at api_server.py:109-115 in non-fatal try/except
+- [Phase 12]: Integration Audit contradiction resolved — Phase 7 did fix both APP-03 and NOTF-01; audit predated Phase 7
 
 ### Roadmap Evolution
 
@@ -198,5 +205,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-02
-Stopped at: Completed 11-01-PLAN.md: Cashier credentials moved from hardcoded strings to CASHIER_USERNAME/CASHIER_PASSWORD env vars; record_once guard in cashier_routes.py; startup guard in admin_dashboard.py; SEC-01 closed; Phase 11 complete
+Stopped at: Completed 12-02-PLAN.md: Phase 12 receipt & FCM wiring complete — APP-03 and NOTF-01 VERIFIED; config_validator.py 11-col schema; migrate_users_schema() startup confirmed
 Resume file: None
