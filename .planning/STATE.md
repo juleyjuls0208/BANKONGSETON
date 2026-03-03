@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-03-02T06:39:50.591Z"
+last_updated: "2026-03-03T11:09:02.204Z"
 progress:
   total_phases: 15
-  completed_phases: 13
+  completed_phases: 14
   total_plans: 49
-  completed_plans: 48
+  completed_plans: 49
 ---
 
 # Project State
@@ -77,6 +77,7 @@ Progress: [##########] 100% (Phase 13 complete — all 2 plans done)
 | Phase 12-receipt-fcm-wiring P01 | 5min | 3 tasks | 2 files |
 | Phase 12-receipt-fcm-wiring P02 | 2min | 2 tasks | 1 file |
 | Phase 13-nfc-payment-contract-fix P01 | 3min | 2 tasks | 2 files |
+| Phase 12-receipt-fcm-wiring P02 | 3min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -207,6 +208,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-02
-Stopped at: Completed 12-02-PLAN.md: Phase 12 receipt & FCM wiring complete — APP-03 and NOTF-01 VERIFIED; config_validator.py 11-col schema; migrate_users_schema() startup confirmed
+Last session: 2026-03-03
+Stopped at: Completed 12-02-PLAN.md: Phase 12 complete — migrate_users_schema() confirmed at api_server.py:109-115 in non-fatal try/except; all NOTF-01 dependencies satisfied; Phase 12 SUMMARY written
 Resume file: None
