@@ -270,7 +270,7 @@ Plans:
   3. The simulation panel is only visible when the server is running in web mode (hardware-free)
 **Plans**: 1 plan
 Plans:
-- [ ] 14-01-PLAN.md — Add NFC simulation panel to dashboard template; wire to /api/nfc/simulate endpoint [WEB-02]
+- [ ] 14-01-PLAN.md — Add NFC simulation panel + POST /api/nfc/simulate endpoint; Jinja student dropdown, inline result display [WEB-02]
 
 ## Progress
 
