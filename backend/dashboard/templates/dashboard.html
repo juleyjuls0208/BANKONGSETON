@@ -367,9 +367,23 @@
                         </div>
                     </div>
                     {% else %}
-                    <!-- Web-Only Mode Notice -->
-                    <div class="alert alert-info mb-4">
-                        <i class="bi bi-cloud"></i> <strong>Web Dashboard Mode</strong> - Card management features require desktop installation with Arduino hardware.
+                    <!-- NFC Simulation Panel (Web Mode - Admin Only) -->
+                    <div class="stat-card mb-4">
+                        <h5><i class="bi bi-wifi"></i> NFC Simulation</h5>
+                        <p class="text-muted small">Simulate a card tap for testing without Arduino hardware.</p>
+                        <div class="mb-3">
+                            <label for="nfcStudentSelect" class="form-label">Student</label>
+                            <select class="form-select" id="nfcStudentSelect" onchange="nfcSelectChanged()">
+                                <option value="" disabled selected>Select a student...</option>
+                                {% for student in students %}
+                                <option value="{{ student.StudentID }}">{{ student.Name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <button class="btn btn-primary" id="nfcSimulateBtn" onclick="simulateNfcTap()" disabled>
+                            <i class="bi bi-wifi"></i> Simulate Tap
+                        </button>
+                        <div id="nfcResult" class="mt-3 d-none"></div>
                     </div>
                     {% endif %}
 
@@ -1311,6 +1325,52 @@
 
         function clearLog() {
             document.getElementById('statusLog').innerHTML = '';
+        }
+
+        // NFC Simulation Panel
+        function nfcSelectChanged() {
+            const select = document.getElementById('nfcStudentSelect');
+            document.getElementById('nfcSimulateBtn').disabled = !select.value;
+        }
+
+        async function simulateNfcTap() {
+            const studentId = document.getElementById('nfcStudentSelect').value;
+            const btn = document.getElementById('nfcSimulateBtn');
+            const resultDiv = document.getElementById('nfcResult');
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Simulating...';
+            resultDiv.classList.add('d-none');
+
+            try {
+                const response = await fetch('/api/nfc/simulate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ student_id: studentId })
+                });
+                const data = await response.json();
+
+                if (response.ok) {
+                    resultDiv.className = 'alert alert-success mt-3';
+                    resultDiv.innerHTML = `
+                        <strong>${data.student_name}</strong><br>
+                        Card UID: <code>${data.card_uid}</code><br>
+                        Balance: ฿${parseFloat(data.balance).toFixed(2)}<br>
+                        <span class="badge bg-success">Card registered — ready for payments</span>
+                    `;
+                } else {
+                    resultDiv.className = 'alert alert-danger mt-3';
+                    resultDiv.textContent = data.error;
+                }
+                resultDiv.classList.remove('d-none');
+            } catch (error) {
+                resultDiv.className = 'alert alert-danger mt-3';
+                resultDiv.textContent = 'Network error: ' + error.message;
+                resultDiv.classList.remove('d-none');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-wifi"></i> Simulate Tap';
+            }
         }
         {% endif %}
     </script>
