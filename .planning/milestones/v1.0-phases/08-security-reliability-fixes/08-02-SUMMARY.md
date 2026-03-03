@@ -93,3 +93,10 @@ None - no external service configuration required.
 ---
 *Phase: 08-security-reliability-fixes*
 *Completed: 2026-03-01*
+
+## Self-Check: PASSED
+
+- `backend/dashboard/cashier/cashier_routes.py` — FOUND on disk
+- `08-02-SUMMARY.md` — FOUND on disk
+- Commit `21cd1c9` — FOUND in git log
+- All 6 verification checks PASS (syntax valid, helpers defined, no global db, direct call replaced, ensure_products_sheet called, canonical headers present)

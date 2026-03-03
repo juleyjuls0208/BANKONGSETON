@@ -109,6 +109,17 @@ None - no external service configuration required.
 - HomeActivity can call `getLastBalance()` on failure to display last-known value
 - FCM pipeline complete end-to-end: token stored by FCMService → read by LoginActivity → sent to backend
 
+## Self-Check: PASSED
+
+- ✅ Models.kt exists with hasMore and balanceBefore
+- ✅ ApiClient.kt exists with offset param
+- ✅ LoginActivity.kt exists with FCM registration
+- ✅ SecureStorage.kt exists with saveLastBalance/getLastBalance
+- ✅ 04-04-SUMMARY.md exists
+- ✅ Task 1 commit 21b39bb confirmed in history
+- ✅ Task 2 commit fdfb5dc confirmed in history
+- ✅ Metadata commit 9bea8d4 confirmed in history
+
 ---
 *Phase: 04-student-app-notifications*
 *Completed: 2026-02-26*
