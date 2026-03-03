@@ -1,9 +1,9 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.0
-milestone_name: milestone
-status: unknown
-last_updated: "2026-03-03T12:37:45.825Z"
+milestone_name: MVP
+status: complete
+last_updated: "2026-03-03T13:21:03.551Z"
 progress:
   total_phases: 15
   completed_phases: 15
@@ -18,7 +18,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-22)
 
 **Core value:** Students can pay for canteen food instantly by tapping their RFID card, with their balance always visible in the app
-**Current focus:** Phase 14 - NFC Simulation UI (Complete)
+**Current focus:** v1.0 SHIPPED — planning next milestone with `/gsd:new-milestone`
 
 ## Current Position
 
