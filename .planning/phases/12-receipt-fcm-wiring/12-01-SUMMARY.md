@@ -90,3 +90,21 @@ None — all code states matched researcher findings exactly. No discrepancies e
 - `api_server.py` `migrate_users_schema`: ✅ (grep confirms lines 111, 113)
 
 ## Self-Check: PASSED
+
+---
+
+## Plan 02 Addendum — migrate_users_schema() Final Confirmation
+
+**Executed:** 2026-03-03
+
+**Task:** Plan 12-02 re-confirmed `migrate_users_schema()` is present at `api_server.py` startup.
+
+| Check | Result | Evidence |
+|-------|--------|----------|
+| Import present | ✅ | `api_server.py:111` — `from migrate_transactions import migrate_users_schema` |
+| Call present | ✅ | `api_server.py:113` — `migrate_users_schema()` |
+| Non-fatal try/except | ✅ | `api_server.py:110-115` — `try: ... except Exception as _mig_err: logger.warning(...)` |
+| After db init | ✅ | `api_server.py:107` — `db = get_sheets_client()` at line 107, startup block at 109-115 |
+| config_validator fix intact | ✅ | `config_validator.py:268` — `'ItemsJson'` as 11th column |
+
+**Phase 12 is complete.** All requirements verified. No code changes required in Plan 02.
