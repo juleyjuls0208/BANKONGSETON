@@ -301,10 +301,19 @@ def logout():
 @login_required
 def dashboard():
     """Main dashboard page"""
-    return render_template('dashboard.html', 
+    students = []
+    if session.get('role') == 'admin':
+        try:
+            users_sheet = get_worksheet_with_retry('Users')
+            students = users_sheet.get_all_records()
+        except Exception:
+            students = []  # Fail silently — dropdown will be empty, not a crash
+
+    return render_template('dashboard.html',
                          username=session.get('admin_username'),
                          role=session.get('role', 'finance'),
-                         arduino_available=False)  # web_app.py: hardware not expected; cashier detects per-session
+                         arduino_available=False,
+                         students=students)
 
 @app.route('/students')
 @login_required
@@ -1910,6 +1919,54 @@ def set_threshold():
         return jsonify({'error': 'Service unavailable, please try again'}), 503
     except Exception as e:
         logger.error("event=set_threshold_unexpected error=%s", e)
+        return jsonify({'error': 'An unexpected error occurred'}), 500
+
+
+@app.route('/api/nfc/simulate', methods=['POST'])
+@admin_only
+def nfc_simulate():
+    """Simulate NFC card tap — verify card registration only, no payment"""
+    try:
+        data = request.json or {}
+        student_id = str(data.get('student_id', '')).strip()
+        if not student_id:
+            return jsonify({'error': 'Student ID is required'}), 400
+
+        users_sheet = get_worksheet_with_retry('Users')
+        students = users_sheet.get_all_records()
+
+        student = next(
+            (s for s in students if str(s.get('StudentID', '')) == student_id),
+            None
+        )
+        if not student:
+            return jsonify({'error': 'Student not found'}), 404
+
+        money_card = normalize_card_uid(str(student.get('MoneyCardNumber', '')))
+        if not money_card:
+            return jsonify({'error': 'No card registered for this student'}), 404
+
+        money_sheet = get_worksheet_with_retry('Money Accounts')
+        money_accounts = money_sheet.get_all_records()
+        balance = 0.00
+        for account in money_accounts:
+            if normalize_card_uid(str(account.get('MoneyCardNumber', ''))) == money_card:
+                balance = account.get('Balance', 0.00)
+                break
+
+        return jsonify({
+            'student_name': student.get('Name'),
+            'card_uid': student.get('MoneyCardNumber'),
+            'balance': balance,
+            'status': 'registered'
+        })
+
+    except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
+            gspread.exceptions.WorksheetNotFound, ConnectionError, TimeoutError) as e:
+        logger.error(f"Google Sheets unavailable in nfc_simulate: {e}")
+        return jsonify({'error': 'Service unavailable, please try again'}), 503
+    except Exception as e:
+        logger.error(f"Unexpected error in nfc_simulate: {e}", exc_info=True)
         return jsonify({'error': 'An unexpected error occurred'}), 500
 
 
