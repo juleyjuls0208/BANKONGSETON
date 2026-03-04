@@ -51,6 +51,12 @@
             android:name=".ReceiptActivity"
             android:exported="false" />
 
+        <activity
+            android:name=".NfcPayOverlayActivity"
+            android:theme="@style/Theme.AppCompat.NoActionBar"
+            android:screenOrientation="portrait"
+            android:exported="false" />
+
         <!-- Firebase Cloud Messaging Service -->
         <service
             android:name=".FCMService"
