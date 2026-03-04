@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Requirements Coverage
 status: unknown
-last_updated: "2026-03-04T20:52:37.009Z"
+last_updated: "2026-03-04T20:58:19.947Z"
 progress:
   total_phases: 1
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 4
-  completed_plans: 2
+  completed_plans: 4
 ---
 
 # Project State
@@ -81,6 +81,8 @@ Progress: [##########] 100% (Phase 14 complete — all 1 plan done)
 | Phase 14-nfc-simulation-ui P01 | 4min | 2 tasks | 2 files |
 | Phase 16-nfc-android-hce P02 | 8min | 1 tasks | 1 files |
 | Phase 16-nfc-android-hce P16-01 | 4 | 2 tasks | 6 files |
+| Phase 16-nfc-android-hce P03 | 45min | 2 tasks | 2 files |
+| Phase 16-nfc-android-hce P04 | 10 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -191,6 +193,8 @@ Recent decisions affecting current work:
 - [Phase 16-nfc-android-hce]: Synthetic NFC Payment row uses TransactionItem with transaction.amount as price — identical layout inflation ensures visual consistency with real items
 - [Phase 16-nfc-android-hce]: Used existing hce_service.xml (AID F042414E4B4F4E475345544F4E) instead of creating apdu_service.xml to match cashier reader configuration
 - [Phase 16-nfc-android-hce]: NfcManager uses coroutines instead of Retrofit enqueue callbacks to align with student_app_v2 ApiClient singleton pattern
+- [Phase 16-nfc-android-hce]: NfcManager used as instance (getInstance) not static; registerDevice requires PIN from SettingsActivity via showPinDialog()
+- [Phase 16-nfc-android-hce]: BankoHceService.isPaymentAuthorized (not NfcManager) is the payment auth flag; NfcManager.getInstance(ctx) for all instance calls; PIN fallback via verifyPin() + AlertDialog
 
 ### Roadmap Evolution
 
