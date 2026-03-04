@@ -79,7 +79,7 @@ class HomeActivity : AppCompatActivity() {
                     if (reason == "NEEDS_PIN") {
                         showPinDialog(nfcManager)
                     } else {
-                        Toast.makeText(this, "Authentication failed: $reason", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this, getString(R.string.nfc_pay_auth_failed, reason), Toast.LENGTH_SHORT).show()
                     }
                 }
             )
@@ -96,7 +96,7 @@ class HomeActivity : AppCompatActivity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == REQUEST_NFC_PAY && resultCode == RESULT_OK) {
-            Toast.makeText(this, "Payment successful", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.nfc_pay_payment_successful), Toast.LENGTH_SHORT).show()
             loadBalance()
         }
     }
@@ -114,13 +114,13 @@ class HomeActivity : AppCompatActivity() {
         val pinInput = EditText(this).apply {
             inputType = android.text.InputType.TYPE_CLASS_NUMBER or
                     android.text.InputType.TYPE_NUMBER_VARIATION_PASSWORD
-            hint = "Enter NFC PIN"
+            hint = getString(R.string.nfc_pin_hint)
         }
         AlertDialog.Builder(this)
-            .setTitle("Bangko ng Seton Payment")
-            .setMessage("Enter your NFC PIN to authorize payment")
+            .setTitle(getString(R.string.nfc_pay_dialog_title))
+            .setMessage(getString(R.string.nfc_pay_dialog_message))
             .setView(pinInput)
-            .setPositiveButton("Confirm") { _, _ ->
+            .setPositiveButton(getString(R.string.nfc_pay_confirm_button)) { _, _ ->
                 val pin = pinInput.text.toString()
                 if (nfcManager.verifyPin(pin)) {
                     startActivityForResult(
@@ -128,7 +128,7 @@ class HomeActivity : AppCompatActivity() {
                         REQUEST_NFC_PAY
                     )
                 } else {
-                    Toast.makeText(this, "Incorrect PIN", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, getString(R.string.nfc_pay_incorrect_pin), Toast.LENGTH_SHORT).show()
                 }
             }
             .setNegativeButton("Cancel", null)

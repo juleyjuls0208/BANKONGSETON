@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
@@ -11,15 +12,15 @@
         android:layout_width="120dp"
         android:layout_height="120dp"
         android:src="@android:drawable/ic_menu_share"
-        android:tint="#FFFFFF"
-        android:contentDescription="NFC icon"
+        app:tint="#FFFFFF"
+        android:contentDescription="@string/nfc_icon_description"
         android:layout_marginBottom="24dp"/>
 
     <TextView
         android:id="@+id/instructionText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Hold phone to terminal"
+        android:text="@string/nfc_hold_to_terminal"
         android:textColor="#FFFFFF"
         android:textSize="22sp"
         android:textStyle="bold"
@@ -30,7 +31,7 @@
         android:id="@+id/countdownText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="30"
+        android:text="@string/nfc_countdown_start"
         android:textColor="#FFFFFF"
         android:textSize="64sp"
         android:textStyle="bold" />
@@ -38,7 +39,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="seconds remaining"
+        android:text="@string/nfc_seconds_remaining"
         android:textColor="#AAAAAA"
         android:textSize="14sp"
         android:layout_marginTop="4dp"/>
@@ -48,7 +49,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="40dp"
-        android:text="Cancel"
+        android:text="@string/nfc_cancel"
         style="@style/Widget.MaterialComponents.Button.OutlinedButton"
         android:textColor="#FFFFFF" />
 

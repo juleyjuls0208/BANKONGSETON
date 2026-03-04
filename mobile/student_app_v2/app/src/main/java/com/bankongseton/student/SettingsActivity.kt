@@ -80,7 +80,7 @@ class SettingsActivity : AppCompatActivity() {
                         if (success) {
                             refreshNfcSection()
                         } else {
-                            Toast.makeText(this, "Registration failed. Please try again.", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this, getString(R.string.nfc_registration_failed), Toast.LENGTH_SHORT).show()
                         }
                     }
                 }
@@ -94,7 +94,7 @@ class SettingsActivity : AppCompatActivity() {
                     if (success) {
                         refreshNfcSection()
                     } else {
-                        Toast.makeText(this, "Could not remove NFC device. Please try again.", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this, getString(R.string.nfc_remove_failed), Toast.LENGTH_SHORT).show()
                     }
                 }
             }
@@ -103,11 +103,11 @@ class SettingsActivity : AppCompatActivity() {
     
     private fun refreshNfcSection() {
         if (nfcManager.isDeviceRegistered()) {
-            nfcStatusText.text = "✓ NFC Payment Ready"
+            nfcStatusText.text = getString(R.string.nfc_status_ready)
             setupNfcButton.visibility = View.GONE
             removeNfcButton.visibility = View.VISIBLE
         } else {
-            nfcStatusText.text = "Not set up"
+            nfcStatusText.text = getString(R.string.nfc_status_not_set_up)
             setupNfcButton.visibility = View.VISIBLE
             removeNfcButton.visibility = View.GONE
         }
@@ -117,18 +117,18 @@ class SettingsActivity : AppCompatActivity() {
         val input = EditText(this).apply {
             inputType = android.text.InputType.TYPE_CLASS_NUMBER or
                 android.text.InputType.TYPE_NUMBER_VARIATION_PASSWORD
-            hint = "4–6 digit PIN"
+            hint = getString(R.string.nfc_pin_setup_hint)
         }
         AlertDialog.Builder(this)
-            .setTitle("Set NFC Payment PIN")
-            .setMessage("Create a PIN to secure your NFC payments.")
+            .setTitle(getString(R.string.nfc_pin_setup_title))
+            .setMessage(getString(R.string.nfc_pin_setup_message))
             .setView(input)
-            .setPositiveButton("Set Up") { _, _ ->
+            .setPositiveButton(getString(R.string.nfc_pin_setup_button)) { _, _ ->
                 val pin = input.text.toString()
                 if (pin.length in 4..6 && pin.all { it.isDigit() }) {
                     onPinEntered(pin)
                 } else {
-                    Toast.makeText(this, "PIN must be 4–6 digits.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, getString(R.string.nfc_pin_invalid), Toast.LENGTH_SHORT).show()
                 }
             }
             .setNegativeButton("Cancel", null)

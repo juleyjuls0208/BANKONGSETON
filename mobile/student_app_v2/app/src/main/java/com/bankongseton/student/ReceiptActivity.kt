@@ -45,14 +45,14 @@ class ReceiptActivity : AppCompatActivity() {
         if (items.isNullOrEmpty()) {
             // Synthetic row for transactions with no line items (e.g. NFC Payment)
             val syntheticItem = TransactionItem(
-                name = "NFC Payment",
+                name = getString(R.string.nfc_receipt_label),
                 price = transaction.amount,
                 qty = 1
             )
             val row = layoutInflater.inflate(R.layout.item_receipt_line, itemsContainer, false)
             row.findViewById<TextView>(R.id.lineItemName).text = syntheticItem.name
             row.findViewById<TextView>(R.id.lineItemUnitPrice).text = "฿%.2f".format(syntheticItem.price)
-            row.findViewById<TextView>(R.id.lineItemQty).text = "x${syntheticItem.qty}"
+            row.findViewById<TextView>(R.id.lineItemQty).text = getString(R.string.item_qty_format, syntheticItem.qty)
             row.findViewById<TextView>(R.id.lineItemTotal).text = "฿%.2f".format(syntheticItem.price * syntheticItem.qty)
             itemsContainer.addView(row)
         } else {
@@ -60,7 +60,7 @@ class ReceiptActivity : AppCompatActivity() {
                 val row = layoutInflater.inflate(R.layout.item_receipt_line, itemsContainer, false)
                 row.findViewById<TextView>(R.id.lineItemName).text = item.name
                 row.findViewById<TextView>(R.id.lineItemUnitPrice).text = "฿%.2f".format(item.price)
-                row.findViewById<TextView>(R.id.lineItemQty).text = "x${item.qty}"
+                row.findViewById<TextView>(R.id.lineItemQty).text = getString(R.string.item_qty_format, item.qty)
                 row.findViewById<TextView>(R.id.lineItemTotal).text = "฿%.2f".format(item.price * item.qty)
                 itemsContainer.addView(row)
             }
