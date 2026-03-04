@@ -1,14 +1,14 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.1
-milestone_name: Platform Expansion
-status: in_progress
-last_updated: "2026-03-04T00:00:00.000Z"
+milestone_name: Requirements Coverage
+status: unknown
+last_updated: "2026-03-04T20:48:20.413Z"
 progress:
-  total_phases: 5
+  total_phases: 1
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 4
+  completed_plans: 1
 ---
 
 # Project State
@@ -79,6 +79,7 @@ Progress: [##########] 100% (Phase 14 complete — all 1 plan done)
 | Phase 13-nfc-payment-contract-fix P01 | 3min | 2 tasks | 2 files |
 | Phase 12-receipt-fcm-wiring P02 | 3min | 2 tasks | 1 files |
 | Phase 14-nfc-simulation-ui P01 | 4min | 2 tasks | 2 files |
+| Phase 16-nfc-android-hce P02 | 8min | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -186,6 +187,7 @@ Recent decisions affecting current work:
 - [13-02]: get_virtual_card_by_token() added as new method (backward compatible) — get_virtual_card_by_tokens() kept intact for any future two-token paths
 - [13-02]: nfc_pay() now uses single-token lookup; X-Device-Token fully removed from handler and CORS allow_headers
 - [Phase 14-nfc-simulation-ui]: Used @admin_only on POST /api/nfc/simulate; students= fetched server-side at render (not AJAX); btn.disabled=false in finally block
+- [Phase 16-nfc-android-hce]: Synthetic NFC Payment row uses TransactionItem with transaction.amount as price — identical layout inflation ensures visual consistency with real items
 
 ### Roadmap Evolution
 
@@ -210,6 +212,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-03
-Stopped at: Completed 12-02-PLAN.md: Phase 12 complete — migrate_users_schema() confirmed at api_server.py:109-115 in non-fatal try/except; all NOTF-01 dependencies satisfied; Phase 12 SUMMARY written
+Last session: 2026-03-05
+Stopped at: Completed 16-02-PLAN.md — ReceiptActivity null-items fallback + transaction type label; NFCA-03, NFCA-05 marked complete
 Resume file: None
