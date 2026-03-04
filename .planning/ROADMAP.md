@@ -12,7 +12,7 @@
 
 | Phase | Name | Requirements | Plans (est.) |
 |-------|------|-------------|-------------|
-| 16 | 1/4 | In Progress|  |
+| 16 | 4/4 | Complete   | 2026-03-04 |
 | 17 | Dashboard Overhaul + Admin | DASH-01–05, ADM-01–02 | 4–5 |
 | 18 | Arduino UNO R4 WiFi Upgrade | ARDW-01–04 | 2–3 |
 | 19 | Parent Portal | PAR-01–06 | 3–4 |
@@ -44,7 +44,7 @@
 
 **Out of scope:** NFC hardware reader on cashier side (cashier still uses RFID reader; phone tap emulates card UID)
 
-**Plans:** 1/4 plans executed
+**Plans:** 4/4 plans complete
 
 Plans:
 - [ ] 16-01-PLAN.md — HCE infrastructure: port BankoHceService + NfcManager, update Models/ApiClient/Manifest/build.gradle

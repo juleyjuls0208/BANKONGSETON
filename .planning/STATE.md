@@ -220,5 +220,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-05
-Stopped at: Completed 16-02-PLAN.md — ReceiptActivity null-items fallback + transaction type label; NFCA-03, NFCA-05 marked complete
+Stopped at: Completed 16-04-PLAN.md — NfcPayOverlayActivity + HomeActivity NFC button; awaiting checkpoint:human-verify (physical device testing of end-to-end NFC payment flow)
 Resume file: None
