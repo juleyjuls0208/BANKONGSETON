@@ -44,11 +44,13 @@
 
 **Out of scope:** NFC hardware reader on cashier side (cashier still uses RFID reader; phone tap emulates card UID)
 
-**Estimated plans:** 3–4
-1. `BankoHceService` + card registration flow (Android)
-2. NFC payment flow + backend contract verification
-3. Receipt navigation fix for `NFC Purchase` + `ReceiptActivity` items
-4. (if needed) Integration testing + edge cases
+**Plans:** 4 plans
+
+Plans:
+- [ ] 16-01-PLAN.md — HCE infrastructure: port BankoHceService + NfcManager, update Models/ApiClient/Manifest/build.gradle
+- [ ] 16-02-PLAN.md — Receipt fix: null-items fallback + transaction type label in ReceiptActivity
+- [ ] 16-03-PLAN.md — Card registration UX: NFC section in SettingsActivity (register/remove)
+- [ ] 16-04-PLAN.md — NFC pay flow: "Activate NFC Pay" button + NfcPayOverlayActivity countdown
 
 ---
 
