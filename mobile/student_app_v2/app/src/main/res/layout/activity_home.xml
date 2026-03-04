@@ -117,6 +117,16 @@
                 android:textAllCaps="false"
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
 
+            <!-- NFC Pay Button (visible only when device is registered and NFC enabled) -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/activateNfcPayButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="Activate NFC Pay"
+                android:textAllCaps="false"
+                android:visibility="gone" />
+
         </LinearLayout>
 
     </ScrollView>
