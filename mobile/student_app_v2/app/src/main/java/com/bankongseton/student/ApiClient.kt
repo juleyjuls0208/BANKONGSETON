@@ -1,9 +1,9 @@
 package com.bankongseton.student
 
-import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Call
+import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.*
@@ -32,13 +32,27 @@ interface BangkoApiService {
     
     @POST("auth/logout")
     fun logout(@Header("Authorization") token: String): Call<MessageResponse>
+
+    @POST("nfc/register")
+    suspend fun registerNfcDevice(
+        @Header("Authorization") authToken: String,
+        @Body request: NfcDeviceRequest
+    ): Response<NfcRegistrationResponse>
+
+    @DELETE("nfc/unregister")
+    suspend fun unregisterNfcDevice(
+        @Header("Authorization") authToken: String,
+        @Body request: NfcUnregisterRequest
+    ): Response<Unit>
 }
 
 object ApiClient {
-    private const val BASE_URL = "http://192.168.68.122:5001/api/"
-    
+    // Production: PythonAnywhere HTTPS — no port needed
+    // Replace with your actual PythonAnywhere subdomain if different
+    private const val BASE_URL = "https://juley2823.pythonanywhere.com/api/"
+
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
-        level = HttpLoggingInterceptor.Level.BODY
+        level = HttpLoggingInterceptor.Level.NONE
     }
     
     private val client = OkHttpClient.Builder()

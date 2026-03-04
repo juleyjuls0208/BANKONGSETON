@@ -59,3 +59,8 @@ data class MessageResponse(
 data class ErrorResponse(
     val error: String
 )
+
+// NFC Models
+data class NfcDeviceRequest(val device_id: String, val pin: String)
+data class NfcRegistrationResponse(val virtual_card_token: String)
+data class NfcUnregisterRequest(val device_id: String)
