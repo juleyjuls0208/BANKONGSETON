@@ -38,6 +38,15 @@ Students can pay for canteen food instantly by tapping their RFID card, with the
 - [ ] NFC Android HCE implementation (BankoHceService + registration flow in student app)
 - [ ] NFC Purchase receipt navigation in TransactionsAdapter (currently only 'Purchase' type opens ReceiptActivity)
 - [ ] ReceiptActivity: display items for NFC Purchase type (distinct from cashier receipt path)
+- [ ] Admin web dashboard: full UI/UX overhaul (modern CSS framework, charts, analytics)
+- [ ] Arduino UNO R4 WiFi: firmware + Flask WiFi endpoint (cable-free card reader)
+- [ ] Parent portal: view-only balance + spending history (new parent role, linked at card registration)
+- [ ] Card registration: dual email (student required, parent optional)
+- [ ] Student app redesign: modern UI/UX + dark mode
+- [ ] Student app: spending summary / monthly budget with alerts
+- [ ] Student app: in-app lost card report
+- [ ] Admin: balance top-up (credit student cards from dashboard)
+- [ ] Admin: transaction CSV export
 
 ### Out of Scope
 
@@ -83,4 +92,15 @@ Students can pay for canteen food instantly by tapping their RFID card, with the
 | Transaction type 'NFC Purchase' distinct from 'Purchase' | Enables Android filtering by payment type | ✓ Good — TransactionsAdapter can separate NFC vs cashier |
 
 ---
-*Last updated: 2026-03-03 after v1.0 milestone*
+*Last updated: 2026-03-04 after v1.1 Platform Expansion milestone start*
+
+## Current Milestone: v1.1 Platform Expansion
+
+**Goal:** Expand the platform with Android NFC payments, a professional dashboard, cable-free Arduino WiFi terminals, and a parent portal.
+
+**Target features:**
+- NFC Android HCE: BankoHceService + card registration in student app + NFC receipt display
+- Admin dashboard overhaul: modern UI (Tailwind/Bootstrap 5), charts, analytics, CSV export, balance top-up
+- Arduino UNO R4 WiFi: firmware update + Flask WiFi endpoint (no more serial USB at cashier)
+- Parent portal: view-only balance + spending history, linked at card registration (dual email)
+- Student app redesign: modern UI/UX, dark mode, budget tracker, in-app lost card report
