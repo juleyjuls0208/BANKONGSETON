@@ -25,7 +25,7 @@ Requirements for this milestone. Six feature areas: NFC Android HCE, Dashboard o
 
 - [ ] **DASH-01**: Dashboard uses modern CSS framework (Bootstrap 5 or Tailwind) — full visual redesign
 - [x] **DASH-02**: Dashboard homepage shows spending analytics charts (daily/weekly/monthly spend trends)
-- [ ] **DASH-03**: Admin can export transaction history as CSV from the dashboard
+- [x] **DASH-03**: Admin can export transaction history as CSV from the dashboard
 - [ ] **DASH-04**: Admin can top-up a student's balance directly from the dashboard
 - [ ] **DASH-05**: Dashboard remains deployable on PythonAnywhere free tier (no paid add-ons required)
 
@@ -92,7 +92,7 @@ Requirements for this milestone. Six feature areas: NFC Android HCE, Dashboard o
 | NFCA-05 | Phase 16 - NFC Android HCE | Complete |
 | DASH-01 | Phase 17 - Dashboard Overhaul | Pending |
 | DASH-02 | Phase 17 - Dashboard Overhaul | Complete |
-| DASH-03 | Phase 17 - Dashboard Overhaul | Pending |
+| DASH-03 | Phase 17 - Dashboard Overhaul | Complete |
 | DASH-04 | Phase 17 - Dashboard Overhaul | Pending |
 | DASH-05 | Phase 17 - Dashboard Overhaul | Pending |
 | ARDW-01 | Phase 18 - Arduino WiFi Upgrade | Pending |
