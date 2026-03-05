@@ -13,7 +13,7 @@
 | Phase | Name | Requirements | Status |
 |-------|------|-------------|--------|
 | 16 | NFC Android HCE | NFCA-01–05 | ✓ Complete (2026-03-05) |
-| 17 | 3/5 | In Progress|  |
+| 17 | 4/5 | In Progress|  |
 | 18 | Arduino UNO R4 WiFi Upgrade | ARDW-01–04 | Pending |
 | 19 | Parent Portal | PAR-01–06 | Pending |
 | 20 | Student App Redesign | APPA-01–05 | Pending |
