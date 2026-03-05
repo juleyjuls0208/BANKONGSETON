@@ -42,7 +42,10 @@ background-image: url('https://i.pinimg.com/736x/f7/db/84/f7db841f2bf75e76c13cdb
             <div class="col-md-6">
                 <div class="input-group">
                     <span class="input-group-text"><i class="bi bi-search"></i></span>
-                    <input type="text" class="form-control" id="searchInput" placeholder="Search by name or ID...">
+                    <input type="text" class="form-control" id="student-search-input" placeholder="Search by name or ID...">
+                    <span id="search-spinner" class="input-group-text" style="display:none;">
+                        <span class="spinner-border spinner-border-sm text-secondary"></span>
+                    </span>
                 </div>
             </div>
         </div>
@@ -105,24 +108,86 @@ background-image: url('https://i.pinimg.com/736x/f7/db/84/f7db841f2bf75e76c13cdb
       </div>
     </div>
     {% endif %}
+
+    <!-- Transaction History Modal -->
+    <div class="modal fade" id="tx-history-modal" tabindex="-1"
+         aria-labelledby="txHistoryLabel" aria-hidden="true">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="txHistoryLabel">
+              <i class="bi bi-clock-history me-2"></i>Transaction History
+              <small class="text-muted ms-2" id="tx-student-label"></small>
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body p-0">
+            <div id="tx-loading" class="text-center py-4">
+              <div class="spinner-border text-primary"></div>
+            </div>
+            <div id="tx-empty" class="text-center text-muted py-4" style="display:none;">
+              <i class="bi bi-inbox fs-2"></i>
+              <p class="mt-2">No transactions found for this student</p>
+            </div>
+            <div id="tx-table-wrap" style="display:none;">
+              <table class="table table-sm table-striped mb-0">
+                <thead class="table-dark">
+                  <tr>
+                    <th>Date</th>
+                    <th>Type</th>
+                    <th>Amount</th>
+                    <th>Balance Before</th>
+                    <th>Balance After</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="tx-table-body"></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
     const IS_ADMIN = {{ 'true' if role == 'admin' else 'false' }};
 
+    // Debounce helper
+    function debounce(fn, ms) {
+        let timer;
+        return function(...args) { clearTimeout(timer); timer = setTimeout(() => fn.apply(this, args), ms); };
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
-        loadStudents();
-        document.getElementById('searchInput').addEventListener('input', searchStudents);
+        loadStudents('');
+
+        const searchInput = document.getElementById('student-search-input');
+        if (searchInput) {
+            searchInput.addEventListener('input', debounce(function() {
+                loadStudents(this.value.trim());
+            }, 300));
+        }
     });
 
-    async function loadStudents() {
+    async function loadStudents(query) {
+        const spinner = document.getElementById('search-spinner');
+        if (spinner) spinner.style.display = '';
         try {
-            const response = await fetch('/api/students');
+            const url = (query !== undefined && query !== '')
+                ? `/api/students/search?q=${encodeURIComponent(query)}`
+                : '/api/students';
+            const response = await fetch(url, { credentials: 'same-origin' });
             const data = await response.json();
             displayStudents(data.students);
         } catch (error) {
             console.error('Error loading students:', error);
+        } finally {
+            if (spinner) spinner.style.display = 'none';
         }
     }
 
@@ -143,20 +208,66 @@ background-image: url('https://i.pinimg.com/736x/f7/db/84/f7db841f2bf75e76c13cdb
                 <td><code>${s.MoneyCardNumber || '-'}</code></td>
                 <td>₱${(s.Balance || 0).toFixed(2)}</td>
                 <td><span class="badge ${s.Status === 'Active' ? 'bg-success' : 'bg-secondary'} badge-status">${s.Status || 'Active'}</span></td>
-                ${IS_ADMIN ? `<td><button class="btn btn-sm btn-outline-success" onclick="openTopUpModal('${s.StudentID}')"><i class="bi bi-plus-circle"></i> Top Up</button></td>` : ''}
+                ${IS_ADMIN ? `<td>
+                    <button class="btn btn-sm btn-outline-success"
+                        onclick="openTopUpModal('${s.StudentID}')">
+                      <i class="bi bi-plus-circle"></i> Top Up
+                    </button>
+                    <button class="btn btn-sm btn-outline-primary ms-1"
+                        onclick="openTxHistory('${s.StudentID}', '${(s.Name||'').replace(/'/g, "\\'")}')">
+                      <i class="bi bi-clock-history"></i> History
+                    </button>
+                </td>` : ''}
             </tr>
         `).join('');
     }
 
-    async function searchStudents() {
-        const query = document.getElementById('searchInput').value;
+    // Open transaction history modal for a student
+    async function openTxHistory(studentId, studentName) {
+        document.getElementById('tx-student-label').textContent = studentName + ' (' + studentId + ')';
+        document.getElementById('tx-loading').style.display = '';
+        document.getElementById('tx-empty').style.display = 'none';
+        document.getElementById('tx-table-wrap').style.display = 'none';
+
+        const modal = new bootstrap.Modal(document.getElementById('tx-history-modal'));
+        modal.show();
 
         try {
-            const response = await fetch(`/api/students/search?q=${encodeURIComponent(query)}`);
-            const data = await response.json();
-            displayStudents(data.students);
-        } catch (error) {
-            console.error('Error searching:', error);
+            const res = await fetch('/api/students/' + encodeURIComponent(studentId) + '/transactions?limit=50',
+                                    { credentials: 'same-origin' });
+            const data = await res.json();
+            const txns = data.transactions || [];
+
+            document.getElementById('tx-loading').style.display = 'none';
+
+            if (txns.length === 0) {
+                document.getElementById('tx-empty').style.display = '';
+                return;
+            }
+
+            const tbody = document.getElementById('tx-table-body');
+            tbody.innerHTML = txns.map(t => {
+                const typeClass = t.Type === 'Purchase' || t.Type === 'NFC Purchase' ? 'text-danger' :
+                                  t.Type === 'Load' ? 'text-success' : '';
+                const amount = parseFloat(t.Amount) || 0;
+                const amountStr = (amount < 0 ? '-' : '') + '₱' + Math.abs(amount).toFixed(2);
+                const date = t.Date ? t.Date.slice(0, 16).replace('T', ' ') : '—';
+                return `<tr>
+                    <td><small>${date}</small></td>
+                    <td><span class="${typeClass}">${t.Type || '—'}</span></td>
+                    <td class="${typeClass} fw-semibold">${amountStr}</td>
+                    <td>₱${parseFloat(t.BalanceBefore || 0).toFixed(2)}</td>
+                    <td>₱${parseFloat(t.BalanceAfter || 0).toFixed(2)}</td>
+                    <td><small>${t.Status || '—'}</small></td>
+                </tr>`;
+            }).join('');
+
+            document.getElementById('tx-table-wrap').style.display = '';
+        } catch (e) {
+            document.getElementById('tx-loading').style.display = 'none';
+            document.getElementById('tx-empty').style.display = '';
+            document.getElementById('tx-empty').querySelector('p').textContent =
+                'Failed to load transactions. Please try again.';
         }
     }
 </script>
@@ -204,7 +315,7 @@ document.getElementById('topup-confirm-btn').addEventListener('click', async fun
       feedback.textContent = `✓ ₱${amount.toFixed(2)} added to ${data.student_name}. New balance: ₱${parseFloat(data.new_balance).toFixed(2)}`;
       feedback.style.display = '';
       // Refresh student list
-      if (typeof loadStudents === 'function') loadStudents();
+      loadStudents(document.getElementById('student-search-input').value.trim());
     } else {
       feedback.className = 'alert alert-danger';
       feedback.textContent = data.error || 'Top-up failed. Please try again.';
