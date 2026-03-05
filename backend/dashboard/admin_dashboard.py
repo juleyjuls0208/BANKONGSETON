@@ -404,6 +404,7 @@ def dashboard():
         username=session.get("admin_username"),
         role=session.get("role", "finance"),
         arduino_available=True,
+        active_page="dashboard",
     )  # Arduino IS available in local version
 
 
@@ -415,6 +416,7 @@ def students_page():
         "students.html",
         username=session.get("admin_username"),
         role=session.get("role", "finance"),
+        active_page="students",
     )
 
 
@@ -426,6 +428,7 @@ def products_page():
         "products.html",
         username=session.get("admin_username"),
         role=session.get("role", "finance"),
+        active_page="products",
     )
 
 
@@ -585,6 +588,7 @@ def transactions_page():
         "transactions.html",
         username=session.get("admin_username"),
         role=session.get("role", "finance"),
+        active_page="transactions",
     )
 
 
