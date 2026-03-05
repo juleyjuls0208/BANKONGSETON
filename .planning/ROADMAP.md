@@ -10,9 +10,13 @@
 
 5 phases covering all v1.1 feature areas. Each phase is independently deliverable. Phases 16–18 touch backend first (NFC, dashboard, Arduino), then 19–20 add portal and mobile polish.
 
-| Phase | Name | Requirements | Plans (est.) |
-|-------|------|-------------|-------------|
-| 16 | 4/4 | Complete   | 2026-03-04 |
+| Phase | Name | Requirements | Status |
+|-------|------|-------------|--------|
+| 16 | NFC Android HCE | NFCA-01–05 | ✓ Complete (2026-03-05) |
+| 17 | Dashboard Overhaul + Admin | DASH-01–05, ADM-01–02 | Pending |
+| 18 | Arduino UNO R4 WiFi Upgrade | ARDW-01–04 | Pending |
+| 19 | Parent Portal | PAR-01–06 | Pending |
+| 20 | Student App Redesign | APPA-01–05 | Pending |
 | 17 | Dashboard Overhaul + Admin | DASH-01–05, ADM-01–02 | 4–5 |
 | 18 | Arduino UNO R4 WiFi Upgrade | ARDW-01–04 | 2–3 |
 | 19 | Parent Portal | PAR-01–06 | 3–4 |
@@ -44,13 +48,18 @@
 
 **Out of scope:** NFC hardware reader on cashier side (cashier still uses RFID reader; phone tap emulates card UID)
 
-**Plans:** 4/4 plans complete
+**Plans:** 4/4 complete ✓
 
 Plans:
-- [ ] 16-01-PLAN.md — HCE infrastructure: port BankoHceService + NfcManager, update Models/ApiClient/Manifest/build.gradle
-- [ ] 16-02-PLAN.md — Receipt fix: null-items fallback + transaction type label in ReceiptActivity
-- [ ] 16-03-PLAN.md — Card registration UX: NFC section in SettingsActivity (register/remove)
-- [ ] 16-04-PLAN.md — NFC pay flow: "Activate NFC Pay" button + NfcPayOverlayActivity countdown
+- [x] 16-01-PLAN.md — HCE infrastructure: port BankoHceService + NfcManager, update Models/ApiClient/Manifest/build.gradle
+- [x] 16-02-PLAN.md — Receipt fix: null-items fallback + transaction type label in ReceiptActivity
+- [x] 16-03-PLAN.md — Card registration UX: NFC section in SettingsActivity (register/remove)
+- [x] 16-04-PLAN.md — NFC pay flow: "Activate NFC Pay" button + NfcPayOverlayActivity countdown
+
+**Post-phase bug fixes (2026-03-05):**
+- Backend `nfc_register`: money card lookup switched from `Money Accounts` sheet to `Users` sheet (fixes 403 for all students)
+- Mobile `ApiClient`: `@DELETE` → `@POST` for `nfc/unregister`; HTTP body logging enabled in debug builds
+- Mobile `SettingsActivity`: shows actual server error instead of generic failure toast
 
 ---
 
