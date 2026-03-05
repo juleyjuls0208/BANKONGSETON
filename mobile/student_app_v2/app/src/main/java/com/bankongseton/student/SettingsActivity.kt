@@ -80,7 +80,17 @@ class SettingsActivity : AppCompatActivity() {
                         if (success) {
                             refreshNfcSection()
                         } else {
-                        Toast.makeText(this, getString(R.string.nfc_registration_failed), Toast.LENGTH_SHORT).show()
+                            val displayMsg = when {
+                                message.contains("Invalid or expired token", ignoreCase = true) ->
+                                    "Session expired. Please log out and log back in."
+                                message.contains("No money card", ignoreCase = true) ->
+                                    "No money card linked to your account. Contact admin."
+                                message.contains("Service unavailable", ignoreCase = true) ->
+                                    "Server unavailable. Please try again in a moment."
+                                message.isNotBlank() -> message
+                                else -> getString(R.string.nfc_registration_failed)
+                            }
+                            Toast.makeText(this, displayMsg, Toast.LENGTH_LONG).show()
                         }
                     }
                 }

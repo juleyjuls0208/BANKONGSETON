@@ -633,11 +633,12 @@ def nfc_register():
 
         db = get_sheets_client()
 
-        # Look up the student's linked RFID money card
-        money_sheet = get_worksheet_with_retry("Money Accounts")
-        money_records = money_sheet.get_all_records()
+        # Look up the student's linked RFID money card from the Users sheet
+        # (same source used by login — MoneyCardNumber lives on the Users row)
+        users_sheet = get_worksheet_with_retry("Users")
+        user_records = users_sheet.get_all_records()
         money_card = None
-        for r in money_records:
+        for r in user_records:
             if str(r.get("StudentID", "")).strip() == str(student_id).strip():
                 money_card = str(r.get("MoneyCardNumber", "")).strip()
                 break

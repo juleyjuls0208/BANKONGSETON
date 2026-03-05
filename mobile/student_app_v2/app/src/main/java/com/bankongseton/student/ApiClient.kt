@@ -39,7 +39,7 @@ interface BangkoApiService {
         @Body request: NfcDeviceRequest
     ): Response<NfcRegistrationResponse>
 
-    @DELETE("nfc/unregister")
+    @POST("nfc/unregister")
     suspend fun unregisterNfcDevice(
         @Header("Authorization") authToken: String,
         @Body request: NfcUnregisterRequest
@@ -52,7 +52,8 @@ object ApiClient {
     private const val BASE_URL = "https://juley2823.pythonanywhere.com/api/"
 
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
-        level = HttpLoggingInterceptor.Level.NONE
+        level = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BODY
+                else HttpLoggingInterceptor.Level.NONE
     }
     
     private val client = OkHttpClient.Builder()
