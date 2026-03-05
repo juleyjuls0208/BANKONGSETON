@@ -1143,6 +1143,62 @@ def get_student_details(student_id):
         return jsonify({"error": "An unexpected error occurred"}), 500
 
 
+@app.route("/api/students/<student_id>/transactions", methods=["GET"])
+@login_required
+def get_student_transactions(student_id):
+    """Get transaction history for a specific student"""
+    try:
+        limit = int(request.args.get("limit", 50))
+        student_id = str(student_id).strip()
+
+        transactions_sheet = get_worksheet_with_retry("Transactions Log")
+        all_transactions = transactions_sheet.get_all_records()
+
+        # Filter by student ID (case-insensitive, strip whitespace)
+        student_txns = [
+            t
+            for t in all_transactions
+            if str(t.get("StudentID", "")).strip().lower() == student_id.lower()
+        ]
+
+        # Sort by Timestamp descending (most recent first)
+        student_txns.sort(key=lambda t: str(t.get("Timestamp", "")), reverse=True)
+
+        # Shape output — map Timestamp→Date, TransactionType→Type
+        result = []
+        for t in student_txns[:limit]:
+            result.append(
+                {
+                    "TransactionID": t.get("TransactionID", ""),
+                    "Date": t.get("Timestamp", ""),
+                    "Type": t.get("TransactionType", ""),
+                    "Amount": t.get("Amount", 0),
+                    "BalanceBefore": t.get("BalanceBefore", 0),
+                    "BalanceAfter": t.get("BalanceAfter", 0),
+                    "Status": t.get("Status", ""),
+                }
+            )
+
+        return jsonify(
+            {"student_id": student_id, "transactions": result, "total": len(result)}
+        ), 200
+
+    except (
+        gspread.exceptions.APIError,
+        gspread.exceptions.SpreadsheetNotFound,
+        gspread.exceptions.WorksheetNotFound,
+        ConnectionError,
+        TimeoutError,
+    ) as e:
+        logger.error(f"Google Sheets unavailable in get_student_transactions: {e}")
+        return jsonify({"error": "Service unavailable, please try again"}), 503
+    except Exception as e:
+        logger.error(
+            f"Unexpected error in get_student_transactions: {e}", exc_info=True
+        )
+        return jsonify({"error": "An unexpected error occurred"}), 500
+
+
 # Money card registration removed - Finance Dashboard only loads balance
 
 
