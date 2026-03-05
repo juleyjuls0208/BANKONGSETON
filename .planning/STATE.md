@@ -22,12 +22,12 @@ See: .planning/PROJECT.md (updated 2026-03-04)
 
 ## Current Position
 
-Phase: Phase 17 — Dashboard Overhaul + Admin (not yet started)
-Plan: —
-Status: Ready to plan
-Last activity: 2026-03-05 — Phase 16 complete (approved); post-phase bug fixes committed
+Phase: Phase 17 — Dashboard Overhaul + Admin
+Plan: 17-01 complete (1 of 5)
+Status: in_progress
+Last activity: 2026-03-05 — 17-01 CSS Consolidation complete
 
-Progress: [##########] Phase 16 of v1.1 ✓ | Phase 17 next
+Progress: [##########] Phase 16 of v1.1 ✓ | Phase 17 in progress (1/5 plans done)
 
 ## Performance Metrics
 
@@ -82,7 +82,7 @@ Progress: [##########] Phase 16 of v1.1 ✓ | Phase 17 next
 | Phase 16-nfc-android-hce P02 | 8min | 1 tasks | 1 files |
 | Phase 16-nfc-android-hce P16-01 | 4 | 2 tasks | 6 files |
 | Phase 16-nfc-android-hce P03 | 45min | 2 tasks | 2 files |
-| Phase 16-nfc-android-hce P04 | 10 | 2 tasks | 5 files |
+| Phase 17-dashboard-overhaul-admin P01 | ~14h | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -195,6 +195,9 @@ Recent decisions affecting current work:
 - [Phase 16-nfc-android-hce]: NfcManager uses coroutines instead of Retrofit enqueue callbacks to align with student_app_v2 ApiClient singleton pattern
 - [Phase 16-nfc-android-hce]: NfcManager used as instance (getInstance) not static; registerDevice requires PIN from SettingsActivity via showPinDialog()
 - [Phase 16-nfc-android-hce]: BankoHceService.isPaymentAuthorized (not NfcManager) is the payment auth flag; NfcManager.getInstance(ctx) for all instance calls; PIN fallback via verifyPin() + AlertDialog
+- [17-01]: login.html kept standalone — not extended from base.html (auth page has different layout needs)
+- [17-01]: products.html uses CSS gradient sidebar via sidebar_style block instead of image URL
+- [17-01]: base.html defines toggleSidebar() once — child templates must not redefine it
 
 ### Roadmap Evolution
 
