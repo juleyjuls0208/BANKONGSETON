@@ -1286,6 +1286,118 @@ def load_balance():
         return jsonify({"error": "An unexpected error occurred"}), 500
 
 
+@app.route("/api/admin/topup", methods=["POST"])
+@login_required
+@admin_only
+def admin_topup():
+    """Admin manual balance top-up by student ID"""
+    try:
+        data = request.get_json()
+        student_id = str(data.get("student_id", "")).strip()
+        amount = float(data.get("amount", 0))
+
+        if not student_id:
+            return jsonify({"error": "student_id is required"}), 400
+        if amount <= 0:
+            return jsonify({"error": "Amount must be greater than 0"}), 400
+
+        # Resolve student_id -> money_card via Users sheet
+        users_sheet = get_worksheet_with_retry("Users")
+        users = users_sheet.get_all_records()
+        student = None
+        for u in users:
+            if str(u.get("StudentID", "")).strip() == student_id:
+                student = u
+                break
+
+        if not student:
+            return jsonify({"error": f"Student '{student_id}' not found"}), 404
+
+        money_card = normalize_card_uid(str(student.get("MoneyCardNumber", "")))
+        if not money_card:
+            return jsonify({"error": "Student has no linked money card"}), 400
+
+        student_name = str(student.get("Name", "Unknown"))
+
+        # Find money account row
+        money_sheet = get_worksheet_with_retry("Money Accounts")
+        money_records = money_sheet.get_all_records()
+        account = None
+        row_index = None
+        for i, record in enumerate(money_records):
+            if normalize_card_uid(str(record.get("MoneyCardNumber", ""))) == money_card:
+                account = record
+                row_index = i + 2  # +2 for header and 0-index
+                break
+
+        if not account:
+            return jsonify({"error": "Money account not found for this student"}), 404
+
+        # Update balance
+        current_balance = float(account.get("Balance", 0))
+        new_balance = current_balance + amount
+        timestamp = get_philippines_time().strftime("%Y-%m-%d %H:%M:%S")
+
+        balance_col = money_sheet.find("Balance").col
+        money_sheet.update_cell(row_index, balance_col, new_balance)
+
+        total_loaded = float(account.get("TotalLoaded", 0)) + amount
+        total_col = money_sheet.find("TotalLoaded").col
+        money_sheet.update_cell(row_index, total_col, total_loaded)
+
+        update_col = money_sheet.find("LastUpdated").col
+        money_sheet.update_cell(row_index, update_col, timestamp)
+
+        # Log transaction
+        try:
+            transactions_sheet = get_worksheet_with_retry("Transactions Log")
+            transaction_id = f"TXN-{get_philippines_time().strftime('%Y%m%d%H%M%S')}"
+            transactions_sheet.append_row(
+                [
+                    transaction_id,
+                    timestamp,
+                    student_id,
+                    money_card,
+                    "Load",
+                    amount,
+                    current_balance,
+                    new_balance,
+                    "Completed",
+                    "",
+                ]
+            )
+        except Exception:
+            pass  # Balance updated; log failure is non-fatal
+
+        invalidate_cache("Money Accounts")
+        invalidate_cache("Transactions Log")
+
+        return jsonify(
+            {
+                "success": True,
+                "student_name": student_name,
+                "student_id": student_id,
+                "amount": amount,
+                "new_balance": new_balance,
+            }
+        ), 200
+
+    except (
+        gspread.exceptions.APIError,
+        gspread.exceptions.SpreadsheetNotFound,
+        gspread.exceptions.WorksheetNotFound,
+        ConnectionError,
+        TimeoutError,
+    ) as e:
+        logger.error(f"Google Sheets unavailable in admin_topup: {e}")
+        return jsonify({"error": "Service unavailable, please try again"}), 503
+    except ValueError:
+        return jsonify({"error": "Invalid amount value"}), 400
+    except Exception as e:
+        logger.error(f"Unexpected error in admin_topup: {e}", exc_info=True)
+        return jsonify({"error": "An unexpected error occurred"}), 500
+
+
 @app.route("/api/transactions/recent", methods=["GET"])
 @login_required
 def get_recent_transactions():
