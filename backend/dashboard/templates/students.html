@@ -27,6 +27,13 @@ background-image: url('https://i.pinimg.com/736x/f7/db/84/f7db841f2bf75e76c13cdb
 {% block content %}
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1>Students Management</h1>
+        <div>
+            {% if role == 'admin' %}
+            <button class="btn btn-success btn-sm ms-2" data-bs-toggle="modal" data-bs-target="#topupModal">
+              <i class="bi bi-plus-circle me-1"></i>Top Up Balance
+            </button>
+            {% endif %}
+        </div>
     </div>
 
     <div class="content-card">
@@ -51,20 +58,59 @@ background-image: url('https://i.pinimg.com/736x/f7/db/84/f7db841f2bf75e76c13cdb
                         <th>Money Card</th>
                         <th>Balance</th>
                         <th>Status</th>
+                        {% if role == 'admin' %}<th>Actions</th>{% endif %}
                     </tr>
                 </thead>
                 <tbody id="studentsTable">
                     <tr>
-                        <td colspan="6" class="text-center">Loading students...</td>
+                        <td colspan="7" class="text-center">Loading students...</td>
                     </tr>
                 </tbody>
             </table>
         </div>
     </div>
+
+    {% if role == 'admin' %}
+    <!-- Top-Up Balance Modal -->
+    <div class="modal fade" id="topupModal" tabindex="-1" aria-labelledby="topupModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="topupModalLabel">
+              <i class="bi bi-plus-circle me-2"></i>Top Up Student Balance
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div class="mb-3">
+              <label for="topup-student-id" class="form-label">Student ID</label>
+              <input type="text" class="form-control" id="topup-student-id"
+                     placeholder="e.g. STU-2024-001" autocomplete="off">
+            </div>
+            <div class="mb-3">
+              <label for="topup-amount" class="form-label">Amount (₱)</label>
+              <input type="number" class="form-control" id="topup-amount"
+                     min="1" step="0.01" placeholder="e.g. 50">
+            </div>
+            <div id="topup-feedback" class="alert" style="display:none;"></div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="button" class="btn btn-success" id="topup-confirm-btn">
+              <span id="topup-btn-text">Confirm Top Up</span>
+              <span id="topup-spinner" class="spinner-border spinner-border-sm ms-1" style="display:none;"></span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
 {% endblock %}
 
 {% block extra_js %}
 <script>
+    const IS_ADMIN = {{ 'true' if role == 'admin' else 'false' }};
+
     document.addEventListener('DOMContentLoaded', () => {
         loadStudents();
         document.getElementById('searchInput').addEventListener('input', searchStudents);
@@ -82,9 +128,10 @@ background-image: url('https://i.pinimg.com/736x/f7/db/84/f7db841f2bf75e76c13cdb
 
     function displayStudents(students) {
         const tbody = document.getElementById('studentsTable');
+        const colspan = IS_ADMIN ? 7 : 6;
 
         if (!students || students.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" class="text-center">No students found</td></tr>';
+            tbody.innerHTML = `<tr><td colspan="${colspan}" class="text-center">No students found</td></tr>`;
             return;
         }
 
@@ -96,6 +143,7 @@ background-image: url('https://i.pinimg.com/736x/f7/db/84/f7db841f2bf75e76c13cdb
                 <td><code>${s.MoneyCardNumber || '-'}</code></td>
                 <td>₱${(s.Balance || 0).toFixed(2)}</td>
                 <td><span class="badge ${s.Status === 'Active' ? 'bg-success' : 'bg-secondary'} badge-status">${s.Status || 'Active'}</span></td>
+                ${IS_ADMIN ? `<td><button class="btn btn-sm btn-outline-success" onclick="openTopUpModal('${s.StudentID}')"><i class="bi bi-plus-circle"></i> Top Up</button></td>` : ''}
             </tr>
         `).join('');
     }
@@ -112,4 +160,66 @@ background-image: url('https://i.pinimg.com/736x/f7/db/84/f7db841f2bf75e76c13cdb
         }
     }
 </script>
+{% if role == 'admin' %}
+<script>
+// Pre-fill student ID when "Top Up" button is clicked from the student table
+function openTopUpModal(studentId) {
+  document.getElementById('topup-student-id').value = studentId || '';
+  document.getElementById('topup-amount').value = '';
+  document.getElementById('topup-feedback').style.display = 'none';
+  var modal = new bootstrap.Modal(document.getElementById('topupModal'));
+  modal.show();
+}
+
+document.getElementById('topup-confirm-btn').addEventListener('click', async function () {
+  const studentId = document.getElementById('topup-student-id').value.trim();
+  const amount    = parseFloat(document.getElementById('topup-amount').value);
+  const feedback  = document.getElementById('topup-feedback');
+  const spinner   = document.getElementById('topup-spinner');
+  const btnText   = document.getElementById('topup-btn-text');
+
+  feedback.style.display = 'none';
+  if (!studentId || isNaN(amount) || amount <= 0) {
+    feedback.className = 'alert alert-warning';
+    feedback.textContent = 'Please enter a valid student ID and amount.';
+    feedback.style.display = '';
+    return;
+  }
+
+  spinner.style.display = '';
+  btnText.textContent = 'Processing...';
+  document.getElementById('topup-confirm-btn').disabled = true;
+
+  try {
+    const res = await fetch('/api/admin/topup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({ student_id: studentId, amount: amount })
+    });
+    const data = await res.json();
+
+    if (res.ok && data.success) {
+      feedback.className = 'alert alert-success';
+      feedback.textContent = `✓ ₱${amount.toFixed(2)} added to ${data.student_name}. New balance: ₱${parseFloat(data.new_balance).toFixed(2)}`;
+      feedback.style.display = '';
+      // Refresh student list
+      if (typeof loadStudents === 'function') loadStudents();
+    } else {
+      feedback.className = 'alert alert-danger';
+      feedback.textContent = data.error || 'Top-up failed. Please try again.';
+      feedback.style.display = '';
+    }
+  } catch (e) {
+    feedback.className = 'alert alert-danger';
+    feedback.textContent = 'Network error. Please check your connection.';
+    feedback.style.display = '';
+  } finally {
+    spinner.style.display = 'none';
+    btnText.textContent = 'Confirm Top Up';
+    document.getElementById('topup-confirm-btn').disabled = false;
+  }
+});
+</script>
+{% endif %}
 {% endblock %}
