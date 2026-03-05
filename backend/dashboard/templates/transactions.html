@@ -25,6 +25,29 @@ background-image: url('https://i.pinimg.com/736x/79/94/e6/7994e695f7880608742fd9
 {% block content %}
     <h1 class="mb-4">Transaction History</h1>
 
+    <!-- CSV Export Panel -->
+    <div class="content-card mb-4">
+      <h5 class="mb-3"><i class="bi bi-download me-2"></i>Export Transactions</h5>
+      <form id="export-form" class="row g-2 align-items-end">
+        <div class="col-sm-4">
+          <label for="export-start" class="form-label small">From Date (optional)</label>
+          <input type="date" id="export-start" class="form-control form-control-sm">
+        </div>
+        <div class="col-sm-4">
+          <label for="export-end" class="form-label small">To Date (optional)</label>
+          <input type="date" id="export-end" class="form-control form-control-sm">
+        </div>
+        <div class="col-sm-4">
+          <button type="button" id="export-btn" class="btn btn-success btn-sm w-100">
+            <i class="bi bi-file-earmark-spreadsheet me-1"></i>Download CSV
+          </button>
+        </div>
+      </form>
+      <div id="export-error" class="alert alert-warning mt-2" style="display:none;">
+        Export service unavailable. Please try again later.
+      </div>
+    </div>
+
     <div class="content-card">
         <!-- Transactions Table -->
         <div class="table-responsive">
@@ -130,6 +153,37 @@ background-image: url('https://i.pinimg.com/736x/79/94/e6/7994e695f7880608742fd9
             console.error('Error loading transactions:', error);
         }
     }
+
+    document.getElementById('export-btn').addEventListener('click', async function () {
+      const start = document.getElementById('export-start').value;
+      const end   = document.getElementById('export-end').value;
+      const errDiv = document.getElementById('export-error');
+      errDiv.style.display = 'none';
+
+      // Build URL
+      const params = new URLSearchParams();
+      if (start) params.set('start_date', start);
+      if (end)   params.set('end_date', end);
+      const url = '/api/export/transactions' + (params.toString() ? '?' + params.toString() : '');
+
+      // Use fetch to detect errors, then trigger download
+      try {
+        const res = await fetch(url, { credentials: 'same-origin' });
+        if (!res.ok) {
+          errDiv.style.display = '';
+          return;
+        }
+        // Trigger download via hidden anchor
+        const blob = await res.blob();
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'transactions' + (start ? '_' + start : '') + (end ? '_to_' + end : '') + '.csv';
+        a.click();
+        URL.revokeObjectURL(a.href);
+      } catch (e) {
+        errDiv.style.display = '';
+      }
+    });
 
     function showTransactionDetails(transaction) {
         try {
