@@ -13,14 +13,10 @@
 | Phase | Name | Requirements | Status |
 |-------|------|-------------|--------|
 | 16 | NFC Android HCE | NFCA-01–05 | ✓ Complete (2026-03-05) |
-| 17 | 5/5 | Complete   | 2026-03-05 |
+| 17 | Dashboard Overhaul + Admin | DASH-01–05, ADM-01–04 | ✓ Complete (2026-03-05) |
 | 18 | Arduino UNO R4 WiFi Upgrade | ARDW-01–04 | Pending |
 | 19 | Parent Portal | PAR-01–06 | Pending |
 | 20 | Student App Redesign | APPA-01–05 | Pending |
-| 17 | Dashboard Overhaul + Admin | DASH-01–05, ADM-01–02 | 4–5 |
-| 18 | Arduino UNO R4 WiFi Upgrade | ARDW-01–04 | 2–3 |
-| 19 | Parent Portal | PAR-01–06 | 3–4 |
-| 20 | Student App Redesign | APPA-01–05 | 4–5 |
 
 **Total phases:** 5
 **Total plans (estimated):** 16–21
@@ -67,7 +63,7 @@ Plans:
 
 **Goal:** Modernize the admin dashboard with Bootstrap 5, add analytics charts, CSV export, and balance top-up. Must remain PythonAnywhere-free-tier deployable.
 
-**Requirements:** DASH-01, DASH-02, DASH-03, DASH-04, DASH-05, ADM-01, ADM-02
+**Requirements:** DASH-01, DASH-02, DASH-03, DASH-04, DASH-05, ADM-01, ADM-02, ADM-03, ADM-04
 
 **Success criteria:**
 - Dashboard uses Bootstrap 5 (or equivalent) — old styling fully replaced
@@ -88,6 +84,16 @@ Plans:
 3. CSV export endpoint + UI
 4. Balance top-up endpoint + UI
 5. (if needed) PythonAnywhere compatibility verification
+
+**Plans:** 6/6 complete ✓
+
+Plans:
+- [x] 17-01-PLAN.md — Bootstrap 5 migration + shared base.html + dashboard.css
+- [x] 17-02-PLAN.md — Analytics charts (Chart.js CDN + spending data endpoint)
+- [x] 17-03-PLAN.md — CSV export endpoint + transactions page UI
+- [x] 17-04-PLAN.md — Admin balance top-up endpoint + modal UI
+- [x] 17-05-PLAN.md — Live student search (ADM-03) + per-student transaction history modal (ADM-04)
+- [x] 17-06-PLAN.md — Gap closure: requirement ID traceability fixes
 
 ---
 
@@ -194,12 +200,12 @@ Recommended execution order: **16 → 17 → 18 → 19 → 20**
 |-------------|-------|---------|
 | NFCA-01–05 | 16 | ✓ |
 | DASH-01–05 | 17 | ✓ |
-| ADM-01–02 | 17 | ✓ |
+| ADM-01–04 | 17 | ✓ |
 | ARDW-01–04 | 18 | ✓ |
 | PAR-01–06 | 19 | ✓ |
 | APPA-01–05 | 20 | ✓ |
 
-**27 / 27 requirements covered. 0 unmapped.**
+**29 / 29 requirements covered. 0 unmapped.**
 
 ---
 

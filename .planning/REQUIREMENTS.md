@@ -23,11 +23,11 @@ Requirements for this milestone. Six feature areas: NFC Android HCE, Dashboard o
 
 ### Dashboard Overhaul
 
-- [ ] **DASH-01**: Dashboard uses modern CSS framework (Bootstrap 5 or Tailwind) — full visual redesign
+- [x] **DASH-01**: Dashboard uses modern CSS framework (Bootstrap 5 or Tailwind) — full visual redesign
 - [x] **DASH-02**: Dashboard homepage shows spending analytics charts (daily/weekly/monthly spend trends)
 - [x] **DASH-03**: Admin can export transaction history as CSV from the dashboard
 - [x] **DASH-04**: Admin can top-up a student's balance directly from the dashboard
-- [ ] **DASH-05**: Dashboard remains deployable on PythonAnywhere free tier (no paid add-ons required)
+- [x] **DASH-05**: Dashboard remains deployable on PythonAnywhere free tier (no paid add-ons required)
 
 ---
 
@@ -65,6 +65,8 @@ Requirements for this milestone. Six feature areas: NFC Android HCE, Dashboard o
 
 - [x] **ADM-01**: Admin can top-up a student balance (balance load) from admin dashboard (covered by DASH-04)
 - [x] **ADM-02**: Admin can export transaction CSV with optional date range filter
+- [x] **ADM-03**: Admin can search students by name or ID with live (debounced) filtering on the students page
+- [x] **ADM-04**: Admin can view per-student transaction history in a modal without leaving the students page
 
 ---
 
@@ -90,11 +92,11 @@ Requirements for this milestone. Six feature areas: NFC Android HCE, Dashboard o
 | NFCA-03 | Phase 16 - NFC Android HCE | Complete |
 | NFCA-04 | Phase 16 - NFC Android HCE | Complete |
 | NFCA-05 | Phase 16 - NFC Android HCE | Complete |
-| DASH-01 | Phase 17 - Dashboard Overhaul | Pending |
+| DASH-01 | Phase 17 - Dashboard Overhaul | Complete |
 | DASH-02 | Phase 17 - Dashboard Overhaul | Complete |
 | DASH-03 | Phase 17 - Dashboard Overhaul | Complete |
 | DASH-04 | Phase 17 - Dashboard Overhaul | Complete |
-| DASH-05 | Phase 17 - Dashboard Overhaul | Pending |
+| DASH-05 | Phase 17 - Dashboard Overhaul | Complete |
 | ARDW-01 | Phase 18 - Arduino WiFi Upgrade | Pending |
 | ARDW-02 | Phase 18 - Arduino WiFi Upgrade | Pending |
 | ARDW-03 | Phase 18 - Arduino WiFi Upgrade | Pending |
@@ -112,10 +114,12 @@ Requirements for this milestone. Six feature areas: NFC Android HCE, Dashboard o
 | APPA-05 | Phase 20 - Student App Redesign | Pending |
 | ADM-01 | Phase 17 - Dashboard Overhaul | Complete |
 | ADM-02 | Phase 17 - Dashboard Overhaul | Complete |
+| ADM-03 | Phase 17 - Dashboard Overhaul | Complete |
+| ADM-04 | Phase 17 - Dashboard Overhaul | Complete |
 
 **Coverage:**
-- v1.1 requirements: 27 total
-- Mapped to phases: 27
+- v1.1 requirements: 29 total
+- Mapped to phases: 29
 - Unmapped: 0
 
 ---
