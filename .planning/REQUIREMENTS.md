@@ -63,8 +63,8 @@ Requirements for this milestone. Six feature areas: NFC Android HCE, Dashboard o
 
 ### Admin Features
 
-- [ ] **ADM-01**: Admin can top-up a student balance (balance load) from admin dashboard (covered by DASH-04)
-- [ ] **ADM-02**: Admin can export transaction CSV with optional date range filter
+- [x] **ADM-01**: Admin can top-up a student balance (balance load) from admin dashboard (covered by DASH-04)
+- [x] **ADM-02**: Admin can export transaction CSV with optional date range filter
 
 ---
 
@@ -110,8 +110,8 @@ Requirements for this milestone. Six feature areas: NFC Android HCE, Dashboard o
 | APPA-03 | Phase 20 - Student App Redesign | Pending |
 | APPA-04 | Phase 20 - Student App Redesign | Pending |
 | APPA-05 | Phase 20 - Student App Redesign | Pending |
-| ADM-01 | Phase 17 - Dashboard Overhaul | Pending |
-| ADM-02 | Phase 17 - Dashboard Overhaul | Pending |
+| ADM-01 | Phase 17 - Dashboard Overhaul | Complete |
+| ADM-02 | Phase 17 - Dashboard Overhaul | Complete |
 
 **Coverage:**
 - v1.1 requirements: 27 total
