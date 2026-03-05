@@ -23,11 +23,11 @@ See: .planning/PROJECT.md (updated 2026-03-04)
 ## Current Position
 
 Phase: Phase 17 — Dashboard Overhaul + Admin
-Plan: 17-01 complete (1 of 5)
+Plan: 17-02 complete (2 of 5)
 Status: in_progress
-Last activity: 2026-03-05 — 17-01 CSS Consolidation complete
+Last activity: 2026-03-05 — 17-02 Daily-Spend Bar Chart complete
 
-Progress: [##########] Phase 16 of v1.1 ✓ | Phase 17 in progress (1/5 plans done)
+Progress: [##########] Phase 16 of v1.1 ✓ | Phase 17 in progress (2/5 plans done)
 
 ## Performance Metrics
 
@@ -83,6 +83,7 @@ Progress: [##########] Phase 16 of v1.1 ✓ | Phase 17 in progress (1/5 plans do
 | Phase 16-nfc-android-hce P16-01 | 4 | 2 tasks | 6 files |
 | Phase 16-nfc-android-hce P03 | 45min | 2 tasks | 2 files |
 | Phase 17-dashboard-overhaul-admin P01 | ~14h | 2 tasks | 7 files |
+| Phase 17-dashboard-overhaul-admin P02 | 15min | 1 task | 1 file |
 
 ## Accumulated Context
 
@@ -198,6 +199,8 @@ Recent decisions affecting current work:
 - [17-01]: login.html kept standalone — not extended from base.html (auth page has different layout needs)
 - [17-01]: products.html uses CSS gradient sidebar via sidebar_style block instead of image URL
 - [17-01]: base.html defines toggleSidebar() once — child templates must not redefine it
+- [17-02]: /api/transactions/recent?limit=500 used for chart data (not /api/analytics/spending — analytics endpoint has Date/Timestamp field-name mismatch bug)
+- [17-02]: Chart.js@4.4.0 loaded from CDN only — no npm/pip dependencies; client-side aggregation only
 
 ### Roadmap Evolution
 
@@ -223,5 +226,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-05
-Stopped at: Phase 17 — Dashboard Overhaul + Admin — not yet planned
+Stopped at: Phase 17 — Dashboard Overhaul + Admin — 17-02 daily-spend bar chart complete
 Resume file: None
