@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Requirements Coverage
 status: unknown
-last_updated: "2026-03-05T14:14:22.024Z"
+last_updated: "2026-03-06T09:24:22.881Z"
 progress:
-  total_phases: 2
+  total_phases: 3
   completed_phases: 2
-  total_plans: 9
-  completed_plans: 9
+  total_plans: 13
+  completed_plans: 12
 ---
 
 # Project State
@@ -22,12 +22,12 @@ See: .planning/PROJECT.md (updated 2026-03-04)
 
 ## Current Position
 
-Phase: Phase 17 — Dashboard Overhaul + Admin
-Plan: 17-05 complete (5 of 5) — PHASE COMPLETE
-Status: complete
-Last activity: 2026-03-05 — 17-05 Student Live Search + Transaction History complete
+Phase: Phase 18 — Arduino UNO R4 WiFi Upgrade
+Plan: 18-02 complete (2 of 3) — IN PROGRESS
+Status: in-progress
+Last activity: 2026-03-06 — 18-02 Arduino UNO R4 WiFi RFID Firmware complete
 
-Progress: [##########] Phase 16 of v1.1 ✓ | Phase 17 ✓ COMPLETE (5/5 plans done)
+Progress: [##########] Phase 17 ✓ COMPLETE | Phase 18 IN PROGRESS (2/3 plans done)
 
 ## Performance Metrics
 
@@ -87,6 +87,7 @@ Progress: [##########] Phase 16 of v1.1 ✓ | Phase 17 ✓ COMPLETE (5/5 plans d
 | Phase 17-dashboard-overhaul-admin P03 | 3min | 1 task | 1 file |
 | Phase 17-dashboard-overhaul-admin P04 | 5min | 2 tasks | 2 files |
 | Phase 17-dashboard-overhaul-admin P05 | 2min | 2 tasks | 2 files |
+| Phase 18-arduino-uno-r4-wifi-upgrade P02 | 2min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -204,6 +205,9 @@ Recent decisions affecting current work:
 - [17-01]: base.html defines toggleSidebar() once — child templates must not redefine it
 - [17-02]: /api/transactions/recent?limit=500 used for chart data (not /api/analytics/spending — analytics endpoint has Date/Timestamp field-name mismatch bug)
 - [17-02]: Chart.js@4.4.0 loaded from CDN only — no npm/pip dependencies; client-side aggregation only
+- [Phase 18-arduino-uno-r4-wifi-upgrade]: Used WiFiS3.h (not WiFi.h) for UNO R4 WiFi — WiFi.h is for older shields and does not compile for this board
+- [Phase 18-02]: HTTP/1.0 with explicit Content-Length header required — Flask/Werkzeug hangs on chunked transfer encoding without it
+- [Phase 18-02]: CARD|UID serial fallback format matches ArduinoBridge._read_serial_line regex exactly — ensures no scan is silently lost
 
 ### Roadmap Evolution
 
@@ -228,6 +232,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-05
-Stopped at: Phase 17 — Dashboard Overhaul + Admin — 17-03 CSV export panel complete
+Last session: 2026-03-06
+Stopped at: Phase 18 — Arduino UNO R4 WiFi Upgrade — 18-02 Arduino firmware complete
 Resume file: None
