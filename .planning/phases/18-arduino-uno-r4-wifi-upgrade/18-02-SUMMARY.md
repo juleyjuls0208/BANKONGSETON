@@ -74,7 +74,7 @@ Each task was committed atomically:
 1. **Task 1: Update .gitignore to exclude secrets.h** - `6e8ce8b` (chore)
 2. **Task 2: Create Arduino firmware and secrets template** - `3e28f11` (feat)
 
-**Plan metadata:** TBD (docs: complete plan)
+**Plan metadata:** `7ead220` (docs(18-02): complete Arduino UNO R4 WiFi firmware plan)
 
 ## Files Created/Modified
 - `arduino/bankongseton_rfid/bankongseton_rfid.ino` — Main sketch: WiFiS3 + MFRC522 + HTTP POST with retry/fallback logic
