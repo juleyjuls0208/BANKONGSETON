@@ -116,10 +116,12 @@ Plans:
 
 **Out of scope:** Removing serial support, OTA firmware updates
 
-**Estimated plans:** 2–3
-1. Flask WiFi card-read endpoint + authentication
-2. Arduino UNO R4 WiFi firmware (WiFiS3 + HTTP POST + retry logic)
-3. (if needed) Integration testing + fallback verification
+**Plans:** 3 plans
+
+Plans:
+- [ ] 18-01-PLAN.md — Flask POST /api/arduino/card-read endpoint + ARDUINO_API_KEY env examples
+- [ ] 18-02-PLAN.md — Arduino UNO R4 WiFi firmware (WiFiS3 + MFRC522 + HTTP POST + serial fallback) + .gitignore
+- [ ] 18-03-PLAN.md — Automated smoke-test + human verification checkpoint
 
 ---
 
