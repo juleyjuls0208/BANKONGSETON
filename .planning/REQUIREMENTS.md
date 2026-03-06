@@ -34,8 +34,8 @@ Requirements for this milestone. Six feature areas: NFC Android HCE, Dashboard o
 ### Arduino UNO R4 WiFi Upgrade
 
 - [x] **ARDW-01**: Arduino UNO R4 firmware sends card read events over WiFi directly to Flask API (no serial USB dependency)
-- [ ] **ARDW-02**: Flask backend has a dedicated WiFi card-read endpoint that accepts Arduino POST requests
-- [ ] **ARDW-03**: Cashier computer UI still handles order entry (item selection) — Arduino WiFi only handles card UID delivery
+- [x] **ARDW-02**: Flask backend has a dedicated WiFi card-read endpoint that accepts Arduino POST requests
+- [x] **ARDW-03**: Cashier computer UI still handles order entry (item selection) — Arduino WiFi only handles card UID delivery
 - [x] **ARDW-04**: Fallback: system can still operate in serial/USB mode if WiFi is unavailable
 
 ---
@@ -98,8 +98,8 @@ Requirements for this milestone. Six feature areas: NFC Android HCE, Dashboard o
 | DASH-04 | Phase 17 - Dashboard Overhaul | Complete |
 | DASH-05 | Phase 17 - Dashboard Overhaul | Complete |
 | ARDW-01 | Phase 18 - Arduino WiFi Upgrade | Complete |
-| ARDW-02 | Phase 18 - Arduino WiFi Upgrade | Pending |
-| ARDW-03 | Phase 18 - Arduino WiFi Upgrade | Pending |
+| ARDW-02 | Phase 18 - Arduino WiFi Upgrade | Complete |
+| ARDW-03 | Phase 18 - Arduino WiFi Upgrade | Complete |
 | ARDW-04 | Phase 18 - Arduino WiFi Upgrade | Complete |
 | PAR-01 | Phase 19 - Parent Portal | Pending |
 | PAR-02 | Phase 19 - Parent Portal | Pending |

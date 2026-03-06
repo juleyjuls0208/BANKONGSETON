@@ -14,7 +14,7 @@
 |-------|------|-------------|--------|
 | 16 | NFC Android HCE | NFCA-01–05 | ✓ Complete (2026-03-05) |
 | 17 | Dashboard Overhaul + Admin | DASH-01–05, ADM-01–04 | ✓ Complete (2026-03-05) |
-| 18 | Arduino UNO R4 WiFi Upgrade | ARDW-01–04 | ✓ Complete (2026-03-07) |
+| 18 | Arduino UNO R4 WiFi Upgrade | Complete    | 2026-03-06 |
 | 19 | Parent Portal | PAR-01–06 | Pending |
 | 20 | Student App Redesign | APPA-01–05 | Pending |
 
@@ -116,7 +116,7 @@ Plans:
 
 **Out of scope:** Removing serial support, OTA firmware updates
 
-**Plans:** 3/3 complete ✓
+**Plans:** 3/3 plans complete
 
 Plans:
 - [x] 18-01-PLAN.md — Flask POST /api/arduino/card-read endpoint + ARDUINO_API_KEY env examples
