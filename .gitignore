@@ -73,6 +73,9 @@ captures/
 .externalNativeBuild/
 .cxx/
 
+# Arduino secrets — copy secrets.h.example to secrets.h and fill in credentials
+arduino/bankongseton_rfid/secrets.h
+
 # Temporary files
 *.tmp
 temp/
