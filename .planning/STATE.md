@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Requirements Coverage
-status: planned
-stopped_at: Phase 20.1 context gathered — ready for research + planning
-last_updated: "2026-03-07T00:00:00.000Z"
+status: context_ready
+stopped_at: Completed 20.1-01-PLAN.md — R3 APDU + R4 PN532 swap done
+last_updated: "2026-03-07T14:25:12.835Z"
 last_activity: 2026-03-07 — Phase 20.1 CONTEXT.md written (all 4 gray areas discussed)
 progress:
-  total_phases: 5
+  total_phases: 6
   completed_phases: 5
-  total_plans: 20
-  completed_plans: 20
+  total_plans: 23
+  completed_plans: 21
 ---
 
 # Project State
@@ -91,6 +91,7 @@ Progress: [##########] Phase 19 ✓ COMPLETE | 4 of 5 phases in v1.1 done (16 �
 | Phase 17-dashboard-overhaul-admin P05 | 2min | 2 tasks | 2 files |
 | Phase 18-arduino-uno-r4-wifi-upgrade P02 | 2min | 2 tasks | 3 files |
 | Phase 18-arduino-uno-r4-wifi-upgrade P03 | <1min | 2 tasks | 0 files |
+| Phase 20.1 P01 | 20min | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -211,6 +212,9 @@ Recent decisions affecting current work:
 - [Phase 18-arduino-uno-r4-wifi-upgrade]: Used WiFiS3.h (not WiFi.h) for UNO R4 WiFi — WiFi.h is for older shields and does not compile for this board
 - [Phase 18-02]: HTTP/1.0 with explicit Content-Length header required — Flask/Werkzeug hangs on chunked transfer encoding without it
 - [Phase 18-02]: CARD|UID serial fallback format matches ArduinoBridge._read_serial_line regex exactly — ensures no scan is silently lost
+- [Phase 20.1]: R4 does not get APDU logic — UID fallback via PN532 is sufficient for WiFi-post role
+- [Phase 20.1]: APDU response validated as responseLength==50 AND response[48]==0x90 AND response[49]==0x00
+- [Phase 20.1]: R3 idle LCD changed to Tap Phone... to cue students for HCE tap
 
 ### Roadmap Evolution
 
@@ -237,6 +241,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-07T00:00:00.000Z
-Stopped at: Phase 20.1 context gathered — next step: run gsd-plan-phase for Phase 20.1
-Resume file: .planning/phases/20.1-arduino-pn532-nfc-backend-integration-student-app-payment-and-firmware-hardening/20.1-CONTEXT.md
+Last session: 2026-03-07T14:25:12.833Z
+Stopped at: Completed 20.1-01-PLAN.md — R3 APDU + R4 PN532 swap done
+Resume file: None
