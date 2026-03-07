@@ -220,3 +220,18 @@ Recommended execution order: **16 → 17 → 18 → 19 → 20**
 ---
 
 *Roadmap created: 2026-03-04*
+
+### Phase 20.1: Arduino PN532 NFC Backend Integration, Student App Payment & Firmware Hardening (INSERTED)
+
+**Goal:** Complete the end-to-end NFC phone-tap payment flow: R3 firmware adds APDU HCE exchange to read 48-char token from student phones; R4 firmware swaps MFRC522 for PN532 and POSTs to `/api/nfc/pay`; ArduinoBridge parses `NFC|<token>` serial lines and forwards payment; Cashier UI shows blue NFC modal and result state.
+
+**Requirements:** NFC-R3-APDU, NFC-R4-SWAP, NFC-BRIDGE-PARSE, NFC-BRIDGE-EMIT, NFC-BRIDGE-POST, NFC-UI-MODAL, NFC-UI-RESULT
+
+**Depends on:** Phase 20
+
+**Plans:** 3 plans
+
+Plans:
+- [ ] 20.1-01-PLAN.md — Firmware: R3 APDU dual-mode (NFC|token + CARD|uid fallback) + R4 PN532 swap with /api/nfc/pay POST [Wave 1]
+- [ ] 20.1-02-PLAN.md — Backend: ArduinoBridge NFC serial parsing, nfc_payment SocketIO emit, _post_nfc_payment daemon thread [Wave 2]
+- [ ] 20.1-03-PLAN.md — Cashier UI: nfc_payment blue modal (#2196F3), nfc_payment_result handler, retry button [Wave 2]
