@@ -330,6 +330,36 @@
                 completeSale(data.uid);
             });
 
+            socket.on('nfc_payment', function(data) {
+                // Phone tapped — show blue NFC modal while payment is processing
+                var modal = document.getElementById('paymentModal');
+                var title = document.getElementById('modalTitle');
+                var msg   = document.getElementById('modalMessage');
+                modal.style.background = '#2196F3';
+                title.textContent = 'NFC Payment';
+                msg.textContent   = 'Processing payment...';
+                modal.style.display = 'flex';
+            });
+
+            socket.on('nfc_payment_result', function(data) {
+                // Close the modal
+                closeModal();
+                var resultDiv = document.getElementById('result');
+                if (data.success) {
+                    resultDiv.innerHTML =
+                        '<div style="color:#43A047;font-size:1.2em;">&#10003; NFC Payment Approved</div>';
+                } else {
+                    var errMsg = data.error || 'Unknown error';
+                    resultDiv.innerHTML =
+                        '<div style="color:#e53935;font-size:1.1em;">&#10007; NFC Payment Failed: ' +
+                        errMsg +
+                        '</div>' +
+                        '<button onclick="retryNfcPayment()" ' +
+                        'style="margin-top:8px;padding:8px 20px;background:#2196F3;color:#fff;' +
+                        'border:none;border-radius:4px;cursor:pointer;">Retry NFC</button>';
+                }
+            });
+
             socket.on('card_timeout', function() {
                 document.getElementById('modalTitle').textContent = 'Timeout';
                 document.getElementById('modalMessage').textContent = 'No card detected. Please try again.';
@@ -365,7 +395,8 @@
 
             const total = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
 
-            // Show modal
+            // Show modal (RFID — green)
+            document.getElementById('paymentModal').style.background = '#43A047';
             document.getElementById('paymentModal').style.display = 'flex';
             document.getElementById('modalTitle').textContent = 'Tap Student Card';
             document.getElementById('modalMessage').textContent = 'Waiting for card...';
@@ -511,6 +542,18 @@
 
         function closeModal() {
             document.getElementById('paymentModal').style.display = 'none';
+        }
+
+        function retryNfcPayment() {
+            // Re-show the NFC waiting modal so cashier can ask student to tap again
+            var modal = document.getElementById('paymentModal');
+            var title = document.getElementById('modalTitle');
+            var msg   = document.getElementById('modalMessage');
+            modal.style.background = '#2196F3';
+            title.textContent = 'NFC Payment';
+            msg.textContent   = 'Tap phone again...';
+            modal.style.display = 'flex';
+            document.getElementById('result').innerHTML = '';
         }
 
         function logout() {
