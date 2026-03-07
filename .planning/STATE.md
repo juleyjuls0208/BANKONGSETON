@@ -1,11 +1,11 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.1
-milestone_name: Requirements Coverage
-status: complete
-stopped_at: Phase 20.1 complete — all 3 plans done, human verified
-last_updated: "2026-03-07"
-last_activity: 2026-03-07 — Phase 20.1 fully verified and closed (VERIFICATION.md created)
+milestone: v1.2
+milestone_name: v1.2 Feature Implementation
+status: in_progress
+stopped_at: Phase 21 context gathered — ready for planning
+last_updated: "2026-03-08"
+last_activity: 2026-03-08 — Phase 21 CONTEXT.md written and committed; ready for /gsd:plan-phase 21
 progress:
   total_phases: 6
   completed_phases: 6
@@ -24,12 +24,12 @@ See: .planning/PROJECT.md (updated 2026-03-04)
 
 ## Current Position
 
-Phase: Phase 20.1 — COMPLETE ✅
-Plan: All 3 plans done and human verified
-Status: complete
-Last activity: 2026-03-07 — Phase 20.1 VERIFICATION.md created; all plans green
+Phase: Phase 21 — IN PROGRESS (context gathered, not yet planned)
+Plan: Context written; awaiting /gsd:plan-phase 21
+Status: in_progress
+Last activity: 2026-03-08 — Phase 21 CONTEXT.md committed; ready for planning
 
-Progress: [##########] ALL 6 PHASES COMPLETE ✓ (16 ✓, 17 ✓, 18 ✓, 19 ✓, 20 ✓, 20.1 ✓)
+Progress: [##########] v1.1 ALL 6 PHASES COMPLETE ✓ (16 ✓, 17 ✓, 18 ✓, 19 ✓, 20 ✓, 20.1 ✓) | v1.2 Phase 21 in context
 
 ## Performance Metrics
 
@@ -220,6 +220,7 @@ Recent decisions affecting current work:
 
 - Phase 07.1 inserted after Phase 7: Web-Deployable Dashboard (URGENT) — make admin dashboard hostable as a public website; hardware-dependent features (COM port, NFC, physical cashier terminal) may be conditionally disabled or stubbed for web mode
 - Phase 20.1 inserted after Phase 20: Arduino PN532 NFC backend integration, student app payment flow, and firmware hardening (URGENT)
+- Phase 21 added: v1.1 Gap Closure + v1.2 Feature Implementation (discuss-phase complete 2026-03-08)
 
 ### Pending Todos
 
@@ -241,6 +242,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-07T14:25:12.833Z
-Stopped at: Completed 20.1-01-PLAN.md — R3 APDU + R4 PN532 swap done
-Resume file: None
+Last session: 2026-03-08T00:00:00.000Z
+Stopped at: Phase 21 CONTEXT.md committed — ready for /gsd:plan-phase 21
+Resume file: .planning/phases/21-21/21-CONTEXT.md
