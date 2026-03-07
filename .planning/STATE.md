@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Requirements Coverage
 status: planned
-stopped_at: Phase 20 plans created — ready to execute
-last_updated: "2026-03-07T12:06:42.742Z"
-last_activity: 2026-03-07 — Phase 20 plans created (20-01 through 20-04)
+stopped_at: Phase 20.1 context gathered — ready for research + planning
+last_updated: "2026-03-07T00:00:00.000Z"
+last_activity: 2026-03-07 — Phase 20.1 CONTEXT.md written (all 4 gray areas discussed)
 progress:
   total_phases: 5
   completed_phases: 5
@@ -24,12 +24,12 @@ See: .planning/PROJECT.md (updated 2026-03-04)
 
 ## Current Position
 
-Phase: Phase 20 — Student App Redesign
-Plan: 4 plans created — ready to execute
-Status: planned
-Last activity: 2026-03-07 — Phase 20 plans created (20-01 through 20-04)
+Phase: Phase 20.1 — Arduino PN532 NFC + Backend Integration + Firmware Hardening
+Plan: Context gathered — ready for research + planning
+Status: context_ready
+Last activity: 2026-03-07 — Phase 20.1 CONTEXT.md written (all 4 gray areas discussed)
 
-Progress: [##########] Phase 19 ✓ COMPLETE | 4 of 5 phases in v1.1 done (16 ✓, 17 ✓, 18 ✓, 19 ✓) | Phase 20 planned (4 plans, 2 waves)
+Progress: [##########] Phase 19 ✓ COMPLETE | 4 of 5 phases in v1.1 done (16 ✓, 17 ✓, 18 ✓, 19 ✓) | Phase 20 planned (4 plans, 2 waves) | Phase 20.1 context gathered
 
 ## Performance Metrics
 
@@ -215,6 +215,7 @@ Recent decisions affecting current work:
 ### Roadmap Evolution
 
 - Phase 07.1 inserted after Phase 7: Web-Deployable Dashboard (URGENT) — make admin dashboard hostable as a public website; hardware-dependent features (COM port, NFC, physical cashier terminal) may be conditionally disabled or stubbed for web mode
+- Phase 20.1 inserted after Phase 20: Arduino PN532 NFC backend integration, student app payment flow, and firmware hardening (URGENT)
 
 ### Pending Todos
 
@@ -236,6 +237,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-07T12:25:39.000Z
-Stopped at: Quick task 2 complete — Arduino UNO R3 PN532 NFC sketch
-Resume file: .planning/phases/20-student-app-redesign/20-01-PLAN.md
+Last session: 2026-03-07T00:00:00.000Z
+Stopped at: Phase 20.1 context gathered — next step: run gsd-plan-phase for Phase 20.1
+Resume file: .planning/phases/20.1-arduino-pn532-nfc-backend-integration-student-app-payment-and-firmware-hardening/20.1-CONTEXT.md
