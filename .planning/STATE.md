@@ -232,6 +232,7 @@ None yet.
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 1 | notification when user loads money or purchases | 2026-03-01 | 3efd04d | [1-notification-when-user-loads-money-or-pu](./quick/1-notification-when-user-loads-money-or-pu/) |
+| 2 | Arduino UNO R3 PN532 NFC reader sketch (SPI) | 2026-03-07 | dac7eea | [2-arduino-uno-r3-pn532-nfc-code-with-spi-p](./quick/2-arduino-uno-r3-pn532-nfc-code-with-spi-p/) |
 
 ## Session Continuity
 
