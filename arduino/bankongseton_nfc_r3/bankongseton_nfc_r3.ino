@@ -1,7 +1,10 @@
 /*
  * BANKONGSETON — Arduino UNO R3 NFC reader (PN532 over SPI)
  *
- * Reads PN532 card UID → Serial "CARD|{UID}" at 9600 baud
+ * Dual-mode operation:
+ *   1. APDU path  — phone running HCE app → Serial "NFC|{48-char-token}"
+ *   2. UID fallback — plain RFID card (or APDU timeout) → Serial "CARD|{UID}"
+ *
  * Python ArduinoBridge reads this line and processes the payment.
  *
  * UNO R3 has no WiFi — serial is the ONLY delivery path.
@@ -249,40 +252,91 @@ void loop() {
   uint8_t uid[7];
   uint8_t uidLen = 0;
 
+  // Show idle state: waiting for phone/card tap
+  lcd_clear();
+  lcd_set_cursor(0, 0);
+  lcd_print("BANKONGSETON");
+  lcd_set_cursor(0, 1);
+  lcd_print("Tap Phone...");
+
   // readPassiveTargetID blocks for NFC_TIMEOUT_MS waiting for a card.
-  // Returns true when a card is in range and its UID is read.
+  // Returns true when a card/phone is in range and its UID is read.
   bool found = nfc.readPassiveTargetID(
     PN532_MIFARE_ISO14443A, uid, &uidLen, NFC_TIMEOUT_MS
   );
 
   if (!found) return;  // no card yet — loop immediately (no extra delay)
 
-  // ── Card detected ──────────────────────────────────────────
-  String uidHex = uidToHex(uid, uidLen);
-
-  // Serial output — exact format consumed by ArduinoBridge._read_serial_line
-  Serial.print("CARD|");
-  Serial.println(uidHex);
-
-  // Piezo beep: 1 kHz, 200 ms
-  tone(PIEZO_PIN, 1000, 200);
-
-  // LCD update — show UID (first 8 chars if long)
+  // ── Target detected — attempt APDU SELECT AID ──────────────
+  // Show "Reading..." while we attempt APDU exchange
   lcd_clear();
   lcd_set_cursor(0, 0);
   lcd_print("BANKONGSETON");
   lcd_set_cursor(0, 1);
-  // Truncate to 16 chars max (LCD width); UID is typically 8 chars
-  String display = uidHex.substring(0, min((int)uidHex.length(), LCD_COLS));
-  lcd_print(display.c_str());
+  lcd_print("Reading...");
 
-  // Cooldown — prevents reading the same card twice in quick succession
+  // Piezo beep: 1 kHz, 100 ms — card detected
+  tone(PIEZO_PIN, 1000, 100);
+
+  // APDU SELECT AID command (19 bytes):
+  //   CLA=0x00, INS=0xA4, P1=0x04, P2=0x00, Lc=0x0D
+  //   AID: F0 42 41 4E 4B 4F 4E 47 53 45 54 4F 4E  (BANKONGSETON)
+  //   Le=0x00
+  uint8_t apduCmd[19] = {
+    0x00, 0xA4, 0x04, 0x00, 0x0D,
+    0xF0, 0x42, 0x41, 0x4E, 0x4B, 0x4F, 0x4E, 0x47, 0x53, 0x45, 0x54, 0x4F, 0x4E,
+    0x00
+  };
+
+  uint8_t response[60];
+  uint8_t responseLength = 60;
+
+  // inDataExchange MUST be called after readPassiveTargetID (uses _inListedTag internally).
+  // Do NOT call inListPassiveTarget() directly.
+  bool apduOk = nfc.inDataExchange(apduCmd, 19, response, &responseLength);
+
+  if (apduOk && responseLength == 50 && response[48] == 0x90 && response[49] == 0x00) {
+    // ── APDU success: extract 48-char ASCII token ────────────
+    String token = "";
+    for (int i = 0; i < 48; i++) token += (char)response[i];
+
+    // Emit NFC token — ArduinoBridge handles "NFC|" prefix
+    Serial.print("NFC|");
+    Serial.println(token);
+
+    // Confirmation beep: two short tones
+    tone(PIEZO_PIN, 1500, 100);
+    delay(120);
+    tone(PIEZO_PIN, 1500, 100);
+
+    // LCD: show OK
+    lcd_clear();
+    lcd_set_cursor(0, 0);
+    lcd_print("OK");
+    lcd_set_cursor(0, 1);
+    lcd_print("Payment sent");
+
+  } else {
+    // ── APDU failed: fall back to UID emission ───────────────
+    String uidHex = uidToHex(uid, uidLen);
+
+    // Emit UID — ArduinoBridge handles "CARD|" prefix (existing format)
+    Serial.print("CARD|");
+    Serial.println(uidHex);
+
+    // Single beep for UID fallback
+    tone(PIEZO_PIN, 800, 200);
+
+    // LCD: show NFC Error
+    lcd_clear();
+    lcd_set_cursor(0, 0);
+    lcd_print("NFC Error");
+    lcd_set_cursor(0, 1);
+    lcd_print("Using card UID");
+  }
+
+  // Cooldown — prevents reading the same card/phone twice in quick succession
   delay(SCAN_COOLDOWN_MS);
 
-  // Reset LCD to idle state
-  lcd_clear();
-  lcd_set_cursor(0, 0);
-  lcd_print("BANKONGSETON");
-  lcd_set_cursor(0, 1);
-  lcd_print("Tap card...");
+  // Idle state reset is handled at top of next loop() iteration
 }
