@@ -53,11 +53,11 @@ Requirements for this milestone. Six feature areas: NFC Android HCE, Dashboard o
 
 ### Student App Redesign
 
-- [ ] **APPA-01**: Full UI/UX overhaul of Android student app (modern visual design, improved layout)
-- [ ] **APPA-02**: Student app supports dark mode
-- [ ] **APPA-03**: Student app has a monthly budget tracker (student sets a monthly spending limit)
-- [ ] **APPA-04**: Student app sends an in-app alert when spending approaches or exceeds monthly budget
-- [ ] **APPA-05**: Student can report a lost card from within the app (triggers card deactivation)
+- [x] **APPA-01**: Full UI/UX overhaul of Android student app (modern visual design, improved layout)
+- [x] **APPA-02**: Student app supports dark mode
+- [x] **APPA-03**: Student app has a monthly budget tracker (student sets a monthly spending limit)
+- [x] **APPA-04**: Student app sends an in-app alert when spending approaches or exceeds monthly budget
+- [x] **APPA-05**: Student can report a lost card from within the app (triggers card deactivation)
 
 ---
 
@@ -107,11 +107,11 @@ Requirements for this milestone. Six feature areas: NFC Android HCE, Dashboard o
 | PAR-04 | Phase 19 - Parent Portal | Pending |
 | PAR-05 | Phase 19 - Parent Portal | Pending |
 | PAR-06 | Phase 19 - Parent Portal | Pending |
-| APPA-01 | Phase 20 - Student App Redesign | Pending |
-| APPA-02 | Phase 20 - Student App Redesign | Pending |
-| APPA-03 | Phase 20 - Student App Redesign | Pending |
-| APPA-04 | Phase 20 - Student App Redesign | Pending |
-| APPA-05 | Phase 20 - Student App Redesign | Pending |
+| APPA-01 | Phase 20 - Student App Redesign | Complete |
+| APPA-02 | Phase 20 - Student App Redesign | Complete |
+| APPA-03 | Phase 20 - Student App Redesign | Complete |
+| APPA-04 | Phase 20 - Student App Redesign | Complete |
+| APPA-05 | Phase 20 - Student App Redesign | Complete |
 | ADM-01 | Phase 17 - Dashboard Overhaul | Complete |
 | ADM-02 | Phase 17 - Dashboard Overhaul | Complete |
 | ADM-03 | Phase 17 - Dashboard Overhaul | Complete |

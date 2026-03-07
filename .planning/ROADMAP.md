@@ -16,7 +16,7 @@
 | 17 | Dashboard Overhaul + Admin | DASH-01–05, ADM-01–04 | ✓ Complete (2026-03-05) |
 | 18 | Arduino UNO R4 WiFi Upgrade | Complete    | 2026-03-06 |
 | 19 | Parent Portal | PAR-01–06 | ✓ Complete (2026-03-07) |
-| 20 | Student App Redesign | APPA-01–05 | 🔵 Planned (4 plans) |
+| 20 | Student App Redesign | Complete    | 2026-03-07 |
 
 **Total phases:** 5
 **Total plans (estimated):** 16–21
@@ -179,7 +179,7 @@ Plans:
 
 **Out of scope:** Lost card physical replacement workflow, multi-account switching
 
-**Plans:** 4 plans ready to execute
+**Plans:** 4/4 plans complete
 
 Plans:
 - [ ] 20-01-PLAN.md — M3 theme migration: colors.xml, themes.xml, type.xml, Inter font (APPA-01, APPA-02)
