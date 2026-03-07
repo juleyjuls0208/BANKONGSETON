@@ -1,27 +1,28 @@
 /*
- * BANKONGSETON — Arduino UNO R4 WiFi RFID reader
+ * BANKONGSETON — Arduino UNO R4 WiFi NFC reader
  *
- * Reads MFRC522 card UID → POST /api/arduino/card-read → Flask
+ * Reads PN532 card/phone UID → POST /api/nfc/pay → Flask
  * Falls back to Serial ("CARD|UID") after MAX_RETRIES failures.
  *
  * Hardware:
- *   MFRC522 SS=10, RST=9 (standard SPI)
+ *   PN532 NFC Module (SPI mode) — SS=10 (standard SPI)
  *
  * Required libraries:
- *   MFRC522 by miguelbalboa
+ *   Adafruit PN532 by Adafruit
+ *   Adafruit BusIO by Adafruit (dependency)
  *   WiFiS3 (built-in for UNO R4 WiFi)
  *
  * Setup: copy secrets.h.example → secrets.h, fill in credentials.
  */
 
 #include <SPI.h>
-#include <MFRC522.h>
+#include <Adafruit_PN532.h>
 #include <WiFiS3.h>
 #include "secrets.h"
 
 // ── Pin assignments ─────────────────────────────────────────────
-#define SS_PIN  10
-#define RST_PIN  9
+#define SS_PIN    10
+#define PN532_SS  10   // Same pin — PN532 SPI chip-select
 
 // ── Tuning constants ────────────────────────────────────────────
 static const int   MAX_RETRIES       = 3;
@@ -29,7 +30,7 @@ static const int   RETRY_DELAY_MS    = 2000;
 static const int   SCAN_COOLDOWN_MS  = 1000;  // avoid double-reads
 static const int   HTTP_TIMEOUT_MS   = 5000;
 
-MFRC522 mfrc522(SS_PIN, RST_PIN);
+Adafruit_PN532 nfc(PN532_SS);
 
 // ─────────────────────────────────────────────────────────────────
 // WiFi helpers
@@ -84,7 +85,7 @@ bool ensureWiFi() {
 // HTTP POST helper
 // ─────────────────────────────────────────────────────────────────
 
-// Posts {"uid": "<uid>"} to Flask.
+// Posts {"token": "<uid>"} to Flask /api/nfc/pay.
 // Returns true on HTTP 200, false on any error.
 bool httpPost(const String &uid) {
   WiFiClient client;
@@ -100,11 +101,11 @@ bool httpPost(const String &uid) {
     return false;
   }
 
-  // Build JSON body
-  String body = "{\"uid\":\"" + uid + "\"}";
+  // Build JSON body with token key (matches /api/nfc/pay contract)
+  String body = "{\"token\":\"" + uid + "\"}";
 
   // Raw HTTP/1.0 POST — Content-Length header is REQUIRED (Flask hangs without it)
-  client.println("POST /api/arduino/card-read HTTP/1.0");
+  client.println("POST /api/nfc/pay HTTP/1.0");
   client.println("Host: " + String(FLASK_HOST));
   client.println("Content-Type: application/json");
   client.println("X-API-Key: " + String(SECRET_API_KEY));
@@ -129,20 +130,6 @@ bool httpPost(const String &uid) {
     Serial.println(statusLine);
   }
   return ok;
-}
-
-// ─────────────────────────────────────────────────────────────────
-// UID → string helper
-// ─────────────────────────────────────────────────────────────────
-
-String uidToHex(MFRC522::Uid &uid) {
-  String result = "";
-  for (byte i = 0; i < uid.size; i++) {
-    if (uid.uidByte[i] < 0x10) result += "0";
-    result += String(uid.uidByte[i], HEX);
-  }
-  result.toUpperCase();
-  return result;
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -187,28 +174,34 @@ void setup() {
   Serial.begin(9600);
   while (!Serial && millis() < 3000);  // wait up to 3 s for Serial Monitor
 
-  Serial.println("BANKONGSETON RFID reader starting...");
+  Serial.println("BANKONGSETON NFC reader starting...");
 
   SPI.begin();
-  mfrc522.PCD_Init();
-  mfrc522.PCD_DumpVersionToSerial();  // confirm reader is wired correctly
+  nfc.begin();
+  nfc.SAMConfig();
 
   connectWiFi();
   Serial.println("Ready — waiting for card...");
 }
 
 void loop() {
-  // Wait for a card
-  if (!mfrc522.PICC_IsNewCardPresent()) return;
-  if (!mfrc522.PICC_ReadCardSerial())   return;
+  uint8_t uid[7];
+  uint8_t uidLength;
 
-  String uid = uidToHex(mfrc522.uid);
-  Serial.println("Card detected: " + uid);
+  // readPassiveTargetID blocks for up to 1000 ms waiting for a card/phone.
+  // R4 uses a simple blocking read — R3 handles timing/APDU for HCE phones.
+  if (nfc.readPassiveTargetID(PN532_MIFARE_ISO14443A, uid, &uidLength, 1000)) {
+    // Build UID hex string
+    String uidStr = "";
+    for (uint8_t i = 0; i < uidLength; i++) {
+      if (uid[i] < 0x10) uidStr += "0";
+      uidStr += String(uid[i], HEX);
+    }
+    uidStr.toUpperCase();
 
-  deliverUID(uid);
+    Serial.println("Card detected: " + uidStr);
+    deliverUID(uidStr);
 
-  mfrc522.PICC_HaltA();
-  mfrc522.PCD_StopCrypto1();
-
-  delay(SCAN_COOLDOWN_MS);  // debounce — prevent double-reads
+    delay(SCAN_COOLDOWN_MS);  // debounce — prevent double-reads
+  }
 }
