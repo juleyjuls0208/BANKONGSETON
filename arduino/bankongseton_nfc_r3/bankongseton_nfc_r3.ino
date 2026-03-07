@@ -242,7 +242,8 @@ void setup() {
   lcd_print("Ready...");
 
   // 5. Startup beep (100 ms) — confirms piezo wiring
-  tone(PIEZO_PIN, 1000, 100);
+  pinMode(PIEZO_PIN, OUTPUT);   // required before tone() on UNO R3
+  tone(PIEZO_PIN, 1000, 200);   // 200 ms at 1 kHz — audible on both active and passive
 
   // 6. Ready message — ArduinoBridge listens for this line at startup
   Serial.println("BANKONGSETON NFC reader ready");
