@@ -15,7 +15,7 @@
 | 16 | NFC Android HCE | NFCA-01–05 | ✓ Complete (2026-03-05) |
 | 17 | Dashboard Overhaul + Admin | DASH-01–05, ADM-01–04 | ✓ Complete (2026-03-05) |
 | 18 | Arduino UNO R4 WiFi Upgrade | Complete    | 2026-03-06 |
-| 19 | Parent Portal | PAR-01–06 | Pending |
+| 19 | Parent Portal | PAR-01–06 | ✓ Complete (2026-03-07) |
 | 20 | Student App Redesign | APPA-01–05 | Pending |
 
 **Total phases:** 5
@@ -149,6 +149,13 @@ Plans:
 2. Parent portal UI (balance view + transaction history)
 3. Card registration form update (optional parent email)
 4. (if needed) Security review + access control hardening
+
+**Plans:** 3/3 complete ✓
+
+Plans:
+- [x] 19-01-PLAN.md — Parent auth backend: `parent_only` decorator, login extension, `/parent` + `/parent/logout` routes, `set_parent_credentials` API
+- [x] 19-02-PLAN.md — Parent portal UI: `GET /api/parent/data` endpoint + `parent_dashboard.html` (balance + transaction history)
+- [x] 19-03-PLAN.md — Students UI: parent badge + Set Parent modal + login role-aware redirect
 
 ---
 
