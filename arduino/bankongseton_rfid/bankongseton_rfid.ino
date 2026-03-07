@@ -6,6 +6,7 @@
  *
  * Hardware:
  *   PN532 NFC Module (SPI mode) — SS=10 (standard SPI)
+ *   Piezo buzzer — D9
  *
  * Required libraries:
  *   Adafruit PN532 by Adafruit
@@ -23,6 +24,7 @@
 // ── Pin assignments ─────────────────────────────────────────────
 #define SS_PIN    10
 #define PN532_SS  10   // Same pin — PN532 SPI chip-select
+#define BUZZER_PIN 9   // Piezo buzzer
 
 // ── Tuning constants ────────────────────────────────────────────
 static const int   MAX_RETRIES       = 3;
@@ -182,6 +184,9 @@ void setup() {
 
   connectWiFi();
   Serial.println("Ready — waiting for card...");
+
+  // Startup beep — confirms buzzer wiring (matches R3 behaviour)
+  tone(BUZZER_PIN, 1000, 100);
 }
 
 void loop() {
