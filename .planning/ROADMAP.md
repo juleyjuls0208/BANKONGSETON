@@ -229,9 +229,11 @@ Recommended execution order: **16 → 17 → 18 → 19 → 20**
 
 **Depends on:** Phase 20
 
-**Plans:** 3 plans
+**Status: ✓ Complete (2026-03-07)**
+
+**Plans:** 3/3 complete ✓
 
 Plans:
-- [ ] 20.1-01-PLAN.md — Firmware: R3 APDU dual-mode (NFC|token + CARD|uid fallback) + R4 PN532 swap with /api/nfc/pay POST [Wave 1]
-- [ ] 20.1-02-PLAN.md — Backend: ArduinoBridge NFC serial parsing, nfc_payment SocketIO emit, _post_nfc_payment daemon thread [Wave 2]
-- [ ] 20.1-03-PLAN.md — Cashier UI: nfc_payment blue modal (#2196F3), nfc_payment_result handler, retry button [Wave 2]
+- [x] 20.1-01-PLAN.md — Firmware: R3 APDU dual-mode (NFC|token + CARD|uid fallback) + R4 PN532 swap with /api/nfc/pay POST [Wave 1]
+- [x] 20.1-02-PLAN.md — Backend: ArduinoBridge NFC serial parsing, nfc_payment SocketIO emit, _post_nfc_payment daemon thread [Wave 2]
+- [x] 20.1-03-PLAN.md — Cashier UI: nfc_payment blue modal (#2196F3), nfc_payment_result handler, retry button [Wave 2]
