@@ -16,7 +16,7 @@
 | 17 | Dashboard Overhaul + Admin | DASH-01–05, ADM-01–04 | ✓ Complete (2026-03-05) |
 | 18 | Arduino UNO R4 WiFi Upgrade | Complete    | 2026-03-06 |
 | 19 | Parent Portal | PAR-01–06 | ✓ Complete (2026-03-07) |
-| 20 | Student App Redesign | APPA-01–05 | Pending |
+| 20 | Student App Redesign | APPA-01–05 | 🔵 Planned (4 plans) |
 
 **Total phases:** 5
 **Total plans (estimated):** 16–21
@@ -179,12 +179,13 @@ Plans:
 
 **Out of scope:** Lost card physical replacement workflow, multi-account switching
 
-**Estimated plans:** 4–5
-1. Material 3 theme + design system setup (colors, typography, dark mode)
-2. Home screen + transactions screen redesign
-3. Monthly budget tracker (settings + tracking logic + in-app alerts)
-4. Lost card report flow (backend endpoint + Android UI)
-5. (if needed) Polish pass + edge cases
+**Plans:** 4 plans ready to execute
+
+Plans:
+- [ ] 20-01-PLAN.md — M3 theme migration: colors.xml, themes.xml, type.xml, Inter font (APPA-01, APPA-02)
+- [ ] 20-02-PLAN.md — Dark mode 3-way + ₱ currency fix across all files (APPA-01, APPA-02) [Wave 2]
+- [ ] 20-03-PLAN.md — Budget tracker: backend sheet + Android UI + Snackbar alerts (APPA-03, APPA-04) [Wave 3]
+- [ ] 20-04-PLAN.md — Lost card flow: POST /api/student/lost-card + Android UI (APPA-05) [Wave 3]
 
 ---
 
