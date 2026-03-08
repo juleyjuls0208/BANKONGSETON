@@ -48,6 +48,7 @@ if not JWT_SECRET:
     sys.exit(1)
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRY_HOURS = 24
+LOW_BALANCE_THRESHOLD = float(os.getenv("LOW_BALANCE_THRESHOLD", "50"))
 
 # Timezone configuration
 PHILIPPINES_TZ = pytz.timezone("Asia/Manila")
@@ -1009,6 +1010,7 @@ def nfc_pay():
         data = request.get_json() or {}
         virtual_card_token = str(data.get("virtual_card_token", "")).strip()
         items = data.get("items", [])
+        station_id = request.headers.get("X-Station-ID", "main")
         try:
             total = float(data.get("total", 0))
         except (TypeError, ValueError):
@@ -1094,11 +1096,12 @@ def nfc_pay():
                 "Completed",  # Status
                 "",  # ErrorMessage
                 json.dumps(items),  # ItemsJson
+                station_id,  # StationID
             ]
         )
 
         logger.info(
-            f"event=nfc_pay_success money_card={money_card_number} total={total} new_balance={new_balance}"
+            f"event=nfc_pay_success money_card={money_card_number} total={total} new_balance={new_balance} station={station_id}"
         )
 
         # Purchase push notification — fires after transaction committed, never blocks
@@ -1112,6 +1115,22 @@ def nfc_pay():
                             from fcm_sender import send_purchase_push
 
                             send_purchase_push(fcm_token, total, new_balance)
+                        # Low-balance email alert
+                        if new_balance < LOW_BALANCE_THRESHOLD:
+                            try:
+                                parent_email = str(u.get("ParentEmail", "")).strip()
+                                student_name = str(u.get("Name", "Student")).strip()
+                                from notifications import EmailNotifier
+
+                                email_notifier = EmailNotifier()
+                                email_notifier.send_low_balance_alert(
+                                    student_name=student_name,
+                                    student_id=nfc_student_id,
+                                    balance=new_balance,
+                                    to_email=parent_email,
+                                )
+                            except Exception as email_err:
+                                logger.warning(f"Low balance email failed: {email_err}")
                         break
         except Exception as notif_err:
             logger.warning("event=nfc_purchase_notify_failed error=%s", notif_err)
