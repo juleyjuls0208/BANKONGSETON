@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Requirements Coverage
 status: in_progress
-stopped_at: Completed 21-02-PLAN.md
-last_updated: "2026-03-08T00:42:35.574Z"
+stopped_at: Completed 21-04-PLAN.md (TwilioSMSNotifier + nfc/pay wire-in)
+last_updated: "2026-03-08T00:43:11.666Z"
 last_activity: 2026-03-08 — Phase 21 CONTEXT.md committed; ready for planning
 progress:
   total_phases: 7
   completed_phases: 6
   total_plans: 31
-  completed_plans: 24
+  completed_plans: 25
 ---
 
 # Project State
@@ -93,6 +93,7 @@ Progress: [##########] v1.1 ALL 6 PHASES COMPLETE ✓ (16 ✓, 17 ✓, 18 ✓, 1
 | Phase 18-arduino-uno-r4-wifi-upgrade P03 | <1min | 2 tasks | 0 files |
 | Phase 20.1 P01 | 20min | 3 tasks | 2 files |
 | Phase 21 P02 | 15 | 2 tasks | 3 files |
+| Phase 21 P04 | 10min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -217,6 +218,8 @@ Recent decisions affecting current work:
 - [Phase 20.1]: APDU response validated as responseLength==50 AND response[48]==0x90 AND response[49]==0x00
 - [Phase 20.1]: R3 idle LCD changed to Tap Phone... to cue students for HCE tap
 - [Phase 21]: FLASK_DEBUG now defaults to false; dev override via env var
+- [Phase 21]: Twilio SDK lazy-imported inside send_low_balance_sms() to keep it optional — server boots without twilio package
+- [Phase 21]: student_name + phone_number captured in same Users sheet loop as nfc_student_id — no extra Sheets API call
 
 ### Roadmap Evolution
 
@@ -244,6 +247,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-08T00:42:31.049Z
-Stopped at: Completed 21-02-PLAN.md
+Last session: 2026-03-08T00:43:11.663Z
+Stopped at: Completed 21-04-PLAN.md (TwilioSMSNotifier + nfc/pay wire-in)
 Resume file: None
