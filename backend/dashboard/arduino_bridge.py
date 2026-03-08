@@ -63,9 +63,9 @@ class ArduinoBridge:
             self.socketio.emit(
                 "nfc_payment_result", {"success": False, "error": "NFC_FAIL"}
             )
-        elif line.startswith("<CARD|") and line.endswith(">"):
-            uid = line[6:-1]
-            if len(uid) == 8:
+        elif line.startswith("CARD|"):
+            uid = line[5:]
+            if len(uid) in (8, 14):  # 4-byte MIFARE (8 hex) or 7-byte (14 hex)
                 self.socketio.emit("card_read", {"uid": uid})
         # Any other lines are ignored silently
 
@@ -146,10 +146,10 @@ class ArduinoBridge:
                         # Route NFC lines through _parse_line (handles NFC|, ERROR|NFC_FAIL)
                         if line.startswith("NFC|") or line.startswith("ERROR|"):
                             self._parse_line(line)
-                        # Expected format: <CARD|ABCD1234>
-                        elif line.startswith("<CARD|") and line.endswith(">"):
-                            uid = line[6:-1]
-                            if len(uid) == 8:
+                        # Expected format: CARD|ABCD1234 (no angle brackets — firmware format)
+                        elif line.startswith("CARD|"):
+                            uid = line[5:]
+                            if len(uid) in (8, 14):
                                 self.reading_active = False
 
                                 # Call the callback with card UID
