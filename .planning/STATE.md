@@ -253,9 +253,10 @@ None yet.
 |---|-------------|------|--------|-----------|
 | 1 | notification when user loads money or purchases | 2026-03-01 | 3efd04d | [1-notification-when-user-loads-money-or-pu](./quick/1-notification-when-user-loads-money-or-pu/) |
 | 2 | Arduino UNO R3 PN532 NFC reader sketch (SPI) | 2026-03-07 | dac7eea | [2-arduino-uno-r3-pn532-nfc-code-with-spi-p](./quick/2-arduino-uno-r3-pn532-nfc-code-with-spi-p/) |
+| 3 | Fix Arduino serial format mismatch (CARD\| vs \<CARD\|\>) | 2026-03-08 | ba0af74 | [3-arduino-doesnt-connect-properly-to-the-a](./quick/3-arduino-doesnt-connect-properly-to-the-a/) |
 
 ## Session Continuity
 
-Last session: 2026-03-08T00:56:47.918Z
-Stopped at: Completed 21-08-PLAN.md — Phase 21 fully complete, v1.2 released
+Last session: 2026-03-08T05:09:11Z
+Stopped at: Completed quick task 3 — Arduino serial format mismatch fix (CARD| format, 4-byte + 7-byte UID support)
 Resume file: None
