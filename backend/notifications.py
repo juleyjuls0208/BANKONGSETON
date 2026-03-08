@@ -4,6 +4,7 @@ Bangko ng Seton
 
 Handles email and push notifications for alerts and updates
 """
+
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -17,11 +18,12 @@ import pytz
 sys.path.insert(0, os.path.dirname(__file__))
 try:
     from errors import get_logger
+
     logger = get_logger(__name__)
 except ImportError:
     logger = logging.getLogger(__name__)
 
-PHILIPPINES_TZ = pytz.timezone('Asia/Manila')
+PHILIPPINES_TZ = pytz.timezone("Asia/Manila")
 
 
 def get_philippines_time():
@@ -31,13 +33,18 @@ def get_philippines_time():
 
 class EmailNotifier:
     """Handles email notifications"""
-    
-    def __init__(self, smtp_server: str = None, smtp_port: int = 587,
-                 smtp_user: str = None, smtp_password: str = None,
-                 from_email: str = None):
+
+    def __init__(
+        self,
+        smtp_server: str = None,
+        smtp_port: int = 587,
+        smtp_user: str = None,
+        smtp_password: str = None,
+        from_email: str = None,
+    ):
         """
         Initialize email notifier
-        
+
         Args:
             smtp_server: SMTP server address (e.g., smtp.gmail.com)
             smtp_port: SMTP port (default: 587 for TLS)
@@ -45,74 +52,76 @@ class EmailNotifier:
             smtp_password: SMTP password
             from_email: Sender email address
         """
-        self.smtp_server = smtp_server or os.getenv('SMTP_SERVER', '')
-        self.smtp_port = smtp_port or int(os.getenv('SMTP_PORT', 587))
-        self.smtp_user = smtp_user or os.getenv('SMTP_USER', '')
-        self.smtp_password = smtp_password or os.getenv('SMTP_PASSWORD', '')
-        self.from_email = from_email or os.getenv('FROM_EMAIL', self.smtp_user)
-        
+        self.smtp_server = smtp_server or os.getenv("SMTP_SERVER", "")
+        self.smtp_port = smtp_port or int(os.getenv("SMTP_PORT", 587))
+        self.smtp_user = smtp_user or os.getenv("SMTP_USER", "")
+        self.smtp_password = smtp_password or os.getenv("SMTP_PASSWORD", "")
+        self.from_email = from_email or os.getenv("FROM_EMAIL", self.smtp_user)
+
         self.enabled = all([self.smtp_server, self.smtp_user, self.smtp_password])
-    
-    def send_email(self, to_email: str, subject: str, body: str, 
-                   html_body: Optional[str] = None) -> bool:
+
+    def send_email(
+        self, to_email: str, subject: str, body: str, html_body: Optional[str] = None
+    ) -> bool:
         """
         Send an email
-        
+
         Args:
             to_email: Recipient email address
             subject: Email subject
             body: Plain text body
             html_body: HTML body (optional)
-        
+
         Returns:
             True if sent successfully, False otherwise
         """
         if not self.enabled:
             logger.debug("event=email_dry_run to=%s subject=%s", to_email, subject)
             return False
-        
+
         try:
             # Create message
-            msg = MIMEMultipart('alternative')
-            msg['Subject'] = subject
-            msg['From'] = self.from_email
-            msg['To'] = to_email
-            
+            msg = MIMEMultipart("alternative")
+            msg["Subject"] = subject
+            msg["From"] = self.from_email
+            msg["To"] = to_email
+
             # Attach plain text
-            msg.attach(MIMEText(body, 'plain'))
-            
+            msg.attach(MIMEText(body, "plain"))
+
             # Attach HTML if provided
             if html_body:
-                msg.attach(MIMEText(html_body, 'html'))
-            
+                msg.attach(MIMEText(html_body, "html"))
+
             # Connect and send
             with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:
                 server.starttls()
                 server.login(self.smtp_user, self.smtp_password)
                 server.send_message(msg)
-            
+
             return True
-        
+
         except Exception as e:
             logger.error("event=email_send_failed to=%s error=%s", to_email, e)
             return False
-    
-    def send_low_balance_alert(self, student_name: str, student_id: str,
-                               balance: float, to_email: str) -> bool:
+
+    def send_low_balance_alert(
+        self, student_name: str, student_id: str, balance: float, to_email: str
+    ) -> bool:
         """
         Send low balance alert email
-        
+
         Args:
             student_name: Student's full name
             student_id: Student ID
             balance: Current balance
             to_email: Parent/guardian email
-        
+
         Returns:
             True if sent successfully
         """
         subject = f"Low Balance Alert - {student_name}"
-        
+
         body = f"""
 Dear Parent/Guardian,
 
@@ -131,7 +140,7 @@ You can load funds by:
 Thank you,
 Bangko ng Seton Finance Office
         """.strip()
-        
+
         html_body = f"""
 <!DOCTYPE html>
 <html>
@@ -169,29 +178,34 @@ Bangko ng Seton Finance Office
 </body>
 </html>
         """
-        
+
         return self.send_email(to_email, subject, body, html_body)
-    
-    def send_load_confirmation(self, student_name: str, student_id: str,
-                               amount: float, new_balance: float,
-                               to_email: str) -> bool:
+
+    def send_load_confirmation(
+        self,
+        student_name: str,
+        student_id: str,
+        amount: float,
+        new_balance: float,
+        to_email: str,
+    ) -> bool:
         """
         Send load/top-up confirmation email to parent
-        
+
         Args:
             student_name: Student's full name
             student_id: Student ID
             amount: Amount loaded
             new_balance: New balance after load
             to_email: Parent/guardian email
-        
+
         Returns:
             True if sent successfully
         """
         now = get_philippines_time()
-        
+
         subject = f"Balance Loaded - {student_name}"
-        
+
         body = f"""
 Dear Parent/Guardian,
 
@@ -200,14 +214,14 @@ This is to confirm that funds have been loaded to {student_name}'s account (ID: 
 Load Details:
 - Amount Loaded: ₱{amount:.2f}
 - New Balance: ₱{new_balance:.2f}
-- Date/Time: {now.strftime('%Y-%m-%d %H:%M:%S')}
+- Date/Time: {now.strftime("%Y-%m-%d %H:%M:%S")}
 
 Thank you for using Bangko ng Seton!
 
 Best regards,
 Bangko ng Seton Finance Office
         """.strip()
-        
+
         html_body = f"""
 <!DOCTYPE html>
 <html>
@@ -237,7 +251,7 @@ Bangko ng Seton Finance Office
                 <h3>Load Details:</h3>
                 <p class="amount">Amount Loaded: ₱{amount:.2f}</p>
                 <p class="balance">New Balance: ₱{new_balance:.2f}</p>
-                <p><strong>Date/Time:</strong> {now.strftime('%Y-%m-%d %H:%M:%S')}</p>
+                <p><strong>Date/Time:</strong> {now.strftime("%Y-%m-%d %H:%M:%S")}</p>
             </div>
             
             <div class="success">
@@ -254,29 +268,34 @@ Bangko ng Seton Finance Office
 </body>
 </html>
         """
-        
+
         return self.send_email(to_email, subject, body, html_body)
-    
-    def send_card_lost_alert(self, student_name: str, student_id: str,
-                            old_card: str, balance: float,
-                            to_email: str) -> bool:
+
+    def send_card_lost_alert(
+        self,
+        student_name: str,
+        student_id: str,
+        old_card: str,
+        balance: float,
+        to_email: str,
+    ) -> bool:
         """
         Send card lost alert email to parent
-        
+
         Args:
             student_name: Student's full name
             student_id: Student ID
             old_card: Lost card number
             balance: Balance preserved
             to_email: Parent/guardian email
-        
+
         Returns:
             True if sent successfully
         """
         now = get_philippines_time()
-        
+
         subject = f"Card Reported Lost - {student_name}"
-        
+
         body = f"""
 Dear Parent/Guardian,
 
@@ -286,7 +305,7 @@ has been reported as lost.
 Card Details:
 - Lost Card Number: {old_card}
 - Balance Preserved: ₱{balance:.2f}
-- Reported: {now.strftime('%Y-%m-%d %H:%M:%S')}
+- Reported: {now.strftime("%Y-%m-%d %H:%M:%S")}
 
 The card has been deactivated for security. The balance of ₱{balance:.2f} has been 
 preserved and will be transferred to a replacement card.
@@ -299,7 +318,7 @@ Next Steps:
 Thank you,
 Bangko ng Seton Finance Office
         """.strip()
-        
+
         html_body = f"""
 <!DOCTYPE html>
 <html>
@@ -328,7 +347,7 @@ Bangko ng Seton Finance Office
                 <h3>Card Details:</h3>
                 <p><strong>Lost Card Number:</strong> {old_card}</p>
                 <p class="balance">Balance Preserved: ₱{balance:.2f}</p>
-                <p><strong>Reported:</strong> {now.strftime('%Y-%m-%d %H:%M:%S')}</p>
+                <p><strong>Reported:</strong> {now.strftime("%Y-%m-%d %H:%M:%S")}</p>
             </div>
             
             <div class="warning">
@@ -351,29 +370,34 @@ Bangko ng Seton Finance Office
 </body>
 </html>
         """
-        
+
         return self.send_email(to_email, subject, body, html_body)
-    
-    def send_card_replaced_confirmation(self, student_name: str, student_id: str,
-                                       new_card: str, balance: float,
-                                       to_email: str) -> bool:
+
+    def send_card_replaced_confirmation(
+        self,
+        student_name: str,
+        student_id: str,
+        new_card: str,
+        balance: float,
+        to_email: str,
+    ) -> bool:
         """
         Send card replacement confirmation email to parent
-        
+
         Args:
             student_name: Student's full name
             student_id: Student ID
             new_card: New card number
             balance: Balance transferred
             to_email: Parent/guardian email
-        
+
         Returns:
             True if sent successfully
         """
         now = get_philippines_time()
-        
+
         subject = f"Replacement Card Issued - {student_name}"
-        
+
         body = f"""
 Dear Parent/Guardian,
 
@@ -383,7 +407,7 @@ This is to confirm that a replacement money card has been issued for {student_na
 Replacement Details:
 - New Card Number: {new_card}
 - Balance Transferred: ₱{balance:.2f}
-- Issued: {now.strftime('%Y-%m-%d %H:%M:%S')}
+- Issued: {now.strftime("%Y-%m-%d %H:%M:%S")}
 
 The card is now active and ready to use. The balance of ₱{balance:.2f} from the 
 lost card has been successfully transferred to this new card.
@@ -393,7 +417,7 @@ Your child can now use the new card at school immediately.
 Thank you,
 Bangko ng Seton Finance Office
         """.strip()
-        
+
         html_body = f"""
 <!DOCTYPE html>
 <html>
@@ -423,7 +447,7 @@ Bangko ng Seton Finance Office
                 <h3>Replacement Details:</h3>
                 <p class="card-number">New Card: {new_card}</p>
                 <p class="balance">Balance Transferred: ₱{balance:.2f}</p>
-                <p><strong>Issued:</strong> {now.strftime('%Y-%m-%d %H:%M:%S')}</p>
+                <p><strong>Issued:</strong> {now.strftime("%Y-%m-%d %H:%M:%S")}</p>
             </div>
             
             <div class="success">
@@ -441,29 +465,34 @@ Bangko ng Seton Finance Office
 </body>
 </html>
         """
-        
+
         return self.send_email(to_email, subject, body, html_body)
-    
-    def send_large_transaction_alert(self, student_name: str, student_id: str,
-                                    amount: float, transaction_type: str,
-                                    to_email: str) -> bool:
+
+    def send_large_transaction_alert(
+        self,
+        student_name: str,
+        student_id: str,
+        amount: float,
+        transaction_type: str,
+        to_email: str,
+    ) -> bool:
         """
         Send large transaction alert email
-        
+
         Args:
             student_name: Student's full name
             student_id: Student ID
             amount: Transaction amount
             transaction_type: Type of transaction
             to_email: Parent/guardian email
-        
+
         Returns:
             True if sent successfully
         """
         now = get_philippines_time()
-        
+
         subject = f"Large Transaction Alert - {student_name}"
-        
+
         body = f"""
 Dear Parent/Guardian,
 
@@ -472,14 +501,14 @@ A large transaction was made on the account of {student_name} (ID: {student_id})
 Transaction Details:
 - Type: {transaction_type}
 - Amount: ₱{abs(amount):.2f}
-- Date/Time: {now.strftime('%Y-%m-%d %H:%M:%S')}
+- Date/Time: {now.strftime("%Y-%m-%d %H:%M:%S")}
 
 If you did not authorize this transaction, please contact the Finance Office immediately.
 
 Thank you,
 Bangko ng Seton Finance Office
         """.strip()
-        
+
         html_body = f"""
 <!DOCTYPE html>
 <html>
@@ -508,7 +537,7 @@ Bangko ng Seton Finance Office
                 <h3>Transaction Details:</h3>
                 <p><strong>Type:</strong> {transaction_type}</p>
                 <p class="amount">Amount: ₱{abs(amount):.2f}</p>
-                <p><strong>Date/Time:</strong> {now.strftime('%Y-%m-%d %H:%M:%S')}</p>
+                <p><strong>Date/Time:</strong> {now.strftime("%Y-%m-%d %H:%M:%S")}</p>
             </div>
             
             <div class="alert">
@@ -524,28 +553,28 @@ Bangko ng Seton Finance Office
 </body>
 </html>
         """
-        
+
         return self.send_email(to_email, subject, body, html_body)
-    
+
     def send_daily_summary(self, to_email: str, summary_data: Dict) -> bool:
         """
         Send daily transaction summary email
-        
+
         Args:
             to_email: Recipient email
             summary_data: Dictionary with summary statistics
-        
+
         Returns:
             True if sent successfully
         """
-        date = summary_data.get('date', datetime.now().strftime('%Y-%m-%d'))
-        total_txns = summary_data.get('total_transactions', 0)
-        total_spending = summary_data.get('total_spending', 0.0)
-        total_loaded = summary_data.get('total_loaded', 0.0)
-        unique_students = summary_data.get('unique_students', 0)
-        
+        date = summary_data.get("date", datetime.now().strftime("%Y-%m-%d"))
+        total_txns = summary_data.get("total_transactions", 0)
+        total_spending = summary_data.get("total_spending", 0.0)
+        total_loaded = summary_data.get("total_loaded", 0.0)
+        unique_students = summary_data.get("unique_students", 0)
+
         subject = f"Daily Summary - {date}"
-        
+
         body = f"""
 Bangko ng Seton - Daily Summary
 Date: {date}
@@ -559,7 +588,7 @@ Summary:
 Thank you,
 Bangko ng Seton System
         """.strip()
-        
+
         html_body = f"""
 <!DOCTYPE html>
 <html>
@@ -605,105 +634,161 @@ Bangko ng Seton System
 </body>
 </html>
         """
-        
+
         return self.send_email(to_email, subject, body, html_body)
 
 
 class NotificationManager:
     """Manages all notification triggers and delivery"""
-    
+
     def __init__(self, email_notifier: EmailNotifier = None):
         """
         Initialize notification manager
-        
+
         Args:
             email_notifier: EmailNotifier instance (creates default if None)
         """
         self.email_notifier = email_notifier or EmailNotifier()
-        self.low_balance_threshold = float(os.getenv('LOW_BALANCE_THRESHOLD', 50))
-        self.large_transaction_threshold = float(os.getenv('LARGE_TRANSACTION_THRESHOLD', 100))
-    
+        self.low_balance_threshold = float(os.getenv("LOW_BALANCE_THRESHOLD", 50))
+        self.large_transaction_threshold = float(
+            os.getenv("LARGE_TRANSACTION_THRESHOLD", 100)
+        )
+
     def check_low_balances(self, accounts: List[Dict], students: List[Dict]) -> int:
         """
         Check for low balances and send alerts
-        
+
         Args:
             accounts: List of money account dictionaries
             students: List of student dictionaries
-        
+
         Returns:
             Number of alerts sent
         """
         alerts_sent = 0
-        
+
         # Create student lookup
-        student_lookup = {s['StudentID']: s for s in students}
-        
+        student_lookup = {s["StudentID"]: s for s in students}
+
         for account in accounts:
             try:
-                balance = float(account.get('Balance', 0))
-                student_id = account.get('StudentID')
-                
-                if balance < self.low_balance_threshold and account.get('Status') == 'Active':
+                balance = float(account.get("Balance", 0))
+                student_id = account.get("StudentID")
+
+                if (
+                    balance < self.low_balance_threshold
+                    and account.get("Status") == "Active"
+                ):
                     student = student_lookup.get(student_id)
                     if not student:
                         continue
-                    
-                    parent_email = student.get('ParentEmail', '').strip()
-                    if not parent_email or '@' not in parent_email:
+
+                    parent_email = student.get("ParentEmail", "").strip()
+                    if not parent_email or "@" not in parent_email:
                         continue
-                    
+
                     success = self.email_notifier.send_low_balance_alert(
-                        student_name=student.get('Name', 'Unknown'),
+                        student_name=student.get("Name", "Unknown"),
                         student_id=student_id,
                         balance=balance,
-                        to_email=parent_email
+                        to_email=parent_email,
                     )
-                    
+
                     if success:
                         alerts_sent += 1
-            
+
             except (ValueError, TypeError):
                 continue
-        
+
         return alerts_sent
-    
+
     def notify_large_transaction(self, transaction: Dict, students: List[Dict]) -> bool:
         """
         Send notification for large transaction
-        
+
         Args:
             transaction: Transaction dictionary
             students: List of student dictionaries
-        
+
         Returns:
             True if notification sent
         """
         try:
-            amount = abs(float(transaction.get('Amount', 0)))
-            
+            amount = abs(float(transaction.get("Amount", 0)))
+
             if amount < self.large_transaction_threshold:
                 return False
-            
-            student_id = transaction.get('StudentID')
-            student = next((s for s in students if s['StudentID'] == student_id), None)
-            
+
+            student_id = transaction.get("StudentID")
+            student = next((s for s in students if s["StudentID"] == student_id), None)
+
             if not student:
                 return False
-            
-            parent_email = student.get('ParentEmail', '').strip()
-            if not parent_email or '@' not in parent_email:
+
+            parent_email = student.get("ParentEmail", "").strip()
+            if not parent_email or "@" not in parent_email:
                 return False
-            
+
             return self.email_notifier.send_large_transaction_alert(
-                student_name=student.get('Name', 'Unknown'),
+                student_name=student.get("Name", "Unknown"),
                 student_id=student_id,
                 amount=amount,
-                transaction_type=transaction.get('Type', 'Unknown'),
-                to_email=parent_email
+                transaction_type=transaction.get("Type", "Unknown"),
+                to_email=parent_email,
             )
-        
+
         except (ValueError, TypeError):
+            return False
+
+
+class TwilioSMSNotifier:
+    """Send SMS notifications via Twilio for low-balance alerts."""
+
+    def __init__(self):
+        self.account_sid = os.getenv("TWILIO_ACCOUNT_SID", "")
+        self.auth_token = os.getenv("TWILIO_AUTH_TOKEN", "")
+        self.from_number = os.getenv("TWILIO_FROM_NUMBER", "")
+        self.enabled = bool(self.account_sid and self.auth_token and self.from_number)
+
+    def send_low_balance_sms(
+        self,
+        phone_number: str,
+        student_name: str,
+        new_balance: float,
+        threshold: float,
+    ) -> bool:
+        """Send a low-balance SMS alert.
+
+        Returns True on success, False on any failure or when disabled.
+        """
+        if not self.enabled:
+            return False
+        if not phone_number:
+            return False
+
+        message_body = (
+            f"Bangko ng Seton Alert: {student_name}'s canteen balance is low. "
+            f"Current balance: ₱{new_balance:.2f} (threshold: ₱{threshold:.2f}). "
+            "Please top up soon."
+        )
+
+        try:
+            from twilio.rest import Client  # lazy import — keeps twilio optional
+
+            client = Client(self.account_sid, self.auth_token)
+            client.messages.create(
+                body=message_body,
+                from_=self.from_number,
+                to=phone_number,
+            )
+            logger.info(
+                f"event=sms_sent phone={phone_number} student={student_name} balance={new_balance}"
+            )
+            return True
+        except Exception as e:
+            logger.warning(
+                f"event=sms_failed phone={phone_number} student={student_name} error={e}"
+            )
             return False
 
 
