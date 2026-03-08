@@ -17,8 +17,9 @@
 | 18 | Arduino UNO R4 WiFi Upgrade | Complete    | 2026-03-06 |
 | 19 | Parent Portal | PAR-01–06 | ✓ Complete (2026-03-07) |
 | 20 | Student App Redesign | Complete    | 2026-03-07 |
+| 21 | v1.1 Gap Closure + v1.2 Features | V11-NFCA-01, V11-PAR-01-06, PROD-HARDEN, V12-* | ✓ Complete |
 
-**Total phases:** 5
+**Total phases:** 6
 **Total plans (estimated):** 16–21
 
 ---
@@ -225,7 +226,9 @@ Recommended execution order: **16 → 17 → 18 → 19 → 20**
 
 **Depends on:** Phase 20.1
 
-**Plans:** 7/8 plans executed
+**Status:** ✓ Complete
+
+**Plans:** 8 plans
 
 Plans:
 - [x] 21-01-PLAN.md — v1.1 Bug Fixes: FCM token registration, HCE token restore, parent login 503, delete stray google-services.json [Wave 1]
@@ -233,9 +236,9 @@ Plans:
 - [x] 21-03-PLAN.md — Low Balance Email + Multi-Station + Arduino R3 auto-connect [Wave 1]
 - [x] 21-04-PLAN.md — SMS Notifications via Twilio [Wave 1]
 - [x] 21-05-PLAN.md — Bulk CSV Student Import endpoint [Wave 1]
-- [ ] 21-06-PLAN.md — NFCA-01 Verification artifact [Wave 2]
-- [ ] 21-07-PLAN.md — PAR-01–06 Verification artifact [Wave 2]
-- [ ] 21-08-PLAN.md — Planning file updates: REQUIREMENTS, ROADMAP, STATE, PROJECT, CHANGELOG [Wave 3]
+- [x] 21-06-PLAN.md — NFCA-01 Verification artifact [Wave 2]
+- [x] 21-07-PLAN.md — PAR-01–06 Verification artifact [Wave 2]
+- [x] 21-08-PLAN.md — Planning file updates: REQUIREMENTS, ROADMAP, STATE, PROJECT, CHANGELOG [Wave 3]
 
 ---
 

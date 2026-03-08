@@ -125,3 +125,30 @@ Requirements for this milestone. Six feature areas: NFC Android HCE, Dashboard o
 ---
 
 *Requirements defined: 2026-03-04*
+
+---
+
+## Phase 21: v1.1 Gap Closure + v1.2 Features
+
+### Gap Closure (v1.1)
+
+| ID | Description |
+|----|-------------|
+| V11-NFCA-01 | Fix NFCA-01 regressions: FCM token not sent to backend; HCE token not restored on app restart; stray google-services.json copies causing build failures |
+| V11-PAR-01-06 | Fix PAR-01–06 regression: parent login silently swallows Google Sheets connection errors instead of returning HTTP 503 |
+
+### Production Hardening
+
+| ID | Description |
+|----|-------------|
+| PROD-HARDEN | Remove 6 debug console.log calls from dashboard.html; flip FLASK_DEBUG default to false in admin_dashboard.py and web_app.py |
+
+### New Features (v1.2)
+
+| ID | Description |
+|----|-------------|
+| V12-EMAIL | Send low-balance email alert to parent when student balance drops below configurable threshold after NFC payment |
+| V12-STATION | Multi-canteen station support: STATION_ID env var injected as X-Station-ID header in ArduinoBridge; recorded in Transactions Log |
+| V12-ARDUINO-R3 | Arduino R3 auto-connect: STATION_SERIAL_PORT env var triggers automatic serial connection on ArduinoBridge startup |
+| V12-SMS | SMS notification via Twilio: send low-balance or payment SMS to parent/student phone number after NFC payment |
+| V12-CSV | Bulk CSV student import: POST /api/students/import endpoint in both admin_dashboard.py and web_app.py; handles Excel BOM; per-row error reporting without aborting batch |
