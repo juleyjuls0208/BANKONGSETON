@@ -4,6 +4,7 @@ Web-based interface for Finance and Admin users with role-based access control
 """
 
 from flask import Flask, render_template, jsonify, request, session, redirect, url_for
+from werkzeug.security import generate_password_hash, check_password_hash
 from flask_cors import CORS
 from flask_socketio import SocketIO, emit
 import serial
@@ -321,6 +322,20 @@ def admin_only(f):
     return decorated_function
 
 
+def parent_only(f):
+    """Decorator requiring parent role"""
+
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if "admin_logged_in" not in session:
+            return redirect(url_for("login"))
+        if session.get("role") != "parent":
+            return redirect(url_for("login"))
+        return f(*args, **kwargs)
+
+    return decorated_function
+
+
 def desktop_features(f):
     """Decorator for features available to both roles on desktop only (Arduino, card management)"""
 
@@ -341,6 +356,8 @@ def desktop_features(f):
 def index():
     """Redirect to dashboard or login"""
     if "admin_logged_in" in session:
+        if session.get("role") == "parent":
+            return redirect(url_for("parent_portal"))
         return redirect(url_for("dashboard"))
     return redirect(url_for("login"))
 
@@ -379,8 +396,34 @@ def login():
             session["admin_username"] = username
             session["role"] = "finance"
             return jsonify({"success": True, "role": "finance"})
-        else:
-            return jsonify({"success": False, "error": "Invalid credentials"}), 401
+
+        # Parent login: look up email in Users sheet
+        try:
+            users_sheet = get_worksheet_with_retry("Users")
+            users_records = users_sheet.get_all_records()
+            parent_user = next(
+                (
+                    u
+                    for u in users_records
+                    if u.get("ParentEmail", "").strip().lower()
+                    == username.strip().lower()
+                    and u.get("ParentPasswordHash", "")
+                ),
+                None,
+            )
+            if parent_user and check_password_hash(
+                parent_user["ParentPasswordHash"], password
+            ):
+                session["admin_logged_in"] = True
+                session["admin_username"] = parent_user.get("ParentEmail", "")
+                session["role"] = "parent"
+                session["parent_student_id"] = str(parent_user.get("StudentID", ""))
+                session["parent_student_name"] = parent_user.get("Name", "")
+                return jsonify({"success": True, "role": "parent"})
+        except Exception:
+            pass  # Fall through to 401 if sheets unavailable
+
+        return jsonify({"success": False, "error": "Invalid credentials"}), 401
 
     return render_template("login.html")
 
@@ -390,6 +433,122 @@ def logout():
     """Logout"""
     session.clear()
     return redirect(url_for("login"))
+
+
+@app.route("/parent")
+@parent_only
+def parent_portal():
+    """Parent portal page"""
+    return render_template(
+        "parent_dashboard.html",
+        student_id=session.get("parent_student_id"),
+        student_name=session.get("parent_student_name"),
+    )
+
+
+@app.route("/parent/logout", methods=["POST"])
+def parent_logout():
+    """Parent logout"""
+    session.clear()
+    return redirect(url_for("login"))
+
+
+@app.route("/api/parent/data", methods=["GET"])
+@parent_only
+def parent_data():
+    """Return balance + transactions for the session-linked student."""
+    try:
+        student_id = session.get("parent_student_id", "")
+        if not student_id:
+            return jsonify({"error": "No student linked to this account"}), 403
+
+        # Get balance from Money Accounts sheet
+        accounts_sheet = get_worksheet_with_retry("Money Accounts")
+        accounts = accounts_sheet.get_all_records()
+
+        # Also need student's MoneyCardNumber to look up balance
+        users_sheet = get_worksheet_with_retry("Users")
+        users = users_sheet.get_all_records()
+        student = next(
+            (
+                u
+                for u in users
+                if str(u.get("StudentID", "")).strip() == str(student_id).strip()
+            ),
+            None,
+        )
+        if not student:
+            return jsonify({"error": "Student not found"}), 404
+
+        money_card = student.get("MoneyCardNumber", "").strip()
+        balance_record = next(
+            (a for a in accounts if a.get("MoneyCardNumber", "").strip() == money_card),
+            None,
+        )
+        balance = float(balance_record.get("Balance", 0)) if balance_record else 0.0
+
+        # Get all transactions for this student (filter by MoneyCardNumber)
+        transactions_sheet = get_worksheet_with_retry("Transactions Log")
+        transactions = transactions_sheet.get_all_records()
+
+        student_txns = [
+            t
+            for t in transactions
+            if t.get("MoneyCardNumber", "").strip() == money_card
+        ]
+
+        # Sort newest first
+        student_txns.sort(key=lambda t: t.get("Timestamp", ""), reverse=True)
+
+        # Monthly spend (current calendar month, purchases only — negative amounts)
+        from datetime import datetime
+
+        now = get_philippines_time()
+        month_prefix = now.strftime("%Y-%m")
+        monthly_spend = 0.0
+        for t in student_txns:
+            ts = str(t.get("Timestamp", ""))
+            if ts.startswith(month_prefix):
+                try:
+                    amt = float(t.get("Amount", 0))
+                    if amt < 0:
+                        monthly_spend += abs(amt)
+                except (ValueError, TypeError):
+                    pass
+
+        # Slim down transaction list for parent view
+        txn_list = []
+        for t in student_txns:
+            txn_list.append(
+                {
+                    "date": t.get("Timestamp", ""),
+                    "description": t.get("TransactionType", ""),
+                    "amount": t.get("Amount", ""),
+                }
+            )
+
+        return jsonify(
+            {
+                "student_name": student.get("Name", ""),
+                "student_id": student_id,
+                "balance": balance,
+                "monthly_spend": monthly_spend,
+                "transactions": txn_list,
+            }
+        )
+
+    except (
+        gspread.exceptions.APIError,
+        gspread.exceptions.SpreadsheetNotFound,
+        gspread.exceptions.WorksheetNotFound,
+        ConnectionError,
+        TimeoutError,
+    ) as e:
+        logger.error(f"Sheets unavailable in parent_data: {e}")
+        return jsonify({"error": "Service unavailable, please try again"}), 503
+    except Exception as e:
+        logger.error(f"Unexpected error in parent_data: {e}", exc_info=True)
+        return jsonify({"error": "An unexpected error occurred"}), 500
 
 
 # ============= DASHBOARD ROUTES =============
@@ -2131,6 +2290,68 @@ def search_students_without_cards():
         return jsonify({"error": "An unexpected error occurred"}), 500
 
 
+@app.route("/api/students/<student_id>/set-parent", methods=["POST"])
+@admin_only
+def set_parent_credentials(student_id):
+    """Admin sets or clears parent email + password for a student."""
+    try:
+        data = request.get_json()
+        parent_email = data.get("parent_email", "").strip()
+        parent_password = data.get("parent_password", "").strip()
+
+        users_sheet = get_worksheet_with_retry("Users")
+        records = users_sheet.get_all_records()
+        headers = users_sheet.row_values(1)
+
+        row_index = next(
+            (
+                i + 2
+                for i, r in enumerate(records)
+                if str(r.get("StudentID", "")).strip() == str(student_id).strip()
+            ),
+            None,
+        )
+        if not row_index:
+            return jsonify({"error": "Student not found"}), 404
+
+        # Ensure ParentPasswordHash column exists
+        if "ParentPasswordHash" not in headers:
+            users_sheet.add_cols(1)
+            users_sheet.update_cell(1, len(headers) + 1, "ParentPasswordHash")
+            headers = users_sheet.row_values(1)
+
+        email_col = headers.index("ParentEmail") + 1
+        hash_col = headers.index("ParentPasswordHash") + 1
+
+        if parent_email:
+            password_hash = (
+                generate_password_hash(parent_password) if parent_password else ""
+            )
+            users_sheet.update_cell(row_index, email_col, parent_email)
+            users_sheet.update_cell(row_index, hash_col, password_hash)
+            logger.info("event=parent_credentials_set student_id=%s", student_id)
+            return jsonify({"success": True, "message": "Parent credentials updated"})
+        else:
+            # Clear parent account
+            users_sheet.update_cell(row_index, email_col, "")
+            users_sheet.update_cell(row_index, hash_col, "")
+            logger.info("event=parent_credentials_cleared student_id=%s", student_id)
+            return jsonify({"success": True, "message": "Parent account removed"})
+
+    except (
+        gspread.exceptions.APIError,
+        gspread.exceptions.SpreadsheetNotFound,
+        gspread.exceptions.WorksheetNotFound,
+        ConnectionError,
+        TimeoutError,
+    ) as e:
+        logger.error(f"Sheets unavailable in set_parent_credentials: {e}")
+        return jsonify({"error": "Service unavailable, please try again"}), 503
+    except Exception as e:
+        logger.error(f"Unexpected error in set_parent_credentials: {e}", exc_info=True)
+        return jsonify({"error": "An unexpected error occurred"}), 500
+
+
 @app.route("/api/students/with-cards", methods=["GET"])
 @admin_only
 def search_students_with_cards():
@@ -2615,6 +2836,61 @@ def get_students_with_lost_reports():
         return jsonify({"error": "An unexpected error occurred"}), 500
 
 
+@app.route("/api/students/import", methods=["POST"])
+@login_required
+def import_students_csv():
+    import csv, io
+
+    if "file" not in request.files:
+        return jsonify({"error": "No file provided"}), 400
+    file = request.files["file"]
+    if not file.filename.endswith(".csv"):
+        return jsonify({"error": "File must be a .csv"}), 400
+
+    stream = io.StringIO(file.read().decode("utf-8-sig"))
+    reader = csv.DictReader(stream)
+
+    REQUIRED = {"StudentID", "Name", "ParentEmail"}
+    imported, skipped, errors = 0, 0, []
+
+    users_sheet = get_worksheet_with_retry("Users")
+
+    for i, row in enumerate(reader, start=2):  # start=2: row 1 is header
+        missing = REQUIRED - set(k for k, v in row.items() if v and str(v).strip())
+        if missing:
+            errors.append(
+                {"row": i, "error": f"Missing required field(s): {', '.join(missing)}"}
+            )
+            skipped += 1
+            continue
+        try:
+            # Check for duplicate StudentID — skip if already exists
+            existing = [
+                r
+                for r in users_sheet.get_all_records()
+                if str(r.get("StudentID", "")) == str(row["StudentID"]).strip()
+            ]
+            if existing:
+                skipped += 1
+                continue
+            users_sheet.append_row(
+                [
+                    row.get("StudentID", "").strip(),
+                    row.get("Name", "").strip(),
+                    row.get("ParentEmail", "").strip(),
+                    row.get("MoneyCardNumber", "").strip(),
+                    row.get("PhoneNumber", "").strip(),
+                    row.get("IDCardUID", "").strip(),
+                ]
+            )
+            imported += 1
+        except Exception as e:
+            errors.append({"row": i, "error": str(e)})
+            skipped += 1
+
+    return jsonify({"imported": imported, "skipped": skipped, "errors": errors})
+
+
 # ============= NOTIFICATION SETTINGS =============
 
 
@@ -2720,7 +2996,7 @@ def handle_disconnect():
 if __name__ == "__main__":
     setup_logging()  # activate bangko StreamHandler before first log call
     port = int(os.getenv("FINANCE_PORT_WEB", 5003))
-    debug = os.getenv("FLASK_DEBUG", "true").lower() == "true"
+    debug = os.getenv("FLASK_DEBUG", "false").lower() == "true"
 
     admin_user = os.getenv("ADMIN_USERNAME", "").strip()
     admin_pass = os.getenv("ADMIN_PASSWORD", "").strip()

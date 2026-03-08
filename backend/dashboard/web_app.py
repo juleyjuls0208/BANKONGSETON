@@ -2513,7 +2513,7 @@ def handle_disconnect():
 if __name__ == "__main__":
     setup_logging()  # activate bangko StreamHandler before first log call
     port = int(os.getenv("FINANCE_PORT_WEB", 5003))
-    debug = os.getenv("FLASK_DEBUG", "true").lower() == "true"
+    debug = os.getenv("FLASK_DEBUG", "false").lower() == "true"
 
     admin_user = os.getenv("ADMIN_USERNAME", "").strip()
     admin_pass = os.getenv("ADMIN_PASSWORD", "").strip()
