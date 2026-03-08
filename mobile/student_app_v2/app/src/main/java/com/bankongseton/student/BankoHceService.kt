@@ -46,6 +46,14 @@ class BankoHceService : HostApduService() {
     }
 
     override fun processCommandApdu(commandApdu: ByteArray?, extras: Bundle?): ByteArray {
+        // Restore token from persistent storage if lost after process kill
+        if (currentToken == null) {
+            currentToken = NfcManager.getInstance(applicationContext).getVirtualToken()
+            if (currentToken != null) {
+                Log.d(TAG, "Restored virtual card token from secure storage")
+            }
+        }
+
         if (commandApdu == null || commandApdu.size < 4) {
             Log.e(TAG, "Invalid APDU command received")
             return SW_ERROR
