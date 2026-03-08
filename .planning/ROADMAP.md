@@ -217,6 +217,26 @@ Recommended execution order: **16 → 17 → 18 → 19 → 20**
 
 **29 / 29 requirements covered. 0 unmapped.**
 
+### Phase 21: v1.1 Gap Closure + v1.2 Features
+
+**Goal:** Close NFCA-01 and PAR-01–06 regressions from Phases 16/19, harden production config, and ship five v1.2 features: low-balance email, SMS notifications, multi-canteen station support, Arduino R3 auto-connect, and bulk CSV student import.
+
+**Requirements:** V11-NFCA-01, V11-PAR-01-06, PROD-HARDEN, V12-EMAIL, V12-STATION, V12-ARDUINO-R3, V12-SMS, V12-CSV
+
+**Depends on:** Phase 20.1
+
+**Plans:** 8 plans
+
+Plans:
+- [ ] 21-01-PLAN.md — v1.1 Bug Fixes: FCM token registration, HCE token restore, parent login 503, delete stray google-services.json [Wave 1]
+- [ ] 21-02-PLAN.md — Production Hardening: remove 6 debug console.log, flip FLASK_DEBUG to false [Wave 1]
+- [ ] 21-03-PLAN.md — Low Balance Email + Multi-Station + Arduino R3 auto-connect [Wave 1]
+- [ ] 21-04-PLAN.md — SMS Notifications via Twilio [Wave 1]
+- [ ] 21-05-PLAN.md — Bulk CSV Student Import endpoint [Wave 1]
+- [ ] 21-06-PLAN.md — NFCA-01 Verification artifact [Wave 2]
+- [ ] 21-07-PLAN.md — PAR-01–06 Verification artifact [Wave 2]
+- [ ] 21-08-PLAN.md — Planning file updates: REQUIREMENTS, ROADMAP, STATE, PROJECT, CHANGELOG [Wave 3]
+
 ---
 
 *Roadmap created: 2026-03-04*
