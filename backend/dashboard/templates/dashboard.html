@@ -445,11 +445,9 @@ background-image: url('https://i.pinimg.com/736x/08/1a/6e/081a6e345f9c8cb5c2be4d
 
     async function loadStats() {
         try {
-            console.log('[DEBUG] Loading dashboard stats...');
             const response = await fetch('/api/stats');
             const data = await response.json();
 
-            console.log('[DEBUG] Stats data:', data);
             document.getElementById('totalStudents').textContent = data.total_students;
             document.getElementById('todayTransactions').textContent = data.today_transactions;
         } catch (error) {
@@ -783,11 +781,8 @@ background-image: url('https://i.pinimg.com/736x/08/1a/6e/081a6e345f9c8cb5c2be4d
 
     async function loadSerialPorts() {
         try {
-            console.log('[DEBUG] Loading serial ports...');
             const response = await fetch('/api/serial/ports');
             const data = await response.json();
-
-            console.log('[DEBUG] Serial ports response:', data);
 
             const select = document.getElementById('serialPort');
             if (!select) {
@@ -804,9 +799,7 @@ background-image: url('https://i.pinimg.com/736x/08/1a/6e/081a6e345f9c8cb5c2be4d
                     option.textContent = `${port.port} - ${port.description}`;
                     select.appendChild(option);
                 });
-                console.log(`[DEBUG] Loaded ${data.ports.length} ports`);
             } else {
-                console.log('[DEBUG] No ports available');
                 addLog('info', 'No Arduino ports detected. Make sure Arduino is connected.');
             }
         } catch (error) {
