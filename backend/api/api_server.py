@@ -30,8 +30,10 @@ except ImportError:
 
 from utils import normalize_card_uid
 from nfc_payments import NFCService, ensure_virtual_cards_sheet
+from notifications import TwilioSMSNotifier
 
 nfc_service = NFCService()
+sms_notifier = TwilioSMSNotifier()
 
 load_dotenv()
 
@@ -580,6 +582,226 @@ def get_transactions():
         return jsonify({"error": "An unexpected error occurred"}), 500
 
 
+def get_or_create_budget_worksheet(sh):
+    """Get or create the Student Budget worksheet."""
+    try:
+        return sh.worksheet("Student Budget")
+    except gspread.exceptions.WorksheetNotFound:
+        ws = sh.add_worksheet(title="Student Budget", rows=500, cols=4)
+        ws.append_row(["StudentID", "MoneyCardNumber", "Month", "MonthlyLimit"])
+        return ws
+
+
+@app.route("/api/student/budget", methods=["GET"])
+def get_budget():
+    """
+    Get student's monthly budget limit
+    GET /api/student/budget
+    Header: Authorization: Bearer <token>
+    """
+    try:
+        token = request.headers.get("Authorization", "").replace("Bearer ", "")
+
+        if token not in active_sessions:
+            return jsonify({"error": "Invalid or expired token"}), 401
+
+        session = active_sessions[token]
+
+        # Get student's money card
+        users_sheet = get_worksheet_with_retry("Users")
+        records = users_sheet.get_all_records()
+
+        money_card = None
+        for record in records:
+            if record["StudentID"] == session["student_id"]:
+                money_card = record.get("MoneyCardNumber")
+                break
+
+        if not money_card:
+            return jsonify({"error": "No money card registered"}), 404
+
+        # Look up budget in Student Budget sheet
+        budget_sheet = get_or_create_budget_worksheet(db)
+        budget_records = budget_sheet.get_all_records()
+
+        monthly_limit = None
+        for row in budget_records:
+            if str(row.get("StudentID", "")) == str(session["student_id"]):
+                val = row.get("MonthlyLimit")
+                if val not in (None, ""):
+                    try:
+                        monthly_limit = float(val)
+                    except (ValueError, TypeError):
+                        monthly_limit = None
+                break
+
+        return jsonify({"monthly_limit": monthly_limit, "currency": "PHP"})
+
+    except (
+        gspread.exceptions.APIError,
+        gspread.exceptions.SpreadsheetNotFound,
+        gspread.exceptions.WorksheetNotFound,
+        ConnectionError,
+        TimeoutError,
+    ) as e:
+        logger.error(f"Google Sheets unavailable in get_budget: {e}")
+        return jsonify({"error": "Service unavailable, please try again"}), 503
+    except Exception as e:
+        logger.error(f"Unexpected error in get_budget: {e}", exc_info=True)
+        return jsonify({"error": "An unexpected error occurred"}), 500
+
+
+@app.route("/api/student/budget", methods=["POST"])
+def set_budget():
+    """
+    Set student's monthly budget limit
+    POST /api/student/budget
+    Header: Authorization: Bearer <token>
+    Body: {"monthly_limit": 1000.0}
+    """
+    try:
+        token = request.headers.get("Authorization", "").replace("Bearer ", "")
+
+        if token not in active_sessions:
+            return jsonify({"error": "Invalid or expired token"}), 401
+
+        session = active_sessions[token]
+        data = request.get_json()
+        if not data or "monthly_limit" not in data:
+            return jsonify({"error": "monthly_limit is required"}), 400
+
+        try:
+            monthly_limit = float(data["monthly_limit"])
+            if monthly_limit < 0:
+                return jsonify({"error": "monthly_limit must be non-negative"}), 400
+        except (ValueError, TypeError):
+            return jsonify({"error": "monthly_limit must be a number"}), 400
+
+        # Get student's money card
+        users_sheet = get_worksheet_with_retry("Users")
+        records = users_sheet.get_all_records()
+
+        money_card = None
+        for record in records:
+            if record["StudentID"] == session["student_id"]:
+                money_card = record.get("MoneyCardNumber")
+                break
+
+        if not money_card:
+            return jsonify({"error": "No money card registered"}), 404
+
+        # Upsert into Student Budget sheet
+        budget_sheet = get_or_create_budget_worksheet(db)
+        budget_records = budget_sheet.get_all_records()
+
+        existing_row = None
+        for i, row in enumerate(budget_records, start=2):  # row 1 is header
+            if str(row.get("StudentID", "")) == str(session["student_id"]):
+                existing_row = i
+                break
+
+        if existing_row:
+            # Update MonthlyLimit column (col 4)
+            budget_sheet.update_cell(existing_row, 4, monthly_limit)
+        else:
+            from datetime import datetime
+
+            month = datetime.utcnow().strftime("%Y-%m")
+            budget_sheet.append_row(
+                [session["student_id"], money_card, month, monthly_limit]
+            )
+
+        return jsonify({"success": True, "monthly_limit": monthly_limit})
+
+    except (
+        gspread.exceptions.APIError,
+        gspread.exceptions.SpreadsheetNotFound,
+        gspread.exceptions.WorksheetNotFound,
+        ConnectionError,
+        TimeoutError,
+    ) as e:
+        logger.error(f"Google Sheets unavailable in set_budget: {e}")
+        return jsonify({"error": "Service unavailable, please try again"}), 503
+    except Exception as e:
+        logger.error(f"Unexpected error in set_budget: {e}", exc_info=True)
+        return jsonify({"error": "An unexpected error occurred"}), 500
+
+
+@app.route("/api/student/lost-card", methods=["POST"])
+def report_lost_card():
+    """
+    Report a student's money card as lost (sets Status to 'lost').
+    POST /api/student/lost-card
+    Header: Authorization: Bearer <token>
+    Returns: { success: true, message: "Card reported as lost" }
+    """
+    try:
+        token = request.headers.get("Authorization", "").replace("Bearer ", "")
+        if token not in active_sessions:
+            return jsonify({"error": "Invalid or expired token"}), 401
+
+        session = active_sessions[token]
+        student_id = session["student_id"]
+
+        db = get_sheets_client()
+
+        # Get MoneyCardNumber from Users sheet
+        users_sheet = get_worksheet_with_retry("Users")
+        users_records = users_sheet.get_all_records()
+        money_card_number = None
+        for record in users_records:
+            if str(record.get("StudentID", "")).strip() == str(student_id).strip():
+                money_card_number = str(record.get("MoneyCardNumber", "")).strip()
+                break
+
+        if not money_card_number:
+            return jsonify({"error": "No money card linked to your account"}), 404
+
+        # Find card row in Money Accounts sheet and update Status
+        money_accounts_sheet = get_worksheet_with_retry("Money Accounts")
+        ma_records = money_accounts_sheet.get_all_records()
+        row_index = None
+        status_col = None
+
+        headers = money_accounts_sheet.row_values(1)
+        try:
+            status_col = headers.index("Status") + 1  # 1-based
+        except ValueError:
+            return jsonify({"error": "Status column not found"}), 500
+
+        for i, record in enumerate(ma_records, start=2):  # data starts at row 2
+            if str(record.get("MoneyCardNumber", "")).strip() == money_card_number:
+                row_index = i
+                break
+
+        if row_index is None:
+            return jsonify({"error": "Money card not found"}), 404
+
+        current_status = (
+            str(ma_records[row_index - 2].get("Status", "")).strip().lower()
+        )
+        if current_status == "lost":
+            return jsonify(
+                {"success": True, "message": "Card already reported as lost"}
+            )
+
+        money_accounts_sheet.update_cell(row_index, status_col, "lost")
+        return jsonify({"success": True, "message": "Card reported as lost"})
+
+    except (
+        gspread.exceptions.APIError,
+        gspread.exceptions.SpreadsheetNotFound,
+        gspread.exceptions.WorksheetNotFound,
+        ConnectionError,
+        TimeoutError,
+    ) as e:
+        logger.error(f"Google Sheets unavailable in report_lost_card: {e}")
+        return jsonify({"error": "Service unavailable, please try again"}), 503
+    except Exception as e:
+        logger.error(f"Unexpected error in report_lost_card: {e}", exc_info=True)
+        return jsonify({"error": "An unexpected error occurred"}), 500
+
+
 @app.route("/api/auth/logout", methods=["POST"])
 def logout():
     """
@@ -842,8 +1064,10 @@ def nfc_pay():
         transaction_id = f"TXN-{timestamp.strftime('%Y%m%d%H%M%S')}"
         trans_sheet = get_worksheet_with_retry("Transactions Log")
 
-        # Look up StudentID from Users sheet via MoneyCardNumber
+        # Look up StudentID, student name, and phone from Users sheet via MoneyCardNumber
         nfc_student_id = ""
+        student_name = ""
+        phone_number = ""
         try:
             users_sheet_nfc = get_worksheet_with_retry("Users")
             for u in users_sheet_nfc.get_all_records():
@@ -851,6 +1075,8 @@ def nfc_pay():
                     str(u.get("MoneyCardNumber", ""))
                 ) == normalize_card_uid(money_card_number):
                     nfc_student_id = str(u.get("StudentID", ""))
+                    student_name = str(u.get("Name", "")).strip()
+                    phone_number = str(u.get("PhoneNumber", "")).strip()
                     break
         except Exception:
             pass  # Non-fatal: student_id will be blank
@@ -889,6 +1115,19 @@ def nfc_pay():
                         break
         except Exception as notif_err:
             logger.warning("event=nfc_purchase_notify_failed error=%s", notif_err)
+
+        # Low-balance SMS notification — non-blocking
+        low_balance_threshold = float(os.getenv("LOW_BALANCE_THRESHOLD", 50))
+        if new_balance < low_balance_threshold and phone_number:
+            try:
+                sms_notifier.send_low_balance_sms(
+                    phone_number=phone_number,
+                    student_name=student_name,
+                    new_balance=new_balance,
+                    threshold=low_balance_threshold,
+                )
+            except Exception as sms_err:
+                logger.warning(f"Low balance SMS failed: {sms_err}")
 
         return jsonify(
             {"success": True, "new_balance": new_balance, "timestamp": timestamp_str}
