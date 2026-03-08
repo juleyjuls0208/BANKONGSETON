@@ -13,7 +13,7 @@ Requirements for this milestone. Six feature areas: NFC Android HCE, Dashboard o
 
 ### NFC Android HCE
 
-- [ ] **NFCA-01**: Android app registers phone as NFC virtual card via HCE (`BankoHceService`)
+- [x] **NFCA-01**: Android app registers phone as NFC virtual card via HCE (`BankoHceService`)
 - [x] **NFCA-02**: Student taps phone at cashier terminal to pay (HCE emulates card UID sent to backend)
 - [x] **NFCA-03**: NFC payment receipt navigation works in Android (tapping `NFC Purchase` transaction opens `ReceiptActivity` with itemized view)
 - [x] **NFCA-04**: Card registration flow in Android app (link phone NFC to student account)
@@ -87,7 +87,7 @@ Requirements for this milestone. Six feature areas: NFC Android HCE, Dashboard o
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| NFCA-01 | Phase 16 - NFC Android HCE | Pending |
+| NFCA-01 | Phase 16 - NFC Android HCE | Complete |
 | NFCA-02 | Phase 16 - NFC Android HCE | Complete |
 | NFCA-03 | Phase 16 - NFC Android HCE | Complete |
 | NFCA-04 | Phase 16 - NFC Android HCE | Complete |

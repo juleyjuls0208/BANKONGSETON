@@ -225,7 +225,7 @@ Recommended execution order: **16 → 17 → 18 → 19 → 20**
 
 **Depends on:** Phase 20.1
 
-**Plans:** 5/8 plans executed
+**Plans:** 7/8 plans executed
 
 Plans:
 - [x] 21-01-PLAN.md — v1.1 Bug Fixes: FCM token registration, HCE token restore, parent login 503, delete stray google-services.json [Wave 1]
