@@ -284,7 +284,7 @@ def invalidate_cache(sheet_name=None):
         _sheets_cache.clear()
 
 
-UID_PATTERN = re.compile(r"^[0-9A-Fa-f]{8}$")
+UID_PATTERN = re.compile(r"^[0-9A-Fa-f]{8}$|^[0-9A-Fa-f]{14}$")
 
 
 def validate_card_uid(uid):
@@ -1842,8 +1842,8 @@ def read_card_thread(card_type):
             if ard.in_waiting > 0:
                 line = ard.readline().decode("utf-8", errors="ignore").strip()
 
-                if line.startswith("<CARD|") and line.endswith(">"):
-                    uid = line[6:-1]
+                if line.startswith("CARD|"):
+                    uid = line[5:]
 
                     # Validate card UID format (BUG-02, SEC-04)
                     if not uid:
@@ -1880,7 +1880,7 @@ def read_card_thread(card_type):
                         )
                         continue
 
-                    if len(uid) == 8:
+                    if len(uid) in (8, 14):
                         card_reader_state.set("card_reading_active", False)
 
                         if card_type == "id_card":
