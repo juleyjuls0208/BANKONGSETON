@@ -26,6 +26,9 @@ _API_BASE_URL = os.environ.get("API_BASE_URL", "http://127.0.0.1:5001")
 if not _CASHIER_JWT:
     logging.warning("CASHIER_JWT env var not set — NFC payment POSTs will lack auth")
 
+STATION_ID = os.getenv("STATION_ID", "main")
+STATION_SERIAL_PORT = os.getenv("STATION_SERIAL_PORT", "")
+
 
 class ArduinoBridge:
     def __init__(self, arduino_serial, socketio):
@@ -34,6 +37,15 @@ class ArduinoBridge:
         self.reading_active = False
         self.current_callback = None
         self.timeout_seconds = 5
+        if self.arduino is None and STATION_SERIAL_PORT:
+            try:
+                import serial as _serial
+
+                self.arduino = _serial.Serial(STATION_SERIAL_PORT, 9600, timeout=2)
+                time.sleep(2)
+                logger.info(f"Auto-connected to {STATION_SERIAL_PORT}")
+            except Exception as e:
+                logger.warning(f"Auto-connect failed on {STATION_SERIAL_PORT}: {e}")
 
     # ── NFC serial line parsing ──────────────────────────────────────
 
@@ -63,6 +75,7 @@ class ArduinoBridge:
         api_base = os.environ.get("API_BASE_URL", _API_BASE_URL)
         url = f"{api_base}/api/nfc/pay"
         headers = {"Authorization": f"Bearer {jwt}", "Content-Type": "application/json"}
+        headers["X-Station-ID"] = STATION_ID
         try:
             resp = requests.post(
                 url, json={"token": token}, headers=headers, timeout=10
