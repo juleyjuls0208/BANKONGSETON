@@ -92,15 +92,10 @@ Students can pay for canteen food instantly by tapping their RFID card, with the
 | Transaction type 'NFC Purchase' distinct from 'Purchase' | Enables Android filtering by payment type | ✓ Good — TransactionsAdapter can separate NFC vs cashier |
 
 ---
-*Last updated: 2026-03-04 after v1.1 Platform Expansion milestone start*
+*Last updated: 2026-03-08 after v1.2 release (Phase 21 complete)*
 
-## Current Milestone: v1.1 Platform Expansion
+## Current Milestone: v1.2 — v1.1 Gap Closure + v1.2 Features
 
-**Goal:** Expand the platform with Android NFC payments, a professional dashboard, cable-free Arduino WiFi terminals, and a parent portal.
+**Goal:** Close NFCA-01 and PAR-01–06 regressions, harden production config, and ship five v1.2 features: low-balance email, SMS notifications, multi-canteen station support, Arduino R3 auto-connect, and bulk CSV student import.
 
-**Target features:**
-- NFC Android HCE: BankoHceService + card registration in student app + NFC receipt display
-- Admin dashboard overhaul: modern UI (Tailwind/Bootstrap 5), charts, analytics, CSV export, balance top-up
-- Arduino UNO R4 WiFi: firmware update + Flask WiFi endpoint (no more serial USB at cashier)
-- Parent portal: view-only balance + spending history, linked at card registration (dual email)
-- Student app redesign: modern UI/UX, dark mode, budget tracker, in-app lost card report
+**Status: ✓ Complete (2026-03-08)**

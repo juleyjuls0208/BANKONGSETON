@@ -1,14 +1,14 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.1
-milestone_name: Requirements Coverage
-status: in_progress
-stopped_at: Completed 21-07-PLAN.md (PAR-01-06 Verification artifact)
-last_updated: "2026-03-08T00:49:52Z"
-last_activity: 2026-03-08 — Phase 21 Plan 07 complete; PAR verification artifact documents all 6 regression findings (5 PASS, 1 GAP→FIXED)
+milestone: v1.2
+milestone_name: v1.1 Gap Closure + v1.2 Features
+status: complete
+stopped_at: Completed 21-08-PLAN.md (Planning file updates — Phase 21 complete)
+last_updated: "2026-03-08T01:00:00Z"
+last_activity: 2026-03-08 — Phase 21 Plan 08 complete; all planning artifacts updated, version bumped to v1.2
 progress:
   total_phases: 7
-  completed_phases: 6
+  completed_phases: 7
   total_plans: 31
   completed_plans: 31
 ---
@@ -17,19 +17,19 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-04)
+See: .planning/PROJECT.md (updated 2026-03-08)
 
 **Core value:** Students can pay for canteen food instantly by tapping their RFID card, with their balance always visible in the app
-**Current focus:** v1.1 Platform Expansion — defining requirements
+**Current focus:** v1.2 released — Phase 21 complete; next phase TBD
 
 ## Current Position
 
-Phase: Phase 21 — IN PROGRESS (7/8 plans complete)
-Plan: 21-07 done; next: 21-08-PLAN.md
-Status: in_progress
-Last activity: 2026-03-08 — Phase 21 Plan 07 complete; PAR verification artifact documents all 6 regression findings (5 PASS, 1 GAP→FIXED)
+Phase: Phase 21 — COMPLETE (8/8 plans complete)
+Plan: 21-08 done; Phase 21 fully complete
+Status: complete
+Last activity: 2026-03-08 — Phase 21 Plan 08 complete; all planning artifacts updated, version bumped to v1.2
 
-Progress: [##########] v1.1 ALL 6 PHASES COMPLETE ✓ (16 ✓, 17 ✓, 18 ✓, 19 ✓, 20 ✓, 20.1 ✓) | v1.2 Phase 21 in context
+Progress: [##########] v1.1 ALL 6 PHASES COMPLETE ✓ (16 ✓, 17 ✓, 18 ✓, 19 ✓, 20 ✓, 20.1 ✓) | Phase 21 (v1.2) ✓ COMPLETE
 
 ## Performance Metrics
 
@@ -253,6 +253,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-08T00:50:41.152Z
-Stopped at: Completed 21-06-PLAN.md (NFCA-01 Verification artifact)
+Last session: 2026-03-08T01:00:00Z
+Stopped at: Completed 21-08-PLAN.md (Phase 21 fully complete — v1.2 released)
 Resume file: None
