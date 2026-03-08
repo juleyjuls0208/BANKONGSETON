@@ -1,15 +1,15 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.2
-milestone_name: v1.2 Feature Implementation
+milestone: v1.1
+milestone_name: Requirements Coverage
 status: in_progress
-stopped_at: Phase 21 context gathered — ready for planning
-last_updated: "2026-03-08"
-last_activity: 2026-03-08 — Phase 21 CONTEXT.md written and committed; ready for /gsd:plan-phase 21
+stopped_at: Completed 21-02-PLAN.md
+last_updated: "2026-03-08T00:42:35.574Z"
+last_activity: 2026-03-08 — Phase 21 CONTEXT.md committed; ready for planning
 progress:
-  total_phases: 6
+  total_phases: 7
   completed_phases: 6
-  total_plans: 24
+  total_plans: 31
   completed_plans: 24
 ---
 
@@ -92,6 +92,7 @@ Progress: [##########] v1.1 ALL 6 PHASES COMPLETE ✓ (16 ✓, 17 ✓, 18 ✓, 1
 | Phase 18-arduino-uno-r4-wifi-upgrade P02 | 2min | 2 tasks | 3 files |
 | Phase 18-arduino-uno-r4-wifi-upgrade P03 | <1min | 2 tasks | 0 files |
 | Phase 20.1 P01 | 20min | 3 tasks | 2 files |
+| Phase 21 P02 | 15 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -215,6 +216,7 @@ Recent decisions affecting current work:
 - [Phase 20.1]: R4 does not get APDU logic — UID fallback via PN532 is sufficient for WiFi-post role
 - [Phase 20.1]: APDU response validated as responseLength==50 AND response[48]==0x90 AND response[49]==0x00
 - [Phase 20.1]: R3 idle LCD changed to Tap Phone... to cue students for HCE tap
+- [Phase 21]: FLASK_DEBUG now defaults to false; dev override via env var
 
 ### Roadmap Evolution
 
@@ -242,6 +244,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-08T00:00:00.000Z
-Stopped at: Phase 21 CONTEXT.md committed — ready for /gsd:plan-phase 21
-Resume file: .planning/phases/21-21/21-CONTEXT.md
+Last session: 2026-03-08T00:42:31.049Z
+Stopped at: Completed 21-02-PLAN.md
+Resume file: None
