@@ -240,6 +240,26 @@ Plans:
 - [x] 21-07-PLAN.md — PAR-01–06 Verification artifact [Wave 2]
 - [x] 21-08-PLAN.md — Planning file updates: REQUIREMENTS, ROADMAP, STATE, PROJECT, CHANGELOG [Wave 3]
 
+### Phase 22: 22
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 21
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 22 to break down)
+
+### Phase 23: iphone app version
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 22
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 23 to break down)
+
 ---
 
 *Roadmap created: 2026-03-04*

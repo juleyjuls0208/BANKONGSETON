@@ -235,6 +235,8 @@ Recent decisions affecting current work:
 - Phase 07.1 inserted after Phase 7: Web-Deployable Dashboard (URGENT) — make admin dashboard hostable as a public website; hardware-dependent features (COM port, NFC, physical cashier terminal) may be conditionally disabled or stubbed for web mode
 - Phase 20.1 inserted after Phase 20: Arduino PN532 NFC backend integration, student app payment flow, and firmware hardening (URGENT)
 - Phase 21 added: v1.1 Gap Closure + v1.2 Feature Implementation (discuss-phase complete 2026-03-08)
+- Phase 22 added: 22
+- Phase 23 added: iphone app version
 
 ### Pending Todos
 
