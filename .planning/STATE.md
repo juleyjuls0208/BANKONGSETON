@@ -254,9 +254,10 @@ None yet.
 | 1 | notification when user loads money or purchases | 2026-03-01 | 3efd04d | [1-notification-when-user-loads-money-or-pu](./quick/1-notification-when-user-loads-money-or-pu/) |
 | 2 | Arduino UNO R3 PN532 NFC reader sketch (SPI) | 2026-03-07 | dac7eea | [2-arduino-uno-r3-pn532-nfc-code-with-spi-p](./quick/2-arduino-uno-r3-pn532-nfc-code-with-spi-p/) |
 | 3 | Fix Arduino serial format mismatch (CARD\| vs \<CARD\|\>) | 2026-03-08 | ba0af74 | [3-arduino-doesnt-connect-properly-to-the-a](./quick/3-arduino-doesnt-connect-properly-to-the-a/) |
+| 4 | Show connected COM port name in cashier header after connection | 2026-03-08 | 68cca03 | [4-status-log-doesnt-show-com-port-connecte](./quick/4-status-log-doesnt-show-com-port-connecte/) |
 
 ## Session Continuity
 
-Last session: 2026-03-08T05:09:11Z
-Stopped at: Completed quick task 3 — Arduino serial format mismatch fix (CARD| format, 4-byte + 7-byte UID support)
+Last session: 2026-03-08T01:02:45Z
+Stopped at: Completed quick task 4 — Show connected COM port name in cashier header (portLabel span + updateArduinoStatus port param)
 Resume file: None
