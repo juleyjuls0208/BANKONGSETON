@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Requirements Coverage
 status: in_progress
-stopped_at: Completed 21-04-PLAN.md (TwilioSMSNotifier + nfc/pay wire-in)
-last_updated: "2026-03-08T00:43:11.666Z"
-last_activity: 2026-03-08 — Phase 21 CONTEXT.md committed; ready for planning
+stopped_at: Completed 21-03-PLAN.md (Low-Balance Email + Station Tracking + Arduino Auto-Connect)
+last_updated: "2026-03-08T01:10:00.000Z"
+last_activity: 2026-03-08 — Phase 21 Plan 03 complete; low-balance email, station ID in transactions, Arduino serial auto-connect
 progress:
   total_phases: 7
   completed_phases: 6
   total_plans: 31
-  completed_plans: 25
+  completed_plans: 28
 ---
 
 # Project State
@@ -220,6 +220,8 @@ Recent decisions affecting current work:
 - [Phase 21]: FLASK_DEBUG now defaults to false; dev override via env var
 - [Phase 21]: Twilio SDK lazy-imported inside send_low_balance_sms() to keep it optional — server boots without twilio package
 - [Phase 21]: student_name + phone_number captured in same Users sheet loop as nfc_student_id — no extra Sheets API call
+- [Phase 21]: HCE token restored via NfcManager.getInstance().getVirtualToken() — SecureStorage holds auth token only, NFC token lives in NfcManager's own EncryptedSharedPreferences
+- [Phase 21]: Misplaced google-services.json was untracked (never committed) — deleted from disk only, no git rm needed
 
 ### Roadmap Evolution
 
@@ -247,6 +249,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-08T00:43:11.663Z
-Stopped at: Completed 21-04-PLAN.md (TwilioSMSNotifier + nfc/pay wire-in)
+Last session: 2026-03-08T00:46:00.533Z
+Stopped at: Completed 21-01-PLAN.md
 Resume file: None
