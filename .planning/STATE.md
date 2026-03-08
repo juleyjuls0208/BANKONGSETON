@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: v1.1 Gap Closure + v1.2 Features
 status: complete
-stopped_at: Completed 21-08-PLAN.md (Planning file updates — Phase 21 complete)
-last_updated: "2026-03-08T01:00:00Z"
+stopped_at: Completed 21-08-PLAN.md — Phase 21 fully complete, v1.2 released
+last_updated: "2026-03-08T00:56:47.920Z"
 last_activity: 2026-03-08 — Phase 21 Plan 08 complete; all planning artifacts updated, version bumped to v1.2
 progress:
   total_phases: 7
@@ -97,6 +97,7 @@ Progress: [##########] v1.1 ALL 6 PHASES COMPLETE ✓ (16 ✓, 17 ✓, 18 ✓, 1
 | Phase 21 P05 | 10min | 2 tasks | 1 file |
 | Phase 21 P06 | 525661min | 1 tasks | 1 files |
 | Phase 21 P07 | 15min | 1 task | 1 file |
+| Phase 21 P08 | 10min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -226,6 +227,8 @@ Recent decisions affecting current work:
 - [Phase 21]: HCE token restored via NfcManager.getInstance().getVirtualToken() — SecureStorage holds auth token only, NFC token lives in NfcManager's own EncryptedSharedPreferences
 - [Phase 21]: Misplaced google-services.json was untracked (never committed) — deleted from disk only, no git rm needed
 - [Phase 21]: Gap analysis split into 3 PASS + 3 GAP→FIXED to preserve audit history and make Phase 21 contribution traceable
+- [Phase 21]: CHANGELOG.md created fresh at project root (did not exist) with v1.2, v1.1, v1.0 sections
+- [Phase 21]: Bookkeeping plan pattern established: end each phase by syncing REQUIREMENTS, ROADMAP, STATE, PROJECT, CHANGELOG atomically
 
 ### Roadmap Evolution
 
@@ -253,6 +256,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-08T01:00:00Z
-Stopped at: Completed 21-08-PLAN.md (Phase 21 fully complete — v1.2 released)
+Last session: 2026-03-08T00:56:47.918Z
+Stopped at: Completed 21-08-PLAN.md — Phase 21 fully complete, v1.2 released
 Resume file: None

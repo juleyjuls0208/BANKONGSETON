@@ -17,7 +17,7 @@
 | 18 | Arduino UNO R4 WiFi Upgrade | Complete    | 2026-03-06 |
 | 19 | Parent Portal | PAR-01–06 | ✓ Complete (2026-03-07) |
 | 20 | Student App Redesign | Complete    | 2026-03-07 |
-| 21 | v1.1 Gap Closure + v1.2 Features | V11-NFCA-01, V11-PAR-01-06, PROD-HARDEN, V12-* | ✓ Complete |
+| 21 | 8/8 | Complete   | 2026-03-08 |
 
 **Total phases:** 6
 **Total plans (estimated):** 16–21
@@ -228,7 +228,7 @@ Recommended execution order: **16 → 17 → 18 → 19 → 20**
 
 **Status:** ✓ Complete
 
-**Plans:** 8 plans
+**Plans:** 8/8 plans complete
 
 Plans:
 - [x] 21-01-PLAN.md — v1.1 Bug Fixes: FCM token registration, HCE token restore, parent login 503, delete stray google-services.json [Wave 1]
