@@ -2351,6 +2351,61 @@ def get_students_with_lost_reports():
         return jsonify({"error": "An unexpected error occurred"}), 500
 
 
+@app.route("/api/students/import", methods=["POST"])
+@login_required
+def import_students_csv():
+    import csv, io
+
+    if "file" not in request.files:
+        return jsonify({"error": "No file provided"}), 400
+    file = request.files["file"]
+    if not file.filename.endswith(".csv"):
+        return jsonify({"error": "File must be a .csv"}), 400
+
+    stream = io.StringIO(file.read().decode("utf-8-sig"))
+    reader = csv.DictReader(stream)
+
+    REQUIRED = {"StudentID", "Name", "ParentEmail"}
+    imported, skipped, errors = 0, 0, []
+
+    users_sheet = get_worksheet_with_retry("Users")
+
+    for i, row in enumerate(reader, start=2):  # start=2: row 1 is header
+        missing = REQUIRED - set(k for k, v in row.items() if v and str(v).strip())
+        if missing:
+            errors.append(
+                {"row": i, "error": f"Missing required field(s): {', '.join(missing)}"}
+            )
+            skipped += 1
+            continue
+        try:
+            # Check for duplicate StudentID — skip if already exists
+            existing = [
+                r
+                for r in users_sheet.get_all_records()
+                if str(r.get("StudentID", "")) == str(row["StudentID"]).strip()
+            ]
+            if existing:
+                skipped += 1
+                continue
+            users_sheet.append_row(
+                [
+                    row.get("StudentID", "").strip(),
+                    row.get("Name", "").strip(),
+                    row.get("ParentEmail", "").strip(),
+                    row.get("MoneyCardNumber", "").strip(),
+                    row.get("PhoneNumber", "").strip(),
+                    row.get("IDCardUID", "").strip(),
+                ]
+            )
+            imported += 1
+        except Exception as e:
+            errors.append({"row": i, "error": str(e)})
+            skipped += 1
+
+    return jsonify({"imported": imported, "skipped": skipped, "errors": errors})
+
+
 # ============= NOTIFICATION SETTINGS =============
 
 
