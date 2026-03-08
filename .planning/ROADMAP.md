@@ -17,7 +17,7 @@
 | 18 | Arduino UNO R4 WiFi Upgrade | Complete    | 2026-03-06 |
 | 19 | Parent Portal | PAR-01–06 | ✓ Complete (2026-03-07) |
 | 20 | Student App Redesign | Complete    | 2026-03-07 |
-| 21 | 8/8 | Complete   | 2026-03-08 |
+| 21 | 8/8 | Complete    | 2026-03-08 |
 
 **Total phases:** 6
 **Total plans (estimated):** 16–21

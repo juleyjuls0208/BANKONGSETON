@@ -1,10 +1,10 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.2
-milestone_name: v1.1 Gap Closure + v1.2 Features
-status: complete
+milestone: v1.1
+milestone_name: Requirements Coverage
+status: completed
 stopped_at: Completed 21-08-PLAN.md — Phase 21 fully complete, v1.2 released
-last_updated: "2026-03-08T00:56:47.920Z"
+last_updated: "2026-03-08T01:02:45.149Z"
 last_activity: 2026-03-08 — Phase 21 Plan 08 complete; all planning artifacts updated, version bumped to v1.2
 progress:
   total_phases: 7
