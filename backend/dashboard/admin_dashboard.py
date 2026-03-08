@@ -420,8 +420,12 @@ def login():
                 session["parent_student_id"] = str(parent_user.get("StudentID", ""))
                 session["parent_student_name"] = parent_user.get("Name", "")
                 return jsonify({"success": True, "role": "parent"})
-        except Exception:
-            pass  # Fall through to 401 if sheets unavailable
+        except (ConnectionError, TimeoutError) as e:
+            logger.error(f"Sheets unreachable during parent login: {e}")
+            return jsonify({"error": "Service temporarily unavailable"}), 503
+        except Exception as e:
+            logger.error(f"Unexpected error during parent login: {e}")
+            return jsonify({"error": "Login failed"}), 500
 
         return jsonify({"success": False, "error": "Invalid credentials"}), 401
 
