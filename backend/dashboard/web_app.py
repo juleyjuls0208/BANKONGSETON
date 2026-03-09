@@ -579,7 +579,7 @@ def toggle_product_status():
         return jsonify({"error": "An unexpected error occurred"}), 500
 
 
-@app.route("/api/products/delete/<product_id>", methods=["DELETE"])
+@app.route("/api/products/<product_id>", methods=["DELETE"])
 @admin_only
 def delete_product(product_id):
     """Soft-delete a product: set Active=FALSE and prefix name with [DELETED]"""

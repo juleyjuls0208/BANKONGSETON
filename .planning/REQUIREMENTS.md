@@ -167,3 +167,10 @@ Requirements for this milestone. Six feature areas: NFC Android HCE, Dashboard o
 - [x] **REQ-23-08**: CARD_LOST 403 handling throughout app (distinct APIError.cardLost case)
 - [x] **REQ-23-09**: ₱ (Philippine Peso) currency symbol used throughout iOS app
 - [x] **REQ-23-10**: No NFC Pay features on iOS (Apple HCE restriction)
+
+## Phase 24 — Admin & Cashier Improvements
+
+- [x] **ADM-24-01**: Admin can soft-delete a product (sets Active=FALSE, prefixes name with [DELETED]); deleted products hidden from cashier
+- [x] **ADM-24-02**: Product categories are managed via a Google Sheets tab (add/delete); active-product safety check blocks deleting in-use categories
+- [x] **ADM-24-03**: Admin can void a completed Purchase transaction; void is logged as a reversal entry
+- [x] **CSH-24-01**: Cashier shift summary panel shows total sales (₱), transaction count, and items sold for the current session; Reset button clears counters

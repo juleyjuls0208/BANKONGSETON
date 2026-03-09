@@ -31,10 +31,7 @@ background-image: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                     <div class="col-md-3">
                         <label class="form-label mb-1">Category</label>
                         <select class="form-select" id="newCategory">
-                            <option value="Food">Food</option>
-                            <option value="Drinks">Drinks</option>
-                            <option value="Snacks">Snacks</option>
-                            <option value="Other">Other</option>
+                            <option value="">Loading...</option>
                         </select>
                     </div>
                     <div class="col-md-3">
@@ -63,17 +60,40 @@ background-image: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                         <th>Price</th>
                         <th>Status</th>
                         <th>Toggle Active</th>
+                        <th>Delete</th>
                     </tr>
                 </thead>
                 <tbody id="productsTableBody">
                     <tr>
-                        <td colspan="5" class="text-center py-4">
+                        <td colspan="6" class="text-center py-4">
                             <div class="spinner-border spinner-border-sm" role="status"></div>
                             <span class="ms-2">Loading products...</span>
                         </td>
                     </tr>
                 </tbody>
             </table>
+        </div>
+    </div>
+
+    <!-- Categories management -->
+    <div class="card mt-4">
+        <div class="card-header fw-semibold d-flex justify-content-between align-items-center">
+            <span>Categories</span>
+        </div>
+        <div class="card-body">
+            <div class="row g-2 align-items-end mb-3">
+                <div class="col-md-8">
+                    <input type="text" class="form-control" id="newCategoryName" placeholder="New category name">
+                </div>
+                <div class="col-md-4">
+                    <button class="btn btn-primary w-100" onclick="addCategory()">
+                        <i class="bi bi-plus-circle"></i> Add Category
+                    </button>
+                </div>
+            </div>
+            <ul class="list-group" id="categoriesList">
+                <li class="list-group-item text-muted">Loading...</li>
+            </ul>
         </div>
     </div>
 
@@ -90,7 +110,7 @@ background-image: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 
 {% block extra_js %}
 <script>
-    const CATEGORIES = ['Food', 'Drinks', 'Snacks', 'Other'];
+    let CATEGORIES = [];
     const saving = new Set();
 
     function showToast(message, type = 'success') {
@@ -100,6 +120,77 @@ background-image: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         new bootstrap.Toast(toastEl, { delay: 2000, autohide: true }).show();
     }
 
+    async function loadCategories() {
+        try {
+            const res = await fetch('/api/categories');
+            const data = await res.json();
+            CATEGORIES = data.categories || [];
+        } catch (err) {
+            CATEGORIES = ['Food', 'Drinks', 'Snacks', 'Other'];
+        }
+        // Populate add-form select
+        const sel = document.getElementById('newCategory');
+        sel.innerHTML = CATEGORIES.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+        // Render categories list
+        renderCategoriesList();
+    }
+
+    function renderCategoriesList() {
+        const ul = document.getElementById('categoriesList');
+        if (CATEGORIES.length === 0) {
+            ul.innerHTML = '<li class="list-group-item text-muted">No categories yet.</li>';
+            return;
+        }
+        ul.innerHTML = CATEGORIES.map(c => `
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                ${escapeHtml(c)}
+                <button class="btn btn-sm btn-outline-danger" onclick="deleteCategory('${escapeHtml(c)}')">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </li>
+        `).join('');
+    }
+
+    async function addCategory() {
+        const input = document.getElementById('newCategoryName');
+        const name = input.value.trim();
+        if (!name) { input.classList.add('is-invalid'); return; }
+        input.classList.remove('is-invalid');
+        try {
+            const res = await fetch('/api/categories', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name })
+            });
+            if (res.ok) {
+                input.value = '';
+                await loadCategories();
+                showToast('Category added');
+            } else {
+                const err = await res.json();
+                showToast(err.error || 'Failed to add category', 'danger');
+            }
+        } catch (err) {
+            showToast('Network error', 'danger');
+        }
+    }
+
+    async function deleteCategory(name) {
+        if (!confirm(`Delete category "${name}"? Products in this category will not be affected.`)) return;
+        try {
+            const res = await fetch(`/api/categories/${encodeURIComponent(name)}`, { method: 'DELETE' });
+            if (res.ok) {
+                await loadCategories();
+                showToast('Category deleted');
+            } else {
+                const err = await res.json();
+                showToast(err.error || 'Failed to delete category', 'danger');
+            }
+        } catch (err) {
+            showToast('Network error', 'danger');
+        }
+    }
+
     async function loadProducts() {
         try {
             const res = await fetch('/api/products/list');
@@ -107,7 +198,7 @@ background-image: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             renderTable(data.products || []);
         } catch (err) {
             document.getElementById('productsTableBody').innerHTML = `
-                <tr><td colspan="5" class="text-center text-danger py-4">
+                <tr><td colspan="6" class="text-center text-danger py-4">
                     <i class="bi bi-exclamation-circle"></i> Failed to load products
                 </td></tr>`;
         }
@@ -116,7 +207,7 @@ background-image: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     function renderTable(products) {
         const tbody = document.getElementById('productsTableBody');
         if (products.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-4">No products found. Add one above.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-4">No products found. Add one above.</td></tr>`;
             return;
         }
         tbody.innerHTML = products.map(p => `
@@ -150,6 +241,11 @@ background-image: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                                ${p.active ? 'checked' : ''}
                                onchange="toggleStatus('${p.id}', this.checked)">
                     </div>
+                </td>
+                <td>
+                    <button class="btn btn-sm btn-outline-danger" onclick="deleteProduct('${p.id}', '${escapeHtml(p.name).replace(/'/g, "\\'")}')">
+                        <i class="bi bi-trash"></i>
+                    </button>
                 </td>
             </tr>
         `).join('');
@@ -279,6 +375,22 @@ background-image: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         }
     }
 
+    async function deleteProduct(id, name) {
+        if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
+        try {
+            const res = await fetch(`/api/products/${encodeURIComponent(id)}`, { method: 'DELETE' });
+            if (res.ok) {
+                await loadProducts();
+                showToast('Product deleted');
+            } else {
+                const err = await res.json();
+                showToast(err.error || 'Failed to delete product', 'danger');
+            }
+        } catch (err) {
+            showToast('Network error', 'danger');
+        }
+    }
+
     function escapeHtml(str) {
         return String(str)
             .replace(/&/g, '&amp;')
@@ -287,6 +399,9 @@ background-image: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             .replace(/"/g, '&quot;');
     }
 
-    document.addEventListener('DOMContentLoaded', loadProducts);
+    document.addEventListener('DOMContentLoaded', async () => {
+        await loadCategories();
+        await loadProducts();
+    });
 </script>
 {% endblock %}
