@@ -250,19 +250,46 @@ Plans:
 Plans:
 - [ ] TBD (run /gsd:plan-phase 22 to break down)
 
-### Phase 23: iphone app version
+### Phase 23: iPhone App Version
 
-**Goal:** [To be planned]
-**Requirements**: TBD
+**Goal:** Build a native SwiftUI iOS student app (iOS 16+) with 7 screens: Login, Home, Transaction History, Receipt, Budget Tracker, Settings, Report Lost Card. Deployed via Codemagic CI/CD.
+
+**Requirements:** REQ-23-01 through REQ-23-10
+
 **Depends on:** Phase 22
-**Plans:** 0 plans
+
+**Status: ✓ Complete (2026-03-09)**
+
+**Plans:** 6/6 complete ✓
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 23 to break down)
+- [x] 23-01-PLAN.md — Xcode project scaffold: SwiftUI app target, folder structure, Info.plist, Codemagic CI setup
+- [x] 23-02-PLAN.md — Auth layer: LoginView (PIN-based), AuthManager, KeychainHelper, APIClient/APIEndpoints stubs
+- [x] 23-03-PLAN.md — Home + Transactions: HomeView (balance + recent txns), TransactionsView (paginated), TransactionRowView
+- [x] 23-04-PLAN.md — Receipt + Budget: ReceiptView (line items + synthetic fallback), BudgetView (progress ring + alerts)
+- [x] 23-05-PLAN.md — Settings + Lost Card: SettingsView (theme toggle + logout), LostCardView (POST /student/lost-card + Keychain flag)
+- [x] 23-06-PLAN.md — Final build verification, Codemagic green build, Xcode Simulator human checkpoint, planning artifact updates
+
+### Phase 24: Admin & Cashier Improvements
+
+**Goal:** Add product soft-delete, dynamic product categories management, transaction void capability, and per-shift sales summary to the admin dashboard and cashier interface.
+
+**Requirements:** ADM-24-01 (product delete), ADM-24-02 (dynamic categories), ADM-24-03 (void transactions), CASH-24-01 (shift summary)
+
+**Depends on:** Phase 23
+
+**Status:** ✓ Complete (2026-03-09)
+
+**Plans:** 5/5 complete ✓
+
+Plans:
+- [x] 24-01-PLAN.md — Bookkeeping: mark PAR-01–06 complete, add Phase 24 to ROADMAP, update STATE
+- [x] 24-02-PLAN.md — Product soft-delete: DELETE /api/products/<id> backend + Delete button in products.html
+- [x] 24-03-PLAN.md — Dynamic categories: _ensure_categories_sheet(), GET/POST/DELETE /api/categories backend + products.html UI
+- [x] 24-04-PLAN.md — Void transactions: POST /api/transactions/<id>/void backend + ItemsJson in get_recent_transactions + transactions.html Actions column
+- [x] 24-05-PLAN.md — Shift summary: session counters in cashier login + complete_sale + GET/POST shift endpoints + cashier_index.html panel
 
 ---
-
-*Roadmap created: 2026-03-04*
 
 ### Phase 20.1: Arduino PN532 NFC Backend Integration, Student App Payment & Firmware Hardening (INSERTED)
 
