@@ -264,7 +264,9 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-None yet.
+| File | Title | Area |
+|------|-------|------|
+| `2026-03-09-fix-ios-login-network-error.md` | Fix iOS login network error | auth |
 
 ### Blockers/Concerns
 
