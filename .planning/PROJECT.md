@@ -92,10 +92,18 @@ Students can pay for canteen food instantly by tapping their RFID card, with the
 | Transaction type 'NFC Purchase' distinct from 'Purchase' | Enables Android filtering by payment type | ✓ Good — TransactionsAdapter can separate NFC vs cashier |
 
 ---
-*Last updated: 2026-03-08 after v1.2 release (Phase 21 complete)*
+*Last updated: 2026-03-09 after v1.3 planning complete (Phases 25–34 defined)*
 
-## Current Milestone: v1.2 — v1.1 Gap Closure + v1.2 Features
+## Previous Milestone: v1.2 — v1.1 Gap Closure + v1.2 Features
 
 **Goal:** Close NFCA-01 and PAR-01–06 regressions, harden production config, and ship five v1.2 features: low-balance email, SMS notifications, multi-canteen station support, Arduino R3 auto-connect, and bulk CSV student import.
 
 **Status: ✓ Complete (2026-03-08)**
+
+## Current Milestone: v1.3 — Stability, Performance & Quality
+
+**Goal:** Fix every known bug, close security holes, activate unused performance infrastructure (`cache.py` and `resilience.py` exist but are never imported), and clean up tech debt across all four components: Flask backend, dashboard/web app, Android app, and iOS app.
+
+**Phases:** 25–34 (10 phases)
+**Requirements:** 57 REQ-IDs across 7 categories (see REQUIREMENTS.md)
+**Status: In Progress — Phase 25 next**

@@ -291,6 +291,338 @@ Plans:
 
 ---
 
+## Milestone v1.3 — Stability, Performance & Quality
+
+**Created:** 2026-03-09
+**Milestone:** v1.3 Stability, Performance & Quality
+**Phase numbering:** Continues from v1.2 (Phase 24 completed)
+
+Fix every known bug, close security holes, activate unused performance infrastructure (cache.py + resilience.py already exist but are never imported), and clean up tech debt across all four components: Flask backend, dashboard/web app, Android app, iOS app.
+
+| Phase | Name | Requirements | Status |
+|-------|------|--------------|--------|
+| 25 | Critical Backend Stability | REQ-SEC-01, REQ-BUG-01, REQ-BUG-04, REQ-PERF-01 | Pending |
+| 26 | Critical Dashboard Stability | REQ-BUG-02, REQ-BUG-03, REQ-CURR-02 | Pending |
+| 27 | Critical Mobile Fixes | REQ-BUG-MOB-01, REQ-BUG-MOB-02, REQ-BUG-MOB-03, REQ-SEC-02, REQ-SEC-03 | Pending |
+| 28 | Backend Performance: Cache Infrastructure | REQ-PERF-02, REQ-PERF-03, REQ-PERF-04 | Pending |
+| 29 | Android Security & P1 Bugs | REQ-SEC-04, REQ-SEC-05, REQ-BUG-MOB-06, REQ-BUG-MOB-07 | Pending |
+| 30 | iOS Bugs & UX | REQ-BUG-MOB-04, REQ-BUG-MOB-05, REQ-UX-01, REQ-UX-02, REQ-UX-03, REQ-UX-04, REQ-UX-05 | Pending |
+| 31 | Dashboard & Backend P1 Fixes | REQ-BUG-05, REQ-BUG-06, REQ-BUG-07, REQ-BUG-08, REQ-SEC-06, REQ-QUAL-01, REQ-QUAL-02, REQ-CURR-01 | Pending |
+| 32 | Mobile Budget Performance | REQ-PERF-06, REQ-PERF-07, REQ-PERF-08, REQ-PERF-09, REQ-PERF-10 | Pending |
+| 33 | Backend Code Quality | REQ-BUG-09, REQ-QUAL-03, REQ-QUAL-04, REQ-QUAL-05, REQ-QUAL-06, REQ-QUAL-07, REQ-PERF-05 | Pending |
+| 34 | Dashboard, Mobile Quality & Final Cleanup | REQ-BUG-10, REQ-BUG-11, REQ-BUG-12, REQ-QUAL-08, REQ-BUG-MOB-08, REQ-BUG-MOB-09, REQ-QUAL-09, REQ-QUAL-10, REQ-QUAL-11, REQ-QUAL-12, REQ-QUAL-13 | Pending |
+
+**Total phases:** 10
+**Total requirements:** 57
+
+---
+
+### Phase 25: Critical Backend Stability
+
+**Goal:** The backend cannot double-spend a student's balance, cannot crash on email failure after a committed transaction, cannot serve to unauthorized origins, and its TTL cache is active.
+
+**Requirements:** REQ-SEC-01, REQ-BUG-01, REQ-BUG-04, REQ-PERF-01
+
+**Depends on:** Phase 24
+
+**Status:** Pending
+
+**Success criteria:**
+- Balance debit uses atomic read-modify-write; two concurrent requests to the same card result in exactly one deduction (no double-spend)
+- CORS in production `wsgi.py` is restricted to configured origins; `*` wildcard is gone
+- Email failure during an already-committed cashier transaction is caught silently; the transaction still returns 200 to the client
+- `cache.py` TTLCache is imported and active in `api_server.py`; repeated calls within TTL period skip Google Sheets entirely
+
+**Plans:** TBD (run `/gsd-plan-phase 25` to break down)
+
+Plans:
+- [ ] TBD
+
+---
+
+### Phase 26: Critical Dashboard Stability
+
+**Goal:** No dashboard route crashes with a NameError; the Thai Baht symbol is gone from every UI string.
+
+**Requirements:** REQ-BUG-02, REQ-BUG-03, REQ-CURR-02
+
+**Depends on:** Phase 25
+
+**Status:** Pending
+
+**Success criteria:**
+- Navigating to `add_category`, `delete_category`, and `void_transaction` routes returns 200/302 (no `NameError` on `@admin_required`)
+- Calling `GET /api/categories` returns data (no `NameError` from undefined `get_db()`)
+- All ฿ occurrences in cashier UI and dashboard HTML templates are replaced with ₱
+
+**Plans:** TBD (run `/gsd-plan-phase 26` to break down)
+
+Plans:
+- [ ] TBD
+
+---
+
+### Phase 27: Critical Mobile Fixes
+
+**Goal:** Lost card state persists across app restarts on both platforms; iOS never crashes via `fatalError`; Android release build uses HTTPS only and NFC payment authorization is not publicly bypassable.
+
+**Requirements:** REQ-BUG-MOB-01, REQ-BUG-MOB-02, REQ-BUG-MOB-03, REQ-SEC-02, REQ-SEC-03
+
+**Depends on:** Phase 24 (can run parallel to 25/26)
+
+**Status:** Pending
+
+**Success criteria:**
+- Reporting a lost card on iOS, killing the app, and relaunching still shows the lost card state
+- Reporting a lost card on Android, killing the app, and relaunching still shows the lost card state
+- No `fatalError()` call paths remain in `APIClient.swift`; URL construction errors produce a logged error instead of a crash
+- Android release manifest does not contain `usesCleartextTraffic="true"` (all API traffic is HTTPS)
+- `BankoHceService.isPaymentAuthorized` is not a public writable static field; external code cannot authorize a payment without the PIN/biometric gate
+
+**Plans:** TBD (run `/gsd-plan-phase 27` to break down)
+
+Plans:
+- [ ] TBD
+
+---
+
+### Phase 28: Backend Performance — Cache Infrastructure
+
+**Goal:** NFC payment path drops from 7–9 sequential Sheets API calls to ≤3; cashier transaction reads the users sheet once (not thrice); per-user transaction query filters at the sheet level.
+
+**Requirements:** REQ-PERF-02, REQ-PERF-03, REQ-PERF-04
+
+**Depends on:** Phase 25 (cache.py wired first)
+
+**Status:** Pending
+
+**Success criteria:**
+- NFC payment path makes ≤3 Google Sheets API calls (verifiable by code review or gspread call instrumentation)
+- Cashier transaction handler reads the users sheet exactly once per transaction (not 3×)
+- Per-user transaction listing fetches only that student's rows from the sheet; no all-users fetch + Python filter
+
+**Plans:** TBD (run `/gsd-plan-phase 28` to break down)
+
+Plans:
+- [ ] TBD
+
+---
+
+### Phase 29: Android Security & P1 Bugs
+
+**Goal:** Android backup does not expose the NFC card token; PIN is stored as a one-way hash; budget tracks only spending (not top-ups); recycled list rows always respond to taps.
+
+**Requirements:** REQ-SEC-04, REQ-SEC-05, REQ-BUG-MOB-06, REQ-BUG-MOB-07
+
+**Depends on:** Phase 27 (mobile P0 fixes complete)
+
+**Status:** Pending
+
+**Success criteria:**
+- Android backup rules exclude the NFC card token key/file; Google Drive restore does not restore a token
+- PIN is verified via a one-way hash (SHA-256 or equivalent); the raw PIN string is never persisted
+- Budget tracker monthly spend sum includes only `Purchase` and `NFC Purchase` transaction types; top-ups are excluded
+- Tapping any row in the transactions `RecyclerView` (including reused ViewHolders) fires the click handler reliably
+
+**Plans:** TBD (run `/gsd-plan-phase 29` to break down)
+
+Plans:
+- [ ] TBD
+
+---
+
+### Phase 30: iOS Bugs & UX
+
+**Goal:** iOS correctly distinguishes lost card from unauthorized; handles token expiry gracefully; and closes five UX papercuts on the budget, transactions, and login screens.
+
+**Requirements:** REQ-BUG-MOB-04, REQ-BUG-MOB-05, REQ-UX-01, REQ-UX-02, REQ-UX-03, REQ-UX-04, REQ-UX-05
+
+**Depends on:** Phase 27 (mobile P0 fixes complete)
+
+**Status:** Pending
+
+**Success criteria:**
+- A blocked/lost card shows "card reported lost" (not "wrong PIN") to the student
+- A 401 response triggers an automatic re-authentication prompt; the app does not stay in a broken authenticated state
+- Typing in the budget input field before the server response arrives keeps the user's typed value (server load does not overwrite it)
+- Transactions list shows a "No transactions yet" empty state when the list is empty
+- Sign In button is fully visible on iPhone SE when the keyboard is open (no keyboard overlap)
+- PIN login field does not trigger iOS password autofill suggestions
+
+**Plans:** TBD (run `/gsd-plan-phase 30` to break down)
+
+Plans:
+- [ ] TBD
+
+---
+
+### Phase 31: Dashboard & Backend P1 Fixes
+
+**Goal:** Socket errors surface correct messages; TXN IDs are collision-free; WriteQueue discards poisoned items; sessions expire under multi-worker deployment; Finance credential is env-guarded; auth is consolidated to one system; dashboard code lives in one place; FCM uses ₱.
+
+**Requirements:** REQ-BUG-05, REQ-BUG-06, REQ-BUG-07, REQ-BUG-08, REQ-SEC-06, REQ-QUAL-01, REQ-QUAL-02, REQ-CURR-01
+
+**Depends on:** Phase 26 (dashboard P0 fixes done), Phase 28 (backend P1 perf done)
+
+**Status:** Pending
+
+**Success criteria:**
+- `card_error` socket event modal displays the actual error message (not "undefined")
+- Two transactions submitted within the same second receive distinct TXN IDs
+- A permanently-failing `WriteQueue` item is dropped after configured retries and an error is logged; no infinite loop
+- `active_sessions` entries expire after their TTL; behavior is consistent across gunicorn workers (no shared-memory assumption)
+- Finance dashboard raises a startup error if `FINANCE_PASSWORD` is missing or set to the default `finance2025` value
+- `generate_jwt_token()` dead code is removed; one auth system handles all student sessions
+- `admin_dashboard.py` / `web_app.py` duplication is eliminated; fixes need only be applied once
+- FCM low-balance push notification body uses ₱ (not ฿)
+
+**Plans:** TBD (run `/gsd-plan-phase 31` to break down)
+
+Plans:
+- [ ] TBD
+
+---
+
+### Phase 32: Mobile Budget Performance
+
+**Goal:** Budget spend calculation no longer requires loading 200 transactions on either mobile platform; a new backend endpoint serves pre-aggregated monthly spend; iOS DateFormatter is not re-allocated on every render.
+
+**Requirements:** REQ-PERF-06, REQ-PERF-07, REQ-PERF-08, REQ-PERF-09, REQ-PERF-10
+
+**Depends on:** Phase 28 (backend perf groundwork), Phase 29 (Android P1 bugs), Phase 30 (iOS P1 bugs)
+
+**Status:** Pending
+
+**Success criteria:**
+- `GET /api/budget-summary` endpoint returns the authenticated student's current-month spend total without returning individual transactions
+- iOS `BudgetViewModel` calls `/api/budget-summary`; it does not fetch the full transactions list to calculate spend
+- Android budget screen calls `/api/budget-summary`; it does not fetch 200 transactions client-side
+- iOS `DateFormatter` instance is static/cached; not created on every `ReceiptView` or `BudgetViewModel` render pass
+- Android `TransactionsAdapter` uses `DiffUtil` for list updates; `notifyDataSetChanged()` is removed
+
+**Plans:** TBD (run `/gsd-plan-phase 32` to break down)
+
+Plans:
+- [ ] TBD
+
+---
+
+### Phase 33: Backend Code Quality
+
+**Goal:** Backend has one canonical time utility; no bare excepts; no null-body crashes; sys.path mutations are module-level; ConnectionPool is used; Firebase initializes safely.
+
+**Requirements:** REQ-BUG-09, REQ-QUAL-03, REQ-QUAL-04, REQ-QUAL-05, REQ-QUAL-06, REQ-QUAL-07, REQ-PERF-05
+
+**Depends on:** Phase 31 (auth consolidation and duplication removal first)
+
+**Status:** Pending
+
+**Success criteria:**
+- `get_philippines_time()` exists in exactly one shared utility module; all four previous inline copies removed
+- Zero bare `except:` clauses remain in backend Python files; all use specific exception types
+- Any endpoint receiving `Content-Type: application/json` with an empty or missing body returns `400 Bad Request` (not 500 crash)
+- All `sys.path.insert` calls are at module level; none are inside request handler functions
+- `ConnectionPool` from `connection_pool.py` is used for gspread client acquisition; the pool module is no longer dead code
+- `firebase_admin.initialize_app()` is called exactly once; concurrent-init race condition is eliminated
+- Hardcoded column `C` for balance in cashier transaction handler is replaced with a header-name lookup
+
+**Plans:** TBD (run `/gsd-plan-phase 33` to break down)
+
+Plans:
+- [ ] TBD
+
+---
+
+### Phase 34: Dashboard, Mobile Quality & Final Cleanup
+
+**Goal:** Dashboard PWA installs cleanly; no phantom 404 polls; products page has no stacked listeners; login backgrounds load from stable URLs; server URLs are environment-configurable on both mobile platforms; Android coroutine and iOS Keychain papercuts resolved.
+
+**Requirements:** REQ-BUG-10, REQ-BUG-11, REQ-BUG-12, REQ-QUAL-08, REQ-BUG-MOB-08, REQ-BUG-MOB-09, REQ-QUAL-09, REQ-QUAL-10, REQ-QUAL-11, REQ-QUAL-12, REQ-QUAL-13
+
+**Depends on:** Phase 31 (dashboard duplication removed), Phase 32 (mobile perf done)
+
+**Status:** Pending
+
+**Success criteria:**
+- PWA service worker references only files that exist; `npm run build` (or equivalent) confirms no 404 on install
+- Browser network tab shows zero polling requests to `/api/queue/status` or `/api/queue/process`
+- Products page makes exactly one API call per button click regardless of how many times `renderTable()` has been called
+- Dashboard login background images load successfully (no expired CDN token URLs)
+- Android server base URL is read from `BuildConfig` / environment variable; `ApiClient.kt` contains no hardcoded production URL
+- iOS server base URL is read from a build config plist or environment; `APIEndpoints.swift` contains no hardcoded URL
+- Android `NfcManager` coroutines use the Activity/ViewModel lifecycle scope; no `CoroutineScope(Dispatchers.IO).launch` memory leaks
+- iOS theme preference is stored in `UserDefaults` (not Keychain)
+- `isPurchaseType` helper exists in exactly one iOS file; the duplicate is removed
+- Android `ReceiptActivity` cast uses safe `as?` with a null-check; unchecked `as LinearLayout` cast removed
+
+---
+
+## v1.3 Requirements Coverage
+
+| Requirement | Phase | Priority | Status |
+|-------------|-------|----------|--------|
+| REQ-SEC-01 | 25 | P0 | Pending |
+| REQ-BUG-01 | 25 | P0 | Pending |
+| REQ-BUG-04 | 25 | P0 | Pending |
+| REQ-PERF-01 | 25 | P0 | Pending |
+| REQ-BUG-02 | 26 | P0 | Pending |
+| REQ-BUG-03 | 26 | P0 | Pending |
+| REQ-CURR-02 | 26 | P1 | Pending |
+| REQ-BUG-MOB-01 | 27 | P0 | Pending |
+| REQ-BUG-MOB-02 | 27 | P0 | Pending |
+| REQ-BUG-MOB-03 | 27 | P0 | Pending |
+| REQ-SEC-02 | 27 | P0 | Pending |
+| REQ-SEC-03 | 27 | P0 | Pending |
+| REQ-PERF-02 | 28 | P1 | Pending |
+| REQ-PERF-03 | 28 | P1 | Pending |
+| REQ-PERF-04 | 28 | P1 | Pending |
+| REQ-SEC-04 | 29 | P1 | Pending |
+| REQ-SEC-05 | 29 | P1 | Pending |
+| REQ-BUG-MOB-06 | 29 | P1 | Pending |
+| REQ-BUG-MOB-07 | 29 | P1 | Pending |
+| REQ-BUG-MOB-04 | 30 | P1 | Pending |
+| REQ-BUG-MOB-05 | 30 | P1 | Pending |
+| REQ-UX-01 | 30 | P2 | Pending |
+| REQ-UX-02 | 30 | P2 | Pending |
+| REQ-UX-03 | 30 | P2 | Pending |
+| REQ-UX-04 | 30 | P2 | Pending |
+| REQ-UX-05 | 30 | P2 | Pending |
+| REQ-BUG-05 | 31 | P1 | Pending |
+| REQ-BUG-06 | 31 | P1 | Pending |
+| REQ-BUG-07 | 31 | P1 | Pending |
+| REQ-BUG-08 | 31 | P1 | Pending |
+| REQ-SEC-06 | 31 | P1 | Pending |
+| REQ-QUAL-01 | 31 | P1 | Pending |
+| REQ-QUAL-02 | 31 | P1 | Pending |
+| REQ-CURR-01 | 31 | P1 | Pending |
+| REQ-PERF-06 | 32 | P2 | Pending |
+| REQ-PERF-07 | 32 | P2 | Pending |
+| REQ-PERF-08 | 32 | P2 | Pending |
+| REQ-PERF-09 | 32 | P2 | Pending |
+| REQ-PERF-10 | 32 | P2 | Pending |
+| REQ-BUG-09 | 33 | P2 | Pending |
+| REQ-QUAL-03 | 33 | P2 | Pending |
+| REQ-QUAL-04 | 33 | P2 | Pending |
+| REQ-QUAL-05 | 33 | P2 | Pending |
+| REQ-QUAL-06 | 33 | P2 | Pending |
+| REQ-QUAL-07 | 33 | P2 | Pending |
+| REQ-PERF-05 | 33 | P2 | Pending |
+| REQ-BUG-10 | 34 | P2 | Pending |
+| REQ-BUG-11 | 34 | P2 | Pending |
+| REQ-BUG-12 | 34 | P2 | Pending |
+| REQ-QUAL-08 | 34 | P2 | Pending |
+| REQ-BUG-MOB-08 | 34 | P2 | Pending |
+| REQ-BUG-MOB-09 | 34 | P2 | Pending |
+| REQ-QUAL-09 | 34 | P2 | Pending |
+| REQ-QUAL-10 | 34 | P2 | Pending |
+| REQ-QUAL-11 | 34 | P2 | Pending |
+| REQ-QUAL-12 | 34 | P3 | Pending |
+| REQ-QUAL-13 | 34 | P3 | Pending |
+
+**57 / 57 requirements covered. 0 unmapped.**
+
+---
+
 ### Phase 20.1: Arduino PN532 NFC Backend Integration, Student App Payment & Firmware Hardening (INSERTED)
 
 **Goal:** Complete the end-to-end NFC phone-tap payment flow: R3 firmware adds APDU HCE exchange to read 48-char token from student phones; R4 firmware swaps MFRC522 for PN532 and POSTs to `/api/nfc/pay`; ArduinoBridge parses `NFC|<token>` serial lines and forwards payment; Cashier UI shows blue NFC modal and result state.

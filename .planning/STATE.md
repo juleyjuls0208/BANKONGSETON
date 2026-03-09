@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.1
-milestone_name: Requirements Coverage
-status: in_progress
-stopped_at: Completed 24-04-PLAN.md
-last_updated: "2026-03-09T07:48:18.651Z"
-last_activity: 2026-03-09 — Phase 24 started; PAR-01–06 bookkeeping fixed, Phase 24 added to ROADMAP
+milestone: v1.3
+milestone_name: Stability, Performance & Quality
+status: ready
+stopped_at: Completed Phase 24 (all 5 plans done); v1.3 roadmap written (Phases 25–34)
+last_updated: "2026-03-09T08:00:00.000Z"
+last_activity: 2026-03-09 — Phase 24 complete (5/5 plans); v1.3 milestone roadmap created (10 phases, 57 requirements)
 progress:
   total_phases: 10
-  completed_phases: 9
-  total_plans: 42
-  completed_plans: 42
+  completed_phases: 10
+  total_plans: 47
+  completed_plans: 47
 ---
 
 # Project State
@@ -20,16 +20,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-08)
 
 **Core value:** Students can pay for canteen food instantly by tapping their RFID card, with their balance always visible in the app
-**Current focus:** Phase 24 — Admin & Cashier Improvements (1/5 plans done)
+**Current focus:** Phase 25 — Critical Backend Stability (v1.3 milestone, not yet started)
 
 ## Current Position
 
-Phase: Phase 24 — IN PROGRESS (1/5 plans complete)
-Plan: 24-01 done; Phase 24 in progress
-Status: in_progress
-Last activity: 2026-03-09 — Phase 24 started; PAR-01–06 bookkeeping fixed, Phase 24 added to ROADMAP
+Phase: Phase 25 — Critical Backend Stability (v1.3, NOT STARTED)
+Plan: Phase 24 fully complete; v1.3 roadmap written and ready
+Status: ready
+Last activity: 2026-03-09 — Phase 24 complete (5/5 plans); v1.3 roadmap created (Phases 25–34, 57 requirements)
 
-Progress: [#########.] v1.2 Phase 24 in progress (Phase 21 ✓, Phase 23 ✓, Phase 24 1/5)
+Progress: [##########] v1.2 COMPLETE ✓ | v1.3 Phase 25 next (10 phases pending)
 
 ## Performance Metrics
 
@@ -238,6 +238,9 @@ Recent decisions affecting current work:
 - [Phase 24-02]: Kept /api/products/delete/<product_id> URL (not plan's /api/products/<product_id>) — products.html JS already called this URL; changing would require extra HTML edit and introduce ambiguity with /api/products/update
 - [Phase 24-02]: Used @admin_only (not @login_required + @admin_required) — admin_required was undefined; admin_only already includes session check
 - [Phase 24-admin-cashier-improvements]: void_transaction restricts voiding to Purchase type only — stricter/safer than plan spec, kept as-is
+- [v1.3-roadmap]: Phases 25–34 created; 57 requirements across 7 categories (BUG, BUG-MOB, SEC, PERF, QUAL, UX, CURR) — all mapped, 0 orphans
+- [v1.3-roadmap]: Phase 27 (Critical Mobile Fixes) parallelizable with Phases 25/26 — mobile and backend are independent components
+- [v1.3-roadmap]: Phases 25–27 are P0 criticals (must fix before anything else); 28–31 are P1; 32–34 are P2/P3
 
 ### Roadmap Evolution
 
