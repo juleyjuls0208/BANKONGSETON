@@ -333,10 +333,11 @@ Fix every known bug, close security holes, activate unused performance infrastru
 - Email failure during an already-committed cashier transaction is caught silently; the transaction still returns 200 to the client
 - `cache.py` TTLCache is imported and active in `api_server.py`; repeated calls within TTL period skip Google Sheets entirely
 
-**Plans:** TBD (run `/gsd-plan-phase 25` to break down)
+**Plans:** 2 plans
 
 Plans:
-- [ ] TBD
+- [ ] 25-01-PLAN.md — Per-card threading locks in nfc_pay() + process_cashier_transaction(); silent email try/except (REQ-BUG-01, REQ-BUG-04)
+- [ ] 25-02-PLAN.md — CORS wildcard → production domain in wsgi.py; TTL cache wired to all users_sheet reads (REQ-SEC-01, REQ-PERF-01)
 
 ---
 
