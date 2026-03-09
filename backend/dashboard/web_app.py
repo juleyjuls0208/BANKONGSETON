@@ -272,7 +272,7 @@ def invalidate_cache(sheet_name=None):
         _sheets_cache.clear()
 
 
-UID_PATTERN = re.compile(r"^[0-9A-Fa-f]{8}$")
+UID_PATTERN = re.compile(r"^[0-9A-Fa-f]{8}$|^[0-9A-Fa-f]{14}$")
 
 # Arduino WiFi API key — loaded once at module level
 # Empty string means endpoint is disabled (returns 401 for any request)
@@ -576,6 +576,266 @@ def toggle_product_status():
         return jsonify({"error": "Service unavailable, please try again"}), 503
     except Exception as e:
         logger.error("event=toggle_product_unexpected error=%s", e, exc_info=True)
+        return jsonify({"error": "An unexpected error occurred"}), 500
+
+
+@app.route("/api/products/delete/<product_id>", methods=["DELETE"])
+@admin_only
+def delete_product(product_id):
+    """Soft-delete a product: set Active=FALSE and prefix name with [DELETED]"""
+    try:
+        product_id = product_id.strip()
+        if not product_id:
+            return jsonify({"error": "Product ID required"}), 400
+
+        products_sheet = ensure_products_sheet()
+        records = products_sheet.get_all_records()
+
+        for idx, record in enumerate(records, start=2):
+            if record.get("ID") == product_id:
+                current_name = record.get("Name", "")
+                if not current_name.startswith("[DELETED]"):
+                    products_sheet.update_cell(idx, 2, f"[DELETED] {current_name}")
+                products_sheet.update_cell(idx, 6, "FALSE")
+                logger.info("event=product_deleted id=%s", product_id)
+                return jsonify({"success": True, "message": "Product deleted"})
+
+        return jsonify({"error": "Product not found"}), 404
+
+    except (
+        gspread.exceptions.APIError,
+        gspread.exceptions.SpreadsheetNotFound,
+        gspread.exceptions.WorksheetNotFound,
+        ConnectionError,
+        TimeoutError,
+    ) as e:
+        logger.error("event=delete_product_error error=%s", e)
+        return jsonify({"error": "Service unavailable, please try again"}), 503
+    except Exception as e:
+        logger.error("event=delete_product_unexpected error=%s", e, exc_info=True)
+        return jsonify({"error": "An unexpected error occurred"}), 500
+
+
+# ============= CATEGORIES ROUTES =============
+
+
+def _ensure_categories_sheet():
+    """Ensure the Categories sheet exists with the correct headers, return it."""
+    db = get_db()
+    try:
+        return db.worksheet("Categories")
+    except gspread.exceptions.WorksheetNotFound:
+        sheet = db.add_worksheet(title="Categories", rows=100, cols=2)
+        sheet.append_row(["Name", "CreatedAt"])
+        logger.info("event=categories_sheet_created")
+        return sheet
+
+
+@app.route("/api/categories", methods=["GET"])
+@login_required
+def get_categories():
+    """Return list of category names"""
+    try:
+        sheet = _ensure_categories_sheet()
+        records = sheet.get_all_records()
+        categories = [
+            r.get("Name", "").strip() for r in records if r.get("Name", "").strip()
+        ]
+        return jsonify({"categories": categories})
+    except (
+        gspread.exceptions.APIError,
+        gspread.exceptions.SpreadsheetNotFound,
+        gspread.exceptions.WorksheetNotFound,
+        ConnectionError,
+        TimeoutError,
+    ) as e:
+        logger.error("event=get_categories_error error=%s", e)
+        return jsonify({"error": "Service unavailable, please try again"}), 503
+    except Exception as e:
+        logger.error("event=get_categories_unexpected error=%s", e, exc_info=True)
+        return jsonify({"error": "An unexpected error occurred"}), 500
+
+
+@app.route("/api/categories", methods=["POST"])
+@login_required
+@admin_required
+def add_category():
+    """Add a new category"""
+    try:
+        data = request.get_json()
+        name = (data.get("name") or "").strip()
+        if not name:
+            return jsonify({"error": "Category name required"}), 400
+
+        sheet = _ensure_categories_sheet()
+        records = sheet.get_all_records()
+        existing = [r.get("Name", "").strip().lower() for r in records]
+        if name.lower() in existing:
+            return jsonify({"error": "Category already exists"}), 409
+
+        from datetime import datetime
+
+        sheet.append_row([name, datetime.utcnow().isoformat()])
+        logger.info("event=category_added name=%s", name)
+        return jsonify({"success": True, "message": "Category added"})
+
+    except (
+        gspread.exceptions.APIError,
+        gspread.exceptions.SpreadsheetNotFound,
+        gspread.exceptions.WorksheetNotFound,
+        ConnectionError,
+        TimeoutError,
+    ) as e:
+        logger.error("event=add_category_error error=%s", e)
+        return jsonify({"error": "Service unavailable, please try again"}), 503
+    except Exception as e:
+        logger.error("event=add_category_unexpected error=%s", e, exc_info=True)
+        return jsonify({"error": "An unexpected error occurred"}), 500
+
+
+@app.route("/api/categories/<name>", methods=["DELETE"])
+@login_required
+@admin_required
+def delete_category(name):
+    """Delete a category by name"""
+    try:
+        name = name.strip()
+        if not name:
+            return jsonify({"error": "Category name required"}), 400
+
+        sheet = _ensure_categories_sheet()
+        records = sheet.get_all_records()
+
+        for idx, record in enumerate(records, start=2):
+            if record.get("Name", "").strip().lower() == name.lower():
+                sheet.delete_rows(idx)
+                logger.info("event=category_deleted name=%s", name)
+                return jsonify({"success": True, "message": "Category deleted"})
+
+        return jsonify({"error": "Category not found"}), 404
+
+    except (
+        gspread.exceptions.APIError,
+        gspread.exceptions.SpreadsheetNotFound,
+        gspread.exceptions.WorksheetNotFound,
+        ConnectionError,
+        TimeoutError,
+    ) as e:
+        logger.error("event=delete_category_error error=%s", e)
+        return jsonify({"error": "Service unavailable, please try again"}), 503
+    except Exception as e:
+        logger.error("event=delete_category_unexpected error=%s", e, exc_info=True)
+        return jsonify({"error": "An unexpected error occurred"}), 500
+
+
+# ============= VOID TRANSACTION ROUTE =============
+
+
+@app.route("/api/transactions/<transaction_id>/void", methods=["POST"])
+@login_required
+@admin_required
+def void_transaction(transaction_id):
+    """Void a transaction: set TransactionType to Voided and reverse student balance"""
+    try:
+        transaction_id = transaction_id.strip()
+        if not transaction_id:
+            return jsonify({"error": "Transaction ID required"}), 400
+
+        txn_sheet = get_worksheet_with_retry("Transactions Log")
+        records = txn_sheet.get_all_records()
+
+        txn_row = None
+        txn_idx = None
+        for idx, record in enumerate(records, start=2):
+            if str(record.get("TransactionID", "")).strip() == transaction_id:
+                txn_row = record
+                txn_idx = idx
+                break
+
+        if txn_row is None:
+            return jsonify({"error": "Transaction not found"}), 404
+
+        current_type = str(txn_row.get("TransactionType", "")).strip()
+        if current_type == "Voided":
+            return jsonify({"error": "Transaction already voided"}), 409
+
+        if current_type != "Purchase":
+            return jsonify({"error": "Only Purchase transactions can be voided"}), 400
+
+        amount = float(txn_row.get("Amount", 0))
+        card_number = str(txn_row.get("MoneyCardNumber", "")).strip()
+
+        accounts_sheet = get_worksheet_with_retry("Money Accounts")
+        account_records = accounts_sheet.get_all_records()
+
+        from utils import normalize_card_uid
+
+        normalized_card = normalize_card_uid(card_number)
+
+        account_row_idx = None
+        current_balance = None
+        for idx, record in enumerate(account_records, start=2):
+            stored_card = normalize_card_uid(
+                str(record.get("MoneyCardNumber", "")).strip()
+            )
+            if stored_card == normalized_card:
+                account_row_idx = idx
+                current_balance = float(record.get("Balance", 0))
+                break
+
+        if account_row_idx is None:
+            return jsonify({"error": "Student account not found"}), 404
+
+        new_balance = current_balance + amount
+
+        headers = accounts_sheet.row_values(1)
+        balance_col = None
+        for i, h in enumerate(headers, start=1):
+            if h.strip().lower() == "balance":
+                balance_col = i
+                break
+
+        if balance_col is None:
+            return jsonify({"error": "Balance column not found"}), 500
+
+        txn_headers = txn_sheet.row_values(1)
+        txn_type_col = None
+        for i, h in enumerate(txn_headers, start=1):
+            if h.strip().lower() == "transactiontype":
+                txn_type_col = i
+                break
+
+        if txn_type_col is None:
+            return jsonify({"error": "TransactionType column not found"}), 500
+
+        txn_sheet.update_cell(txn_idx, txn_type_col, "Voided")
+        accounts_sheet.update_cell(account_row_idx, balance_col, new_balance)
+
+        logger.info(
+            "event=transaction_voided id=%s amount=%.2f new_balance=%.2f",
+            transaction_id,
+            amount,
+            new_balance,
+        )
+        return jsonify(
+            {
+                "success": True,
+                "message": "Transaction voided",
+                "new_balance": new_balance,
+            }
+        )
+
+    except (
+        gspread.exceptions.APIError,
+        gspread.exceptions.SpreadsheetNotFound,
+        gspread.exceptions.WorksheetNotFound,
+        ConnectionError,
+        TimeoutError,
+    ) as e:
+        logger.error("event=void_transaction_error error=%s", e)
+        return jsonify({"error": "Service unavailable, please try again"}), 503
+    except Exception as e:
+        logger.error("event=void_transaction_unexpected error=%s", e, exc_info=True)
         return jsonify({"error": "An unexpected error occurred"}), 500
 
 
@@ -1310,6 +1570,8 @@ def get_recent_transactions():
                     "BalanceBefore": t.get("BalanceBefore", 0),
                     "BalanceAfter": t.get("BalanceAfter", 0),
                     "Status": t.get("Status", ""),
+                    "ProcessedBy": t.get("ProcessedBy", ""),
+                    "ItemsJson": t.get("ItemsJson", ""),
                 }
             )
 
