@@ -626,9 +626,11 @@ def complete_sale():
                     settings_err,
                     threshold,
                 )
-            users_sheet2 = db.worksheet("Users")
-            user_records2 = users_sheet2.get_all_records()
-            for user in user_records2:
+            _users_notif = get_cached("users_all")
+            if _users_notif is None:
+                _users_notif = db.worksheet("Users").get_all_records()
+                set_cached("users_all", _users_notif, ttl=30)
+            for user in _users_notif:
                 if (
                     normalize_card_uid(user.get("MoneyCardNumber", ""))
                     == normalized_card
@@ -652,10 +654,12 @@ def complete_sale():
 
         # Send email (async)
         try:
-            users_sheet = db.worksheet("Users")
-            user_records = users_sheet.get_all_records()
+            _users_email = get_cached("users_all")
+            if _users_email is None:
+                _users_email = db.worksheet("Users").get_all_records()
+                set_cached("users_all", _users_email, ttl=30)
 
-            for user in user_records:
+            for user in _users_email:
                 if (
                     normalize_card_uid(user.get("MoneyCardNumber", ""))
                     == normalized_card
