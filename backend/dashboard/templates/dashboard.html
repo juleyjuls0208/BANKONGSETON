@@ -250,7 +250,7 @@ background-image: url('https://i.pinimg.com/736x/08/1a/6e/081a6e345f9c8cb5c2be4d
       <div class="card-body">
         <div class="row align-items-end">
           <div class="col-md-4">
-            <label for="thresholdInput" class="form-label">Low Balance Alert Threshold (฿)</label>
+            <label for="thresholdInput" class="form-label">Low Balance Alert Threshold (₱)</label>
             <input type="number" id="thresholdInput" class="form-control" min="0" step="1" placeholder="50">
           </div>
           <div class="col-md-2">
@@ -1154,7 +1154,7 @@ background-image: url('https://i.pinimg.com/736x/08/1a/6e/081a6e345f9c8cb5c2be4d
                 resultDiv.innerHTML = `
                     <strong>${data.student_name}</strong><br>
                     Card UID: <code>${data.card_uid}</code><br>
-                    Balance: ฿${parseFloat(data.balance).toFixed(2)}<br>
+                    Balance: ₱${parseFloat(data.balance).toFixed(2)}<br>
                     <span class="badge bg-success">Card registered — ready for payments</span>
                 `;
             } else {
