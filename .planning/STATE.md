@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Requirements Coverage
 status: completed
-stopped_at: Phase 28 Plan 02 complete — Users sheet reads cached in cashier_routes.py (d3a6aa3)
-last_updated: "2026-03-09T12:09:10.827Z"
+stopped_at: Phase 28 Plan 01 complete — transactions_all cache + missing invalidations in nfc_pay/nfc_register (0737c37)
+last_updated: "2026-03-09T12:30:00.000Z"
 last_activity: 2026-03-09 — Phase 26 Plan 01 executed (NameErrors fixed in admin_dashboard.py, ฿ → ₱ in dashboard.html)
 progress:
   total_phases: 20
   completed_phases: 12
   total_plans: 49
-  completed_plans: 48
+  completed_plans: 49
 ---
 
 # Project State
@@ -24,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-03-08)
 
 ## Current Position
 
-Phase: Phase 26 — Critical Dashboard Stability (COMPLETE ✓)
-Plan: 26-01-PLAN.md complete (admin_required alias + get_sheets_client + ₱ currency)
-Status: complete — Phase 26 fully executed
-Last activity: 2026-03-09 — Phase 26 Plan 01 executed (NameErrors fixed in admin_dashboard.py, ฿ → ₱ in dashboard.html)
+Phase: Phase 28 — Backend Performance Cache Infrastructure (COMPLETE ✓)
+Plan: 28-01-PLAN.md complete (transactions_all cache + cache invalidations for nfc_pay/nfc_register)
+Status: complete — Phase 28 fully executed (both plans 28-01 and 28-02 done)
+Last activity: 2026-03-09 — Phase 28 Plan 01 executed (transactions_all cache in get_transactions, invalidate_cached calls in nfc_pay + nfc_register)
 
 Progress: [##########] v1.2 COMPLETE ✓ | v1.3 Phase 25 next (10 phases pending)
 
