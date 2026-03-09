@@ -862,11 +862,30 @@ def add_category():
 @login_required
 @admin_required
 def delete_category(name):
-    """Delete a category by name"""
+    """Delete a category by name, only if no active products use it."""
     try:
         name = name.strip()
         if not name:
             return jsonify({"error": "Category name required"}), 400
+
+        # Safety check: refuse if active products use this category
+        db = get_db()
+        try:
+            products_sheet = db.worksheet("Products")
+            products = products_sheet.get_all_records()
+            in_use = any(
+                str(p.get("Category", "")).strip().lower() == name.lower()
+                and str(p.get("Active", "")).upper() == "TRUE"
+                for p in products
+            )
+            if in_use:
+                return jsonify(
+                    {
+                        "error": f'Cannot delete "{name}": active products use this category'
+                    }
+                ), 409
+        except gspread.exceptions.WorksheetNotFound:
+            pass  # No Products sheet yet — safe to delete
 
         sheet = _ensure_categories_sheet()
         records = sheet.get_all_records()
