@@ -10,10 +10,13 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
+import com.google.android.material.progressindicator.CircularProgressIndicator
 import com.google.android.material.snackbar.Snackbar
+import kotlinx.coroutines.launch
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -30,6 +33,17 @@ class HomeActivity : AppCompatActivity() {
     private lateinit var balanceProgressBar: ProgressBar
     private lateinit var refreshButton: ImageButton
     private lateinit var secureStorage: SecureStorage
+
+    // Budget UI
+    private lateinit var budgetCard: MaterialCardView
+    private lateinit var budgetProgress: CircularProgressIndicator
+    private lateinit var tvBudgetPercent: TextView
+    private lateinit var tvBudgetSpend: TextView
+    private lateinit var btnSetBudget: MaterialButton
+    private var monthlyLimit: Double? = null
+
+    // Lost card banner
+    private lateinit var bannerLostCard: MaterialCardView
 
     companion object {
         const val REQUEST_NFC_PAY = 1001
@@ -51,6 +65,16 @@ class HomeActivity : AppCompatActivity() {
         balanceProgressBar = findViewById(R.id.balanceProgressBar)
         refreshButton = findViewById(R.id.refreshButton)
 
+        // Budget views
+        budgetCard = findViewById(R.id.budgetCard)
+        budgetProgress = findViewById(R.id.budgetProgress)
+        tvBudgetPercent = findViewById(R.id.tvBudgetPercent)
+        tvBudgetSpend = findViewById(R.id.tvBudgetSpend)
+        btnSetBudget = findViewById(R.id.btnSetBudget)
+
+        // Lost card banner
+        bannerLostCard = findViewById(R.id.bannerLostCard)
+
         transactionsButton.setOnClickListener {
             startActivity(Intent(this, TransactionsActivity::class.java))
         }
@@ -64,6 +88,8 @@ class HomeActivity : AppCompatActivity() {
         }
 
         refreshButton.setOnClickListener { loadBalance() }
+
+        btnSetBudget.setOnClickListener { showSetBudgetDialog() }
 
         activateNfcPayButton.setOnClickListener {
             val nfcManager = NfcManager.getInstance(this)
@@ -86,11 +112,18 @@ class HomeActivity : AppCompatActivity() {
         }
 
         loadBalance()
+        loadAndDisplayBudget()
     }
 
     override fun onResume() {
         super.onResume()
         refreshNfcButton()
+        // Show lost card banner if card has been reported lost
+        if (secureStorage.isCardLost()) {
+            bannerLostCard.visibility = View.VISIBLE
+        } else {
+            bannerLostCard.visibility = View.GONE
+        }
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
@@ -150,13 +183,13 @@ class HomeActivity : AppCompatActivity() {
 
                 if (response.isSuccessful) {
                     response.body()?.let { balance ->
-                        balanceText.text = "฿%.2f".format(balance.balance)
+                        balanceText.text = "₱%.2f".format(balance.balance)
                         secureStorage.saveLastBalance(balance.balance)
                     }
                 } else {
                     val lastBalance = secureStorage.getLastBalance()
                     if (lastBalance != null) {
-                        balanceText.text = "฿%.2f".format(lastBalance)
+                        balanceText.text = "₱%.2f".format(lastBalance)
                     }
                     Snackbar.make(
                         findViewById(android.R.id.content),
@@ -174,7 +207,7 @@ class HomeActivity : AppCompatActivity() {
 
                 val lastBalance = secureStorage.getLastBalance()
                 if (lastBalance != null) {
-                    balanceText.text = "฿%.2f".format(lastBalance)
+                    balanceText.text = "₱%.2f".format(lastBalance)
                 }
                 Snackbar.make(
                     findViewById(android.R.id.content),
@@ -183,5 +216,145 @@ class HomeActivity : AppCompatActivity() {
                 ).show()
             }
         })
+    }
+
+    // ── Budget Tracker ─────────────────────────────────────────────────────────
+
+    private fun loadAndDisplayBudget() {
+        val token = secureStorage.getAuthToken() ?: return
+
+        lifecycleScope.launch {
+            try {
+                val response = ApiClient.apiService.getBudget("Bearer $token")
+                if (response.isSuccessful) {
+                    monthlyLimit = response.body()?.monthlyLimit
+                } else {
+                    monthlyLimit = null
+                }
+            } catch (e: Exception) {
+                monthlyLimit = null
+            }
+
+            // Now load transactions with callback style (not suspend)
+            ApiClient.apiService.getTransactions("Bearer $token")
+                .enqueue(object : Callback<TransactionsResponse> {
+                    override fun onResponse(
+                        call: Call<TransactionsResponse>,
+                        response: Response<TransactionsResponse>
+                    ) {
+                        val transactions = response.body()?.transactions ?: emptyList()
+                        updateBudgetUI(transactions)
+                    }
+
+                    override fun onFailure(call: Call<TransactionsResponse>, t: Throwable) {
+                        updateBudgetUI(emptyList())
+                    }
+                })
+        }
+    }
+
+    private fun updateBudgetUI(transactions: List<Transaction>) {
+        val limit = monthlyLimit
+        if (limit == null || limit <= 0.0) {
+            tvBudgetSpend.text = getString(R.string.budget_no_limit)
+            tvBudgetPercent.text = "—"
+            budgetProgress.progress = 0
+            budgetCard.visibility = View.VISIBLE
+            return
+        }
+
+        val currentMonth = java.text.SimpleDateFormat("yyyy-MM", java.util.Locale.getDefault())
+            .format(java.util.Date())
+
+        val spent = transactions
+            .filter { it.timestamp.startsWith(currentMonth) }
+            .filter { it.type == "Purchase" || it.type == "NFC Purchase" }
+            .sumOf { it.amount }
+
+        val percent = ((spent / limit) * 100).toInt().coerceIn(0, 100)
+
+        tvBudgetPercent.text = "$percent%"
+        tvBudgetSpend.text = getString(R.string.budget_spent_format, spent, limit)
+        budgetProgress.max = 100
+        budgetProgress.progress = percent
+        budgetCard.visibility = View.VISIBLE
+
+        checkBudgetAlerts(percent, currentMonth)
+    }
+
+    private fun checkBudgetAlerts(percent: Int, currentMonth: String) {
+        val lastAlertMonth = secureStorage.getBudgetAlertMonth()
+        if (lastAlertMonth != currentMonth) {
+            // New month — reset flags
+            secureStorage.setBudgetAlertMonth(currentMonth)
+            secureStorage.setBudgetAlerted80(false)
+            secureStorage.setBudgetAlerted100(false)
+        }
+
+        if (percent >= 100 && !secureStorage.isBudgetAlerted100()) {
+            secureStorage.setBudgetAlerted100(true)
+            Snackbar.make(
+                findViewById(android.R.id.content),
+                getString(R.string.budget_alert_100),
+                Snackbar.LENGTH_LONG
+            ).show()
+        } else if (percent >= 80 && !secureStorage.isBudgetAlerted80()) {
+            secureStorage.setBudgetAlerted80(true)
+            Snackbar.make(
+                findViewById(android.R.id.content),
+                getString(R.string.budget_alert_80),
+                Snackbar.LENGTH_LONG
+            ).show()
+        }
+    }
+
+    private fun showSetBudgetDialog() {
+        val input = EditText(this).apply {
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER or
+                    android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
+            hint = "e.g. 1000"
+            monthlyLimit?.let { setText("%.2f".format(it)) }
+        }
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.budget_set_limit))
+            .setView(input)
+            .setPositiveButton("Save") { _, _ ->
+                val value = input.text.toString().toDoubleOrNull()
+                if (value != null && value >= 0) {
+                    saveBudgetLimit(value)
+                } else {
+                    Toast.makeText(this, "Enter a valid amount", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun saveBudgetLimit(limit: Double) {
+        val token = secureStorage.getAuthToken() ?: return
+        lifecycleScope.launch {
+            try {
+                val response = ApiClient.apiService.setBudget(
+                    "Bearer $token",
+                    SetBudgetRequest(limit)
+                )
+                if (response.isSuccessful) {
+                    monthlyLimit = limit
+                    loadAndDisplayBudget()
+                } else {
+                    Toast.makeText(
+                        this@HomeActivity,
+                        "Failed to save budget",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            } catch (e: Exception) {
+                Toast.makeText(
+                    this@HomeActivity,
+                    "Failed to save budget",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
     }
 }
