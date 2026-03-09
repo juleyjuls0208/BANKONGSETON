@@ -24,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-03-08)
 
 ## Current Position
 
-Phase: Phase 28 — Backend Performance Cache Infrastructure (COMPLETE ✓)
-Plan: 28-01-PLAN.md complete (transactions_all cache + cache invalidations for nfc_pay/nfc_register)
-Status: complete — Phase 28 fully executed (both plans 28-01 and 28-02 done)
-Last activity: 2026-03-09 — Phase 28 Plan 01 executed (transactions_all cache in get_transactions, invalidate_cached calls in nfc_pay + nfc_register)
+Phase: Phase 30 — iOS Bugs & UX (CONTEXT WRITTEN ✓, planning next)
+Plan: 30-CONTEXT.md complete — ready for /gsd:plan-phase 30
+Status: context complete — all 4 gray areas discussed and decided
+Last activity: 2026-03-09 — Phase 30 context written (401 session expiry, card lost messaging, budget input protection, loading & empty states)
 
 Progress: [##########] v1.2 COMPLETE ✓ | v1.3 Phase 25 next (10 phases pending)
 
@@ -249,8 +249,11 @@ Recent decisions affecting current work:
 - [Phase 28-backend-performance-cache-infrastructure]: ImportError fallback (no-op get_cached/set_cached) added so cashier_routes works in test environments without cache.py on path
 - [Phase 29-android-security-p1-bugs]: [29-02]: isClickable reset at top of bind() ensures recycled ViewHolders always start clickable before type-branch sets final state
 - [Phase 29-android-security-p1-bugs]: [29-02]: Budget spend filter targets Purchase and NFC Purchase types only — excludes Top-Up and other credit transactions from spend calculation
-- [Phase 29-android-security-p1-bugs]: SHA-256 (no salt) for PIN hash — PIN validated server-side; local hash is offline biometric fallback only
-- [Phase 29-android-security-p1-bugs]: verifyPin() handles plaintext→hash migration transparently — no separate migration job needed
+- [Phase 30]: 401 → alert ("Your session has expired. Please sign in again.") → login screen; no deep-link back; all ViewModels handle flow
+- [Phase 30]: CARD_LOST detected via response body string (not HTTP status); inline red error on login screen only; message: "Your card has been reported lost. Please contact the canteen admin."
+- [Phase 30]: Budget input: hasEdited flag (Option A); resets on .onDisappear so server value reloads fresh on next visit
+- [Phase 30]: Empty transactions: "No transactions yet" + subtext "Your transaction history will appear here." (no icon)
+- [Phase 30]: Balance during load: read last_balance from Keychain on HomeViewModel init; show cached value immediately, update when fresh data arrives
 
 ### Roadmap Evolution
 
