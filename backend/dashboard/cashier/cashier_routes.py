@@ -131,7 +131,7 @@ def ensure_products_sheet():
 
 JWT_ALGORITHM = "HS256"
 
-UID_PATTERN = re.compile(r"^[0-9A-Fa-f]{8}$")
+UID_PATTERN = re.compile(r"^[0-9A-Fa-f]{8}$|^[0-9A-Fa-f]{14}$")
 
 
 def jwt_required(roles=None):
@@ -187,6 +187,11 @@ def api_login():
 
         response = jsonify({"success": True})
         response.set_cookie("jwt_token", token, httponly=True, max_age=28800)
+        # Initialise shift counters for the new login session
+        from flask import session as flask_session
+        flask_session["shift_total_sales"] = 0.0
+        flask_session["shift_transaction_count"] = 0
+        flask_session["shift_items_sold"] = 0
         return response
     else:
         return jsonify({"error": "Invalid credentials"}), 401
@@ -222,7 +227,16 @@ def get_ports():
 def connect_arduino():
     """Connect to Arduino on specified port"""
     try:
+        import serial
         from flask import current_app
+
+        # ArduinoBridge lives one package level up from the cashier blueprint
+        import sys, os as _os
+
+        _bridge_dir = _os.path.join(_os.path.dirname(__file__), "..")
+        if _bridge_dir not in sys.path:
+            sys.path.insert(0, _bridge_dir)
+        from arduino_bridge import ArduinoBridge
 
         data = request.get_json()
         port = data.get("port")
@@ -230,28 +244,23 @@ def connect_arduino():
         if not port:
             return jsonify({"error": "Port required"}), 400
 
-        # Try to connect Arduino
-        if hasattr(current_app, "arduino_bridge"):
+        # Close any existing connection
+        if hasattr(current_app, "arduino") and current_app.arduino:
             try:
-                import serial
+                current_app.arduino.close()
+            except Exception:
+                pass
 
-                # Close existing connection if any
-                if hasattr(current_app, "arduino") and current_app.arduino:
-                    try:
-                        current_app.arduino.close()
-                    except:
-                        pass
+        # Open new serial connection
+        arduino = serial.Serial(port, 9600, timeout=1)
 
-                # Open new connection
-                arduino = serial.Serial(port, 9600, timeout=1)
-                current_app.arduino = arduino
-                current_app.arduino_port = port
+        # Create (or replace) the ArduinoBridge so the cashier can read cards
+        bridge = ArduinoBridge(arduino, current_app.socketio)
+        current_app.arduino = arduino
+        current_app.arduino_bridge = bridge
+        current_app.arduino_port = port
 
-                return jsonify({"success": True, "message": f"Connected to {port}"})
-            except Exception as e:
-                return jsonify({"error": f"Failed to connect: {str(e)}"}), 500
-        else:
-            return jsonify({"error": "Arduino bridge not available"}), 500
+        return jsonify({"success": True, "message": f"Connected to {port}"})
 
     except (ConnectionError, TimeoutError) as e:
         logger.error(f"Serial connection error in connect_arduino: {e}")
@@ -567,6 +576,13 @@ def complete_sale():
         # Clear pending transaction
         flask_session.pop("pending_transaction", None)
 
+        # Update shift counters
+        flask_session["shift_total_sales"] = flask_session.get("shift_total_sales", 0.0) + total
+        flask_session["shift_transaction_count"] = flask_session.get("shift_transaction_count", 0) + 1
+        flask_session["shift_items_sold"] = flask_session.get("shift_items_sold", 0) + sum(
+            int(i.get("qty", 1)) for i in items
+        )
+
         # FCM purchase push (always) + low-balance push (if threshold breached)
         # Never blocks or rolls back the transaction response
         try:
@@ -656,3 +672,30 @@ def complete_sale():
     except Exception as e:
         logger.error(f"Unexpected error in complete_sale: {e}", exc_info=True)
         return jsonify({"error": "An unexpected error occurred"}), 500
+
+
+@cashier_bp.route("/api/shift/summary", methods=["GET"])
+@jwt_required(roles=["cashier", "admin"])
+def get_shift_summary():
+    """Return the current shift counters from the session."""
+    from flask import session as flask_session
+
+    return jsonify(
+        {
+            "total_sales": flask_session.get("shift_total_sales", 0.0),
+            "transaction_count": flask_session.get("shift_transaction_count", 0),
+            "items_sold": flask_session.get("shift_items_sold", 0),
+        }
+    )
+
+
+@cashier_bp.route("/api/shift/reset", methods=["POST"])
+@jwt_required(roles=["cashier", "admin"])
+def reset_shift():
+    """Reset all shift counters to zero."""
+    from flask import session as flask_session
+
+    flask_session["shift_total_sales"] = 0.0
+    flask_session["shift_transaction_count"] = 0
+    flask_session["shift_items_sold"] = 0
+    return jsonify({"success": True})
