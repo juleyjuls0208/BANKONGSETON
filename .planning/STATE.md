@@ -4,7 +4,7 @@ milestone: v1.1
 milestone_name: Requirements Coverage
 status: completed
 stopped_at: Completed 29-01-PLAN.md
-last_updated: "2026-03-09T13:08:39.523Z"
+last_updated: "2026-03-09T13:12:31.376Z"
 last_activity: 2026-03-09 — Phase 28 Plan 01 executed (transactions_all cache in get_transactions, invalidate_cached calls in nfc_pay + nfc_register)
 progress:
   total_phases: 20
