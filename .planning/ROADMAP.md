@@ -403,10 +403,11 @@ Plans:
 - Cashier transaction handler reads the users sheet exactly once per transaction (not 3×)
 - Per-user transaction listing fetches only that student's rows from the sheet; no all-users fetch + Python filter
 
-**Plans:** TBD (run `/gsd-plan-phase 28` to break down)
+**Plans:** 2 plans
 
 Plans:
-- [ ] TBD
+- [ ] 28-01-PLAN.md — Cache VirtualCards + Transactions Log in api_server.py; eliminate redundant Money Accounts header call; add missing invalidations
+- [ ] 28-02-PLAN.md — Import cache helpers into cashier_routes.py; replace both raw Users sheet reads with shared users_all cache
 
 ---
 
