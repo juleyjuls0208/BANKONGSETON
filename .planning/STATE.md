@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Requirements Coverage
 status: completed
-stopped_at: Phase 25 Plan 02 complete — CORS locked + TTL cache wired (28982e9, c288060); Phase 25 fully done
-last_updated: "2026-03-09T12:00:00.000Z"
-last_activity: 2026-03-09 — Phase 28 context gathered (VirtualCards TTL, Money Accounts, Transaction Query, Cashier Dedup)
+stopped_at: Phase 28 Plan 02 complete — Users sheet reads cached in cashier_routes.py (d3a6aa3)
+last_updated: "2026-03-09T12:09:10.827Z"
+last_activity: 2026-03-09 — Phase 26 Plan 01 executed (NameErrors fixed in admin_dashboard.py, ฿ → ₱ in dashboard.html)
 progress:
   total_phases: 20
   completed_phases: 12
-  total_plans: 47
-  completed_plans: 47
+  total_plans: 49
+  completed_plans: 48
 ---
 
 # Project State
@@ -103,6 +103,7 @@ Progress: [##########] v1.2 COMPLETE ✓ | v1.3 Phase 25 next (10 phases pending
 | Phase 24-admin-cashier-improvements P04 | 5min | 3 tasks | 1 files |
 | Phase 25-critical-backend-stability P01 | 12min | 2 tasks | 1 file |
 | Phase 25-critical-backend-stability P02 | 20min | 2 tasks | 2 files |
+| Phase 28 P02 | 5min | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -243,6 +244,7 @@ Recent decisions affecting current work:
 - [v1.3-roadmap]: Phases 25–34 created; 57 requirements across 7 categories (BUG, BUG-MOB, SEC, PERF, QUAL, UX, CURR) — all mapped, 0 orphans
 - [v1.3-roadmap]: Phase 27 (Critical Mobile Fixes) parallelizable with Phases 25/26 — mobile and backend are independent components
 - [v1.3-roadmap]: Phases 25–27 are P0 criticals (must fix before anything else); 28–31 are P1; 32–34 are P2/P3
+- [Phase 28-backend-performance-cache-infrastructure]: ImportError fallback (no-op get_cached/set_cached) added so cashier_routes works in test environments without cache.py on path
 
 ### Roadmap Evolution
 
@@ -287,6 +289,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-09T12:00:00.000Z
-Stopped at: Phase 28 context gathered — cache decisions locked for planning
-Resume file: .planning/phases/28-backend-performance-cache-infrastructure/28-CONTEXT.md
+Last session: 2026-03-09T12:08:59.941Z
+Stopped at: Phase 28 Plan 02 complete — Users sheet reads cached in cashier_routes.py (d3a6aa3)
+Resume file: None
