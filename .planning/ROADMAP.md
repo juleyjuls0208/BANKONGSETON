@@ -453,10 +453,11 @@ Plans:
 - Sign In button is fully visible on iPhone SE when the keyboard is open (no keyboard overlap)
 - PIN login field does not trigger iOS password autofill suggestions
 
-**Plans:** TBD (run `/gsd-plan-phase 30` to break down)
+**Plans:** 2 plans
 
 Plans:
-- [ ] TBD
+- [ ] 30-01-PLAN.md — Error-handling bugs + cached balance (APIClient, AuthManager, all ViewModels)
+- [ ] 30-02-PLAN.md — UX polish views (session alert, login keyboard/PIN, budget guard, transactions empty state)
 
 ---
 
