@@ -323,6 +323,9 @@ def admin_only(f):
     return decorated_function
 
 
+admin_required = admin_only  # alias — admin_only IS the admin requirement check
+
+
 def parent_only(f):
     """Decorator requiring parent role"""
 
@@ -780,13 +783,9 @@ def delete_product(product_id):
         logger.error("event=delete_product_unexpected error=%s", e, exc_info=True)
         return jsonify({"error": "An unexpected error occurred"}), 500
 
+    # ============= CATEGORIES ROUTES =============
 
-# ============= CATEGORIES ROUTES =============
-
-
-def _ensure_categories_sheet():
-    """Ensure the Categories sheet exists with the correct headers, return it."""
-    db = get_db()
+    db = get_sheets_client()
     try:
         return db.worksheet("Categories")
     except gspread.exceptions.WorksheetNotFound:
@@ -869,7 +868,7 @@ def delete_category(name):
             return jsonify({"error": "Category name required"}), 400
 
         # Safety check: refuse if active products use this category
-        db = get_db()
+        db = get_sheets_client()
         try:
             products_sheet = db.worksheet("Products")
             products = products_sheet.get_all_records()
