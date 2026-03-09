@@ -18,6 +18,7 @@ import json
 import re
 import logging
 import sys
+import threading
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 try:
@@ -31,6 +32,7 @@ except ImportError:
 from utils import normalize_card_uid
 from nfc_payments import NFCService, ensure_virtual_cards_sheet
 from notifications import TwilioSMSNotifier
+from cache import get_cached, set_cached, invalidate_cached
 
 nfc_service = NFCService()
 sms_notifier = TwilioSMSNotifier()
@@ -140,6 +142,10 @@ def get_worksheet_with_retry(sheet_name, retries=2):
 # Simple token storage (in production, use Redis or database)
 active_sessions = {}
 
+# Per-card locks to prevent double-spend race conditions
+_card_locks: dict = {}
+_card_locks_lock = threading.Lock()
+
 
 def generate_token():
     """Generate secure session token"""
@@ -196,7 +202,7 @@ def require_auth(roles=None):
     return decorator
 
 
-UID_PATTERN = re.compile(r"^[0-9A-Fa-f]{8}$")
+UID_PATTERN = re.compile(r"^[0-9A-Fa-f]{8}$|^[0-9A-Fa-f]{14}$")
 
 
 def validate_card_uid(uid):
@@ -232,7 +238,10 @@ def login():
 
         # Search for student in Users sheet
         users_sheet = get_worksheet_with_retry("Users")
-        records = users_sheet.get_all_records()
+        records = get_cached("users_all")
+        if records is None:
+            records = users_sheet.get_all_records()
+            set_cached("users_all", records, ttl=30)
 
         student = None
 
@@ -334,7 +343,10 @@ def get_profile():
 
         # Get student data
         users_sheet = get_worksheet_with_retry("Users")
-        records = users_sheet.get_all_records()
+        records = get_cached("users_all")
+        if records is None:
+            records = users_sheet.get_all_records()
+            set_cached("users_all", records, ttl=30)
 
         student = None
         for record in records:
@@ -413,7 +425,10 @@ def get_balance():
 
         # Get student's money card
         users_sheet = get_worksheet_with_retry("Users")
-        records = users_sheet.get_all_records()
+        records = get_cached("users_all")
+        if records is None:
+            records = users_sheet.get_all_records()
+            set_cached("users_all", records, ttl=30)
 
         money_card = None
         for record in records:
@@ -486,7 +501,10 @@ def get_transactions():
 
         # Get student's money card
         users_sheet = get_worksheet_with_retry("Users")
-        records = users_sheet.get_all_records()
+        records = get_cached("users_all")
+        if records is None:
+            records = users_sheet.get_all_records()
+            set_cached("users_all", records, ttl=30)
 
         money_card = None
         for record in records:
@@ -610,7 +628,10 @@ def get_budget():
 
         # Get student's money card
         users_sheet = get_worksheet_with_retry("Users")
-        records = users_sheet.get_all_records()
+        records = get_cached("users_all")
+        if records is None:
+            records = users_sheet.get_all_records()
+            set_cached("users_all", records, ttl=30)
 
         money_card = None
         for record in records:
@@ -680,7 +701,10 @@ def set_budget():
 
         # Get student's money card
         users_sheet = get_worksheet_with_retry("Users")
-        records = users_sheet.get_all_records()
+        records = get_cached("users_all")
+        if records is None:
+            records = users_sheet.get_all_records()
+            set_cached("users_all", records, ttl=30)
 
         money_card = None
         for record in records:
@@ -748,7 +772,10 @@ def report_lost_card():
 
         # Get MoneyCardNumber from Users sheet
         users_sheet = get_worksheet_with_retry("Users")
-        users_records = users_sheet.get_all_records()
+        users_records = get_cached("users_all")
+        if users_records is None:
+            users_records = users_sheet.get_all_records()
+            set_cached("users_all", users_records, ttl=30)
         money_card_number = None
         for record in users_records:
             if str(record.get("StudentID", "")).strip() == str(student_id).strip():
@@ -1028,37 +1055,43 @@ def nfc_pay():
         money_card_number = str(matched.get("MoneyCardNumber", "")).strip()
 
         # Step 4: Debit balance from Money Accounts sheet
-        money_sheet = get_worksheet_with_retry("Money Accounts")
-        money_records = money_sheet.get_all_records()
-        balance_row_idx = None
-        current_balance = None
-        for idx, r in enumerate(money_records, start=2):
-            if str(r.get("MoneyCardNumber", "")).strip() == money_card_number:
-                balance_row_idx = idx
-                try:
-                    current_balance = float(r.get("Balance", 0))
-                except (TypeError, ValueError):
-                    current_balance = 0.0
-                break
+        # Acquire per-card lock to prevent double-spend race condition
+        with _card_locks_lock:
+            card_lock = _card_locks.setdefault(money_card_number, threading.Lock())
+        with card_lock:
+            money_sheet = get_worksheet_with_retry("Money Accounts")
+            money_records = money_sheet.get_all_records()
+            balance_row_idx = None
+            current_balance = None
+            for idx, r in enumerate(money_records, start=2):
+                if str(r.get("MoneyCardNumber", "")).strip() == money_card_number:
+                    balance_row_idx = idx
+                    try:
+                        current_balance = float(r.get("Balance", 0))
+                    except (TypeError, ValueError):
+                        current_balance = 0.0
+                    break
 
-        if balance_row_idx is None:
-            return jsonify({"error": "Invalid virtual card token or device token"}), 401
+            if balance_row_idx is None:
+                return jsonify(
+                    {"error": "Invalid virtual card token or device token"}
+                ), 401
 
-        if current_balance < total:
-            return jsonify(
-                {"error": "Insufficient funds", "balance": current_balance}
-            ), 400
+            if current_balance < total:
+                return jsonify(
+                    {"error": "Insufficient funds", "balance": current_balance}
+                ), 400
 
-        new_balance = round(current_balance - total, 2)
+            new_balance = round(current_balance - total, 2)
 
-        # Find Balance column index (1-based) in Money Accounts
-        header_row = money_sheet.row_values(1)
-        try:
-            balance_col_idx = header_row.index("Balance") + 1
-        except ValueError:
-            balance_col_idx = 3  # fallback: column C
+            # Find Balance column index (1-based) in Money Accounts
+            header_row = money_sheet.row_values(1)
+            try:
+                balance_col_idx = header_row.index("Balance") + 1
+            except ValueError:
+                balance_col_idx = 3  # fallback: column C
 
-        money_sheet.update_cell(balance_row_idx, balance_col_idx, new_balance)
+            money_sheet.update_cell(balance_row_idx, balance_col_idx, new_balance)
 
         # Step 5: Log to Transactions Log sheet
         timestamp = get_philippines_time()
@@ -1319,52 +1352,59 @@ def process_cashier_transaction():
         # Normalize card UID
         normalized_card = normalize_card_uid(card_uid)
 
-        # Find the money account
-        money_sheet = get_worksheet_with_retry("Money Accounts")
-        money_records = money_sheet.get_all_records()
-
         account_row = None
         current_balance = 0.0
         student_id = None
 
-        for idx, record in enumerate(money_records, start=2):
-            if normalize_card_uid(record.get("MoneyCardNumber", "")) == normalized_card:
-                account_row = idx
-                current_balance = float(record.get("Balance", 0))
-                card_status = record.get("Status", "").strip().lower()
+        # Acquire per-card lock to prevent double-spend race condition
+        with _card_locks_lock:
+            card_lock = _card_locks.setdefault(normalized_card, threading.Lock())
+        with card_lock:
+            # Find the money account
+            money_sheet = get_worksheet_with_retry("Money Accounts")
+            money_records = money_sheet.get_all_records()
 
-                # Check card status
-                if card_status == "lost":
-                    return jsonify({"error": "Card reported as lost"}), 403
-                if card_status != "active":
-                    return jsonify({"error": f"Card is {card_status}"}), 403
+            for idx, record in enumerate(money_records, start=2):
+                if (
+                    normalize_card_uid(record.get("MoneyCardNumber", ""))
+                    == normalized_card
+                ):
+                    account_row = idx
+                    current_balance = float(record.get("Balance", 0))
+                    card_status = record.get("Status", "").strip().lower()
 
-                # Get student ID from associated user
-                student_id_card = record.get("StudentIDCard", "")
-                users_sheet = get_worksheet_with_retry("Users")
-                user_records = users_sheet.get_all_records()
-                for user in user_records:
-                    if normalize_card_uid(
-                        user.get("IDCardNumber", "")
-                    ) == normalize_card_uid(student_id_card):
-                        student_id = user.get("StudentID")
-                        break
-                break
+                    # Check card status
+                    if card_status == "lost":
+                        return jsonify({"error": "Card reported as lost"}), 403
+                    if card_status != "active":
+                        return jsonify({"error": f"Card is {card_status}"}), 403
 
-        if not account_row:
-            return jsonify({"error": "Card not found"}), 404
+                    # Get student ID from associated user
+                    student_id_card = record.get("StudentIDCard", "")
+                    users_sheet = get_worksheet_with_retry("Users")
+                    user_records = users_sheet.get_all_records()
+                    for user in user_records:
+                        if normalize_card_uid(
+                            user.get("IDCardNumber", "")
+                        ) == normalize_card_uid(student_id_card):
+                            student_id = user.get("StudentID")
+                            break
+                    break
 
-        # Check sufficient balance
-        if current_balance < total:
-            return jsonify(
-                {"error": "Insufficient funds", "balance": current_balance}
-            ), 400
+            if not account_row:
+                return jsonify({"error": "Card not found"}), 404
 
-        # Deduct balance
-        new_balance = current_balance - total
-        money_sheet.update(
-            f"C{account_row}", [[new_balance]]
-        )  # Assuming Balance is column C
+            # Check sufficient balance
+            if current_balance < total:
+                return jsonify(
+                    {"error": "Insufficient funds", "balance": current_balance}
+                ), 400
+
+            # Deduct balance
+            new_balance = current_balance - total
+            money_sheet.update(
+                f"C{account_row}", [[new_balance]]
+            )  # Assuming Balance is column C
 
         # Log transaction with ItemsJson
         trans_sheet = get_worksheet_with_retry("Transactions Log")
