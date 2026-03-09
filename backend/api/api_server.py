@@ -538,7 +538,10 @@ def get_transactions():
 
         # Get transactions
         trans_sheet = get_worksheet_with_retry("Transactions Log")
-        trans_records = trans_sheet.get_all_records()
+        trans_records = get_cached("transactions_all")
+        if trans_records is None:
+            trans_records = trans_sheet.get_all_records()
+            set_cached("transactions_all", trans_records, ttl=30)
 
         normalized_card = normalize_card_uid(money_card)
         transactions = []
@@ -902,6 +905,7 @@ def nfc_register():
 
         result = nfc_service.register_virtual_card(student_id, money_card, db)
         invalidate_cached("users_all")
+        invalidate_cached("virtual_cards_all")
         logger.info(f"event=nfc_register_success student_id={student_id}")
         return jsonify(
             {
@@ -1053,7 +1057,19 @@ def nfc_pay():
 
         # Step 2: Look up VirtualCard by token (must be active)
         db = get_sheets_client()
-        matched = nfc_service.get_virtual_card_by_token(virtual_card_token, db)
+        _vc_records = get_cached("virtual_cards_all")
+        if _vc_records is None:
+            _vc_records = get_worksheet_with_retry("VirtualCards").get_all_records()
+            set_cached("virtual_cards_all", _vc_records, ttl=30)
+        matched = next(
+            (
+                r
+                for r in _vc_records
+                if r.get("VirtualCardToken") == virtual_card_token
+                and str(r.get("IsActive", "")).upper() == "TRUE"
+            ),
+            None,
+        )
         if not matched:
             return jsonify({"error": "Invalid or inactive virtual card token"}), 401
 
@@ -1089,12 +1105,14 @@ def nfc_pay():
 
             new_balance = round(current_balance - total, 2)
 
-            # Find Balance column index (1-based) in Money Accounts
-            header_row = money_sheet.row_values(1)
-            try:
-                balance_col_idx = header_row.index("Balance") + 1
-            except ValueError:
-                balance_col_idx = 3  # fallback: column C
+            # Derive Balance column index from record keys — avoids extra row_values(1) API call
+            if money_records:
+                try:
+                    balance_col_idx = list(money_records[0].keys()).index("Balance") + 1
+                except ValueError:
+                    balance_col_idx = 3
+            else:
+                balance_col_idx = 3
 
             money_sheet.update_cell(balance_row_idx, balance_col_idx, new_balance)
 
@@ -1141,6 +1159,7 @@ def nfc_pay():
                 station_id,  # StationID
             ]
         )
+        invalidate_cached("transactions_all")
 
         logger.info(
             f"event=nfc_pay_success money_card={money_card_number} total={total} new_balance={new_balance} station={station_id}"
