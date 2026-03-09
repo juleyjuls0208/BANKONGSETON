@@ -304,7 +304,7 @@ Fix every known bug, close security holes, activate unused performance infrastru
 | 25 | 1/2 | Complete    | 2026-03-09 |
 | 26 | 1/1 | Complete    | 2026-03-09 |
 | 27 | Critical Mobile Fixes | Complete    | 2026-03-09 |
-| 28 | Backend Performance: Cache Infrastructure | REQ-PERF-02, REQ-PERF-03, REQ-PERF-04 | Pending |
+| 28 | Backend Performance: Cache Infrastructure | Complete    | 2026-03-09 |
 | 29 | Android Security & P1 Bugs | REQ-SEC-04, REQ-SEC-05, REQ-BUG-MOB-06, REQ-BUG-MOB-07 | Pending |
 | 30 | iOS Bugs & UX | REQ-BUG-MOB-04, REQ-BUG-MOB-05, REQ-UX-01, REQ-UX-02, REQ-UX-03, REQ-UX-04, REQ-UX-05 | Pending |
 | 31 | Dashboard & Backend P1 Fixes | REQ-BUG-05, REQ-BUG-06, REQ-BUG-07, REQ-BUG-08, REQ-SEC-06, REQ-QUAL-01, REQ-QUAL-02, REQ-CURR-01 | Pending |
@@ -403,7 +403,7 @@ Plans:
 - Cashier transaction handler reads the users sheet exactly once per transaction (not 3×)
 - Per-user transaction listing fetches only that student's rows from the sheet; no all-users fetch + Python filter
 
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 28-01-PLAN.md — Cache VirtualCards + Transactions Log in api_server.py; eliminate redundant Money Accounts header call; add missing invalidations
