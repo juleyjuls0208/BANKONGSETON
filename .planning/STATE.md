@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.1
-milestone_name: Requirements Coverage
-status: completed
-stopped_at: Completed 21-08-PLAN.md — Phase 21 fully complete, v1.2 released
-last_updated: "2026-03-08T01:02:45.149Z"
-last_activity: 2026-03-08 — Phase 21 Plan 08 complete; all planning artifacts updated, version bumped to v1.2
+milestone: v1.2
+milestone_name: Admin & Cashier Improvements
+status: in_progress
+stopped_at: Completed 24-01-PLAN.md — PAR-01–06 marked complete; Phase 24 added to ROADMAP
+last_updated: "2026-03-09T00:00:00.000Z"
+last_activity: 2026-03-09 — Phase 24 started; PAR-01–06 bookkeeping fixed, Phase 24 added to ROADMAP
 progress:
-  total_phases: 7
+  total_phases: 8
   completed_phases: 7
-  total_plans: 31
-  completed_plans: 31
+  total_plans: 36
+  completed_plans: 32
 ---
 
 # Project State
@@ -20,16 +20,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-08)
 
 **Core value:** Students can pay for canteen food instantly by tapping their RFID card, with their balance always visible in the app
-**Current focus:** v1.2 released — Phase 21 complete; next phase TBD
+**Current focus:** Phase 24 — Admin & Cashier Improvements (1/5 plans done)
 
 ## Current Position
 
-Phase: Phase 21 — COMPLETE (8/8 plans complete)
-Plan: 21-08 done; Phase 21 fully complete
-Status: complete
-Last activity: 2026-03-08 — Phase 21 Plan 08 complete; all planning artifacts updated, version bumped to v1.2
+Phase: Phase 24 — IN PROGRESS (1/5 plans complete)
+Plan: 24-01 done; Phase 24 in progress
+Status: in_progress
+Last activity: 2026-03-09 — Phase 24 started; PAR-01–06 bookkeeping fixed, Phase 24 added to ROADMAP
 
-Progress: [##########] v1.1 ALL 6 PHASES COMPLETE ✓ (16 ✓, 17 ✓, 18 ✓, 19 ✓, 20 ✓, 20.1 ✓) | Phase 21 (v1.2) ✓ COMPLETE
+Progress: [#########.] v1.2 Phase 24 in progress (Phase 21 ✓, Phase 23 ✓, Phase 24 1/5)
 
 ## Performance Metrics
 
@@ -260,6 +260,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-08T01:02:45Z
-Stopped at: Completed quick task 4 — Show connected COM port name in cashier header (portLabel span + updateArduinoStatus port param)
+Last session: 2026-03-09T00:00:00Z
+Stopped at: Completed 24-01-PLAN.md — PAR-01–06 marked complete; Phase 24 added to ROADMAP
 Resume file: None
