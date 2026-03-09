@@ -4,12 +4,12 @@ milestone: v1.1
 milestone_name: Requirements Coverage
 status: completed
 stopped_at: Phase 28 Plan 02 complete — Users sheet reads cached in cashier_routes.py (d3a6aa3)
-last_updated: "2026-03-09T12:34:03.373Z"
+last_updated: "2026-03-09T12:51:06.394Z"
 last_activity: 2026-03-09 — Phase 28 Plan 01 executed (transactions_all cache in get_transactions, invalidate_cached calls in nfc_pay + nfc_register)
 progress:
   total_phases: 20
   completed_phases: 13
-  total_plans: 49
+  total_plans: 51
   completed_plans: 49
 ---
 

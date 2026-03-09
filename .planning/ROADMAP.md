@@ -396,7 +396,7 @@ Plans:
 
 **Depends on:** Phase 25 (cache.py wired first)
 
-**Status:** Pending
+**Status:** ✓ Complete (2026-03-09)
 
 **Success criteria:**
 - NFC payment path makes ≤3 Google Sheets API calls (verifiable by code review or gspread call instrumentation)
@@ -406,8 +406,8 @@ Plans:
 **Plans:** 2/2 plans complete
 
 Plans:
-- [ ] 28-01-PLAN.md — Cache VirtualCards + Transactions Log in api_server.py; eliminate redundant Money Accounts header call; add missing invalidations
-- [ ] 28-02-PLAN.md — Import cache helpers into cashier_routes.py; replace both raw Users sheet reads with shared users_all cache
+- [x] 28-01-PLAN.md — Cache VirtualCards + Transactions Log in api_server.py; eliminate redundant Money Accounts header call; add missing invalidations
+- [x] 28-02-PLAN.md — Import cache helpers into cashier_routes.py; replace both raw Users sheet reads with shared users_all cache
 
 ---
 
