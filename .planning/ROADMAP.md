@@ -380,10 +380,11 @@ Plans:
 - Android release manifest does not contain `usesCleartextTraffic="true"` (all API traffic is HTTPS)
 - `BankoHceService.isPaymentAuthorized` is not a public writable static field; external code cannot authorize a payment without the PIN/biometric gate
 
-**Plans:** TBD (run `/gsd-plan-phase 27` to break down)
+**Plans:** 2 plans
 
 Plans:
-- [ ] TBD
+- [ ] 27-01-PLAN.md — iOS Critical Fixes: add cardStatus to Student model, add invalidURL to APIError, replace fatalErrors, fix isCardLost persistence (REQ-BUG-MOB-01, REQ-BUG-MOB-03)
+- [ ] 27-02-PLAN.md — Android Critical Fixes: clear isCardLost on login, move cleartext to debug-only source set, encapsulate NFC payment state (REQ-BUG-MOB-02, REQ-SEC-02, REQ-SEC-03)
 
 ---
 
