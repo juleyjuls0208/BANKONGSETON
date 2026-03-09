@@ -46,10 +46,11 @@ class TransactionsAdapter : RecyclerView.Adapter<TransactionsAdapter.Transaction
         private val typeIcon: ImageView = itemView.findViewById(R.id.expandIcon)
 
         fun bind(transaction: Transaction) {
+            itemView.isClickable = true
             typeText.text = transaction.type
             timestampText.text = transaction.timestamp
-            amountText.text = "฿%.2f".format(transaction.amount)
-            balanceText.text = "Balance: ฿%.2f".format(transaction.balance)
+            amountText.text = "₱%.2f".format(transaction.amount)
+            balanceText.text = "Balance: ₱%.2f".format(transaction.balance)
 
             val isPurchase = transaction.type.equals("Purchase", ignoreCase = true)
                     || transaction.type.equals("NFC Purchase", ignoreCase = true)
