@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Requirements Coverage
 status: in_progress
-stopped_at: Completed 24-03-PLAN.md
-last_updated: "2026-03-09T07:23:50.261Z"
+stopped_at: Completed 24-04-PLAN.md
+last_updated: "2026-03-09T07:27:07.489Z"
 last_activity: 2026-03-09 — Phase 24 started; PAR-01–06 bookkeeping fixed, Phase 24 added to ROADMAP
 progress:
   total_phases: 10
-  completed_phases: 8
+  completed_phases: 9
   total_plans: 42
-  completed_plans: 41
+  completed_plans: 42
 ---
 
 # Project State
@@ -100,6 +100,7 @@ Progress: [#########.] v1.2 Phase 24 in progress (Phase 21 ✓, Phase 23 ✓, Ph
 | Phase 21 P08 | 10min | 2 tasks | 5 files |
 | Phase 24-admin-cashier-improvements P05 | 3min | 2 tasks | 2 files |
 | Phase 24-admin-cashier-improvements P02 | 5 | 3 tasks | 2 files |
+| Phase 24-admin-cashier-improvements P04 | 5min | 3 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -236,6 +237,7 @@ Recent decisions affecting current work:
 - [Phase 24-05]: Shift bar uses horizontal dark bar style (not card) for always-visible glanceable stats
 - [Phase 24-02]: Kept /api/products/delete/<product_id> URL (not plan's /api/products/<product_id>) — products.html JS already called this URL; changing would require extra HTML edit and introduce ambiguity with /api/products/update
 - [Phase 24-02]: Used @admin_only (not @login_required + @admin_required) — admin_required was undefined; admin_only already includes session check
+- [Phase 24-admin-cashier-improvements]: void_transaction restricts voiding to Purchase type only — stricter/safer than plan spec, kept as-is
 
 ### Roadmap Evolution
 
@@ -267,6 +269,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-09T07:23:50.258Z
-Stopped at: Completed 24-03-PLAN.md
+Last session: 2026-03-09T07:27:07.486Z
+Stopped at: Completed 24-04-PLAN.md
 Resume file: None
