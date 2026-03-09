@@ -5,7 +5,7 @@ milestone_name: Requirements Coverage
 status: completed
 stopped_at: Phase 25 Plan 02 complete — CORS locked + TTL cache wired (28982e9, c288060); Phase 25 fully done
 last_updated: "2026-03-09T09:56:02.746Z"
-last_activity: 2026-03-09 — Phase 26 Plan 01 executed (NameErrors fixed in admin_dashboard.py, ฿ → ₱ in dashboard.html)
+last_activity: 2026-03-09 — Phase 27 context written (27-CONTEXT.md); discuss-phase complete
 progress:
   total_phases: 20
   completed_phases: 11
@@ -256,6 +256,11 @@ Recent decisions affecting current work:
 - [25-02]: Single cache key "users_all" shared across all 14 Users-sheet reads — 30s TTL window
 - [25-02]: invalidate_cached placed immediately after Sheets write in report_lost_card and nfc_register
 - [25-02]: _cached_nfc/_cached_notif temp vars used for inline for-loop patterns in nfc_pay() to avoid restructuring loops
+
+- [Phase 27]: isCardLost survives restart but cleared on explicit logout and backend-driven on next successful login
+- [Phase 27]: iOS fatalError → throw APIError.invalidURL; Android scope = student_app_v2 only
+- [Phase 27]: Android HTTPS: remove usesCleartextTraffic from main manifest, add network_security_config.xml in debug flavor for localhost
+- [Phase 27]: NFC auth fields → private; expose authorize(token)/deauthorize() method pair on BankoHceService
 
 ### Pending Todos
 
