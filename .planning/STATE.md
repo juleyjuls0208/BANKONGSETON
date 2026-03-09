@@ -267,6 +267,7 @@ Recent decisions affecting current work:
 | File | Title | Area |
 |------|-------|------|
 | `2026-03-09-fix-ios-login-network-error.md` | Fix iOS login network error | auth |
+| `2026-03-09-remove-pin-in-ios-app.md` | Remove pin in iOS app | auth |
 
 ### Blockers/Concerns
 
