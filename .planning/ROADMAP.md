@@ -303,7 +303,7 @@ Fix every known bug, close security holes, activate unused performance infrastru
 |-------|------|--------------|--------|
 | 25 | 1/2 | Complete    | 2026-03-09 |
 | 26 | 1/1 | Complete    | 2026-03-09 |
-| 27 | Critical Mobile Fixes | REQ-BUG-MOB-01, REQ-BUG-MOB-02, REQ-BUG-MOB-03, REQ-SEC-02, REQ-SEC-03 | Pending |
+| 27 | Critical Mobile Fixes | Complete    | 2026-03-09 |
 | 28 | Backend Performance: Cache Infrastructure | REQ-PERF-02, REQ-PERF-03, REQ-PERF-04 | Pending |
 | 29 | Android Security & P1 Bugs | REQ-SEC-04, REQ-SEC-05, REQ-BUG-MOB-06, REQ-BUG-MOB-07 | Pending |
 | 30 | iOS Bugs & UX | REQ-BUG-MOB-04, REQ-BUG-MOB-05, REQ-UX-01, REQ-UX-02, REQ-UX-03, REQ-UX-04, REQ-UX-05 | Pending |
@@ -380,7 +380,7 @@ Plans:
 - Android release manifest does not contain `usesCleartextTraffic="true"` (all API traffic is HTTPS)
 - `BankoHceService.isPaymentAuthorized` is not a public writable static field; external code cannot authorize a payment without the PIN/biometric gate
 
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 27-01-PLAN.md — iOS Critical Fixes: add cardStatus to Student model, add invalidURL to APIError, replace fatalErrors, fix isCardLost persistence (REQ-BUG-MOB-01, REQ-BUG-MOB-03)
