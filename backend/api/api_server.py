@@ -1110,7 +1110,11 @@ def nfc_pay():
         phone_number = ""
         try:
             users_sheet_nfc = get_worksheet_with_retry("Users")
-            for u in users_sheet_nfc.get_all_records():
+            _cached_nfc = get_cached("users_all")
+            if _cached_nfc is None:
+                _cached_nfc = users_sheet_nfc.get_all_records()
+                set_cached("users_all", _cached_nfc, ttl=30)
+            for u in _cached_nfc:
                 if normalize_card_uid(
                     str(u.get("MoneyCardNumber", ""))
                 ) == normalize_card_uid(money_card_number):
@@ -1146,7 +1150,11 @@ def nfc_pay():
         try:
             if nfc_student_id:
                 users_sheet_notif = get_worksheet_with_retry("Users")
-                for u in users_sheet_notif.get_all_records():
+                _cached_notif = get_cached("users_all")
+                if _cached_notif is None:
+                    _cached_notif = users_sheet_notif.get_all_records()
+                    set_cached("users_all", _cached_notif, ttl=30)
+                for u in _cached_notif:
                     if str(u.get("StudentID", "")) == nfc_student_id:
                         fcm_token = str(u.get("FCMToken", "")).strip()
                         if fcm_token:
@@ -1387,7 +1395,10 @@ def process_cashier_transaction():
                     # Get student ID from associated user
                     student_id_card = record.get("StudentIDCard", "")
                     users_sheet = get_worksheet_with_retry("Users")
-                    user_records = users_sheet.get_all_records()
+                    user_records = get_cached("users_all")
+                    if user_records is None:
+                        user_records = users_sheet.get_all_records()
+                        set_cached("users_all", user_records, ttl=30)
                     for user in user_records:
                         if normalize_card_uid(
                             user.get("IDCardNumber", "")
@@ -1437,7 +1448,10 @@ def process_cashier_transaction():
         try:
             if student_id:
                 users_sheet2 = get_worksheet_with_retry("Users")
-                user_records2 = users_sheet2.get_all_records()
+                user_records2 = get_cached("users_all")
+                if user_records2 is None:
+                    user_records2 = users_sheet2.get_all_records()
+                    set_cached("users_all", user_records2, ttl=30)
                 for user in user_records2:
                     if str(user.get("StudentID")) == str(student_id):
                         fcm_token = str(user.get("FCMToken", "")).strip()
@@ -1476,7 +1490,10 @@ def process_cashier_transaction():
         try:
             if student_id:
                 users_sheet = get_worksheet_with_retry("Users")
-                user_records = users_sheet.get_all_records()
+                user_records = get_cached("users_all")
+                if user_records is None:
+                    user_records = users_sheet.get_all_records()
+                    set_cached("users_all", user_records, ttl=30)
                 for user in user_records:
                     if user.get("StudentID") == student_id:
                         parent_email = user.get("ParentEmail", "")
@@ -1546,7 +1563,10 @@ def register_fcm_token():
 
         # Update user's FCM token
         users_sheet = get_worksheet_with_retry("Users")
-        records = users_sheet.get_all_records()
+        records = get_cached("users_all")
+        if records is None:
+            records = users_sheet.get_all_records()
+            set_cached("users_all", records, ttl=30)
 
         user_row = None
         for idx, record in enumerate(records, start=2):
