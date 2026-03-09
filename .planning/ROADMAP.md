@@ -333,11 +333,11 @@ Fix every known bug, close security holes, activate unused performance infrastru
 - Email failure during an already-committed cashier transaction is caught silently; the transaction still returns 200 to the client
 - `cache.py` TTLCache is imported and active in `api_server.py`; repeated calls within TTL period skip Google Sheets entirely
 
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans executed
 
 Plans:
-- [ ] 25-01-PLAN.md — Per-card threading locks in nfc_pay() + process_cashier_transaction(); silent email try/except (REQ-BUG-01, REQ-BUG-04)
-- [ ] 25-02-PLAN.md — CORS wildcard → production domain in wsgi.py; TTL cache wired to all users_sheet reads (REQ-SEC-01, REQ-PERF-01)
+- [x] 25-01-PLAN.md — Per-card threading locks in nfc_pay() + process_cashier_transaction(); silent email try/except (REQ-BUG-01, REQ-BUG-04)
+- [x] 25-02-PLAN.md — CORS wildcard → production domain in wsgi.py; TTL cache wired to all users_sheet reads (REQ-SEC-01, REQ-PERF-01)
 
 ---
 
@@ -562,10 +562,10 @@ Plans:
 
 | Requirement | Phase | Priority | Status |
 |-------------|-------|----------|--------|
-| REQ-SEC-01 | 25 | P0 | Pending |
-| REQ-BUG-01 | 25 | P0 | Pending |
-| REQ-BUG-04 | 25 | P0 | Pending |
-| REQ-PERF-01 | 25 | P0 | Pending |
+| REQ-SEC-01 | 25 | P0 | ✅ Complete |
+| REQ-BUG-01 | 25 | P0 | ✅ Complete |
+| REQ-BUG-04 | 25 | P0 | ✅ Complete |
+| REQ-PERF-01 | 25 | P0 | ✅ Complete |
 | REQ-BUG-02 | 26 | P0 | Pending |
 | REQ-BUG-03 | 26 | P0 | Pending |
 | REQ-CURR-02 | 26 | P1 | Pending |

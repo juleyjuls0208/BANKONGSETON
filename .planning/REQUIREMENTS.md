@@ -21,7 +21,7 @@
 
 | ID | Priority | Requirement | Source |
 |----|----------|-------------|--------|
-| REQ-SEC-01 | P0 | Restrict CORS in production WSGI — `wsgi.py` currently allows `*` (all origins) | Backend WSGI-01 |
+| ~~REQ-SEC-01~~ | ~~P0~~ | ~~Restrict CORS in production WSGI — `wsgi.py` currently allows `*` (all origins)~~ | ~~Backend WSGI-01~~ | ✅ Complete (25-02) |
 | REQ-SEC-02 | P0 | Prevent NFC payment authorization bypass — `BankoHceService.isPaymentAuthorized` and `currentToken` are public writable static fields; any code can authorize a payment without biometric/PIN | Android SEC-01 |
 | REQ-SEC-03 | P0 | Remove `usesCleartextTraffic="true"` from Android release manifest — all API traffic must use HTTPS | Android SEC-02 |
 | REQ-SEC-04 | P1 | Block NFC token from backup — Android backup rules expose the card token to Google Drive backup | Android SEC-03 |
@@ -69,7 +69,7 @@
 
 | ID | Priority | Requirement | Source |
 |----|----------|-------------|--------|
-| REQ-PERF-01 | P0 | Wire up existing `cache.py` TTLCache in `api_server.py` — `users_sheet.get_all_records()` is called uncached on EVERY request; cache already exists but is never imported | Backend PERF-01, QUAL-02 |
+| ~~REQ-PERF-01~~ | ~~P0~~ | ~~Wire up existing `cache.py` TTLCache in `api_server.py` — `users_sheet.get_all_records()` is called uncached on EVERY request; cache already exists but is never imported~~ | ~~Backend PERF-01, QUAL-02~~ | ✅ Complete (25-02) |
 | REQ-PERF-02 | P1 | Reduce NFC payment path from 7–9 sequential Google Sheets API calls to ≤3 — batch reads; estimated 1.4–4.5s latency improvement | Backend PERF-03 |
 | REQ-PERF-03 | P1 | Cache users sheet per request in cashier transaction — currently read 3× per single cashier transaction | Backend PERF-04 |
 | REQ-PERF-04 | P1 | Add per-user transaction query — currently all transactions for ALL users are fetched and filtered in Python | Backend PERF-02 |

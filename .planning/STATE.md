@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Stability, Performance & Quality
-status: ready
-stopped_at: Phase 25 Plan 01 complete (25-01-SUMMARY.md written); 25-02 next
-last_updated: "2026-03-09T09:32:00.000Z"
-last_activity: 2026-03-09 — Phase 25 Plan 01 executed (per-card threading locks + email silent catch)
+status: complete
+stopped_at: Phase 25 Plan 02 complete (25-02-SUMMARY.md written); both Phase 25 plans done
+last_updated: "2026-03-09T09:45:00.000Z"
+last_activity: 2026-03-09 — Phase 25 Plan 02 executed (CORS restricted + TTL cache wired in 14 endpoints)
 progress:
   total_phases: 10
   completed_phases: 10
@@ -24,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-03-08)
 
 ## Current Position
 
-Phase: Phase 25 — Critical Backend Stability (v1.3, PLANS WRITTEN — ready to execute)
-Plan: 25-01-PLAN.md + 25-02-PLAN.md created; both Wave 1 (parallel)
-Status: ready
-Last activity: 2026-03-09 — Phase 25 plans written (locking/email guard + CORS/cache)
+Phase: Phase 25 — Critical Backend Stability (v1.3, BOTH PLANS COMPLETE ✓)
+Plan: 25-02-PLAN.md complete (CORS + TTL cache wiring)
+Status: complete — Phase 25 fully executed
+Last activity: 2026-03-09 — Phase 25 Plan 02 executed (CORS wildcard fixed, TTL cache wired, 14 endpoints cached)
 
 Progress: [##########] v1.2 COMPLETE ✓ | v1.3 Phase 25 next (10 phases pending)
 
@@ -102,6 +102,7 @@ Progress: [##########] v1.2 COMPLETE ✓ | v1.3 Phase 25 next (10 phases pending
 | Phase 24-admin-cashier-improvements P02 | 5 | 3 tasks | 2 files |
 | Phase 24-admin-cashier-improvements P04 | 5min | 3 tasks | 1 files |
 | Phase 25-critical-backend-stability P01 | 12min | 2 tasks | 1 file |
+| Phase 25-critical-backend-stability P02 | 20min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -252,6 +253,9 @@ Recent decisions affecting current work:
 - Phase 23 added: iphone app version
 - [25-01]: Per-card Lock keyed on normalized card UID, stored in module-level dict guarded by a meta-lock (_card_locks_lock)
 - [25-01]: Email receipt block wrapped in try/except with logger.warning — no re-raise; success return remains outside
+- [25-02]: Single cache key "users_all" shared across all 14 Users-sheet reads — 30s TTL window
+- [25-02]: invalidate_cached placed immediately after Sheets write in report_lost_card and nfc_register
+- [25-02]: _cached_nfc/_cached_notif temp vars used for inline for-loop patterns in nfc_pay() to avoid restructuring loops
 
 ### Pending Todos
 
@@ -275,6 +279,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-09T09:32:00.000Z
-Stopped at: Phase 25 Plan 01 complete — per-card locks + email guard committed (d94fa41, 484cfee); 25-02 is next
+Last session: 2026-03-09T09:45:00.000Z
+Stopped at: Phase 25 Plan 02 complete — CORS locked + TTL cache wired (28982e9, c288060); Phase 25 fully done
 Resume file: None
