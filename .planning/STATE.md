@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Requirements Coverage
 status: completed
-stopped_at: Phase 25 Plan 02 complete — CORS locked + TTL cache wired (28982e9, c288060); Phase 25 fully done
-last_updated: "2026-03-09T09:33:25.989Z"
-last_activity: 2026-03-09 — Phase 25 Plan 02 executed (CORS wildcard fixed, TTL cache wired, 14 endpoints cached)
+stopped_at: Phase 26 Plan 01 complete — admin_required alias + get_sheets_client fixes + ₱ currency (bcb1c0f, e4ba8d8); Phase 26 fully done
+last_updated: "2026-03-09T17:55:00.000Z"
+last_activity: 2026-03-09 — Phase 26 Plan 01 executed (NameErrors fixed, Thai Baht replaced with Philippine Peso)
 progress:
   total_phases: 20
   completed_phases: 10
@@ -24,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-03-08)
 
 ## Current Position
 
-Phase: Phase 25 — Critical Backend Stability (v1.3, BOTH PLANS COMPLETE ✓)
-Plan: 25-02-PLAN.md complete (CORS + TTL cache wiring)
-Status: complete — Phase 25 fully executed
-Last activity: 2026-03-09 — Phase 25 Plan 02 executed (CORS wildcard fixed, TTL cache wired, 14 endpoints cached)
+Phase: Phase 26 — Critical Dashboard Stability (COMPLETE ✓)
+Plan: 26-01-PLAN.md complete (admin_required alias + get_sheets_client + ₱ currency)
+Status: complete — Phase 26 fully executed
+Last activity: 2026-03-09 — Phase 26 Plan 01 executed (NameErrors fixed in admin_dashboard.py, ฿ → ₱ in dashboard.html)
 
 Progress: [##########] v1.2 COMPLETE ✓ | v1.3 Phase 25 next (10 phases pending)
 

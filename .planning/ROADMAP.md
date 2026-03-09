@@ -302,7 +302,7 @@ Fix every known bug, close security holes, activate unused performance infrastru
 | Phase | Name | Requirements | Status |
 |-------|------|--------------|--------|
 | 25 | 1/2 | Complete    | 2026-03-09 |
-| 26 | Critical Dashboard Stability | REQ-BUG-02, REQ-BUG-03, REQ-CURR-02 | Pending |
+| 26 | 1/1 | Complete   | 2026-03-09 |
 | 27 | Critical Mobile Fixes | REQ-BUG-MOB-01, REQ-BUG-MOB-02, REQ-BUG-MOB-03, REQ-SEC-02, REQ-SEC-03 | Pending |
 | 28 | Backend Performance: Cache Infrastructure | REQ-PERF-02, REQ-PERF-03, REQ-PERF-04 | Pending |
 | 29 | Android Security & P1 Bugs | REQ-SEC-04, REQ-SEC-05, REQ-BUG-MOB-06, REQ-BUG-MOB-07 | Pending |
@@ -356,7 +356,7 @@ Plans:
 - Calling `GET /api/categories` returns data (no `NameError` from undefined `get_db()`)
 - All ฿ occurrences in cashier UI and dashboard HTML templates are replaced with ₱
 
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
 - [ ] 26-01-PLAN.md — Fix @admin_required NameError, get_db() NameError, and replace ฿ with ₱ (REQ-BUG-02, REQ-BUG-03, REQ-CURR-02)
