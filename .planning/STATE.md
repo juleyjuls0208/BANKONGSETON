@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Requirements Coverage
 status: completed
-stopped_at: Phase 29 Plan 02 complete — Android P1 bugs fixed (TransactionsAdapter clickability + HomeActivity budget filter)
-last_updated: "2026-03-09T13:03:45.667Z"
+stopped_at: Completed 29-01-PLAN.md
+last_updated: "2026-03-09T13:08:39.523Z"
 last_activity: 2026-03-09 — Phase 28 Plan 01 executed (transactions_all cache in get_transactions, invalidate_cached calls in nfc_pay + nfc_register)
 progress:
   total_phases: 20
-  completed_phases: 13
+  completed_phases: 14
   total_plans: 51
-  completed_plans: 50
+  completed_plans: 51
 ---
 
 # Project State
@@ -105,6 +105,7 @@ Progress: [##########] v1.2 COMPLETE ✓ | v1.3 Phase 25 next (10 phases pending
 | Phase 25-critical-backend-stability P02 | 20min | 2 tasks | 2 files |
 | Phase 28 P02 | 5min | 1 tasks | 1 files |
 | Phase 29-android-security-p1-bugs P02 | 5min | 2 tasks | 2 files |
+| Phase 29-android-security-p1-bugs P01 | 30 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -248,6 +249,8 @@ Recent decisions affecting current work:
 - [Phase 28-backend-performance-cache-infrastructure]: ImportError fallback (no-op get_cached/set_cached) added so cashier_routes works in test environments without cache.py on path
 - [Phase 29-android-security-p1-bugs]: [29-02]: isClickable reset at top of bind() ensures recycled ViewHolders always start clickable before type-branch sets final state
 - [Phase 29-android-security-p1-bugs]: [29-02]: Budget spend filter targets Purchase and NFC Purchase types only — excludes Top-Up and other credit transactions from spend calculation
+- [Phase 29-android-security-p1-bugs]: SHA-256 (no salt) for PIN hash — PIN validated server-side; local hash is offline biometric fallback only
+- [Phase 29-android-security-p1-bugs]: verifyPin() handles plaintext→hash migration transparently — no separate migration job needed
 
 ### Roadmap Evolution
 
@@ -292,6 +295,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-09T13:03:45.664Z
-Stopped at: Phase 29 Plan 02 complete — Android P1 bugs fixed (TransactionsAdapter clickability + HomeActivity budget filter)
+Last session: 2026-03-09T13:08:33.341Z
+Stopped at: Completed 29-01-PLAN.md
 Resume file: None
