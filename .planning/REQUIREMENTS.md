@@ -42,12 +42,12 @@ Requirements for this milestone. Six feature areas: NFC Android HCE, Dashboard o
 
 ### Parent Portal
 
-- [ ] **PAR-01**: Parent role exists in the system (read-only access, scoped to their linked student)
-- [ ] **PAR-02**: Parent can view their linked student's current balance
-- [ ] **PAR-03**: Parent can view their linked student's spending history (transactions list)
-- [ ] **PAR-04**: Parent email is optionally collected at student card registration (not required)
-- [ ] **PAR-05**: Student card registration accepts two emails: student (required) and parent (optional)
-- [ ] **PAR-06**: Parent portal is accessible via web browser (part of Flask dashboard, not a separate app)
+- [x] **PAR-01**: Parent role exists in the system (read-only access, scoped to their linked student)
+- [x] **PAR-02**: Parent can view their linked student's current balance
+- [x] **PAR-03**: Parent can view their linked student's spending history (transactions list)
+- [x] **PAR-04**: Parent email is optionally collected at student card registration (not required)
+- [x] **PAR-05**: Student card registration accepts two emails: student (required) and parent (optional)
+- [x] **PAR-06**: Parent portal is accessible via web browser (part of Flask dashboard, not a separate app)
 
 ---
 
@@ -101,12 +101,12 @@ Requirements for this milestone. Six feature areas: NFC Android HCE, Dashboard o
 | ARDW-02 | Phase 18 - Arduino WiFi Upgrade | Complete |
 | ARDW-03 | Phase 18 - Arduino WiFi Upgrade | Complete |
 | ARDW-04 | Phase 18 - Arduino WiFi Upgrade | Complete |
-| PAR-01 | Phase 19 - Parent Portal | Pending |
-| PAR-02 | Phase 19 - Parent Portal | Pending |
-| PAR-03 | Phase 19 - Parent Portal | Pending |
-| PAR-04 | Phase 19 - Parent Portal | Pending |
-| PAR-05 | Phase 19 - Parent Portal | Pending |
-| PAR-06 | Phase 19 - Parent Portal | Pending |
+| PAR-01 | Phase 19 - Parent Portal | Complete |
+| PAR-02 | Phase 19 - Parent Portal | Complete |
+| PAR-03 | Phase 19 - Parent Portal | Complete |
+| PAR-04 | Phase 19 - Parent Portal | Complete |
+| PAR-05 | Phase 19 - Parent Portal | Complete |
+| PAR-06 | Phase 19 - Parent Portal | Complete |
 | APPA-01 | Phase 20 - Student App Redesign | Complete |
 | APPA-02 | Phase 20 - Student App Redesign | Complete |
 | APPA-03 | Phase 20 - Student App Redesign | Complete |
@@ -152,3 +152,18 @@ Requirements for this milestone. Six feature areas: NFC Android HCE, Dashboard o
 | V12-ARDUINO-R3 | Arduino R3 auto-connect: STATION_SERIAL_PORT env var triggers automatic serial connection on ArduinoBridge startup |
 | V12-SMS | SMS notification via Twilio: send low-balance or payment SMS to parent/student phone number after NFC payment |
 | V12-CSV | Bulk CSV student import: POST /api/students/import endpoint in both admin_dashboard.py and web_app.py; handles Excel BOM; per-row error reporting without aborting batch |
+
+---
+
+## Phase 23 — iPhone App Version
+
+- [x] **REQ-23-01**: Xcode project compiles with no errors (iOS 16+, SwiftUI)
+- [x] **REQ-23-02**: Login screen with PIN authentication and Keychain token storage
+- [x] **REQ-23-03**: Home screen shows ₱ balance and recent transactions
+- [x] **REQ-23-04**: Transaction history with pagination and receipt navigation
+- [x] **REQ-23-05**: Budget tracker with monthly spending computation and threshold alerts
+- [x] **REQ-23-06**: Settings with theme toggle (Keychain-persisted) and logout
+- [x] **REQ-23-07**: Report Lost Card screen (POST /student/lost-card, Keychain isCardLost flag)
+- [x] **REQ-23-08**: CARD_LOST 403 handling throughout app (distinct APIError.cardLost case)
+- [x] **REQ-23-09**: ₱ (Philippine Peso) currency symbol used throughout iOS app
+- [x] **REQ-23-10**: No NFC Pay features on iOS (Apple HCE restriction)
