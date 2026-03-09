@@ -356,10 +356,10 @@ Plans:
 - Calling `GET /api/categories` returns data (no `NameError` from undefined `get_db()`)
 - All ฿ occurrences in cashier UI and dashboard HTML templates are replaced with ₱
 
-**Plans:** TBD (run `/gsd-plan-phase 26` to break down)
+**Plans:** 1 plan
 
 Plans:
-- [ ] TBD
+- [ ] 26-01-PLAN.md — Fix @admin_required NameError, get_db() NameError, and replace ฿ with ₱ (REQ-BUG-02, REQ-BUG-03, REQ-CURR-02)
 
 ---
 
