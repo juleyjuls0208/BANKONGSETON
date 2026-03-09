@@ -280,7 +280,7 @@ Plans:
 
 **Status:** ✓ Complete (2026-03-09)
 
-**Plans:** 5/5 complete ✓
+**Plans:** 1/5 plans executed
 
 Plans:
 - [x] 24-01-PLAN.md — Bookkeeping: mark PAR-01–06 complete, add Phase 24 to ROADMAP, update STATE
