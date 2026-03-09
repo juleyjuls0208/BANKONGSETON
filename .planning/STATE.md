@@ -4,8 +4,8 @@ milestone: v1.1
 milestone_name: Requirements Coverage
 status: completed
 stopped_at: Phase 25 Plan 02 complete — CORS locked + TTL cache wired (28982e9, c288060); Phase 25 fully done
-last_updated: "2026-03-09T11:06:00.448Z"
-last_activity: 2026-03-09 — Phase 26 Plan 01 executed (NameErrors fixed in admin_dashboard.py, ฿ → ₱ in dashboard.html)
+last_updated: "2026-03-09T12:00:00.000Z"
+last_activity: 2026-03-09 — Phase 28 context gathered (VirtualCards TTL, Money Accounts, Transaction Query, Cashier Dedup)
 progress:
   total_phases: 20
   completed_phases: 12
@@ -287,6 +287,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-09T09:45:00.000Z
-Stopped at: Phase 25 Plan 02 complete — CORS locked + TTL cache wired (28982e9, c288060); Phase 25 fully done
-Resume file: None
+Last session: 2026-03-09T12:00:00.000Z
+Stopped at: Phase 28 context gathered — cache decisions locked for planning
+Resume file: .planning/phases/28-backend-performance-cache-infrastructure/28-CONTEXT.md
