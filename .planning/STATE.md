@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Requirements Coverage
 status: in_progress
-stopped_at: Completed 24-05-PLAN.md
-last_updated: "2026-03-09T07:22:24.753Z"
+stopped_at: Completed 24-02-PLAN.md
+last_updated: "2026-03-09T07:23:27.280Z"
 last_activity: 2026-03-09 — Phase 24 started; PAR-01–06 bookkeeping fixed, Phase 24 added to ROADMAP
 progress:
   total_phases: 10
   completed_phases: 8
   total_plans: 42
-  completed_plans: 39
+  completed_plans: 40
 ---
 
 # Project State
@@ -99,6 +99,7 @@ Progress: [#########.] v1.2 Phase 24 in progress (Phase 21 ✓, Phase 23 ✓, Ph
 | Phase 21 P07 | 15min | 1 task | 1 file |
 | Phase 21 P08 | 10min | 2 tasks | 5 files |
 | Phase 24-admin-cashier-improvements P05 | 3min | 2 tasks | 2 files |
+| Phase 24-admin-cashier-improvements P02 | 5 | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -233,6 +234,8 @@ Recent decisions affecting current work:
 - [Phase 24-admin-cashier-improvements]: STATE.md was pre-edited to show Phase 24 fully complete; reset to correct in-progress state before committing
 - [Phase 24-05]: Used @jwt_required on shift API routes — consistent with all cashier API endpoints
 - [Phase 24-05]: Shift bar uses horizontal dark bar style (not card) for always-visible glanceable stats
+- [Phase 24-02]: Kept /api/products/delete/<product_id> URL (not plan's /api/products/<product_id>) — products.html JS already called this URL; changing would require extra HTML edit and introduce ambiguity with /api/products/update
+- [Phase 24-02]: Used @admin_only (not @login_required + @admin_required) — admin_required was undefined; admin_only already includes session check
 
 ### Roadmap Evolution
 
@@ -264,6 +267,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-09T07:22:14.731Z
-Stopped at: Completed 24-05-PLAN.md
+Last session: 2026-03-09T07:23:27.278Z
+Stopped at: Completed 24-02-PLAN.md
 Resume file: None
