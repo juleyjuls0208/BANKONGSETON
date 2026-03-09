@@ -814,6 +814,7 @@ def report_lost_card():
             )
 
         money_accounts_sheet.update_cell(row_index, status_col, "lost")
+        invalidate_cached("users_all")
         return jsonify({"success": True, "message": "Card reported as lost"})
 
     except (
@@ -886,7 +887,10 @@ def nfc_register():
         # Look up the student's linked RFID money card from the Users sheet
         # (same source used by login — MoneyCardNumber lives on the Users row)
         users_sheet = get_worksheet_with_retry("Users")
-        user_records = users_sheet.get_all_records()
+        user_records = get_cached("users_all")
+        if user_records is None:
+            user_records = users_sheet.get_all_records()
+            set_cached("users_all", user_records, ttl=30)
         money_card = None
         for r in user_records:
             if str(r.get("StudentID", "")).strip() == str(student_id).strip():
@@ -897,6 +901,7 @@ def nfc_register():
             return jsonify({"error": "No money card registered"}), 403
 
         result = nfc_service.register_virtual_card(student_id, money_card, db)
+        invalidate_cached("users_all")
         logger.info(f"event=nfc_register_success student_id={student_id}")
         return jsonify(
             {
@@ -1468,32 +1473,35 @@ def process_cashier_transaction():
             # Never block the transaction response
 
         # Send email receipt (async with retry)
-        if student_id:
-            users_sheet = get_worksheet_with_retry("Users")
-            user_records = users_sheet.get_all_records()
-            for user in user_records:
-                if user.get("StudentID") == student_id:
-                    parent_email = user.get("ParentEmail", "")
-                    student_email = user.get("Email", "")
-                    student_name = user.get("Name", "Student")
+        try:
+            if student_id:
+                users_sheet = get_worksheet_with_retry("Users")
+                user_records = users_sheet.get_all_records()
+                for user in user_records:
+                    if user.get("StudentID") == student_id:
+                        parent_email = user.get("ParentEmail", "")
+                        student_email = user.get("Email", "")
+                        student_name = user.get("Name", "Student")
 
-                    # Import email service
-                    import sys
+                        # Import email service
+                        import sys
 
-                    sys.path.insert(
-                        0, os.path.join(os.path.dirname(__file__), "..", "services")
-                    )
-                    from email_service import email_service
+                        sys.path.insert(
+                            0, os.path.join(os.path.dirname(__file__), "..", "services")
+                        )
+                        from email_service import email_service
 
-                    email_service.send_receipt(
-                        parent_email,
-                        student_email,
-                        student_name,
-                        items,
-                        total,
-                        new_balance,
-                    )
-                    break
+                        email_service.send_receipt(
+                            parent_email,
+                            student_email,
+                            student_name,
+                            items,
+                            total,
+                            new_balance,
+                        )
+                        break
+        except Exception as email_err:
+            logger.warning("event=email_receipt_failed error=%s", email_err)
 
         return jsonify(
             {"success": True, "new_balance": new_balance, "timestamp": timestamp}
