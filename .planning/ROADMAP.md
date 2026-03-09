@@ -306,7 +306,7 @@ Fix every known bug, close security holes, activate unused performance infrastru
 | 27 | Critical Mobile Fixes | Complete    | 2026-03-09 |
 | 28 | Backend Performance: Cache Infrastructure | Complete    | 2026-03-09 |
 | 29 | 2/2 | Complete    | 2026-03-09 |
-| 30 | 2/2 | Complete |  |
+| 30 | 2/2 | Complete    | 2026-03-09 |
 | 31 | Dashboard & Backend P1 Fixes | REQ-BUG-05, REQ-BUG-06, REQ-BUG-07, REQ-BUG-08, REQ-SEC-06, REQ-QUAL-01, REQ-QUAL-02, REQ-CURR-01 | Pending |
 | 32 | Mobile Budget Performance | REQ-PERF-06, REQ-PERF-07, REQ-PERF-08, REQ-PERF-09, REQ-PERF-10 | Pending |
 | 33 | Backend Code Quality | REQ-BUG-09, REQ-QUAL-03, REQ-QUAL-04, REQ-QUAL-05, REQ-QUAL-06, REQ-QUAL-07, REQ-PERF-05 | Pending |
@@ -453,7 +453,7 @@ Plans:
 - Sign In button is fully visible on iPhone SE when the keyboard is open (no keyboard overlap) ✅
 - PIN login field does not trigger iOS password autofill suggestions ✅
 
-**Plans:** 2/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [x] 30-01-PLAN.md — Error-handling bugs + cached balance (APIClient, AuthManager, all ViewModels)
