@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.1
-milestone_name: Requirements Coverage
-status: completed
-stopped_at: Completed 29-01-PLAN.md
-last_updated: "2026-03-09T13:12:31.376Z"
-last_activity: 2026-03-09 — Phase 28 Plan 01 executed (transactions_all cache in get_transactions, invalidate_cached calls in nfc_pay + nfc_register)
+milestone: v1.3
+milestone_name: iOS Bugs & UX
+status: in_progress
+stopped_at: Completed 30-02-PLAN.md (Phase 30 complete)
+last_updated: "2026-03-10T00:00:00.000Z"
+last_activity: 2026-03-10 — Phase 30 fully complete (30-01 + 30-02 both executed)
 progress:
   total_phases: 20
-  completed_phases: 14
-  total_plans: 51
-  completed_plans: 51
+  completed_phases: 15
+  total_plans: 53
+  completed_plans: 53
 ---
 
 # Project State
@@ -24,12 +24,12 @@ See: .planning/PROJECT.md (updated 2026-03-08)
 
 ## Current Position
 
-Phase: Phase 30 — iOS Bugs & UX (CONTEXT WRITTEN ✓, planning next)
-Plan: 30-CONTEXT.md complete — ready for /gsd:plan-phase 30
-Status: context complete — all 4 gray areas discussed and decided
-Last activity: 2026-03-09 — Phase 30 context written (401 session expiry, card lost messaging, budget input protection, loading & empty states)
+Phase: Phase 30 — iOS Bugs & UX ✅ COMPLETE
+Plan: All 2 plans executed (30-01 ✓, 30-02 ✓)
+Status: Phase 30 complete — Phase 31 is next
+Last activity: 2026-03-10 — Phase 30 fully complete (30-01 + 30-02 both executed)
 
-Progress: [##########] v1.2 COMPLETE ✓ | v1.3 Phase 25 next (10 phases pending)
+Progress: [##########] v1.3 — Phase 30 done | 53/53 plans complete
 
 ## Performance Metrics
 
@@ -106,6 +106,8 @@ Progress: [##########] v1.2 COMPLETE ✓ | v1.3 Phase 25 next (10 phases pending
 | Phase 28 P02 | 5min | 1 tasks | 1 files |
 | Phase 29-android-security-p1-bugs P02 | 5min | 2 tasks | 2 files |
 | Phase 29-android-security-p1-bugs P01 | 30 | 2 tasks | 3 files |
+| Phase 30-ios-bugs-ux P01 | 8min | 2 tasks | 7 files |
+| Phase 30-ios-bugs-ux P02 | 10min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -254,6 +256,10 @@ Recent decisions affecting current work:
 - [Phase 30]: Budget input: hasEdited flag (Option A); resets on .onDisappear so server value reloads fresh on next visit
 - [Phase 30]: Empty transactions: "No transactions yet" + subtext "Your transaction history will appear here." (no icon)
 - [Phase 30]: Balance during load: read last_balance from Keychain on HomeViewModel init; show cached value immediately, update when fresh data arrives
+- [Phase 30-ios-bugs-ux]: handleUnauthorized() does NOT call clearAll() — deferred to View alert button to prevent alert teardown before user sees it
+- [Phase 30-ios-bugs-ux]: mobile/ios/ is a separate nested git repo — 30-01 commits are in mobile/ios git (main branch), not parent project git
+- [Phase 30-02]: clearAll() in button action (not handleUnauthorized()) so alert renders before MainTabView tears down on isLoggedIn = false
+- [Phase 30-02]: iOS 16 single-arg onChange used: .onChange(of: limitInput) { _ in } — iOS 17 two-arg form not used for compatibility
 
 ### Roadmap Evolution
 
@@ -298,6 +304,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-09T13:08:33.341Z
-Stopped at: Completed 29-01-PLAN.md
+Last session: 2026-03-10T00:00:00.000Z
+Stopped at: Completed 30-02-PLAN.md (Phase 30 complete — all 53 plans done)
 Resume file: None

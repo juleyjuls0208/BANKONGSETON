@@ -306,7 +306,7 @@ Fix every known bug, close security holes, activate unused performance infrastru
 | 27 | Critical Mobile Fixes | Complete    | 2026-03-09 |
 | 28 | Backend Performance: Cache Infrastructure | Complete    | 2026-03-09 |
 | 29 | 2/2 | Complete    | 2026-03-09 |
-| 30 | iOS Bugs & UX | REQ-BUG-MOB-04, REQ-BUG-MOB-05, REQ-UX-01, REQ-UX-02, REQ-UX-03, REQ-UX-04, REQ-UX-05 | Pending |
+| 30 | 2/2 | Complete |  |
 | 31 | Dashboard & Backend P1 Fixes | REQ-BUG-05, REQ-BUG-06, REQ-BUG-07, REQ-BUG-08, REQ-SEC-06, REQ-QUAL-01, REQ-QUAL-02, REQ-CURR-01 | Pending |
 | 32 | Mobile Budget Performance | REQ-PERF-06, REQ-PERF-07, REQ-PERF-08, REQ-PERF-09, REQ-PERF-10 | Pending |
 | 33 | Backend Code Quality | REQ-BUG-09, REQ-QUAL-03, REQ-QUAL-04, REQ-QUAL-05, REQ-QUAL-06, REQ-QUAL-07, REQ-PERF-05 | Pending |
@@ -443,21 +443,21 @@ Plans:
 
 **Depends on:** Phase 27 (mobile P0 fixes complete)
 
-**Status:** Pending
+**Status:** Complete ✅
 
 **Success criteria:**
-- A blocked/lost card shows "card reported lost" (not "wrong PIN") to the student
-- A 401 response triggers an automatic re-authentication prompt; the app does not stay in a broken authenticated state
-- Typing in the budget input field before the server response arrives keeps the user's typed value (server load does not overwrite it)
-- Transactions list shows a "No transactions yet" empty state when the list is empty
-- Sign In button is fully visible on iPhone SE when the keyboard is open (no keyboard overlap)
-- PIN login field does not trigger iOS password autofill suggestions
+- A blocked/lost card shows "card reported lost" (not "wrong PIN") to the student ✅
+- A 401 response triggers an automatic re-authentication prompt; the app does not stay in a broken authenticated state ✅
+- Typing in the budget input field before the server response arrives keeps the user's typed value (server load does not overwrite it) ✅
+- Transactions list shows a "No transactions yet" empty state when the list is empty ✅
+- Sign In button is fully visible on iPhone SE when the keyboard is open (no keyboard overlap) ✅
+- PIN login field does not trigger iOS password autofill suggestions ✅
 
-**Plans:** 2 plans
+**Plans:** 2/2 plans executed
 
 Plans:
-- [ ] 30-01-PLAN.md — Error-handling bugs + cached balance (APIClient, AuthManager, all ViewModels)
-- [ ] 30-02-PLAN.md — UX polish views (session alert, login keyboard/PIN, budget guard, transactions empty state)
+- [x] 30-01-PLAN.md — Error-handling bugs + cached balance (APIClient, AuthManager, all ViewModels)
+- [x] 30-02-PLAN.md — UX polish views (session alert, login keyboard/PIN, budget guard, transactions empty state)
 
 ---
 
@@ -585,13 +585,13 @@ Plans:
 | REQ-SEC-05 | 29 | P1 | Pending |
 | REQ-BUG-MOB-06 | 29 | P1 | Pending |
 | REQ-BUG-MOB-07 | 29 | P1 | Pending |
-| REQ-BUG-MOB-04 | 30 | P1 | Pending |
-| REQ-BUG-MOB-05 | 30 | P1 | Pending |
-| REQ-UX-01 | 30 | P2 | Pending |
-| REQ-UX-02 | 30 | P2 | Pending |
+| REQ-BUG-MOB-04 | 30 | P1 | Complete |
+| REQ-BUG-MOB-05 | 30 | P1 | Complete |
+| REQ-UX-01 | 30 | P2 | Complete |
+| REQ-UX-02 | 30 | P2 | Complete |
 | REQ-UX-03 | 30 | P2 | Pending |
-| REQ-UX-04 | 30 | P2 | Pending |
-| REQ-UX-05 | 30 | P2 | Pending |
+| REQ-UX-04 | 30 | P2 | Complete |
+| REQ-UX-05 | 30 | P2 | Complete |
 | REQ-BUG-05 | 31 | P1 | Pending |
 | REQ-BUG-06 | 31 | P1 | Pending |
 | REQ-BUG-07 | 31 | P1 | Pending |
