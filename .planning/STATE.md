@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Requirements Coverage
 status: in_progress
-stopped_at: Completed 24-01-PLAN.md
-last_updated: "2026-03-09T07:19:08.581Z"
+stopped_at: Completed 24-05-PLAN.md
+last_updated: "2026-03-09T07:22:24.753Z"
 last_activity: 2026-03-09 — Phase 24 started; PAR-01–06 bookkeeping fixed, Phase 24 added to ROADMAP
 progress:
   total_phases: 10
   completed_phases: 8
   total_plans: 42
-  completed_plans: 38
+  completed_plans: 39
 ---
 
 # Project State
@@ -98,6 +98,7 @@ Progress: [#########.] v1.2 Phase 24 in progress (Phase 21 ✓, Phase 23 ✓, Ph
 | Phase 21 P06 | 525661min | 1 tasks | 1 files |
 | Phase 21 P07 | 15min | 1 task | 1 file |
 | Phase 21 P08 | 10min | 2 tasks | 5 files |
+| Phase 24-admin-cashier-improvements P05 | 3min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -230,6 +231,8 @@ Recent decisions affecting current work:
 - [Phase 21]: CHANGELOG.md created fresh at project root (did not exist) with v1.2, v1.1, v1.0 sections
 - [Phase 21]: Bookkeeping plan pattern established: end each phase by syncing REQUIREMENTS, ROADMAP, STATE, PROJECT, CHANGELOG atomically
 - [Phase 24-admin-cashier-improvements]: STATE.md was pre-edited to show Phase 24 fully complete; reset to correct in-progress state before committing
+- [Phase 24-05]: Used @jwt_required on shift API routes — consistent with all cashier API endpoints
+- [Phase 24-05]: Shift bar uses horizontal dark bar style (not card) for always-visible glanceable stats
 
 ### Roadmap Evolution
 
@@ -261,6 +264,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-09T07:19:00.306Z
-Stopped at: Completed 24-01-PLAN.md
+Last session: 2026-03-09T07:22:14.731Z
+Stopped at: Completed 24-05-PLAN.md
 Resume file: None
