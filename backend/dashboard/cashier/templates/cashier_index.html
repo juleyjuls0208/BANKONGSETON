@@ -45,6 +45,12 @@
         .modal-content { background: white; padding: 40px; border-radius: 16px; text-align: center; max-width: 400px; }
         .modal-content h2 { margin-bottom: 20px; color: #667eea; }
         .modal-content button { margin-top: 20px; padding: 12px 32px; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer; }
+        .shift-bar { background: #2d3748; color: white; padding: 8px 24px; display: flex; gap: 24px; align-items: center; font-size: 14px; flex-wrap: wrap; }
+        .shift-stat { display: flex; flex-direction: column; align-items: center; min-width: 90px; }
+        .shift-stat .label { font-size: 11px; color: #a0aec0; text-transform: uppercase; letter-spacing: 0.05em; }
+        .shift-stat .value { font-size: 18px; font-weight: 700; color: #68d391; }
+        .shift-reset-btn { margin-left: auto; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 5px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; }
+        .shift-reset-btn:hover { background: rgba(231,76,60,0.7); }
     </style>
 </head>
 <body>
@@ -62,6 +68,23 @@
             </div>
             <button class="logout-btn" onclick="logout()">Logout</button>
         </div>
+    </div>
+
+    <!-- Shift Summary Bar -->
+    <div class="shift-bar" id="shiftBar">
+        <div class="shift-stat">
+            <span class="label">Shift Sales</span>
+            <span class="value" id="shiftTotalSales">&#8369;0.00</span>
+        </div>
+        <div class="shift-stat">
+            <span class="label">Transactions</span>
+            <span class="value" id="shiftTxnCount">0</span>
+        </div>
+        <div class="shift-stat">
+            <span class="label">Items Sold</span>
+            <span class="value" id="shiftItemsSold">0</span>
+        </div>
+        <button class="shift-reset-btn" onclick="resetShift()">Reset Shift</button>
     </div>
 
     <div class="main-container">
@@ -336,10 +359,6 @@
         function initWebSocket() {
             socket = io();
 
-            socket.on('cashier_request_card', function(data) {
-                socket.emit('cashier_request_card', data);
-            });
-
             socket.on('card_read', function(data) {
                 completeSale(data.uid);
             });
@@ -451,6 +470,7 @@
 
                     cart = [];
                     renderCart();
+                    loadShiftSummary();
 
                     setTimeout(function() { closeModal(); }, 2000);
                 }
@@ -544,6 +564,7 @@
                         'Payment received!\nNew Balance: \u20B1' + data.new_balance.toFixed(2);
                     cart = [];
                     renderCart();
+                    loadShiftSummary();
                     setTimeout(function() { closeModal(); }, 2000);
                 }
             } catch (error) {
@@ -578,6 +599,30 @@
         // --- Event Listeners ---
 
         document.getElementById('searchBar').addEventListener('input', renderProducts);
+
+        // --- Shift Summary ---
+
+        async function loadShiftSummary() {
+            try {
+                const res = await fetch('/cashier/api/shift/summary');
+                if (!res.ok) return;
+                const data = await res.json();
+                document.getElementById('shiftTotalSales').textContent = '\u20B1' + parseFloat(data.total_sales).toFixed(2);
+                document.getElementById('shiftTxnCount').textContent = data.transaction_count;
+                document.getElementById('shiftItemsSold').textContent = data.items_sold;
+            } catch (e) { /* silently ignore */ }
+        }
+
+        async function resetShift() {
+            if (!confirm('Reset all shift counters to zero?')) return;
+            try {
+                const res = await fetch('/cashier/api/shift/reset', { method: 'POST' });
+                if (res.ok) await loadShiftSummary();
+            } catch (e) { /* silently ignore */ }
+        }
+
+        // Load shift summary on page load
+        loadShiftSummary();
     </script>
 </body>
 </html>
