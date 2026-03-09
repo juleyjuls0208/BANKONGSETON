@@ -305,7 +305,7 @@ Fix every known bug, close security holes, activate unused performance infrastru
 | 26 | 1/1 | Complete    | 2026-03-09 |
 | 27 | Critical Mobile Fixes | Complete    | 2026-03-09 |
 | 28 | Backend Performance: Cache Infrastructure | Complete    | 2026-03-09 |
-| 29 | Android Security & P1 Bugs | REQ-SEC-04, REQ-SEC-05, REQ-BUG-MOB-06, REQ-BUG-MOB-07 | Pending |
+| 29 | 1/2 | In Progress|  |
 | 30 | iOS Bugs & UX | REQ-BUG-MOB-04, REQ-BUG-MOB-05, REQ-UX-01, REQ-UX-02, REQ-UX-03, REQ-UX-04, REQ-UX-05 | Pending |
 | 31 | Dashboard & Backend P1 Fixes | REQ-BUG-05, REQ-BUG-06, REQ-BUG-07, REQ-BUG-08, REQ-SEC-06, REQ-QUAL-01, REQ-QUAL-02, REQ-CURR-01 | Pending |
 | 32 | Mobile Budget Performance | REQ-PERF-06, REQ-PERF-07, REQ-PERF-08, REQ-PERF-09, REQ-PERF-10 | Pending |
@@ -427,7 +427,7 @@ Plans:
 - Budget tracker monthly spend sum includes only `Purchase` and `NFC Purchase` transaction types; top-ups are excluded
 - Tapping any row in the transactions `RecyclerView` (including reused ViewHolders) fires the click handler reliably
 
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
 - [ ] 29-01-PLAN.md — Android backup exclusion rules + SHA-256 PIN hashing with migration

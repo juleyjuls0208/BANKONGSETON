@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Requirements Coverage
 status: completed
-stopped_at: Phase 28 Plan 02 complete — Users sheet reads cached in cashier_routes.py (d3a6aa3)
-last_updated: "2026-03-09T12:51:06.394Z"
+stopped_at: Phase 29 Plan 02 complete — Android P1 bugs fixed (TransactionsAdapter clickability + HomeActivity budget filter)
+last_updated: "2026-03-09T13:03:45.667Z"
 last_activity: 2026-03-09 — Phase 28 Plan 01 executed (transactions_all cache in get_transactions, invalidate_cached calls in nfc_pay + nfc_register)
 progress:
   total_phases: 20
   completed_phases: 13
   total_plans: 51
-  completed_plans: 49
+  completed_plans: 50
 ---
 
 # Project State
@@ -104,6 +104,7 @@ Progress: [##########] v1.2 COMPLETE ✓ | v1.3 Phase 25 next (10 phases pending
 | Phase 25-critical-backend-stability P01 | 12min | 2 tasks | 1 file |
 | Phase 25-critical-backend-stability P02 | 20min | 2 tasks | 2 files |
 | Phase 28 P02 | 5min | 1 tasks | 1 files |
+| Phase 29-android-security-p1-bugs P02 | 5min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -245,6 +246,8 @@ Recent decisions affecting current work:
 - [v1.3-roadmap]: Phase 27 (Critical Mobile Fixes) parallelizable with Phases 25/26 — mobile and backend are independent components
 - [v1.3-roadmap]: Phases 25–27 are P0 criticals (must fix before anything else); 28–31 are P1; 32–34 are P2/P3
 - [Phase 28-backend-performance-cache-infrastructure]: ImportError fallback (no-op get_cached/set_cached) added so cashier_routes works in test environments without cache.py on path
+- [Phase 29-android-security-p1-bugs]: [29-02]: isClickable reset at top of bind() ensures recycled ViewHolders always start clickable before type-branch sets final state
+- [Phase 29-android-security-p1-bugs]: [29-02]: Budget spend filter targets Purchase and NFC Purchase types only — excludes Top-Up and other credit transactions from spend calculation
 
 ### Roadmap Evolution
 
@@ -289,6 +292,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-09T12:08:59.941Z
-Stopped at: Phase 28 Plan 02 complete — Users sheet reads cached in cashier_routes.py (d3a6aa3)
+Last session: 2026-03-09T13:03:45.664Z
+Stopped at: Phase 29 Plan 02 complete — Android P1 bugs fixed (TransactionsAdapter clickability + HomeActivity budget filter)
 Resume file: None

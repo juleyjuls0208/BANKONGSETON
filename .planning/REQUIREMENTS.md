@@ -58,8 +58,8 @@
 | REQ-BUG-MOB-03 | P0 | Remove `fatalError()` calls in iOS `APIClient.swift` — two force-unwrap paths will crash production app on any URL construction error | iOS BUG-02 |
 | REQ-BUG-MOB-04 | P1 | Fix iOS CARD_LOST vs UNAUTHORIZED misclassification — a blocked card shows "wrong PIN" to student instead of "card reported lost" | iOS BUG-03 |
 | REQ-BUG-MOB-05 | P1 | Handle 401 token expiry in iOS — user is stuck in a broken authenticated state indefinitely with no re-auth prompt | iOS BUG-04 |
-| REQ-BUG-MOB-06 | P1 | Fix Android budget calculation — spending sum counts top-ups as expenses; should only count Purchase/NFC Purchase transaction types | Android BUG-01 |
-| REQ-BUG-MOB-07 | P1 | Fix Android RecyclerView `isClickable` not reset on recycled ViewHolders — taps silently ignored on reused cells | Android BUG-02 |
+ | ~~REQ-BUG-MOB-06~~ | ~~P1~~ | ~~Fix Android budget calculation — spending sum counts top-ups as expenses; should only count Purchase/NFC Purchase transaction types~~ | ~~Android BUG-01~~ | ✅ Complete (29-02) |
+ | ~~REQ-BUG-MOB-07~~ | ~~P1~~ | ~~Fix Android RecyclerView `isClickable` not reset on recycled ViewHolders — taps silently ignored on reused cells~~ | ~~Android BUG-02~~ | ✅ Complete (29-02) |
 | REQ-BUG-MOB-08 | P2 | Fix Android `ReceiptActivity` fragile unchecked cast `parent.parent as LinearLayout` — crash risk if layout changes | Android BUG-03 |
 | REQ-BUG-MOB-09 | P2 | Fix Android NFC payment success detection via `onResume` polling — unreliable; can produce false-positive payment completions | Android BUG-04 |
 
