@@ -61,6 +61,16 @@ class NfcManager private constructor(private val context: Context) {
             EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
         )
     }
+
+    private fun hashPin(pin: String): String {
+        val digest = java.security.MessageDigest.getInstance("SHA-256")
+        val hashBytes = digest.digest(pin.toByteArray(Charsets.UTF_8))
+        return hashBytes.joinToString("") { "%02x".format(it) }
+    }
+
+    fun setPin(pin: String) {
+        securePrefs.edit().putString(KEY_NFC_PIN, hashPin(pin)).apply()
+    }
     
     // Check if NFC is available on this device
     fun isNfcAvailable(): Boolean {
@@ -117,11 +127,11 @@ class NfcManager private constructor(private val context: Context) {
                         securePrefs.edit()
                             .putString(KEY_VIRTUAL_CARD_TOKEN, token)
                             .putBoolean(KEY_DEVICE_REGISTERED, true)
-                            .putString(KEY_NFC_PIN, pin)
                             .apply()
+                        setPin(pin)
                         
                         // Enable HCE service with token
-                        BankoHceService.currentToken = token
+                        BankoHceService.loadToken(token)
                         
                         callback(true, "Device registered successfully")
                     } else {
@@ -153,8 +163,7 @@ class NfcManager private constructor(private val context: Context) {
                 withContext(Dispatchers.Main) {
                     // Clear local data regardless of server response
                     securePrefs.edit().clear().apply()
-                    BankoHceService.currentToken = null
-                    BankoHceService.isPaymentAuthorized = false
+                    BankoHceService.deauthorize()
                     callback(true, "Device unregistered")
                 }
             }
@@ -173,7 +182,7 @@ class NfcManager private constructor(private val context: Context) {
         }
         
         // Load token into HCE service
-        BankoHceService.currentToken = getVirtualToken()
+        BankoHceService.loadToken(getVirtualToken()!!)
         
         if (hasBiometricCapability()) {
             // Use biometric authentication
@@ -184,14 +193,23 @@ class NfcManager private constructor(private val context: Context) {
         }
     }
     
-    // Verify PIN manually
+    // Verify PIN manually (migration-aware: upgrades plaintext → hash on first use)
     fun verifyPin(enteredPin: String): Boolean {
-        val storedPin = securePrefs.getString(KEY_NFC_PIN, null)
-        if (storedPin != null && storedPin == enteredPin) {
-            BankoHceService.isPaymentAuthorized = true
-            return true
+        val storedPin = securePrefs.getString(KEY_NFC_PIN, null) ?: return false
+        val expectedHash = hashPin(enteredPin)
+
+        return if (storedPin == expectedHash) {
+            // Already hashed — normal path
+            BankoHceService.reauthorize()
+            true
+        } else if (storedPin == enteredPin) {
+            // Legacy plaintext detected — migrate to hash transparently
+            setPin(enteredPin)
+            BankoHceService.reauthorize()
+            true
+        } else {
+            false
         }
-        return false
     }
     
     private fun showBiometricPrompt(
@@ -205,7 +223,7 @@ class NfcManager private constructor(private val context: Context) {
             object : BiometricPrompt.AuthenticationCallback() {
                 override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
                     super.onAuthenticationSucceeded(result)
-                    BankoHceService.isPaymentAuthorized = true
+                    BankoHceService.reauthorize()
                     onSuccess()
                 }
                 
