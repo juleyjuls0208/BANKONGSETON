@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Stability, Performance & Quality
 status: ready
-stopped_at: Phase 25 planning complete (2 plans written); ready for /gsd-execute-phase 25
-last_updated: "2026-03-09T09:00:00.000Z"
-last_activity: 2026-03-09 — Phase 25 plans written (25-01-PLAN.md: locking+email guard, 25-02-PLAN.md: CORS+cache wiring)
+stopped_at: Phase 25 Plan 01 complete (25-01-SUMMARY.md written); 25-02 next
+last_updated: "2026-03-09T09:32:00.000Z"
+last_activity: 2026-03-09 — Phase 25 Plan 01 executed (per-card threading locks + email silent catch)
 progress:
   total_phases: 10
   completed_phases: 10
@@ -101,6 +101,7 @@ Progress: [##########] v1.2 COMPLETE ✓ | v1.3 Phase 25 next (10 phases pending
 | Phase 24-admin-cashier-improvements P05 | 3min | 2 tasks | 2 files |
 | Phase 24-admin-cashier-improvements P02 | 5 | 3 tasks | 2 files |
 | Phase 24-admin-cashier-improvements P04 | 5min | 3 tasks | 1 files |
+| Phase 25-critical-backend-stability P01 | 12min | 2 tasks | 1 file |
 
 ## Accumulated Context
 
@@ -249,6 +250,8 @@ Recent decisions affecting current work:
 - Phase 21 added: v1.1 Gap Closure + v1.2 Feature Implementation (discuss-phase complete 2026-03-08)
 - Phase 22 added: 22
 - Phase 23 added: iphone app version
+- [25-01]: Per-card Lock keyed on normalized card UID, stored in module-level dict guarded by a meta-lock (_card_locks_lock)
+- [25-01]: Email receipt block wrapped in try/except with logger.warning — no re-raise; success return remains outside
 
 ### Pending Todos
 
@@ -272,6 +275,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-09T09:00:00.000Z
-Stopped at: Phase 25 planning complete — 25-01-PLAN.md and 25-02-PLAN.md written; ROADMAP.md updated
+Last session: 2026-03-09T09:32:00.000Z
+Stopped at: Phase 25 Plan 01 complete — per-card locks + email guard committed (d94fa41, 484cfee); 25-02 is next
 Resume file: None

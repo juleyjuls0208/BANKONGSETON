@@ -301,7 +301,7 @@ Fix every known bug, close security holes, activate unused performance infrastru
 
 | Phase | Name | Requirements | Status |
 |-------|------|--------------|--------|
-| 25 | Critical Backend Stability | REQ-SEC-01, REQ-BUG-01, REQ-BUG-04, REQ-PERF-01 | Pending |
+| 25 | 1/2 | In Progress|  |
 | 26 | Critical Dashboard Stability | REQ-BUG-02, REQ-BUG-03, REQ-CURR-02 | Pending |
 | 27 | Critical Mobile Fixes | REQ-BUG-MOB-01, REQ-BUG-MOB-02, REQ-BUG-MOB-03, REQ-SEC-02, REQ-SEC-03 | Pending |
 | 28 | Backend Performance: Cache Infrastructure | REQ-PERF-02, REQ-PERF-03, REQ-PERF-04 | Pending |
@@ -333,7 +333,7 @@ Fix every known bug, close security holes, activate unused performance infrastru
 - Email failure during an already-committed cashier transaction is caught silently; the transaction still returns 200 to the client
 - `cache.py` TTLCache is imported and active in `api_server.py`; repeated calls within TTL period skip Google Sheets entirely
 
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
 - [ ] 25-01-PLAN.md — Per-card threading locks in nfc_pay() + process_cashier_transaction(); silent email try/except (REQ-BUG-01, REQ-BUG-04)
