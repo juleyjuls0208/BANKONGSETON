@@ -22,6 +22,18 @@ try:
 except ImportError:
     logger = logging.getLogger(__name__)
 from utils import normalize_card_uid
+
+try:
+    from cache import get_cached, set_cached
+except ImportError:
+    # Fallback: no-op cache (tests without cache.py on path)
+    def get_cached(key):  # type: ignore[misc]
+        return None
+
+    def set_cached(key, value, ttl=30):  # type: ignore[misc]
+        pass
+
+
 import time
 
 cashier_bp = Blueprint(
@@ -189,6 +201,7 @@ def api_login():
         response.set_cookie("jwt_token", token, httponly=True, max_age=28800)
         # Initialise shift counters for the new login session
         from flask import session as flask_session
+
         flask_session["shift_total_sales"] = 0.0
         flask_session["shift_transaction_count"] = 0
         flask_session["shift_items_sold"] = 0
@@ -439,7 +452,10 @@ def complete_sale():
         if manual_student_id:
             try:
                 _db = get_sheets_client()
-                _users = _db.worksheet("Users").get_all_records()
+                _users = get_cached("users_all")
+                if _users is None:
+                    _users = _db.worksheet("Users").get_all_records()
+                    set_cached("users_all", _users, ttl=30)
                 _student = next(
                     (
                         r
@@ -496,7 +512,10 @@ def complete_sale():
         resolved_student_id = manual_student_id if manual_student_id else ""
         if not manual_student_id:
             try:
-                _users_for_id = db.worksheet("Users").get_all_records()
+                _users_for_id = get_cached("users_all")
+                if _users_for_id is None:
+                    _users_for_id = db.worksheet("Users").get_all_records()
+                    set_cached("users_all", _users_for_id, ttl=30)
                 for _u in _users_for_id:
                     if (
                         normalize_card_uid(_u.get("MoneyCardNumber", ""))
@@ -577,11 +596,15 @@ def complete_sale():
         flask_session.pop("pending_transaction", None)
 
         # Update shift counters
-        flask_session["shift_total_sales"] = flask_session.get("shift_total_sales", 0.0) + total
-        flask_session["shift_transaction_count"] = flask_session.get("shift_transaction_count", 0) + 1
-        flask_session["shift_items_sold"] = flask_session.get("shift_items_sold", 0) + sum(
-            int(i.get("qty", 1)) for i in items
+        flask_session["shift_total_sales"] = (
+            flask_session.get("shift_total_sales", 0.0) + total
         )
+        flask_session["shift_transaction_count"] = (
+            flask_session.get("shift_transaction_count", 0) + 1
+        )
+        flask_session["shift_items_sold"] = flask_session.get(
+            "shift_items_sold", 0
+        ) + sum(int(i.get("qty", 1)) for i in items)
 
         # FCM purchase push (always) + low-balance push (if threshold breached)
         # Never blocks or rolls back the transaction response
