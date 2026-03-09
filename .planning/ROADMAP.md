@@ -427,10 +427,11 @@ Plans:
 - Budget tracker monthly spend sum includes only `Purchase` and `NFC Purchase` transaction types; top-ups are excluded
 - Tapping any row in the transactions `RecyclerView` (including reused ViewHolders) fires the click handler reliably
 
-**Plans:** TBD (run `/gsd-plan-phase 29` to break down)
+**Plans:** 2 plans
 
 Plans:
-- [ ] TBD
+- [ ] 29-01-PLAN.md — Android backup exclusion rules + SHA-256 PIN hashing with migration
+- [ ] 29-02-PLAN.md — RecyclerView isClickable reset + budget type filter for purchases only
 
 ---
 
