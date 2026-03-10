@@ -301,7 +301,6 @@ Recent decisions affecting current work:
 
 | File | Title | Area |
 |------|-------|------|
-| `2026-03-09-fix-ios-login-network-error.md` | Fix iOS login network error | auth |
 | `2026-03-09-remove-pin-in-ios-app.md` | Remove pin in iOS app | auth |
 
 ### Blockers/Concerns
@@ -322,6 +321,31 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-10T10:25:43.454Z
-Stopped at: Completed 32-04-PLAN.md
+Last session: 2026-03-10T12:30:00.000Z
+Stopped at: Android bug fixes + Arduino R4 update complete; Phase 32 human verification still pending
 Resume file: None
+
+### Session 2026-03-10 (session 2) — Android Bug Fixes + Arduino R4 Update
+
+Three fixes committed (commit after `0050c87`):
+1. **Android — "Failed to save budget" (HomeActivity.kt):** `saveBudgetLimit()` now reads
+   error body from failed HTTP responses and shows the specific error (e.g. "Session expired",
+   "Service unavailable") instead of the opaque generic toast. Null token now shows a toast
+   before returning (was silently returning with no feedback).
+2. **Android — NFC pay activation crash (NfcManager.kt):** `showBiometricPrompt()` now wraps
+   `biometricPrompt.authenticate()` in try/catch for `IllegalArgumentException` and
+   `IllegalStateException`. On devices where biometric hardware rejects the prompt at runtime,
+   the app now falls back to the PIN path instead of crashing.
+3. **Arduino R4 sketch (bankongseton_rfid.ino):** Full rewrite to match R3 behavior:
+   - Switched from `Adafruit_PN532` → Elechouse `PN532_SPI` + `PN532`
+   - Added PCF8574 bit-bang I2C LCD driver (D6=SDA, D7=SCL) verbatim from R3
+   - Added APDU SELECT AID exchange (same AID: F042414E4B4F4E475345544F4E)
+   - Unified `deliver(value, prefix)` for WiFi POST + serial fallback for both NFC and CARD paths
+   - Matching beep patterns: startup 200ms@1kHz, detect 100ms@1kHz, success double 100ms@1.5kHz, fallback 200ms@800Hz
+   - LCD messages matching R3: idle "Tap Phone...", reading "Reading...", success "OK/Payment sent", fallback "NFC Error/Using card UID"
+   - `SCAN_COOLDOWN_MS=1500`, `NFC_TIMEOUT_MS=500`
+   - `pinMode(PIEZO_PIN, OUTPUT)` before `tone()` in setup
+   - PN532 firmware version check + halt on failure
+   - setup() shows "WiFi..." on LCD during WiFi connect, then "Ready..."
+
+**Remaining:** Phase 32 human verification (3 live device tests) still pending.
