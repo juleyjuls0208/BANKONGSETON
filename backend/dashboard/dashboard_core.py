@@ -322,7 +322,7 @@ def register_routes(app, socketio):
         try:
             ports = serial.tools.list_ports.comports()
             port_list = [
-                {"device": p.device, "description": p.description} for p in ports
+                {"port": p.device, "description": p.description} for p in ports
             ]
             return jsonify({"ports": port_list})
         except Exception as e:
