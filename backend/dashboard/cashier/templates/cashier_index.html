@@ -400,7 +400,7 @@
 
             socket.on('card_error', function(data) {
                 document.getElementById('modalTitle').textContent = 'Error';
-                document.getElementById('modalMessage').textContent = data.error;
+                document.getElementById('modalMessage').textContent = data.message;
             });
         }
 
