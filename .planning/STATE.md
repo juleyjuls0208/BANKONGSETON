@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Requirements Coverage
 status: completed
-stopped_at: Completed 31-04 JWT student login wiring
-last_updated: "2026-03-10T06:08:11.449Z"
+stopped_at: Completed 31-05-PLAN.md
+last_updated: "2026-03-10T07:04:07.641Z"
 last_activity: 2026-03-10 — 31-01 executed (card_error key, TXN UUID suffix, WriteQueue bounded loop)
 progress:
   total_phases: 20
-  completed_phases: 15
+  completed_phases: 16
   total_plans: 58
-  completed_plans: 57
+  completed_plans: 58
 ---
 
 # Project State
@@ -273,6 +273,8 @@ Recent decisions affecting current work:
 - [Phase 31-dashboard-backend-p1-fixes]: Stored login_time as time.time() float for direct TTL arithmetic — replaced ISO string isoformat()
 - [Phase 31-dashboard-backend-p1-fixes]: active_sessions dict remains session store — JWT string used as key, consistent with 31-02 TTL layer
 - [Phase 31-dashboard-backend-p1-fixes]: generate_token() preserved in api_server.py (not deleted) in case of other callers
+- [Phase 31]: register_routes factory pattern: shared routes as closures, both shims call after app creation
+- [Phase 31]: dashboard_core.py has no circular imports; startup guards and shim-specific routes stay in each shim
 
 ### Roadmap Evolution
 
@@ -317,6 +319,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-10T06:08:11.446Z
-Stopped at: Completed 31-04 JWT student login wiring
+Last session: 2026-03-10T07:04:01.436Z
+Stopped at: Completed 31-05-PLAN.md
 Resume file: None
