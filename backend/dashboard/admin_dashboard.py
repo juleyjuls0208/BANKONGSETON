@@ -115,7 +115,11 @@ if CASHIER_AVAILABLE:
     logger.info("event=blueprint_registered name=cashier prefix=/cashier")
 
 # Initialize Google Sheets connection (module-level for cashier_routes compat)
-db = get_sheets_client()
+try:
+    db = get_sheets_client()
+except Exception as _sheets_init_err:
+    logger.error("event=sheets_init_failed error=%s", _sheets_init_err)
+    db = None
 
 # Register all shared routes
 register_routes(app, socketio)

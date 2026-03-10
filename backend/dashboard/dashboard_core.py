@@ -141,7 +141,9 @@ def get_sheets_client():
             credentials_path, scopes=scopes
         )
         client = gspread.authorize(credentials)
-        spreadsheet_id = os.getenv("GOOGLE_SHEET_ID")
+        spreadsheet_id = os.getenv("GOOGLE_SHEETS_ID")
+        if not spreadsheet_id:
+            raise ValueError("GOOGLE_SHEETS_ID environment variable is not set")
         return client.open_by_key(spreadsheet_id)
     except Exception as e:
         logger.error("event=sheets_client_error error=%s", e)

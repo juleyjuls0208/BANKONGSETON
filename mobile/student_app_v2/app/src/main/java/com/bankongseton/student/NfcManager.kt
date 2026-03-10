@@ -48,18 +48,49 @@ class NfcManager private constructor(private val context: Context) {
     }
     
     init {
-        // Create encrypted shared preferences for secure token storage
-        val masterKey = MasterKey.Builder(context)
-            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-            .build()
-        
-        securePrefs = EncryptedSharedPreferences.create(
-            context,
-            PREFS_NAME,
-            masterKey,
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-        )
+        // Create encrypted shared preferences for secure token storage.
+        // EncryptedSharedPreferences can throw GeneralSecurityException / IOException on
+        // Samsung/Android 14+ when the KeyStore entry is corrupted. If that happens we
+        // delete the stale file and retry once. If it still fails we fall back to plain
+        // SharedPreferences so the app never crashes on startup.
+        securePrefs = createSecurePrefs(context)
+    }
+
+    private fun createSecurePrefs(context: Context): SharedPreferences {
+        return tryCreateEncryptedPrefs(context)
+            ?: run {
+                // First attempt failed — delete the corrupted file and retry once
+                context.deleteSharedPreferences(PREFS_NAME)
+                tryCreateEncryptedPrefs(context)
+            }
+            ?: run {
+                // Second attempt also failed — fall back to plain SharedPreferences.
+                // The user will need to re-register their virtual card, but the app
+                // will not crash.
+                android.util.Log.e(
+                    "NfcManager",
+                    "EncryptedSharedPreferences unavailable; falling back to plain prefs"
+                )
+                context.getSharedPreferences(PREFS_NAME + "_plain", Context.MODE_PRIVATE)
+            }
+    }
+
+    private fun tryCreateEncryptedPrefs(context: Context): SharedPreferences? {
+        return try {
+            val masterKey = MasterKey.Builder(context)
+                .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+                .build()
+            EncryptedSharedPreferences.create(
+                context,
+                PREFS_NAME,
+                masterKey,
+                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+            )
+        } catch (e: Exception) {
+            android.util.Log.w("NfcManager", "EncryptedSharedPreferences init failed: $e")
+            null
+        }
     }
 
     private fun hashPin(pin: String): String {
