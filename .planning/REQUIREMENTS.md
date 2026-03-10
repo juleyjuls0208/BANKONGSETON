@@ -107,7 +107,7 @@
 
 | ID | Priority | Requirement | Source |
 |----|----------|-------------|--------|
-| REQ-QUAL-01 | P1 | Consolidate dual auth systems — `opaque_session_tokens` for students and JWT for cashier both active simultaneously; `generate_jwt_token()` is dead code | Backend BUG-03 |
+| ~~REQ-QUAL-01~~ | ~~P1~~ | ~~Consolidate dual auth systems — `opaque_session_tokens` for students and JWT for cashier both active simultaneously; `generate_jwt_token()` is dead code~~ ✅ | ~~Backend BUG-03~~ |
 | REQ-QUAL-02 | P1 | Eliminate `admin_dashboard.py` / `web_app.py` ~90% code duplication — fixes must currently be applied twice | Dashboard QUALITY-01 |
 | REQ-QUAL-03 | P2 | Deduplicate `get_philippines_time()` — defined in 4 separate files; extract to shared utility | Backend QUAL-04 |
 | REQ-QUAL-04 | P2 | Remove bare `except:` clauses throughout backend — replace with specific exception types | Backend QUAL-05 |
