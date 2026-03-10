@@ -249,7 +249,15 @@ class NfcManager private constructor(private val context: Context) {
             .setNegativeButtonText("Use PIN")
             .build()
         
-        biometricPrompt.authenticate(promptInfo)
+        try {
+            biometricPrompt.authenticate(promptInfo)
+        } catch (e: IllegalArgumentException) {
+            // Biometric not configured correctly on this device — fall back to PIN
+            onFailure("NEEDS_PIN")
+        } catch (e: IllegalStateException) {
+            // Activity in wrong state (e.g. not foregrounded) — fall back to PIN
+            onFailure("NEEDS_PIN")
+        }
     }
     
     private fun getDeviceId(): String {

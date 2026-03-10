@@ -225,35 +225,22 @@ class HomeActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             try {
-                val response = ApiClient.apiService.getBudget("Bearer $token")
-                if (response.isSuccessful) {
-                    monthlyLimit = response.body()?.monthlyLimit
-                } else {
-                    monthlyLimit = null
-                }
+                val budgetResponse = ApiClient.apiService.getBudget("Bearer $token")
+                val summaryResponse = ApiClient.apiService.fetchBudgetSummary("Bearer $token")
+
+                val limit = if (budgetResponse.isSuccessful) budgetResponse.body()?.monthlyLimit else null
+                monthlyLimit = limit
+
+                val spent = if (summaryResponse.isSuccessful) summaryResponse.body()?.spent else null
+                updateBudgetUI(spent)
             } catch (e: Exception) {
                 monthlyLimit = null
+                updateBudgetUI(null)
             }
-
-            // Now load transactions with callback style (not suspend)
-            ApiClient.apiService.getTransactions("Bearer $token")
-                .enqueue(object : Callback<TransactionsResponse> {
-                    override fun onResponse(
-                        call: Call<TransactionsResponse>,
-                        response: Response<TransactionsResponse>
-                    ) {
-                        val transactions = response.body()?.transactions ?: emptyList()
-                        updateBudgetUI(transactions)
-                    }
-
-                    override fun onFailure(call: Call<TransactionsResponse>, t: Throwable) {
-                        updateBudgetUI(emptyList())
-                    }
-                })
         }
     }
 
-    private fun updateBudgetUI(transactions: List<Transaction>) {
+    private fun updateBudgetUI(spent: Double?) {
         val limit = monthlyLimit
         if (limit == null || limit <= 0.0) {
             tvBudgetSpend.text = getString(R.string.budget_no_limit)
@@ -263,18 +250,14 @@ class HomeActivity : AppCompatActivity() {
             return
         }
 
+        val actualSpent = spent ?: 0.0
         val currentMonth = java.text.SimpleDateFormat("yyyy-MM", java.util.Locale.getDefault())
             .format(java.util.Date())
 
-        val spent = transactions
-            .filter { it.timestamp.startsWith(currentMonth) }
-            .filter { it.type == "Purchase" || it.type == "NFC Purchase" }
-            .sumOf { it.amount }
-
-        val percent = ((spent / limit) * 100).toInt().coerceIn(0, 100)
+        val percent = ((actualSpent / limit) * 100).toInt().coerceIn(0, 100)
 
         tvBudgetPercent.text = "$percent%"
-        tvBudgetSpend.text = getString(R.string.budget_spent_format, spent, limit)
+        tvBudgetSpend.text = getString(R.string.budget_spent_format, actualSpent, limit)
         budgetProgress.max = 100
         budgetProgress.progress = percent
         budgetCard.visibility = View.VISIBLE
@@ -331,7 +314,11 @@ class HomeActivity : AppCompatActivity() {
     }
 
     private fun saveBudgetLimit(limit: Double) {
-        val token = secureStorage.getAuthToken() ?: return
+        val token = secureStorage.getAuthToken()
+        if (token == null) {
+            Toast.makeText(this, "Session expired, please log in again", Toast.LENGTH_SHORT).show()
+            return
+        }
         lifecycleScope.launch {
             try {
                 val response = ApiClient.apiService.setBudget(
@@ -342,17 +329,23 @@ class HomeActivity : AppCompatActivity() {
                     monthlyLimit = limit
                     loadAndDisplayBudget()
                 } else {
-                    Toast.makeText(
-                        this@HomeActivity,
-                        "Failed to save budget",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    val errorMsg = try {
+                        val errorJson = response.errorBody()?.string()
+                        if (!errorJson.isNullOrBlank()) {
+                            org.json.JSONObject(errorJson).optString("error", "Failed to save budget")
+                        } else {
+                            "Failed to save budget (${response.code()})"
+                        }
+                    } catch (_: Exception) {
+                        "Failed to save budget (${response.code()})"
+                    }
+                    Toast.makeText(this@HomeActivity, errorMsg, Toast.LENGTH_LONG).show()
                 }
             } catch (e: Exception) {
                 Toast.makeText(
                     this@HomeActivity,
-                    "Failed to save budget",
-                    Toast.LENGTH_SHORT
+                    "Network error: ${e.message ?: "check your connection"}",
+                    Toast.LENGTH_LONG
                 ).show()
             }
         }
