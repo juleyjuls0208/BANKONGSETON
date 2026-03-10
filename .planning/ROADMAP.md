@@ -505,10 +505,12 @@ Plans:
 - iOS `DateFormatter` instance is static/cached; not created on every `ReceiptView` or `BudgetViewModel` render pass
 - Android `TransactionsAdapter` uses `DiffUtil` for list updates; `notifyDataSetChanged()` is removed
 
-**Plans:** TBD (run `/gsd-plan-phase 32` to break down)
+**Plans:** 3 plans
 
 Plans:
-- [ ] TBD
+- [ ] 32-01-PLAN.md — Backend: Add GET /api/budget-summary route (REQ-PERF-06)
+- [ ] 32-02-PLAN.md — iOS: DateFormatter statics + fetchBudgetSummary() (REQ-PERF-07, REQ-PERF-08)
+- [ ] 32-03-PLAN.md — Android: DiffUtil in TransactionsAdapter + budget summary fetch (REQ-PERF-09, REQ-PERF-10)
 
 ---
 
