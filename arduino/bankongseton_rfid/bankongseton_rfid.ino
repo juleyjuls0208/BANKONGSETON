@@ -3,7 +3,8 @@
  *
  * Dual-mode operation:
  *   1. APDU path  — phone running HCE app → WiFi POST token + Serial "NFC|{48-char-token}"
- *   2. UID fallback — plain RFID card (or APDU timeout) → WiFi POST uid + Serial "CARD|{UID}"
+ *   2. UID path   — plain NFC tag (NTAG215, MIFARE, 7-byte UID) → WiFi POST uid + Serial "CARD|{UID}"
+ *                   APDU is skipped entirely for non-HCE targets (avoids PN532 lockup on NTAG cards)
  *
  * Python ArduinoBridge reads the serial line and processes the payment.
  *
@@ -224,6 +225,7 @@ String uidToHex(uint8_t *uid, uint8_t len) {
 // ═══════════════════════════════════════════════════════════════
 
 void connectWiFi() {
+#ifdef SECRET_SSID
   if (WiFi.status() == WL_NO_MODULE) {
     Serial.println("ERROR: WiFi module not found");
     lcd_clear();
@@ -254,11 +256,20 @@ void connectWiFi() {
   } else {
     Serial.println("WARNING: WiFi connect failed — will retry before each scan");
   }
+#else
+  Serial.println("WiFi disabled — serial-only mode");
+  lcd_clear();
+  lcd_set_cursor(0, 0);
+  lcd_print("BANKONGSETON");
+  lcd_set_cursor(0, 1);
+  lcd_print("Serial mode");
+#endif
 }
 
 // Ensure WiFi is connected; reconnect non-blocking if dropped.
 // Returns true if connected after the attempt.
 bool ensureWiFi() {
+#ifdef SECRET_SSID
   if (WiFi.status() == WL_CONNECTED) return true;
 
   Serial.println("WiFi lost — reconnecting...");
@@ -270,13 +281,16 @@ bool ensureWiFi() {
   }
 
   return WiFi.status() == WL_CONNECTED;
+#else
+  return false;  // WiFi disabled — always use serial fallback
+#endif
 }
 
 // ═══════════════════════════════════════════════════════════════
 // HTTP POST HELPER
 // ═══════════════════════════════════════════════════════════════
 
-// Posts {"token": "<value>"} to Flask /api/nfc/pay.
+// Posts {"token": "<value>"} to Flask /api/nfc/tap.
 // Returns true on HTTP 200, false on any error.
 bool httpPost(const String &value) {
   WiFiClient client;
@@ -293,7 +307,7 @@ bool httpPost(const String &value) {
 
   String body = "{\"token\":\"" + value + "\"}";
 
-  client.println("POST /api/nfc/pay HTTP/1.0");
+  client.println("POST /api/nfc/tap HTTP/1.0");
   client.println("Host: " + String(FLASK_HOST));
   client.println("Content-Type: application/json");
   client.println("X-API-Key: " + String(SECRET_API_KEY));
@@ -421,8 +435,16 @@ void loop() {
 
   if (!found) return;  // no card yet — loop immediately
 
-  // ── Target detected — attempt APDU SELECT AID ──────────────
-  // Show "Reading..." while we attempt APDU exchange
+  // ── Target detected — decide path based on UID length ──────
+  // HCE phones (Android/iOS) present a 4-byte UID.
+  // Plain NFC tags (NTAG215, MIFARE, etc.) present a 7-byte UID.
+  // NTAG215 does NOT support ISO 7816-4 APDUs — sending one can lock
+  // up inDataExchange for its full timeout and leave the PN532 RF
+  // field in a bad state. So we skip the APDU entirely for non-HCE targets.
+
+  String uidHex = uidToHex(uid, uidLen);
+
+  // Show "Reading..." while processing
   lcd_clear();
   lcd_set_cursor(0, 0);
   lcd_print("BANKONGSETON");
@@ -432,58 +454,86 @@ void loop() {
   // Detect beep: 1 kHz, 100 ms
   tone(PIEZO_PIN, 1000, 100);
 
-  // APDU SELECT AID command (19 bytes):
-  //   CLA=0x00, INS=0xA4, P1=0x04, P2=0x00, Lc=0x0D
-  //   AID: F0 42 41 4E 4B 4F 4E 47 53 45 54 4F 4E  (BANKONGSETON)
-  //   Le=0x00
-  uint8_t apduCmd[19] = {
-    0x00, 0xA4, 0x04, 0x00, 0x0D,
-    0xF0, 0x42, 0x41, 0x4E, 0x4B, 0x4F, 0x4E, 0x47, 0x53, 0x45, 0x54, 0x4F, 0x4E,
-    0x00
-  };
+  if (uidLen != 4) {
+    // ── Plain NFC tag (7-byte UID = NTAG21x, MIFARE, etc.) ──────
+    // Skip APDU — deliver UID directly
+    Serial.print("CARD detected (uidLen=");
+    Serial.print(uidLen);
+    Serial.println(") — skipping APDU");
 
-  uint8_t response[60];
-  uint8_t responseLength = 60;
-
-  // inDataExchange MUST be called after readPassiveTargetID (uses _inListedTag internally).
-  bool apduOk = nfc.inDataExchange(apduCmd, 19, response, &responseLength);
-
-  if (apduOk && responseLength == 50 && response[48] == 0x90 && response[49] == 0x00) {
-    // ── APDU success: extract 48-char ASCII token ────────────
-    String token = "";
-    for (int i = 0; i < 48; i++) token += (char)response[i];
-
-    // Deliver via WiFi POST (token key), serial fallback "NFC|<token>"
-    deliver(token, "NFC");
-
-    // Success beep: two short tones at 1.5 kHz
-    tone(PIEZO_PIN, 1500, 100);
-    delay(120);
-    tone(PIEZO_PIN, 1500, 100);
-
-    // LCD: show OK
-    lcd_clear();
-    lcd_set_cursor(0, 0);
-    lcd_print("OK");
-    lcd_set_cursor(0, 1);
-    lcd_print("Payment sent");
-
-  } else {
-    // ── APDU failed: fall back to UID emission ───────────────
-    String uidHex = uidToHex(uid, uidLen);
-
-    // Deliver via WiFi POST (uid as token), serial fallback "CARD|<uid>"
     deliver(uidHex, "CARD");
 
     // Fallback beep: single 200 ms at 800 Hz
     tone(PIEZO_PIN, 800, 200);
 
-    // LCD: show NFC Error
+    // LCD: show card UID
     lcd_clear();
     lcd_set_cursor(0, 0);
-    lcd_print("NFC Error");
+    lcd_print("Card Read");
     lcd_set_cursor(0, 1);
-    lcd_print("Using card UID");
+    // Show first 8 chars of UID on LCD
+    lcd_print(uidHex.substring(0, LCD_COLS).c_str());
+
+  } else {
+    // ── 4-byte UID: likely HCE phone — attempt APDU ─────────────
+    // APDU SELECT AID command (19 bytes):
+    //   CLA=0x00, INS=0xA4, P1=0x04, P2=0x00, Lc=0x0D
+    //   AID: F0 42 41 4E 4B 4F 4E 47 53 45 54 4F 4E  (BANKONGSETON)
+    //   Le=0x00
+    uint8_t apduCmd[19] = {
+      0x00, 0xA4, 0x04, 0x00, 0x0D,
+      0xF0, 0x42, 0x41, 0x4E, 0x4B, 0x4F, 0x4E, 0x47, 0x53, 0x45, 0x54, 0x4F, 0x4E,
+      0x00
+    };
+
+    uint8_t response[60];
+    uint8_t responseLength = 60;
+
+    // inDataExchange MUST be called after readPassiveTargetID (uses _inListedTag internally).
+    bool apduOk = nfc.inDataExchange(apduCmd, 19, response, &responseLength);
+
+    if (apduOk && responseLength == 50 && response[48] == 0x90 && response[49] == 0x00) {
+      // ── APDU success: extract 48-char ASCII token ──────────
+      String token = "";
+      for (int i = 0; i < 48; i++) token += (char)response[i];
+
+      // Deliver via WiFi POST (token key), serial fallback "NFC|<token>"
+      deliver(token, "NFC");
+
+      // Success beep: two short tones at 1.5 kHz
+      tone(PIEZO_PIN, 1500, 100);
+      delay(120);
+      tone(PIEZO_PIN, 1500, 100);
+
+      // LCD: show OK
+      lcd_clear();
+      lcd_set_cursor(0, 0);
+      lcd_print("OK");
+      lcd_set_cursor(0, 1);
+      lcd_print("Payment sent");
+
+    } else {
+      // ── APDU failed on 4-byte target — reset RF and fall back to UID
+      // Reset RF field to clear any PN532 error state from the failed APDU
+      nfc.setRFField(0, 0);  // RF off
+      delay(20);
+      nfc.setRFField(1, 1);  // RF on
+      delay(10);
+
+      Serial.println("APDU failed on 4-byte target — using UID fallback");
+
+      deliver(uidHex, "CARD");
+
+      // Fallback beep: single 200 ms at 800 Hz
+      tone(PIEZO_PIN, 800, 200);
+
+      // LCD: show NFC Error
+      lcd_clear();
+      lcd_set_cursor(0, 0);
+      lcd_print("NFC Error");
+      lcd_set_cursor(0, 1);
+      lcd_print("Using card UID");
+    }
   }
 
   // Cooldown — prevents reading the same card/phone twice in quick succession
