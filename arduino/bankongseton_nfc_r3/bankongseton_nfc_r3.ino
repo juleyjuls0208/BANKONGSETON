@@ -36,15 +36,15 @@
  * ═══════════════════════════════════════════════════════════════
  * REQUIRED LIBRARIES (install via Arduino Library Manager)
  * ═══════════════════════════════════════════════════════════════
- *   - "Adafruit PN532" by Adafruit
- *   - "Adafruit BusIO" by Adafruit  (dependency of PN532)
+ *   - "PN532" by Elechouse  (also installs PN532_SPI, PN532_HSU, etc.)
  *
  * LCD uses inline bit-bang I2C — no extra library required.
  * ═══════════════════════════════════════════════════════════════
  */
 
 #include <SPI.h>
-#include <Adafruit_PN532.h>
+#include <PN532_SPI.h>
+#include <PN532.h>
 
 // ── Pin assignments ──────────────────────────────────────────────
 #define PN532_SS   10   // SPI chip-select (NSS/CS on PN532 board)
@@ -63,8 +63,9 @@
 #define SCAN_COOLDOWN_MS  1500  // ms pause after card read (prevents double-scan)
 #define NFC_TIMEOUT_MS     500  // ms readPassiveTargetID blocks waiting for card
 
-// ── PN532 instance (SPI mode — pass only the SS pin) ─────────────
-Adafruit_PN532 nfc(PN532_SS);
+// ── PN532 instance (SPI mode — matches working reference) ────────
+PN532_SPI pn532spi(SPI, PN532_SS);
+PN532 nfc(pn532spi);
 
 // ═══════════════════════════════════════════════════════════════
 // INLINE BIT-BANG I2C + PCF8574 LCD DRIVER
@@ -222,10 +223,7 @@ void setup() {
   Serial.begin(9600);
   while (!Serial && millis() < 3000);  // wait up to 3 s for Serial Monitor
 
-  // 2. SPI bus — must start before nfc.begin()
-  SPI.begin();
-
-  // 3. PN532 init
+  // 2. PN532 init (PN532_SPI handles SPI.begin() internally)
   nfc.begin();
   uint32_t versiondata = nfc.getFirmwareVersion();
   if (!versiondata) {
@@ -234,18 +232,18 @@ void setup() {
   }
   nfc.SAMConfig();  // configure for ISO14443A cards
 
-  // 4. LCD init
+  // 3. LCD init
   lcd_init();
   lcd_set_cursor(0, 0);
   lcd_print("BANKONGSETON");
   lcd_set_cursor(0, 1);
   lcd_print("Ready...");
 
-  // 5. Startup beep (100 ms) — confirms piezo wiring
+  // 4. Startup beep (100 ms) — confirms piezo wiring
   pinMode(PIEZO_PIN, OUTPUT);   // required before tone() on UNO R3
   tone(PIEZO_PIN, 1000, 200);   // 200 ms at 1 kHz — audible on both active and passive
 
-  // 6. Ready message — ArduinoBridge listens for this line at startup
+  // 5. Ready message — ArduinoBridge listens for this line at startup
   Serial.println("BANKONGSETON NFC reader ready");
 }
 
@@ -260,13 +258,29 @@ void loop() {
   lcd_set_cursor(0, 1);
   lcd_print("Tap Phone...");
 
+  // RF field toggle: cycle off→on to reset any stuck NTAG state.
+  // Required for passive ISO14443A (NTAG215): autoRFCA must be 0.
+  nfc.setRFField(0, 0);  // RF off
+  delay(50);
+  nfc.setRFField(0, 1);  // RF on, no autoRFCA
+  delay(10);
+
   // readPassiveTargetID blocks for NFC_TIMEOUT_MS waiting for a card.
   // Returns true when a card/phone is in range and its UID is read.
   bool found = nfc.readPassiveTargetID(
     PN532_MIFARE_ISO14443A, uid, &uidLen, NFC_TIMEOUT_MS
   );
 
-  if (!found) return;  // no card yet — loop immediately (no extra delay)
+  if (!found) {
+    Serial.print("SCAN: no card — raw buf:");
+    for (int i = 0; i < 16; i++) {
+      Serial.print(" ");
+      if (nfc.pn532_packetbuffer[i] < 0x10) Serial.print("0");
+      Serial.print(nfc.pn532_packetbuffer[i], HEX);
+    }
+    Serial.println();
+    return;
+  }
 
   // ── Target detected — attempt APDU SELECT AID ──────────────
   // Show "Reading..." while we attempt APDU exchange
