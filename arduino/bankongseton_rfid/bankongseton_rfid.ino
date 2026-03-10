@@ -399,6 +399,11 @@ void setup() {
   }
   nfc.SAMConfig();  // configure for ISO14443A cards
 
+  // Tell PN532 to retry cascade anticollision up to 0xFF times before giving up.
+  // Critical for 7-byte UID tags (NTAG21x, most NXP tags): without this the
+  // PN532 may silently abort during level-2 cascade and return "no card found".
+  nfc.setPassiveActivationRetries(0xFF);
+
   // 5. WiFi connect (shows "WiFi..." on LCD during connect)
   connectWiFi();
 
@@ -425,13 +430,27 @@ void loop() {
   lcd_set_cursor(0, 0);
   lcd_print("BANKONGSETON");
   lcd_set_cursor(0, 1);
-  lcd_print("Tap Phone...");
+  lcd_print("Tap card...");
+
+  // Small breathing room between polls — helps PN532 reliably complete
+  // the two-level cascade anticollision needed for 7-byte UID tags (NTAG21x).
+  delay(10);
 
   // readPassiveTargetID blocks for NFC_TIMEOUT_MS waiting for a card.
   // Returns true when a card/phone is in range and its UID is read.
   bool found = nfc.readPassiveTargetID(
     PN532_MIFARE_ISO14443A, uid, &uidLen, NFC_TIMEOUT_MS
   );
+
+  // ── Diagnostic: always print scan result so Serial Monitor shows what's happening
+  if (found) {
+    Serial.print("SCAN: FOUND uidLen=");
+    Serial.print(uidLen);
+    Serial.print(" uid=");
+    Serial.println(uidToHex(uid, uidLen));
+  } else {
+    Serial.println("SCAN: no card");
+  }
 
   if (!found) return;  // no card yet — loop immediately
 
