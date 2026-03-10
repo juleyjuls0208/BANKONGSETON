@@ -62,7 +62,7 @@
 
 // ── Tuning ───────────────────────────────────────────────────────
 #define SCAN_COOLDOWN_MS  1500  // ms pause after card read (prevents double-scan)
-#define NFC_TIMEOUT_MS     500  // ms readPassiveTargetID blocks waiting for card
+#define NFC_TIMEOUT_MS    5000  // ms readPassiveTargetID blocks waiting for card
 
 // ── HTTP tuning ──────────────────────────────────────────────────
 static const int MAX_RETRIES    = 3;
@@ -432,8 +432,12 @@ void loop() {
   lcd_set_cursor(0, 1);
   lcd_print("Tap card...");
 
-  // Small breathing room between polls — helps PN532 reliably complete
-  // the two-level cascade anticollision needed for 7-byte UID tags (NTAG21x).
+  // RF field toggle: cycle field off→on to reset any stuck NTAG state.
+  // This forces the NTAG215 back to IDLE so the cascade anticollision
+  // starts cleanly from the beginning each scan attempt.
+  nfc.setRFField(0, 0);  // RF off
+  delay(50);
+  nfc.setRFField(1, 1);  // RF on
   delay(10);
 
   // readPassiveTargetID blocks for NFC_TIMEOUT_MS waiting for a card.
@@ -449,7 +453,16 @@ void loop() {
     Serial.print(" uid=");
     Serial.println(uidToHex(uid, uidLen));
   } else {
-    Serial.println("SCAN: no card");
+    // Print raw PN532 response buffer to distinguish:
+    //   pn532_packetbuffer[2] == 0x01 → PN532 DID detect card but library returned false (library bug)
+    //   pn532_packetbuffer[2] == 0x00 → PN532 truly found nothing (RF/hardware issue)
+    Serial.print("SCAN: no card — raw buf:");
+    for (int i = 0; i < 16; i++) {
+      Serial.print(" ");
+      if (nfc.pn532_packetbuffer[i] < 0x10) Serial.print("0");
+      Serial.print(nfc.pn532_packetbuffer[i], HEX);
+    }
+    Serial.println();
   }
 
   if (!found) return;  // no card yet — loop immediately
