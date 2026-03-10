@@ -399,10 +399,13 @@ void setup() {
   }
   nfc.SAMConfig();  // configure for ISO14443A cards
 
-  // Tell PN532 to retry cascade anticollision up to 0xFF times before giving up.
-  // Critical for 7-byte UID tags (NTAG21x, most NXP tags): without this the
-  // PN532 may silently abort during level-2 cascade and return "no card found".
-  nfc.setPassiveActivationRetries(0xFF);
+  // Use a finite retry count so the PN532 gives up and sends a "NbTg=0" response
+  // when no card is found. 0xFF means "infinite retries" — the PN532 never sends
+  // NbTg=0, it just keeps scanning until the library timeout expires, which means
+  // readResponse times out and pn532_packetbuffer is never overwritten with the
+  // response. 0x0A (10 retries) is enough to reliably detect both passive tags
+  // and active HCE phones, while still allowing quick failure on no-card.
+  nfc.setPassiveActivationRetries(0x0A);
 
   // 5. WiFi connect (shows "WiFi..." on LCD during connect)
   connectWiFi();
