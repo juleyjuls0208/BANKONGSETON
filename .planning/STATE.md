@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Requirements Coverage
 status: completed
-stopped_at: Phase 31 context gathered
-last_updated: "2026-03-10T05:25:46.387Z"
+stopped_at: Completed 31-03 FINANCE_PASSWORD startup guard plan
+last_updated: "2026-03-10T05:58:13.704Z"
 last_activity: 2026-03-10 — Phase 30 fully complete (30-01 + 30-02 both executed)
 progress:
   total_phases: 20
   completed_phases: 15
-  total_plans: 53
-  completed_plans: 53
+  total_plans: 58
+  completed_plans: 55
 ---
 
 # Project State
@@ -108,6 +108,7 @@ Progress: [##########] v1.3 — Phase 30 done | 53/53 plans complete
 | Phase 29-android-security-p1-bugs P01 | 30 | 2 tasks | 3 files |
 | Phase 30-ios-bugs-ux P01 | 8min | 2 tasks | 7 files |
 | Phase 30-ios-bugs-ux P02 | 10min | 2 tasks | 4 files |
+| Phase 31-dashboard-backend-p1-fixes P03 | 5 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -260,6 +261,8 @@ Recent decisions affecting current work:
 - [Phase 30-ios-bugs-ux]: mobile/ios/ is a separate nested git repo — 30-01 commits are in mobile/ios git (main branch), not parent project git
 - [Phase 30-02]: clearAll() in button action (not handleUnauthorized()) so alert renders before MainTabView tears down on isLoggedIn = false
 - [Phase 30-02]: iOS 16 single-arg onChange used: .onChange(of: limitInput) { _ in } — iOS 17 two-arg form not used for compatibility
+- [Phase 31]: FINANCE_PASSWORD guard placed after JWT_SECRET guard in both files — consistent guard ordering (FLASK_SECRET_KEY -> JWT_SECRET -> FINANCE_PASSWORD)
+- [Phase 31]: Named constant _INSECURE_FINANCE_DEFAULT follows _INSECURE_DEFAULT/_JWT_INSECURE_DEFAULT naming pattern already present in both files
 
 ### Roadmap Evolution
 
@@ -304,6 +307,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-10T05:25:46.384Z
-Stopped at: Phase 31 context gathered
-Resume file: .planning/phases/31-dashboard-backend-p1-fixes/31-CONTEXT.md
+Last session: 2026-03-10T05:58:13.701Z
+Stopped at: Completed 31-03 FINANCE_PASSWORD startup guard plan
+Resume file: None
