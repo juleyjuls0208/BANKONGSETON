@@ -60,7 +60,30 @@ data class ErrorResponse(
     val error: String
 )
 
+// Budget Models
+data class BudgetResponse(
+    @SerializedName("monthly_limit") val monthlyLimit: Double?,
+    val currency: String
+)
+
+data class SetBudgetRequest(
+    @SerializedName("monthly_limit") val monthlyLimit: Double
+)
+
+data class SetBudgetResponse(
+    val success: Boolean,
+    @SerializedName("monthly_limit") val monthlyLimit: Double
+)
+
 // NFC Models
 data class NfcDeviceRequest(val device_id: String, val pin: String)
 data class NfcRegistrationResponse(val virtual_card_token: String)
 data class NfcUnregisterRequest(val device_id: String)
+
+// Lost Card Models
+data class LostCardResponse(val success: Boolean, val message: String)
+
+// Budget Summary Model
+data class BudgetSummaryResponse(
+    @SerializedName("monthly_spend") val spent: Double
+)
