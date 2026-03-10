@@ -78,7 +78,7 @@ class ArduinoBridge:
         headers["X-Station-ID"] = STATION_ID
         try:
             resp = requests.post(
-                url, json={"token": token}, headers=headers, timeout=10
+                url, json={"virtual_card_token": token}, headers=headers, timeout=10
             )
             if resp.status_code != 200:
                 logging.warning("NFC pay POST returned %s", resp.status_code)
@@ -97,6 +97,45 @@ class ArduinoBridge:
         """Start the serial reader daemon thread. Extracted for testability."""
         t = threading.Thread(target=self._read_card_thread, daemon=True)
         t.start()
+
+    def start_background_listener(self) -> None:
+        """Start a persistent background daemon that routes every serial line
+        through _parse_line() until the serial port is closed or gone.
+
+        Unlike _read_card_thread(), this loop has NO timeout — it runs
+        indefinitely.  NFC|, ERROR|NFC_FAIL, and CARD| lines are all handled.
+        Call this once after the serial connection is established (e.g. from
+        connect_serial in dashboard_core.py).
+        """
+        t = threading.Thread(target=self._background_listener_loop, daemon=True)
+        t.daemon = True
+        t.start()
+        logger.info("event=background_listener_started")
+
+    def _background_listener_loop(self) -> None:
+        """Daemon thread body for the persistent serial listener."""
+        logger.info("event=background_listener_loop_running")
+        while True:
+            try:
+                ard = self.arduino
+                if ard is None or not ard.is_open:
+                    # Port closed — exit the loop
+                    logger.info(
+                        "event=background_listener_loop_exit reason=port_closed"
+                    )
+                    return
+                if ard.in_waiting > 0:
+                    line = ard.readline().decode("utf-8", errors="ignore").strip()
+                    if line:
+                        self._parse_line(line)
+                else:
+                    time.sleep(0.05)
+            except Exception as exc:
+                # Port gone / OS error — stop listening
+                logger.warning(
+                    "event=background_listener_loop_exit reason=exception error=%s", exc
+                )
+                return
 
     # ── Existing card-read API ───────────────────────────────────────
 
