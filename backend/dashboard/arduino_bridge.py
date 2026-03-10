@@ -23,8 +23,10 @@ except ImportError:
 # NFC payment env vars — read once at import time; also re-read per call for testability
 _CASHIER_JWT = os.environ.get("CASHIER_JWT", "")
 _API_BASE_URL = os.environ.get("API_BASE_URL", "http://127.0.0.1:5001")
-if not _CASHIER_JWT:
-    logging.warning("CASHIER_JWT env var not set — NFC payment POSTs will lack auth")
+_DASHBOARD_BASE_URL = os.environ.get("DASHBOARD_BASE_URL", "http://127.0.0.1:5003")
+_ARDUINO_API_KEY = os.environ.get("ARDUINO_API_KEY", "")
+if not _ARDUINO_API_KEY:
+    logging.warning("ARDUINO_API_KEY env var not set — NFC tap POSTs will be rejected")
 
 STATION_ID = os.getenv("STATION_ID", "main")
 STATION_SERIAL_PORT = os.getenv("STATION_SERIAL_PORT", "")
@@ -70,28 +72,28 @@ class ArduinoBridge:
         # Any other lines are ignored silently
 
     def _post_nfc_payment(self, token: str) -> None:
-        """POST token to /api/nfc/pay in a daemon thread. Called from _parse_line."""
-        jwt = os.environ.get("CASHIER_JWT", _CASHIER_JWT)
-        api_base = os.environ.get("API_BASE_URL", _API_BASE_URL)
-        url = f"{api_base}/api/nfc/pay"
-        headers = {"Authorization": f"Bearer {jwt}", "Content-Type": "application/json"}
-        headers["X-Station-ID"] = STATION_ID
+        """POST token to /api/nfc/tap on the dashboard (port 5003) in a daemon thread.
+
+        This is called from _parse_line() after the SocketIO nfc_payment event is
+        already emitted. The POST serves as an audit confirmation — the cashier UI
+        receives the SocketIO event regardless of whether this POST succeeds.
+
+        Auth: X-API-Key header (ARDUINO_API_KEY in .env).
+        """
+        api_key = os.environ.get("ARDUINO_API_KEY", _ARDUINO_API_KEY)
+        dashboard_base = os.environ.get("DASHBOARD_BASE_URL", _DASHBOARD_BASE_URL)
+        url = f"{dashboard_base}/api/nfc/tap"
+        headers = {
+            "X-API-Key": api_key,
+            "Content-Type": "application/json",
+            "X-Station-ID": STATION_ID,
+        }
         try:
-            resp = requests.post(
-                url, json={"virtual_card_token": token}, headers=headers, timeout=10
-            )
+            resp = requests.post(url, json={"token": token}, headers=headers, timeout=5)
             if resp.status_code != 200:
-                logging.warning("NFC pay POST returned %s", resp.status_code)
-                self.socketio.emit(
-                    "nfc_payment_result",
-                    {"success": False, "error": f"HTTP {resp.status_code}"},
-                )
-            # Success result is emitted by the API endpoint via its own SocketIO emit (not here)
+                logging.warning("NFC tap POST returned %s", resp.status_code)
         except Exception as exc:
-            logging.error("NFC pay POST failed: %s", exc)
-            self.socketio.emit(
-                "nfc_payment_result", {"success": False, "error": str(exc)}
-            )
+            logging.warning("NFC tap POST failed (non-critical): %s", exc)
 
     def _start_serial_thread(self) -> None:
         """Start the serial reader daemon thread. Extracted for testability."""

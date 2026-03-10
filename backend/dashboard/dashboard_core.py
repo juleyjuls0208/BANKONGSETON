@@ -2023,6 +2023,39 @@ def register_routes(app, socketio):
             logger.error(f"Unexpected error in nfc_simulate: {e}", exc_info=True)
             return jsonify({"error": "An unexpected error occurred"}), 500
 
+    @app.route("/api/nfc/tap", methods=["POST"])
+    def arduino_nfc_tap():
+        """Wireless NFC tap endpoint for Arduino UNO R4 WiFi.
+
+        Arduino POSTs {"token": "<48-char-token>"} with X-API-Key header.
+        Emits nfc_payment SocketIO event to the cashier UI — identical to the
+        serial NFC| path in ArduinoBridge._parse_line().
+
+        Auth: X-API-Key header must match ARDUINO_API_KEY in .env.
+        No JWT or session required — designed for embedded device access.
+        """
+        _arduino_api_key = os.environ.get("ARDUINO_API_KEY", "")
+        api_key = request.headers.get("X-API-Key", "")
+        if not _arduino_api_key or api_key != _arduino_api_key:
+            logger.warning(
+                "event=arduino_nfc_tap_rejected reason=invalid_api_key remote=%s",
+                request.remote_addr,
+            )
+            return jsonify({"error": "Unauthorized"}), 401
+
+        data = request.get_json(silent=True) or {}
+        token = str(data.get("token", "")).strip()
+        if not token:
+            return jsonify({"error": "token is required"}), 400
+
+        socketio.emit("nfc_payment", {"token": token})
+        logger.info(
+            "event=arduino_nfc_tap_received token_len=%d remote=%s",
+            len(token),
+            request.remote_addr,
+        )
+        return jsonify({"received": True}), 200
+
     # ============= PRODUCTS (STRING-ID) =============
 
     @app.route("/api/products/list", methods=["GET"])
