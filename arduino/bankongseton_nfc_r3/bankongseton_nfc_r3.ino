@@ -282,72 +282,92 @@ void loop() {
     return;
   }
 
-  // ── Target detected — attempt APDU SELECT AID ──────────────
-  // Show "Reading..." while we attempt APDU exchange
-  lcd_clear();
-  lcd_set_cursor(0, 0);
-  lcd_print("BANKONGSETON");
-  lcd_set_cursor(0, 1);
-  lcd_print("Reading...");
-
-  // Piezo beep: 1 kHz, 100 ms — card detected
+  // ── Target detected ──────────────────────────────────────────
+  // Detect beep: 1 kHz, 100 ms
   tone(PIEZO_PIN, 1000, 100);
 
-  // APDU SELECT AID command (19 bytes):
-  //   CLA=0x00, INS=0xA4, P1=0x04, P2=0x00, Lc=0x0D
-  //   AID: F0 42 41 4E 4B 4F 4E 47 53 45 54 4F 4E  (BANKONGSETON)
-  //   Le=0x00
-  uint8_t apduCmd[19] = {
-    0x00, 0xA4, 0x04, 0x00, 0x0D,
-    0xF0, 0x42, 0x41, 0x4E, 0x4B, 0x4F, 0x4E, 0x47, 0x53, 0x45, 0x54, 0x4F, 0x4E,
-    0x00
-  };
+  String uidHex = uidToHex(uid, uidLen);
 
-  uint8_t response[60];
-  uint8_t responseLength = 60;
+  if (uidLen != 4) {
+    // ── Plain NFC tag (7-byte UID = NTAG21x, MIFARE physical) ──
+    // Skip APDU — deliver UID directly via serial
+    Serial.print("CARD detected (uidLen=");
+    Serial.print(uidLen);
+    Serial.println(") — skipping APDU");
 
-  // inDataExchange MUST be called after readPassiveTargetID (uses _inListedTag internally).
-  // Do NOT call inListPassiveTarget() directly.
-  bool apduOk = nfc.inDataExchange(apduCmd, 19, response, &responseLength);
-
-  if (apduOk && responseLength == 50 && response[48] == 0x90 && response[49] == 0x00) {
-    // ── APDU success: extract 48-char ASCII token ────────────
-    String token = "";
-    for (int i = 0; i < 48; i++) token += (char)response[i];
-
-    // Emit NFC token — ArduinoBridge handles "NFC|" prefix
-    Serial.print("NFC|");
-    Serial.println(token);
-
-    // Confirmation beep: two short tones
-    tone(PIEZO_PIN, 1500, 100);
-    delay(120);
-    tone(PIEZO_PIN, 1500, 100);
-
-    // LCD: show OK
-    lcd_clear();
-    lcd_set_cursor(0, 0);
-    lcd_print("OK");
-    lcd_set_cursor(0, 1);
-    lcd_print("Payment sent");
-
-  } else {
-    // ── APDU failed: fall back to UID emission ───────────────
-    String uidHex = uidToHex(uid, uidLen);
-
-    // Emit UID — ArduinoBridge handles "CARD|" prefix (existing format)
     Serial.print("CARD|");
     Serial.println(uidHex);
 
-    // Single beep for UID fallback
     tone(PIEZO_PIN, 800, 200);
-
-    // LCD: show NFC Error
     lcd_clear();
     lcd_set_cursor(0, 0);
-    lcd_print("NFC Error");
+    lcd_print("Card Read");
     lcd_set_cursor(0, 1);
-    lcd_print("Using card UID");
+    lcd_print(uidHex.substring(0, LCD_COLS).c_str());
+
+  } else {
+    // ── 4-byte UID: likely HCE phone — attempt APDU ─────────
+    // Show "Reading..." while we attempt APDU exchange
+    lcd_clear();
+    lcd_set_cursor(0, 0);
+    lcd_print("BANKONGSETON");
+    lcd_set_cursor(0, 1);
+    lcd_print("Reading...");
+
+    // APDU SELECT AID command (19 bytes):
+    //   CLA=0x00, INS=0xA4, P1=0x04, P2=0x00, Lc=0x0D
+    //   AID: F0 42 41 4E 4B 4F 4E 47 53 45 54 4F 4E  (BANKONGSETON)
+    //   Le=0x00
+    uint8_t apduCmd[19] = {
+      0x00, 0xA4, 0x04, 0x00, 0x0D,
+      0xF0, 0x42, 0x41, 0x4E, 0x4B, 0x4F, 0x4E, 0x47, 0x53, 0x45, 0x54, 0x4F, 0x4E,
+      0x00
+    };
+
+    uint8_t response[60];
+    uint8_t responseLength = 60;
+
+    // inDataExchange MUST be called after readPassiveTargetID (uses _inListedTag internally).
+    // Do NOT call inListPassiveTarget() directly.
+    bool apduOk = nfc.inDataExchange(apduCmd, 19, response, &responseLength);
+
+    if (apduOk && responseLength == 50 && response[48] == 0x90 && response[49] == 0x00) {
+      // ── APDU success: extract 48-char ASCII token ────────────
+      String token = "";
+      for (int i = 0; i < 48; i++) token += (char)response[i];
+
+      // Emit NFC token — ArduinoBridge handles "NFC|" prefix
+      Serial.print("NFC|");
+      Serial.println(token);
+
+      // Confirmation beep: two short tones
+      tone(PIEZO_PIN, 1500, 100);
+      delay(120);
+      tone(PIEZO_PIN, 1500, 100);
+
+      // LCD: show OK
+      lcd_clear();
+      lcd_set_cursor(0, 0);
+      lcd_print("OK");
+      lcd_set_cursor(0, 1);
+      lcd_print("Payment sent");
+
+    } else {
+      // ── APDU failed: fall back to UID emission ───────────────
+      // Emit UID — ArduinoBridge handles "CARD|" prefix (existing format)
+      Serial.print("CARD|");
+      Serial.println(uidHex);
+
+      // Single beep for UID fallback
+      tone(PIEZO_PIN, 800, 200);
+
+      // LCD: show NFC Error
+      lcd_clear();
+      lcd_set_cursor(0, 0);
+      lcd_print("NFC Error");
+      lcd_set_cursor(0, 1);
+      lcd_print("Using card UID");
+    }
   }
 
   // Cooldown — prevents reading the same card/phone twice in quick succession
