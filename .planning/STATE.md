@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Requirements Coverage
-status: completed
-stopped_at: Completed 31-03 FINANCE_PASSWORD startup guard plan
-last_updated: "2026-03-10T05:58:13.704Z"
-last_activity: 2026-03-10 — Phase 30 fully complete (30-01 + 30-02 both executed)
+status: in_progress
+stopped_at: Completed 31-01 P1 bug fixes plan
+last_updated: "2026-03-10T06:30:00.000Z"
+last_activity: 2026-03-10 — Phase 31 plan 01 complete (card_error key, TXN UUID, WriteQueue loop)
 progress:
   total_phases: 20
   completed_phases: 15
@@ -24,12 +24,12 @@ See: .planning/PROJECT.md (updated 2026-03-08)
 
 ## Current Position
 
-Phase: Phase 30 — iOS Bugs & UX ✅ COMPLETE
-Plan: All 2 plans executed (30-01 ✓, 30-02 ✓)
-Status: Phase 30 complete — Phase 31 is next
-Last activity: 2026-03-10 — Phase 30 fully complete (30-01 + 30-02 both executed)
+Phase: Phase 31 — Dashboard Backend P1 Fixes 🔄 IN PROGRESS
+Plan: Plan 01 complete (31-01 ✓); plans 02 and 03 complete; 04 onward TBD
+Status: Phase 31 plan 01 done — REQ-BUG-05, REQ-BUG-06, REQ-BUG-07 resolved
+Last activity: 2026-03-10 — 31-01 executed (card_error key, TXN UUID suffix, WriteQueue bounded loop)
 
-Progress: [##########] v1.3 — Phase 30 done | 53/53 plans complete
+Progress: [##########] v1.3 — Phase 31 in progress | 56/58 plans complete
 
 ## Performance Metrics
 
@@ -109,6 +109,7 @@ Progress: [##########] v1.3 — Phase 30 done | 53/53 plans complete
 | Phase 30-ios-bugs-ux P01 | 8min | 2 tasks | 7 files |
 | Phase 30-ios-bugs-ux P02 | 10min | 2 tasks | 4 files |
 | Phase 31-dashboard-backend-p1-fixes P03 | 5 | 2 tasks | 2 files |
+| Phase 31-dashboard-backend-p1-fixes P01 | 25min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -263,6 +264,9 @@ Recent decisions affecting current work:
 - [Phase 30-02]: iOS 16 single-arg onChange used: .onChange(of: limitInput) { _ in } — iOS 17 two-arg form not used for compatibility
 - [Phase 31]: FINANCE_PASSWORD guard placed after JWT_SECRET guard in both files — consistent guard ordering (FLASK_SECRET_KEY -> JWT_SECRET -> FINANCE_PASSWORD)
 - [Phase 31]: Named constant _INSECURE_FINANCE_DEFAULT follows _INSECURE_DEFAULT/_JWT_INSECURE_DEFAULT naming pattern already present in both files
+- [31-01]: UUID suffix (8-char hex) used for TXN ID uniqueness — sufficient entropy for concurrent same-second transactions
+- [31-01]: Snapshot-bounded WriteQueue uses qsize() at call start — re-queued items deferred to next process_queue() call
+- [31-01]: dashboard.html:709 already used data.message (HTTP handler, not socket) — confirmed no change needed
 
 ### Roadmap Evolution
 
@@ -307,6 +311,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-10T05:58:13.701Z
-Stopped at: Completed 31-03 FINANCE_PASSWORD startup guard plan
+Last session: 2026-03-10T06:30:00.000Z
+Stopped at: Completed 31-01 P1 bug fixes (card_error key, TXN UUID, WriteQueue loop)
 Resume file: None
