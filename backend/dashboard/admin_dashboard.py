@@ -129,6 +129,16 @@ if not _jwt_secret or _jwt_secret == _INSECURE_JWT_DEFAULT:
     )
     sys.exit(1)
 
+# --- FINANCE_PASSWORD startup guard (SEC-06) ---
+FINANCE_PASSWORD = os.getenv("FINANCE_PASSWORD", "").strip()
+_INSECURE_FINANCE_DEFAULT = "finance2025"
+if not FINANCE_PASSWORD or FINANCE_PASSWORD == _INSECURE_FINANCE_DEFAULT:
+    logger.critical(
+        "event=startup_aborted reason=insecure_finance_password "
+        'message="FINANCE_PASSWORD must be set in .env and must not use the default value."'
+    )
+    sys.exit(1)
+
 # Timezone configuration
 PHILIPPINES_TZ = pytz.timezone("Asia/Manila")
 
@@ -380,7 +390,7 @@ def login():
 
         # Check Finance credentials
         finance_user = os.getenv("FINANCE_USERNAME", "financedashboard")
-        finance_pass = os.getenv("FINANCE_PASSWORD", "finance2025")
+        finance_pass = os.getenv("FINANCE_PASSWORD")
 
         # Empty-credential guard (BUG-04): reject blank submissions before comparison
         if not username:
@@ -3290,7 +3300,7 @@ if __name__ == "__main__":
     admin_user = os.getenv("ADMIN_USERNAME", "").strip()
     admin_pass = os.getenv("ADMIN_PASSWORD", "").strip()
     finance_user = os.getenv("FINANCE_USERNAME", "financedashboard")
-    finance_pass = os.getenv("FINANCE_PASSWORD", "finance2025")
+    finance_pass = os.getenv("FINANCE_PASSWORD")
 
     # --- Redacted credential logging (SEC-01) ---
     logger.info(
