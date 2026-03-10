@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Requirements Coverage
 status: completed
-stopped_at: Completed 31-05-PLAN.md
-last_updated: "2026-03-10T07:10:13.152Z"
+stopped_at: Completed 32-04-PLAN.md
+last_updated: "2026-03-10T10:25:54.630Z"
 last_activity: 2026-03-10 — 31-01 executed (card_error key, TXN UUID suffix, WriteQueue bounded loop)
 progress:
   total_phases: 20
-  completed_phases: 16
-  total_plans: 58
-  completed_plans: 58
+  completed_phases: 17
+  total_plans: 62
+  completed_plans: 62
 ---
 
 # Project State
@@ -112,6 +112,7 @@ Progress: [##########] v1.3 — Phase 31 in progress | 56/58 plans complete
 | Phase 31-dashboard-backend-p1-fixes P01 | 25min | 3 tasks | 3 files |
 | Phase 31-dashboard-backend-p1-fixes P02 | 5min | 2 tasks | 1 files |
 | Phase 31-dashboard-backend-p1-fixes P04 | 5min | 2 tasks | 1 files |
+| Phase 32-mobile-budget-performance P04 | 8 | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -275,6 +276,8 @@ Recent decisions affecting current work:
 - [Phase 31-dashboard-backend-p1-fixes]: generate_token() preserved in api_server.py (not deleted) in case of other callers
 - [Phase 31]: register_routes factory pattern: shared routes as closures, both shims call after app creation
 - [Phase 31]: dashboard_core.py has no circular imports; startup guards and shim-specific routes stay in each shim
+- [Phase 32-mobile-budget-performance]: iOS commit made from mobile/ios nested git repo (not parent repo) — mobile/ios/ is an untracked subdir in parent git
+- [Phase 32-mobile-budget-performance]: Both iOS and Android BudgetSummaryResponse stripped to single field (spent) — backend only returns monthly_spend; extra fields were dead weight
 
 ### Roadmap Evolution
 
@@ -319,6 +322,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-10T07:04:01.436Z
-Stopped at: Completed 31-05-PLAN.md
+Last session: 2026-03-10T10:25:43.454Z
+Stopped at: Completed 32-04-PLAN.md
 Resume file: None

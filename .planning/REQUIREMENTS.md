@@ -75,9 +75,9 @@
 | REQ-PERF-04 | P1 | Add per-user transaction query — currently all transactions for ALL users are fetched and filtered in Python | Backend PERF-02 |
 | REQ-PERF-05 | P2 | Wire up existing `ConnectionPool` in `connection_pool.py` — fully implemented but never used | Backend QUAL-03 |
 | REQ-PERF-06 | P2 | Fix Android budget load — currently fetches all 200 transactions client-side just to sum monthly spend | Android PERF-01 |
-| REQ-PERF-07 | P2 | Fix iOS `BudgetViewModel` — same issue; fetches 200 transactions to calculate monthly spend client-side | iOS PERF-01 |
+| ~~REQ-PERF-07~~ | ~~P2~~ | ~~Fix iOS `BudgetViewModel` — same issue; fetches 200 transactions to calculate monthly spend client-side~~ | ~~iOS PERF-01~~ | ✅ Complete (32-04) |
 | REQ-PERF-08 | P2 | Add budget summary endpoint to API — serves pre-calculated monthly spend server-side to avoid full transaction fetch in both mobile apps | Backend PERF-05 |
-| REQ-PERF-09 | P2 | Fix iOS `DateFormatter` allocation on every render pass in `ReceiptView` and `BudgetViewModel` — move to static/cached instance | iOS PERF-02 |
+| ~~REQ-PERF-09~~ | ~~P2~~ | ~~Fix iOS `DateFormatter` allocation on every render pass in `ReceiptView` and `BudgetViewModel` — move to static/cached instance~~ | ~~iOS PERF-02~~ | ✅ Complete (32-04) |
 | REQ-PERF-10 | P2 | Replace `notifyDataSetChanged()` with `DiffUtil` in Android `TransactionsAdapter` | Android PERF-02 |
 
 ---
