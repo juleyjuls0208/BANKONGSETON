@@ -19,6 +19,7 @@ import re
 import logging
 import sys
 import threading
+import uuid
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 try:
@@ -1119,7 +1120,9 @@ def nfc_pay():
         # Step 5: Log to Transactions Log sheet
         timestamp = get_philippines_time()
         timestamp_str = timestamp.strftime("%Y-%m-%d %H:%M:%S")
-        transaction_id = f"TXN-{timestamp.strftime('%Y%m%d%H%M%S')}"
+        transaction_id = (
+            f"TXN-{timestamp.strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:8]}"
+        )
         trans_sheet = get_worksheet_with_retry("Transactions Log")
 
         # Look up StudentID, student name, and phone from Users sheet via MoneyCardNumber
@@ -1444,7 +1447,7 @@ def process_cashier_transaction():
         # Log transaction with ItemsJson
         trans_sheet = get_worksheet_with_retry("Transactions Log")
         timestamp = get_philippines_time().strftime("%Y-%m-%d %H:%M:%S")
-        transaction_id = f"TXN-{get_philippines_time().strftime('%Y%m%d%H%M%S')}"
+        transaction_id = f"TXN-{get_philippines_time().strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:8]}"
 
         transaction_row = [
             transaction_id,  # TransactionID
