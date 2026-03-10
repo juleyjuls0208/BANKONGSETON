@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-stopped_at: Completed 32.1-02-PLAN.md
-last_updated: "2026-03-10T22:18:11.222Z"
+stopped_at: Completed 32.1-04-PLAN.md
+last_updated: "2026-03-10T22:22:18.896Z"
 last_activity: "2026-02-26 — Executed 02-03-PLAN.md: migrated all backend files from oauth2client to google-auth; pinned exact versions in requirements.txt; added smoke test"
 progress:
   total_phases: 7
@@ -51,6 +51,8 @@ Progress: [█████████░] 93%
 - Trend: Stable
 | Phase 32.1-nfc-fix P01 | 3min | 2 tasks | 1 files |
 | Phase 32.1-nfc-fix P02 | 10 | 2 tasks | 1 files |
+| Phase 32.1-nfc-fix P03 | 5 | 2 tasks | 1 files |
+| Phase 32.1-nfc-fix P04 | 3 | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -89,6 +91,8 @@ Recent decisions affecting current work:
 - [Phase 32.1-nfc-fix]: autoRFCA=0 required for passive ISO14443A — autoRFCA=1 suppresses PN532 RF field during passive sensing (NTAG215 never powers up)
 - [Phase 32.1-nfc-fix]: Remove setPassiveActivationRetries(0x0A) — 10 retries insufficient for NTAG215 7-byte double-cascade anticollision; PN532 default 0xFF bounded by NFC_TIMEOUT_MS is correct
 - [Phase 32.1-nfc-fix]: UID-length dispatch: uidLen != 4 = physical card (CARD| path), == 4 = HCE phone (APDU path)
+- [Phase 32.1-nfc-fix]: Named _start_serial_thread in ArduinoBridge constructor — required for test patchability via patch.object
+- [Phase 32.1-nfc-fix]: UID_PATTERN widened to {8}|{14} in cashier_routes.py — NTAG215 7-byte UIDs (14 hex chars) accepted end-to-end
 
 ### Pending Todos
 
@@ -103,6 +107,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-10T22:18:11.220Z
-Stopped at: Completed 32.1-02-PLAN.md
+Last session: 2026-03-10T22:22:05.756Z
+Stopped at: Completed 32.1-04-PLAN.md
 Resume file: None
