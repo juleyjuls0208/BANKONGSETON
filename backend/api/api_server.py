@@ -20,6 +20,7 @@ import logging
 import sys
 import threading
 import uuid
+import time
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 try:
@@ -142,6 +143,20 @@ def get_worksheet_with_retry(sheet_name, retries=2):
 
 # Simple token storage (in production, use Redis or database)
 active_sessions = {}
+
+SESSION_TTL_SECONDS = 8 * 3600  # 8-hour absolute TTL from login
+
+
+def _check_session(token):
+    """Return session dict if token is valid and not expired, else None.
+    Performs lazy eviction: deletes expired entry on lookup."""
+    session = active_sessions.get(token)
+    if session is None:
+        return None
+    if time.time() - session["login_time"] > SESSION_TTL_SECONDS:
+        del active_sessions[token]
+        return None
+    return session
 
 # Per-card locks to prevent double-spend race conditions
 _card_locks: dict = {}
@@ -296,7 +311,7 @@ def login():
         active_sessions[token] = {
             "student_id": student["StudentID"],
             "card_number": student["IDCardNumber"],
-            "login_time": get_philippines_time().isoformat(),
+            "login_time": time.time(),  # float seconds for TTL arithmetic
         }
 
         return jsonify(
@@ -336,10 +351,9 @@ def get_profile():
     try:
         token = request.headers.get("Authorization", "").replace("Bearer ", "")
 
-        if token not in active_sessions:
-            return jsonify({"error": "Invalid or expired token"}), 401
-
-        session = active_sessions[token]
+        session = _check_session(token)
+        if session is None:
+            return jsonify({"error": "Session expired, please log in again"}), 401
         student_id = session["student_id"]
 
         # Get student data
@@ -419,10 +433,9 @@ def get_balance():
     try:
         token = request.headers.get("Authorization", "").replace("Bearer ", "")
 
-        if token not in active_sessions:
-            return jsonify({"error": "Invalid or expired token"}), 401
-
-        session = active_sessions[token]
+        session = _check_session(token)
+        if session is None:
+            return jsonify({"error": "Session expired, please log in again"}), 401
 
         # Get student's money card
         users_sheet = get_worksheet_with_retry("Users")
@@ -493,10 +506,9 @@ def get_transactions():
     try:
         token = request.headers.get("Authorization", "").replace("Bearer ", "")
 
-        if token not in active_sessions:
-            return jsonify({"error": "Invalid or expired token"}), 401
-
-        session = active_sessions[token]
+        session = _check_session(token)
+        if session is None:
+            return jsonify({"error": "Session expired, please log in again"}), 401
         limit = int(request.args.get("limit", 50))
         offset = int(request.args.get("offset", 0))
 
@@ -625,10 +637,9 @@ def get_budget():
     try:
         token = request.headers.get("Authorization", "").replace("Bearer ", "")
 
-        if token not in active_sessions:
-            return jsonify({"error": "Invalid or expired token"}), 401
-
-        session = active_sessions[token]
+        session = _check_session(token)
+        if session is None:
+            return jsonify({"error": "Session expired, please log in again"}), 401
 
         # Get student's money card
         users_sheet = get_worksheet_with_retry("Users")
@@ -688,10 +699,9 @@ def set_budget():
     try:
         token = request.headers.get("Authorization", "").replace("Bearer ", "")
 
-        if token not in active_sessions:
-            return jsonify({"error": "Invalid or expired token"}), 401
-
-        session = active_sessions[token]
+        session = _check_session(token)
+        if session is None:
+            return jsonify({"error": "Session expired, please log in again"}), 401
         data = request.get_json()
         if not data or "monthly_limit" not in data:
             return jsonify({"error": "monthly_limit is required"}), 400
@@ -766,10 +776,9 @@ def report_lost_card():
     """
     try:
         token = request.headers.get("Authorization", "").replace("Bearer ", "")
-        if token not in active_sessions:
-            return jsonify({"error": "Invalid or expired token"}), 401
-
-        session = active_sessions[token]
+        session = _check_session(token)
+        if session is None:
+            return jsonify({"error": "Session expired, please log in again"}), 401
         student_id = session["student_id"]
 
         db = get_sheets_client()
@@ -880,10 +889,9 @@ def nfc_register():
     """
     try:
         token = request.headers.get("Authorization", "").replace("Bearer ", "")
-        if token not in active_sessions:
-            return jsonify({"error": "Invalid or expired token"}), 401
-
-        session = active_sessions[token]
+        session = _check_session(token)
+        if session is None:
+            return jsonify({"error": "Session expired, please log in again"}), 401
         student_id = session["student_id"]
 
         db = get_sheets_client()
@@ -934,10 +942,9 @@ def nfc_status():
     """
     try:
         token = request.headers.get("Authorization", "").replace("Bearer ", "")
-        if token not in active_sessions:
-            return jsonify({"error": "Invalid or expired token"}), 401
-
-        session = active_sessions[token]
+        session = _check_session(token)
+        if session is None:
+            return jsonify({"error": "Session expired, please log in again"}), 401
         student_id = session["student_id"]
 
         db = get_sheets_client()
@@ -991,10 +998,9 @@ def nfc_unregister():
     """
     try:
         token = request.headers.get("Authorization", "").replace("Bearer ", "")
-        if token not in active_sessions:
-            return jsonify({"error": "Invalid or expired token"}), 401
-
-        session = active_sessions[token]
+        session = _check_session(token)
+        if session is None:
+            return jsonify({"error": "Session expired, please log in again"}), 401
         student_id = session["student_id"]
 
         data = request.get_json() or {}
@@ -1572,9 +1578,9 @@ def register_fcm_token():
     """
     try:
         token = request.headers.get("Authorization", "").replace("Bearer ", "")
-        if token not in active_sessions:
-            return jsonify({"error": "Invalid or expired token"}), 401
-        session = active_sessions[token]
+        session = _check_session(token)
+        if session is None:
+            return jsonify({"error": "Session expired, please log in again"}), 401
         student_id = session["student_id"]
 
         data = request.get_json()
