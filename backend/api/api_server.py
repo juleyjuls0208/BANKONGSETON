@@ -158,6 +158,7 @@ def _check_session(token):
         return None
     return session
 
+
 # Per-card locks to prevent double-spend race conditions
 _card_locks: dict = {}
 _card_locks_lock = threading.Lock()
@@ -306,8 +307,8 @@ def login():
                 {"error": f"Your money card is {card_status}. Please contact admin."}
             ), 403
 
-        # Generate session token
-        token = generate_token()
+        # Generate JWT session token
+        token = generate_jwt_token(student["StudentID"])
         active_sessions[token] = {
             "student_id": student["StudentID"],
             "card_number": student["IDCardNumber"],
