@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Requirements Coverage
-status: in_progress
-stopped_at: Completed 31-01 P1 bug fixes plan
-last_updated: "2026-03-10T06:30:00.000Z"
-last_activity: 2026-03-10 — Phase 31 plan 01 complete (card_error key, TXN UUID, WriteQueue loop)
+status: completed
+stopped_at: Completed 31-02 session TTL + currency verify
+last_updated: "2026-03-10T06:04:17.861Z"
+last_activity: 2026-03-10 — 31-01 executed (card_error key, TXN UUID suffix, WriteQueue bounded loop)
 progress:
   total_phases: 20
   completed_phases: 15
   total_plans: 58
-  completed_plans: 55
+  completed_plans: 56
 ---
 
 # Project State
@@ -110,6 +110,7 @@ Progress: [##########] v1.3 — Phase 31 in progress | 56/58 plans complete
 | Phase 30-ios-bugs-ux P02 | 10min | 2 tasks | 4 files |
 | Phase 31-dashboard-backend-p1-fixes P03 | 5 | 2 tasks | 2 files |
 | Phase 31-dashboard-backend-p1-fixes P01 | 25min | 3 tasks | 3 files |
+| Phase 31-dashboard-backend-p1-fixes P02 | 5min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -267,6 +268,8 @@ Recent decisions affecting current work:
 - [31-01]: UUID suffix (8-char hex) used for TXN ID uniqueness — sufficient entropy for concurrent same-second transactions
 - [31-01]: Snapshot-bounded WriteQueue uses qsize() at call start — re-queued items deferred to next process_queue() call
 - [31-01]: dashboard.html:709 already used data.message (HTTP handler, not socket) — confirmed no change needed
+- [Phase 31-dashboard-backend-p1-fixes]: Used lazy eviction (_check_session) instead of background sweep thread to avoid dict-iteration race conditions
+- [Phase 31-dashboard-backend-p1-fixes]: Stored login_time as time.time() float for direct TTL arithmetic — replaced ISO string isoformat()
 
 ### Roadmap Evolution
 
@@ -311,6 +314,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-10T06:30:00.000Z
-Stopped at: Completed 31-01 P1 bug fixes (card_error key, TXN UUID, WriteQueue loop)
+Last session: 2026-03-10T06:04:17.858Z
+Stopped at: Completed 31-02 session TTL + currency verify
 Resume file: None
