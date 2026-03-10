@@ -440,7 +440,7 @@ void loop() {
   // starts cleanly from the beginning each scan attempt.
   nfc.setRFField(0, 0);  // RF off
   delay(50);
-  nfc.setRFField(1, 1);  // RF on
+  nfc.setRFField(0, 1);  // RF on, no autoRFCA
   delay(10);
 
   // readPassiveTargetID blocks for NFC_TIMEOUT_MS waiting for a card.
@@ -552,7 +552,7 @@ void loop() {
       // Reset RF field to clear any PN532 error state from the failed APDU
       nfc.setRFField(0, 0);  // RF off
       delay(20);
-      nfc.setRFField(1, 1);  // RF on
+      nfc.setRFField(0, 1);  // RF on, no autoRFCA
       delay(10);
 
       Serial.println("APDU failed on 4-byte target — using UID fallback");
