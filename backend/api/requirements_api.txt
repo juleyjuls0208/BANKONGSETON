@@ -12,6 +12,3 @@ gunicorn==21.2.0
 # Security
 pyjwt==2.8.0
 cryptography==41.0.7
-
-# Push notifications
-firebase-admin>=6.0.0

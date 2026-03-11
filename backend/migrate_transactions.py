@@ -5,18 +5,9 @@ Backfills existing transactions with empty ItemsJson field
 
 import gspread
 import os
-import sys
-import logging
 from dotenv import load_dotenv
 
 load_dotenv()
-
-sys.path.insert(0, os.path.dirname(__file__))
-try:
-    from errors import get_logger
-    logger = get_logger(__name__)
-except ImportError:
-    logger = logging.getLogger(__name__)
 
 def migrate_transactions():
     """Add ItemsJson column to Transactions Log sheet"""
@@ -36,30 +27,32 @@ def migrate_transactions():
         all_values = trans_sheet.get_all_values()
         
         if not all_values:
-            logger.warning("event=migrate_transactions_empty sheet=Transactions Log")
+            print("❌ No data found in Transactions Log")
             return
         
         headers = all_values[0]
         
         # Check if ItemsJson column already exists
         if 'ItemsJson' in headers:
-            logger.info("event=migrate_transactions_skip reason=column_exists column=ItemsJson")
+            print("✅ ItemsJson column already exists")
             return
         
         # Add ItemsJson to headers
         headers.append('ItemsJson')
         trans_sheet.update('A1:Z1', [headers])
         
-        logger.info("event=migrate_transactions_column_added column=ItemsJson")
-        logger.info("event=migrate_transactions_rows total=%d", len(all_values))
+        print(f"✅ Added 'ItemsJson' column to Transactions Log")
+        print(f"📊 Total rows: {len(all_values)}")
         
         # Backfill empty ItemsJson for existing rows (optional - already empty by default)
         num_rows = len(all_values)
         if num_rows > 1:
-            logger.info("event=migrate_transactions_backfill rows=%d", num_rows - 1)
+            print(f"✅ {num_rows - 1} existing transactions will have empty ItemsJson by default")
         
     except Exception as e:
-        logger.error("event=migrate_transactions_failed error=%s", e, exc_info=True)
+        print(f"❌ Migration failed: {e}")
+        import traceback
+        traceback.print_exc()
 
 def migrate_users_schema():
     """Add ParentEmail, FCMToken, Role columns to Users sheet"""
@@ -77,7 +70,7 @@ def migrate_users_schema():
         # Get headers
         all_values = users_sheet.get_all_values()
         if not all_values:
-            logger.warning("event=migrate_users_empty sheet=Users")
+            print("❌ No data found in Users sheet")
             return
         
         headers = all_values[0]
@@ -94,12 +87,14 @@ def migrate_users_schema():
         if columns_to_add:
             headers.extend(columns_to_add)
             users_sheet.update('A1:Z1', [headers])
-            logger.info("event=migrate_users_columns_added columns=%s", ', '.join(columns_to_add))
+            print(f"✅ Added columns to Users: {', '.join(columns_to_add)}")
         else:
-            logger.info("event=migrate_users_skip reason=all_columns_exist")
+            print("✅ All required columns already exist in Users sheet")
         
     except Exception as e:
-        logger.error("event=migrate_users_failed error=%s", e, exc_info=True)
+        print(f"❌ Users migration failed: {e}")
+        import traceback
+        traceback.print_exc()
 
 def create_products_sheet():
     """Create Products sheet if it doesn't exist"""
@@ -114,7 +109,7 @@ def create_products_sheet():
         # Check if Products sheet exists
         try:
             products_sheet = db.worksheet('Products')
-            logger.info("event=create_products_sheet_skip reason=already_exists")
+            print("✅ Products sheet already exists")
             return
         except:
             pass
@@ -150,23 +145,29 @@ def create_products_sheet():
             # Write products to sheet
             if rows:
                 products_sheet.update(f'A2:G{len(rows) + 1}', rows)
-                logger.info("event=create_products_sheet_done count=%d", len(rows))
+                print(f"✅ Created Products sheet with {len(rows)} products")
         else:
-            logger.info("event=create_products_sheet_empty reason=products_json_not_found")
+            print("✅ Created empty Products sheet (products.json not found)")
         
     except Exception as e:
-        logger.error("event=create_products_sheet_failed error=%s", e, exc_info=True)
+        print(f"❌ Products sheet creation failed: {e}")
+        import traceback
+        traceback.print_exc()
 
 if __name__ == '__main__':
-    logger.info("event=migration_start")
+    print("=" * 60)
+    print("🔄 Starting Database Migration")
+    print("=" * 60)
     
-    logger.info("event=migration_step step=1 name=transactions_log")
+    print("\n1️⃣ Migrating Transactions Log...")
     migrate_transactions()
     
-    logger.info("event=migration_step step=2 name=users_schema")
+    print("\n2️⃣ Migrating Users schema...")
     migrate_users_schema()
     
-    logger.info("event=migration_step step=3 name=products_sheet")
+    print("\n3️⃣ Creating Products sheet...")
     create_products_sheet()
     
-    logger.info("event=migration_complete")
+    print("\n" + "=" * 60)
+    print("✅ Migration Complete")
+    print("=" * 60)

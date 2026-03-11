@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+
+{% block title %}Cashier Accounts — Bangko ng Seton{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-1"><i class="bi bi-person-badge me-2 text-primary"></i>Cashier Accounts</h2>
+        <p class="text-muted mb-0">Manage cashier login credentials and access</p>
+    </div>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createModal">
+        <i class="bi bi-plus-lg me-1"></i>New Account
+    </button>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Account ID</th>
+                        <th>Username</th>
+                        <th>Display Name</th>
+                        <th>Status</th>
+                        <th>Created</th>
+                        <th>Last Login</th>
+                        <th style="width:160px">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="accountsBody">
+                    <tr><td colspan="7" class="text-center text-muted py-4">
+                        <div class="spinner-border spinner-border-sm me-2"></div>Loading…
+                    </td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Create Account Modal -->
+<div class="modal fade" id="createModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-person-plus me-2"></i>Create Cashier Account</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Username</label>
+                    <input type="text" class="form-control" id="newUsername" placeholder="e.g. cashier2" autocomplete="off">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Display Name</label>
+                    <input type="text" class="form-control" id="newDisplayName" placeholder="e.g. Station 2 Cashier">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Password</label>
+                    <input type="password" class="form-control" id="newPassword" placeholder="Min. 6 characters" autocomplete="new-password">
+                    <div class="form-text">Minimum 6 characters</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="createAccount()">
+                    <i class="bi bi-check2 me-1"></i>Create
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Account Modal -->
+<div class="modal fade" id="editModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-pencil me-2"></i>Edit Account</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="editAccountId">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Display Name</label>
+                    <input type="text" class="form-control" id="editDisplayName">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">New Password <span class="text-muted fw-normal">(leave blank to keep current)</span></label>
+                    <input type="password" class="form-control" id="editPassword" placeholder="Leave blank to keep" autocomplete="new-password">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveEdit()">
+                    <i class="bi bi-check2 me-1"></i>Save
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    async function loadAccounts() {
+        const tbody = document.getElementById('accountsBody');
+        try {
+            const res = await fetch('/api/cashier-accounts');
+            const data = await res.json();
+            const accounts = data.accounts || [];
+            if (!accounts.length) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">No accounts found</td></tr>';
+                return;
+            }
+            tbody.innerHTML = accounts.map(a => `
+                <tr>
+                    <td><code class="small">${a.AccountID}</code></td>
+                    <td><strong>${a.Username}</strong></td>
+                    <td>${a.DisplayName || '—'}</td>
+                    <td>${a.Status === 'Active'
+                        ? '<span class="badge bg-success">Active</span>'
+                        : '<span class="badge bg-secondary">Inactive</span>'}</td>
+                    <td class="small text-muted">${a.CreatedAt || '—'}</td>
+                    <td class="small text-muted">${a.LastLogin || 'Never'}</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary me-1"
+                            onclick='openEdit("${a.AccountID}", "${(a.DisplayName||'').replace(/"/g,"&quot;")}")'>
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        ${a.Status === 'Active'
+                            ? `<button class="btn btn-sm btn-outline-warning" onclick='toggleStatus("${a.AccountID}","Inactive")' title="Deactivate"><i class="bi bi-pause-circle"></i></button>`
+                            : `<button class="btn btn-sm btn-outline-success" onclick='toggleStatus("${a.AccountID}","Active")' title="Activate"><i class="bi bi-play-circle"></i></button>`
+                        }
+                    </td>
+                </tr>
+            `).join('');
+        } catch {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger py-3">Failed to load accounts</td></tr>';
+        }
+    }
+
+    async function createAccount() {
+        const username = document.getElementById('newUsername').value.trim();
+        const password = document.getElementById('newPassword').value;
+        const display_name = document.getElementById('newDisplayName').value.trim();
+        if (!username || !password) { alert('Username and password are required'); return; }
+        try {
+            const res = await fetch('/api/cashier-accounts', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({username, password, display_name})
+            });
+            const data = await res.json();
+            if (data.success) {
+                bootstrap.Modal.getInstance(document.getElementById('createModal')).hide();
+                document.getElementById('newUsername').value = '';
+                document.getElementById('newPassword').value = '';
+                document.getElementById('newDisplayName').value = '';
+                loadAccounts();
+            } else {
+                alert(data.error || 'Failed to create account');
+            }
+        } catch { alert('Network error'); }
+    }
+
+    function openEdit(accountId, displayName) {
+        document.getElementById('editAccountId').value = accountId;
+        document.getElementById('editDisplayName').value = displayName;
+        document.getElementById('editPassword').value = '';
+        new bootstrap.Modal(document.getElementById('editModal')).show();
+    }
+
+    async function saveEdit() {
+        const accountId = document.getElementById('editAccountId').value;
+        const display_name = document.getElementById('editDisplayName').value.trim();
+        const password = document.getElementById('editPassword').value;
+        const body = {display_name};
+        if (password) body.password = password;
+        try {
+            const res = await fetch(`/api/cashier-accounts/${accountId}`, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(body)
+            });
+            const data = await res.json();
+            if (data.success) {
+                bootstrap.Modal.getInstance(document.getElementById('editModal')).hide();
+                loadAccounts();
+            } else {
+                alert(data.error || 'Failed to update account');
+            }
+        } catch { alert('Network error'); }
+    }
+
+    async function toggleStatus(accountId, newStatus) {
+        const verb = newStatus === 'Active' ? 'activate' : 'deactivate';
+        if (!confirm(`Are you sure you want to ${verb} this account?`)) return;
+        try {
+            const res = await fetch(`/api/cashier-accounts/${accountId}`, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({status: newStatus})
+            });
+            const data = await res.json();
+            if (data.success) {
+                loadAccounts();
+            } else {
+                alert(data.error || 'Failed to update status');
+            }
+        } catch { alert('Network error'); }
+    }
+
+    loadAccounts();
+</script>
+{% endblock %}

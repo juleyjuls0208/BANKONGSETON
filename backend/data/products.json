@@ -1,0 +1,44 @@
+[
+  {
+    "id": "PROD-001",
+    "name": "Chicken Sandwich",
+    "price": 45.00,
+    "category": "Food"
+  },
+  {
+    "id": "PROD-002",
+    "name": "Spaghetti",
+    "price": 50.00,
+    "category": "Food"
+  },
+  {
+    "id": "PROD-003",
+    "name": "Rice Meal (Chicken)",
+    "price": 85.00,
+    "category": "Food"
+  },
+  {
+    "id": "PROD-004",
+    "name": "Coke Mismo",
+    "price": 25.00,
+    "category": "Drinks"
+  },
+  {
+    "id": "PROD-005",
+    "name": "Water (500ml)",
+    "price": 15.00,
+    "category": "Drinks"
+  },
+  {
+    "id": "PROD-006",
+    "name": "Ballpen",
+    "price": 12.00,
+    "category": "Stationery"
+  },
+  {
+    "id": "PROD-007",
+    "name": "Pad Paper (Intermediate)",
+    "price": 30.00,
+    "category": "Stationery"
+  }
+]

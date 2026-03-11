@@ -1,336 +1,271 @@
-{% extends "base.html" %}
-
-{% block sidebar_style %}
-background-image: url('https://i.pinimg.com/736x/f7/db/84/f7db841f2bf75e76c13cdb27ea35326b.jpg');
-{% endblock %}
-
-{% block extra_css %}
-<style>
-    .badge-status {
-        font-size: 12px;
-        padding: 5px 10px;
-    }
-    @media (max-width: 768px) {
-        .table {
-            font-size: 0.85rem;
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Students</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
         }
-        .input-group {
-            width: 100% !important;
+        .sidebar {
+            height: 100vh;
+            background: url('https://i.pinimg.com/736x/f7/db/84/f7db841f2bf75e76c13cdb27ea35326b.jpg') no-repeat center center;
+            background-size: cover;
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 250px;
+            color: white;
+            padding: 20px;
+            z-index: 1000;
+            transition: transform 0.3s ease;
         }
-        .col-md-6 {
-            width: 100%;
+        .sidebar-brand {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 30px;
+            text-align: center;
         }
-    }
-</style>
-{% endblock %}
-
-{% block content %}
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1>Students Management</h1>
-        <div>
-            {% if role == 'admin' %}
-            <button class="btn btn-success btn-sm ms-2" data-bs-toggle="modal" data-bs-target="#topupModal">
-              <i class="bi bi-plus-circle me-1"></i>Top Up Balance
-            </button>
-            {% endif %}
+        .sidebar-menu {
+            list-style: none;
+            padding: 0;
+        }
+        .sidebar-menu li {
+            margin-bottom: 10px;
+        }
+        .sidebar-menu a {
+            color: white;
+            text-decoration: none;
+            padding: 12px 15px;
+            display: block;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+        .sidebar-menu a:hover,
+        .sidebar-menu a.active {
+            background: rgba(255,255,255,0.2);
+        }
+        .main-content {
+            margin-left: 250px;
+            padding: 30px;
+            transition: margin-left 0.3s ease;
+        }
+        .content-card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .badge-status {
+            font-size: 12px;
+            padding: 5px 10px;
+        }
+        .mobile-header {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 20px;
+            z-index: 999;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+        .mobile-header h5 {
+            margin: 0;
+            font-weight: bold;
+        }
+        .menu-toggle {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 0;
+        }
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 999;
+        }
+        
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+            .sidebar.active {
+                transform: translateX(0);
+            }
+            .main-content {
+                margin-left: 0;
+                padding: 80px 15px 20px 15px;
+            }
+            .mobile-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            .sidebar-overlay.active {
+                display: block;
+            }
+            .content-card {
+                padding: 15px;
+            }
+            h1 {
+                font-size: 1.5rem;
+            }
+            .table {
+                font-size: 0.85rem;
+            }
+            .input-group {
+                width: 100% !important;
+            }
+            .col-md-6 {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Mobile Header -->
+    <div class="mobile-header">
+        <h5>Banko ng Seton</h5>
+        <button class="menu-toggle" onclick="toggleSidebar()">
+            <i class="bi bi-list"></i>
+        </button>
+    </div>
+    
+    <!-- Sidebar Overlay -->
+    <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
+    
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="sidebar-brand">
+            Banko ng Seton
+        </div>
+        <ul class="sidebar-menu">
+            <li><a href="/dashboard"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
+            <li><a href="/students" class="active"><i class="bi bi-people"></i> Students</a></li>
+            <li><a href="/transactions"><i class="bi bi-credit-card"></i> Transactions</a></li>
+            <li><a href="/logout"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
+        </ul>
+        <div class="mt-4 text-center" style="opacity: 0.7;">
+            <small>Logged in as: {{ username }}</small>
         </div>
     </div>
 
-    <div class="content-card">
-        <!-- Search Bar -->
-        <div class="row mb-4">
-            <div class="col-md-6">
-                <div class="input-group">
-                    <span class="input-group-text"><i class="bi bi-search"></i></span>
-                    <input type="text" class="form-control" id="student-search-input" placeholder="Search by name or ID...">
-                    <span id="search-spinner" class="input-group-text" style="display:none;">
-                        <span class="spinner-border spinner-border-sm text-secondary"></span>
-                    </span>
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>Students Management</h1>
+        </div>
+        
+        <div class="content-card">
+            <!-- Search Bar -->
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input type="text" class="form-control" id="searchInput" placeholder="Search by name or ID...">
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Students Table -->
-        <div class="table-responsive">
-            <table class="table table-hover">
-                <thead>
-                    <tr>
-                        <th>Student ID</th>
-                        <th>Name</th>
-                        <th>ID Card</th>
-                        <th>Money Card</th>
-                        <th>Balance</th>
-                        <th>Status</th>
-                        {% if role == 'admin' %}<th>Actions</th>{% endif %}
-                    </tr>
-                </thead>
-                <tbody id="studentsTable">
-                    <tr>
-                        <td colspan="7" class="text-center">Loading students...</td>
-                    </tr>
-                </tbody>
-            </table>
+            <!-- Students Table -->
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Student ID</th>
+                            <th>Name</th>
+                            <th>ID Card</th>
+                            <th>Money Card</th>
+                            <th>Balance</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="studentsTable">
+                        <tr>
+                            <td colspan="6" class="text-center">Loading students...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 
-    {% if role == 'admin' %}
-    <!-- Top-Up Balance Modal -->
-    <div class="modal fade" id="topupModal" tabindex="-1" aria-labelledby="topupModalLabel" aria-hidden="true">
-      <div class="modal-dialog">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title" id="topupModalLabel">
-              <i class="bi bi-plus-circle me-2"></i>Top Up Student Balance
-            </h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-          </div>
-          <div class="modal-body">
-            <div class="mb-3">
-              <label for="topup-student-id" class="form-label">Student ID</label>
-              <input type="text" class="form-control" id="topup-student-id"
-                     placeholder="e.g. STU-2024-001" autocomplete="off">
-            </div>
-            <div class="mb-3">
-              <label for="topup-amount" class="form-label">Amount (₱)</label>
-              <input type="number" class="form-control" id="topup-amount"
-                     min="1" step="0.01" placeholder="e.g. 50">
-            </div>
-            <div id="topup-feedback" class="alert" style="display:none;"></div>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-            <button type="button" class="btn btn-success" id="topup-confirm-btn">
-              <span id="topup-btn-text">Confirm Top Up</span>
-              <span id="topup-spinner" class="spinner-border spinner-border-sm ms-1" style="display:none;"></span>
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-    {% endif %}
-
-    <!-- Transaction History Modal -->
-    <div class="modal fade" id="tx-history-modal" tabindex="-1"
-         aria-labelledby="txHistoryLabel" aria-hidden="true">
-      <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title" id="txHistoryLabel">
-              <i class="bi bi-clock-history me-2"></i>Transaction History
-              <small class="text-muted ms-2" id="tx-student-label"></small>
-            </h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-          </div>
-          <div class="modal-body p-0">
-            <div id="tx-loading" class="text-center py-4">
-              <div class="spinner-border text-primary"></div>
-            </div>
-            <div id="tx-empty" class="text-center text-muted py-4" style="display:none;">
-              <i class="bi bi-inbox fs-2"></i>
-              <p class="mt-2">No transactions found for this student</p>
-            </div>
-            <div id="tx-table-wrap" style="display:none;">
-              <table class="table table-sm table-striped mb-0">
-                <thead class="table-dark">
-                  <tr>
-                    <th>Date</th>
-                    <th>Type</th>
-                    <th>Amount</th>
-                    <th>Balance Before</th>
-                    <th>Balance After</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody id="tx-table-body"></tbody>
-              </table>
-            </div>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
-          </div>
-        </div>
-      </div>
-    </div>
-{% endblock %}
-
-{% block extra_js %}
-<script>
-    const IS_ADMIN = {{ 'true' if role == 'admin' else 'false' }};
-
-    // Debounce helper
-    function debounce(fn, ms) {
-        let timer;
-        return function(...args) { clearTimeout(timer); timer = setTimeout(() => fn.apply(this, args), ms); };
-    }
-
-    document.addEventListener('DOMContentLoaded', () => {
-        loadStudents('');
-
-        const searchInput = document.getElementById('student-search-input');
-        if (searchInput) {
-            searchInput.addEventListener('input', debounce(function() {
-                loadStudents(this.value.trim());
-            }, 300));
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function toggleSidebar() {
+            document.querySelector('.sidebar').classList.toggle('active');
+            document.querySelector('.sidebar-overlay').classList.toggle('active');
         }
-    });
+        
+        document.querySelectorAll('.sidebar-menu a').forEach(link => {
+            link.addEventListener('click', () => {
+                if (window.innerWidth <= 768) {
+                    toggleSidebar();
+                }
+            });
+        });
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            loadStudents();
+            document.getElementById('searchInput').addEventListener('input', searchStudents);
+        });
 
-    async function loadStudents(query) {
-        const spinner = document.getElementById('search-spinner');
-        if (spinner) spinner.style.display = '';
-        try {
-            const url = (query !== undefined && query !== '')
-                ? `/api/students/search?q=${encodeURIComponent(query)}`
-                : '/api/students';
-            const response = await fetch(url, { credentials: 'same-origin' });
-            const data = await response.json();
-            displayStudents(data.students);
-        } catch (error) {
-            console.error('Error loading students:', error);
-        } finally {
-            if (spinner) spinner.style.display = 'none';
-        }
-    }
-
-    function displayStudents(students) {
-        const tbody = document.getElementById('studentsTable');
-        const colspan = IS_ADMIN ? 7 : 6;
-
-        if (!students || students.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="${colspan}" class="text-center">No students found</td></tr>`;
-            return;
+        async function loadStudents() {
+            try {
+                const response = await fetch('/api/students');
+                const data = await response.json();
+                
+                displayStudents(data.students);
+            } catch (error) {
+                console.error('Error loading students:', error);
+            }
         }
 
-        tbody.innerHTML = students.map(s => `
-            <tr>
-                <td>${s.StudentID}</td>
-                <td>${s.Name}</td>
-                <td><code>${s.IDCardNumber || '-'}</code></td>
-                <td><code>${s.MoneyCardNumber || '-'}</code></td>
-                <td>₱${(s.Balance || 0).toFixed(2)}</td>
-                <td><span class="badge ${s.Status === 'Active' ? 'bg-success' : 'bg-secondary'} badge-status">${s.Status || 'Active'}</span></td>
-                ${IS_ADMIN ? `<td>
-                    <button class="btn btn-sm btn-outline-success"
-                        onclick="openTopUpModal('${s.StudentID}')">
-                      <i class="bi bi-plus-circle"></i> Top Up
-                    </button>
-                    <button class="btn btn-sm btn-outline-primary ms-1"
-                        onclick="openTxHistory('${s.StudentID}', '${(s.Name||'').replace(/'/g, "\\'")}')">
-                      <i class="bi bi-clock-history"></i> History
-                    </button>
-                </td>` : ''}
-            </tr>
-        `).join('');
-    }
-
-    // Open transaction history modal for a student
-    async function openTxHistory(studentId, studentName) {
-        document.getElementById('tx-student-label').textContent = studentName + ' (' + studentId + ')';
-        document.getElementById('tx-loading').style.display = '';
-        document.getElementById('tx-empty').style.display = 'none';
-        document.getElementById('tx-table-wrap').style.display = 'none';
-
-        const modal = new bootstrap.Modal(document.getElementById('tx-history-modal'));
-        modal.show();
-
-        try {
-            const res = await fetch('/api/students/' + encodeURIComponent(studentId) + '/transactions?limit=50',
-                                    { credentials: 'same-origin' });
-            const data = await res.json();
-            const txns = data.transactions || [];
-
-            document.getElementById('tx-loading').style.display = 'none';
-
-            if (txns.length === 0) {
-                document.getElementById('tx-empty').style.display = '';
+        function displayStudents(students) {
+            const tbody = document.getElementById('studentsTable');
+            
+            if (!students || students.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center">No students found</td></tr>';
                 return;
             }
-
-            const tbody = document.getElementById('tx-table-body');
-            tbody.innerHTML = txns.map(t => {
-                const typeClass = t.Type === 'Purchase' || t.Type === 'NFC Purchase' ? 'text-danger' :
-                                  t.Type === 'Load' ? 'text-success' : '';
-                const amount = parseFloat(t.Amount) || 0;
-                const amountStr = (amount < 0 ? '-' : '') + '₱' + Math.abs(amount).toFixed(2);
-                const date = t.Date ? t.Date.slice(0, 16).replace('T', ' ') : '—';
-                return `<tr>
-                    <td><small>${date}</small></td>
-                    <td><span class="${typeClass}">${t.Type || '—'}</span></td>
-                    <td class="${typeClass} fw-semibold">${amountStr}</td>
-                    <td>₱${parseFloat(t.BalanceBefore || 0).toFixed(2)}</td>
-                    <td>₱${parseFloat(t.BalanceAfter || 0).toFixed(2)}</td>
-                    <td><small>${t.Status || '—'}</small></td>
-                </tr>`;
-            }).join('');
-
-            document.getElementById('tx-table-wrap').style.display = '';
-        } catch (e) {
-            document.getElementById('tx-loading').style.display = 'none';
-            document.getElementById('tx-empty').style.display = '';
-            document.getElementById('tx-empty').querySelector('p').textContent =
-                'Failed to load transactions. Please try again.';
+            
+            tbody.innerHTML = students.map(s => `
+                <tr>
+                    <td>${s.StudentID}</td>
+                    <td>${s.Name}</td>
+                    <td><code>${s.IDCardNumber || '-'}</code></td>
+                    <td><code>${s.MoneyCardNumber || '-'}</code></td>
+                    <td>₱${(s.Balance || 0).toFixed(2)}</td>
+                    <td><span class="badge ${s.Status === 'Active' ? 'bg-success' : 'bg-secondary'} badge-status">${s.Status || 'Active'}</span></td>
+                </tr>
+            `).join('');
         }
-    }
-</script>
-{% if role == 'admin' %}
-<script>
-// Pre-fill student ID when "Top Up" button is clicked from the student table
-function openTopUpModal(studentId) {
-  document.getElementById('topup-student-id').value = studentId || '';
-  document.getElementById('topup-amount').value = '';
-  document.getElementById('topup-feedback').style.display = 'none';
-  var modal = new bootstrap.Modal(document.getElementById('topupModal'));
-  modal.show();
-}
 
-document.getElementById('topup-confirm-btn').addEventListener('click', async function () {
-  const studentId = document.getElementById('topup-student-id').value.trim();
-  const amount    = parseFloat(document.getElementById('topup-amount').value);
-  const feedback  = document.getElementById('topup-feedback');
-  const spinner   = document.getElementById('topup-spinner');
-  const btnText   = document.getElementById('topup-btn-text');
-
-  feedback.style.display = 'none';
-  if (!studentId || isNaN(amount) || amount <= 0) {
-    feedback.className = 'alert alert-warning';
-    feedback.textContent = 'Please enter a valid student ID and amount.';
-    feedback.style.display = '';
-    return;
-  }
-
-  spinner.style.display = '';
-  btnText.textContent = 'Processing...';
-  document.getElementById('topup-confirm-btn').disabled = true;
-
-  try {
-    const res = await fetch('/api/admin/topup', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'same-origin',
-      body: JSON.stringify({ student_id: studentId, amount: amount })
-    });
-    const data = await res.json();
-
-    if (res.ok && data.success) {
-      feedback.className = 'alert alert-success';
-      feedback.textContent = `✓ ₱${amount.toFixed(2)} added to ${data.student_name}. New balance: ₱${parseFloat(data.new_balance).toFixed(2)}`;
-      feedback.style.display = '';
-      // Refresh student list
-      loadStudents(document.getElementById('student-search-input').value.trim());
-    } else {
-      feedback.className = 'alert alert-danger';
-      feedback.textContent = data.error || 'Top-up failed. Please try again.';
-      feedback.style.display = '';
-    }
-  } catch (e) {
-    feedback.className = 'alert alert-danger';
-    feedback.textContent = 'Network error. Please check your connection.';
-    feedback.style.display = '';
-  } finally {
-    spinner.style.display = 'none';
-    btnText.textContent = 'Confirm Top Up';
-    document.getElementById('topup-confirm-btn').disabled = false;
-  }
-});
-</script>
-{% endif %}
-{% endblock %}
+        async function searchStudents() {
+            const query = document.getElementById('searchInput').value;
+            
+            try {
+                const response = await fetch(`/api/students/search?q=${encodeURIComponent(query)}`);
+                const data = await response.json();
+                displayStudents(data.students);
+            } catch (error) {
+                console.error('Error searching:', error);
+            }
+        }
+    </script>
+</body>
+</html>

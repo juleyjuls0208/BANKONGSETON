@@ -56,22 +56,65 @@ def login():
 @cashier_bp.route('/api/login', methods=['POST'])
 def api_login():
     data = request.get_json()
-    username = data.get('username', '').strip()
+    username = data.get('username', '').strip().lower()
     password = data.get('password', '').strip()
-    
-    if username == 'cashier' and password == 'cashier123':
+
+    authenticated = False
+    display_name = username
+
+    # Try Google Sheets Cashier Accounts first
+    try:
+        import sys, os
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+        from admin_dashboard import get_sheets_client
+        db = get_sheets_client()
+        try:
+            ws = db.worksheet('Cashier Accounts')
+            records = ws.get_all_records()
+            for row in records:
+                if row.get('Username', '').lower() == username:
+                    if row.get('Status', '').lower() != 'active':
+                        return jsonify({'error': 'Account is inactive'}), 401
+                    pw_hash = row.get('PasswordHash', '')
+                    try:
+                        import bcrypt as _bcrypt
+                        if _bcrypt.checkpw(password.encode(), pw_hash.encode()):
+                            authenticated = True
+                            display_name = row.get('DisplayName', username)
+                            # Update LastLogin
+                            try:
+                                from datetime import datetime
+                                idx = records.index(row) + 2
+                                ws.update_cell(idx, 7, datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+                            except Exception:
+                                pass
+                    except ImportError:
+                        # Fallback: plain comparison if bcrypt not available
+                        if pw_hash == password:
+                            authenticated = True
+                            display_name = row.get('DisplayName', username)
+                    break
+        except Exception:
+            pass  # Sheet not found — fall through to legacy
+    except Exception:
+        pass
+
+    # Legacy fallback: hardcoded credentials
+    if not authenticated and username == 'cashier' and password == 'cashier123':
+        authenticated = True
+        display_name = 'Cashier'
+
+    if authenticated:
         from datetime import datetime, timedelta
-        
         payload = {
-            'user_id': 'cashier001',
+            'user_id': f'{username}_id',
             'username': username,
+            'display_name': display_name,
             'role': 'cashier',
             'exp': datetime.utcnow() + timedelta(hours=8),
             'iat': datetime.utcnow()
         }
-        
         token = jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
-        
         response = jsonify({'success': True})
         response.set_cookie('jwt_token', token, httponly=True, max_age=28800)
         return response
@@ -330,7 +373,23 @@ def complete_sale():
                                 f"complete_sale: CRITICAL — rollback also failed for card {normalized_card}. "
                                 f"Balance may be incorrect. Rollback error: {rollback_err}. Original error: {e}"
                             )
-                    return jsonify({'error': 'Service unavailable, please try again'}), 503
+                    # Queue the transaction for later sync
+                    try:
+                        import sys as _sys
+                        _sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
+                        from offline_queue import get_offline_queue
+                        q = get_offline_queue()
+                        q.enqueue('append_row', 'Transactions Log', transaction_row)
+                        logger.info("event=offline_queued card=%s total=%.2f", normalized_card, total)
+                    except Exception as qe:
+                        logger.error("event=offline_queue_failed error=%s", qe)
+                    return jsonify({
+                        'success': True,
+                        'new_balance': new_balance,
+                        'timestamp': timestamp,
+                        'offline': True,
+                        'message': 'Sale processed offline — will sync when connection is restored.'
+                    })
 
         if last_error:
             # Should not reach here, but guard just in case
@@ -344,8 +403,10 @@ def complete_sale():
             users_sheet = db.worksheet('Users')
             user_records = users_sheet.get_all_records()
             
+            matched_user = None
             for user in user_records:
                 if normalize_card_uid(user.get('MoneyCardNumber', '')) == normalized_card:
+                    matched_user = user
                     sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'services'))
                     from email_service import EmailService
                     
@@ -361,6 +422,39 @@ def complete_sale():
                     break
         except Exception as e:
             print(f"Email send error (non-fatal): {e}")
+            matched_user = None
+
+        # Send SMS notification to parent
+        try:
+            if matched_user:
+                parent_phone = str(matched_user.get('ParentPhone', '')).strip()
+                if parent_phone and parent_phone.startswith('+'):
+                    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
+                    from notifications import get_sms_notifier
+                    items_summary = ', '.join(
+                        f"{i.get('name','?')} x{i.get('qty',1)}" for i in items[:3]
+                    )
+                    sms = get_sms_notifier()
+                    sms.send_purchase_sms(
+                        to_number=parent_phone,
+                        student_name=matched_user.get('Name', 'Student'),
+                        amount=total,
+                        new_balance=new_balance,
+                        items_summary=items_summary,
+                    )
+        except Exception:
+            pass  # SMS failure is non-blocking
+
+        # Send FCM push to student
+        try:
+            if matched_user:
+                fcm_token = str(matched_user.get('FCMToken', '')).strip()
+                if fcm_token:
+                    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
+                    from api.fcm_sender import send_purchase_push
+                    send_purchase_push(fcm_token, total, new_balance)
+        except Exception:
+            pass  # FCM failure is non-blocking
         
         return jsonify({
             'success': True,
@@ -376,3 +470,35 @@ def complete_sale():
         logger.error(f"Unexpected error in complete_sale: {e}", exc_info=True)
         return jsonify({'error': 'An unexpected error occurred'}), 500
 
+
+
+@cashier_bp.route('/api/queue/status', methods=['GET'])
+@jwt_required(roles=['cashier', 'admin'])
+def queue_status():
+    """GET /cashier/api/queue/status — returns pending/failed/synced counts."""
+    try:
+        import sys
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
+        from offline_queue import get_offline_queue
+        return jsonify(get_offline_queue().get_status())
+    except Exception as e:
+        logger.error(f"queue_status error: {e}", exc_info=True)
+        return jsonify({'error': 'An unexpected error occurred'}), 500
+
+
+@cashier_bp.route('/api/queue/sync', methods=['POST'])
+@jwt_required(roles=['cashier', 'admin'])
+def queue_sync():
+    """POST /cashier/api/queue/sync — attempt to drain pending queue."""
+    try:
+        import sys
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+        from admin_dashboard import get_sheets_client
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
+        from offline_queue import get_offline_queue
+        db = get_sheets_client()
+        synced, failed = get_offline_queue().process_queue(db)
+        return jsonify({'synced': synced, 'failed': failed})
+    except Exception as e:
+        logger.error(f"queue_sync error: {e}", exc_info=True)
+        return jsonify({'error': 'An unexpected error occurred'}), 500

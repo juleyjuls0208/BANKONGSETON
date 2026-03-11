@@ -1,4 +1,3 @@
-import sys
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -6,14 +5,6 @@ import os
 import threading
 from datetime import datetime
 import time
-
-try:
-    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-    from errors import get_logger
-    logger = get_logger(__name__)
-except ImportError:
-    import logging
-    logger = logging.getLogger(__name__)
 
 class EmailService:
     def __init__(self):
@@ -31,14 +22,14 @@ class EmailService:
         Falls back to student email if parent email is not provided.
         """
         if not self.enabled:
-            logger.info("event=email_skipped reason=missing_credentials")
+            print("[EmailService] Disabled (missing credentials). Skipping email.")
             return
 
         # Fallback to student email if parent email is null
         recipient = to_email if to_email else student_email
         
         if not recipient:
-            logger.info("event=email_skipped reason=no_recipient")
+            print("[EmailService] No email provided (parent or student). Skipping.")
             return
 
         # Run in background to not block the API
@@ -54,16 +45,16 @@ class EmailService:
         for attempt in range(self.max_retries):
             try:
                 self._send_email(to_email, student_name, items, total_amount, new_balance)
-                logger.info("event=email_sent to=%s attempt=%d", to_email, attempt + 1)
+                print(f"[EmailService] Receipt sent to {to_email} (attempt {attempt + 1})")
                 return  # Success
             except Exception as e:
-                logger.warning("event=email_attempt_failed attempt=%d/%d error=%s", attempt + 1, self.max_retries, e)
+                print(f"[EmailService] Attempt {attempt + 1}/{self.max_retries} failed: {e}")
                 if attempt < self.max_retries - 1:
                     delay = self.retry_delay * (2 ** attempt)  # Exponential backoff
-                    logger.info("event=email_retry delay=%ds", delay)
+                    print(f"[EmailService] Retrying in {delay}s...")
                     time.sleep(delay)
                 else:
-                    logger.error("event=email_exhausted to=%s", to_email)
+                    print(f"[EmailService] All retry attempts exhausted. Email not sent to {to_email}")
 
     def _send_email(self, to_email, student_name, items, total_amount, new_balance):
         """Internal method to send the email"""

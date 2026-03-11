@@ -16,6 +16,12 @@ gunicorn>=21.2.0
 pyjwt>=2.8.0
 cryptography==46.0.5
 
+# Password hashing for cashier accounts
+bcrypt>=4.0.0
+
+# SMS notifications (optional — requires TWILIO_* env vars)
+twilio>=9.0.0
+
 # Health monitoring
 psutil>=5.9.0
 

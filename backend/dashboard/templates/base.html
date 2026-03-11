@@ -69,6 +69,17 @@
                     <i class="bi bi-box-seam"></i> Products
                 </a>
             </li>
+            <li>
+                <a href="/fraud-alerts" class="{% if active_page == 'fraud_alerts' %}active{% endif %}">
+                    <i class="bi bi-shield-exclamation"></i> Fraud Alerts
+                    <span id="fraudAlertBadge" class="badge bg-danger ms-1" style="display:none;font-size:0.65rem;"></span>
+                </a>
+            </li>
+            <li>
+                <a href="/cashier-accounts" class="{% if active_page == 'cashier_accounts' %}active{% endif %}">
+                    <i class="bi bi-person-badge"></i> Cashier Accounts
+                </a>
+            </li>
             {% endif %}
         </ul>
 
@@ -94,6 +105,17 @@
         sidebar.classList.toggle('open');
         overlay.classList.toggle('active');
     }
+    // Load fraud alert badge count
+    (function() {
+        const badge = document.getElementById('fraudAlertBadge');
+        if (!badge) return;
+        fetch('/api/fraud/stats').then(r => r.ok ? r.json() : null).then(data => {
+            if (data && data.unresolved_alerts > 0) {
+                badge.textContent = data.unresolved_alerts;
+                badge.style.display = 'inline';
+            }
+        }).catch(() => {});
+    })();
 </script>
 {% block extra_js %}{% endblock %}
 </body>

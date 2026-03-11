@@ -50,18 +50,16 @@ class ReceiptActivity : AppCompatActivity() {
                 qty = 1
             )
             val row = layoutInflater.inflate(R.layout.item_receipt_line, itemsContainer, false)
-            row.findViewById<TextView>(R.id.lineItemName).text = syntheticItem.name
-            row.findViewById<TextView>(R.id.lineItemUnitPrice).text = "₱%.2f".format(syntheticItem.price)
-            row.findViewById<TextView>(R.id.lineItemQty).text = getString(R.string.item_qty_format, syntheticItem.qty)
-            row.findViewById<TextView>(R.id.lineItemTotal).text = "₱%.2f".format(syntheticItem.price * syntheticItem.qty)
+            row.findViewById<TextView>(R.id.itemName).text = syntheticItem.name
+            row.findViewById<TextView>(R.id.itemQty).text = getString(R.string.item_qty_format, syntheticItem.qty)
+            row.findViewById<TextView>(R.id.itemPrice).text = "₱%.2f".format(syntheticItem.price * syntheticItem.qty)
             itemsContainer.addView(row)
         } else {
             items.forEach { item ->
                 val row = layoutInflater.inflate(R.layout.item_receipt_line, itemsContainer, false)
-                row.findViewById<TextView>(R.id.lineItemName).text = item.name
-                row.findViewById<TextView>(R.id.lineItemUnitPrice).text = "₱%.2f".format(item.price)
-                row.findViewById<TextView>(R.id.lineItemQty).text = getString(R.string.item_qty_format, item.qty)
-                row.findViewById<TextView>(R.id.lineItemTotal).text = "₱%.2f".format(item.price * item.qty)
+                row.findViewById<TextView>(R.id.itemName).text = item.name
+                row.findViewById<TextView>(R.id.itemQty).text = getString(R.string.item_qty_format, item.qty)
+                row.findViewById<TextView>(R.id.itemPrice).text = "₱%.2f".format(item.price * item.qty)
                 itemsContainer.addView(row)
             }
         }

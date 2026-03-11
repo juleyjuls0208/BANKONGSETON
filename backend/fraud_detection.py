@@ -8,11 +8,14 @@ from typing import Dict, List, Optional, Any, Tuple
 from collections import defaultdict
 from enum import Enum
 import pytz
+import logging
 
 try:
     from backend.errors import BankoError, ErrorCode, get_logger
 except ImportError:
     from errors import BankoError, ErrorCode, get_logger
+
+_sheet_logger = logging.getLogger(__name__)
 
 PHILIPPINES_TZ = pytz.timezone('Asia/Manila')
 
@@ -573,6 +576,147 @@ class FraudDetector:
             'suspended_cards': len(self.suspended_cards),
             'cards_monitored': len(self.transaction_history)
         }
+
+    # ── Google Sheets persistence ──────────────────────────────────────────────
+
+    FRAUD_ALERTS_HEADERS = [
+        'AlertID', 'MoneyCard', 'FraudType', 'RiskLevel', 'Description',
+        'CreatedAt', 'Resolved', 'ResolvedAt', 'ResolutionNotes', 'AutoAction'
+    ]
+    SUSPENDED_CARDS_HEADERS = [
+        'MoneyCard', 'Reason', 'SuspendedAt', 'AutoSuspended'
+    ]
+
+    def load_from_sheets(self, fraud_ws, suspended_ws) -> None:
+        """Load persisted alerts and suspended cards from Google Sheets on startup."""
+        try:
+            rows = fraud_ws.get_all_records()
+            for row in rows:
+                alert_id = row.get('AlertID', '')
+                if not alert_id:
+                    continue
+                # Reconstruct a minimal FraudAlert from the sheet row
+                try:
+                    fraud_type = FraudType(row.get('FraudType', 'velocity'))
+                except ValueError:
+                    fraud_type = FraudType.VELOCITY
+                try:
+                    risk_level = RiskLevel(row.get('RiskLevel', 'low'))
+                except ValueError:
+                    risk_level = RiskLevel.LOW
+
+                alert = FraudAlert(
+                    money_card=row.get('MoneyCard', ''),
+                    fraud_type=fraud_type,
+                    risk_level=risk_level,
+                    description=row.get('Description', ''),
+                )
+                alert.id = alert_id
+                resolved_val = row.get('Resolved', 'False')
+                alert.resolved = str(resolved_val).lower() in ('true', '1', 'yes')
+                alert.resolution_notes = row.get('ResolutionNotes') or None
+                alert.auto_action_taken = row.get('AutoAction') or None
+                resolved_at_str = row.get('ResolvedAt', '')
+                if resolved_at_str:
+                    try:
+                        alert.resolved_at = datetime.fromisoformat(resolved_at_str)
+                    except ValueError:
+                        alert.resolved_at = None
+                created_at_str = row.get('CreatedAt', '')
+                if created_at_str:
+                    try:
+                        alert.created_at = datetime.fromisoformat(created_at_str)
+                    except ValueError:
+                        pass
+                self.alerts.append(alert)
+            _sheet_logger.info("event=fraud_alerts_loaded count=%d", len(self.alerts))
+        except Exception as e:
+            _sheet_logger.warning("event=fraud_alerts_load_failed error=%s", e)
+
+        try:
+            rows = suspended_ws.get_all_records()
+            for row in rows:
+                card = row.get('MoneyCard', '')
+                if card:
+                    self.suspended_cards[card] = {
+                        'reason': row.get('Reason', ''),
+                        'suspended_at': row.get('SuspendedAt', ''),
+                        'auto_suspended': str(row.get('AutoSuspended', 'False')).lower() in ('true', '1', 'yes'),
+                    }
+            _sheet_logger.info("event=suspended_cards_loaded count=%d", len(self.suspended_cards))
+        except Exception as e:
+            _sheet_logger.warning("event=suspended_cards_load_failed error=%s", e)
+
+    def save_alert_to_sheet(self, fraud_ws, alert: 'FraudAlert') -> bool:
+        """Append a new alert row to the Fraud Alerts sheet."""
+        try:
+            row = [
+                alert.id,
+                alert.money_card,
+                alert.fraud_type.value,
+                alert.risk_level.value,
+                alert.description,
+                alert.created_at.isoformat(),
+                str(alert.resolved),
+                alert.resolved_at.isoformat() if alert.resolved_at else '',
+                alert.resolution_notes or '',
+                alert.auto_action_taken or '',
+            ]
+            fraud_ws.append_row(row)
+            return True
+        except Exception as e:
+            _sheet_logger.warning("event=fraud_alert_save_failed error=%s", e)
+            return False
+
+    def update_alert_in_sheet(self, fraud_ws, alert: 'FraudAlert') -> bool:
+        """Update the Resolved fields of an existing alert row by AlertID."""
+        try:
+            records = fraud_ws.get_all_records()
+            for idx, row in enumerate(records, start=2):
+                if row.get('AlertID') == alert.id:
+                    # Columns: Resolved=7, ResolvedAt=8, ResolutionNotes=9
+                    fraud_ws.update_cell(idx, 7, str(alert.resolved))
+                    fraud_ws.update_cell(idx, 8, alert.resolved_at.isoformat() if alert.resolved_at else '')
+                    fraud_ws.update_cell(idx, 9, alert.resolution_notes or '')
+                    return True
+            return False
+        except Exception as e:
+            _sheet_logger.warning("event=fraud_alert_update_failed error=%s", e)
+            return False
+
+    def save_suspended_card_to_sheet(self, suspended_ws, card: str, data: Dict) -> bool:
+        """Append or update a suspended card row."""
+        try:
+            row = [
+                card,
+                data.get('reason', ''),
+                data.get('suspended_at', ''),
+                str(data.get('auto_suspended', False)),
+            ]
+            # Check if already present
+            records = suspended_ws.get_all_records()
+            for idx, r in enumerate(records, start=2):
+                if r.get('MoneyCard') == card:
+                    suspended_ws.update(f'A{idx}:D{idx}', [row])
+                    return True
+            suspended_ws.append_row(row)
+            return True
+        except Exception as e:
+            _sheet_logger.warning("event=suspended_save_failed error=%s", e)
+            return False
+
+    def remove_suspended_card_from_sheet(self, suspended_ws, card: str) -> bool:
+        """Remove a card from the Suspended Cards sheet."""
+        try:
+            records = suspended_ws.get_all_records()
+            for idx, r in enumerate(records, start=2):
+                if r.get('MoneyCard') == card:
+                    suspended_ws.delete_rows(idx)
+                    return True
+            return False
+        except Exception as e:
+            _sheet_logger.warning("event=suspended_remove_failed error=%s", e)
+            return False
 
 
 # Global fraud detector instance

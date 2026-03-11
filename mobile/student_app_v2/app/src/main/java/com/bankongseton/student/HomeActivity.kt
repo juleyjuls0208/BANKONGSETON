@@ -127,7 +127,9 @@ class HomeActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         updateNfcButtonVisibility()
+        checkBudgetMonthReset()
         loadBudget()
+        checkLostCardStatus()
     }
 
     // ── Greeting ──────────────────────────────────────────────────────────────
@@ -141,6 +143,63 @@ class HomeActivity : AppCompatActivity() {
     }
 
     // ── Budget ────────────────────────────────────────────────────────────────
+
+    /**
+     * Check if we've entered a new calendar month since the budget was last set.
+     * If so, clear the stored limit and prompt the user to set a new one.
+     */
+    private fun checkBudgetMonthReset() {
+        val currentMonth = java.text.SimpleDateFormat("yyyy-MM", java.util.Locale.getDefault())
+            .format(java.util.Date())
+        val storedMonth = secureStorage.getBudgetMonth()
+        val hasLimit = secureStorage.getBudgetLimit() >= 0f
+
+        if (hasLimit && storedMonth.isNotEmpty() && storedMonth != currentMonth) {
+            // New month — reset budget
+            secureStorage.clearBudgetLimit()
+            secureStorage.setBudgetMonth("")
+            android.app.AlertDialog.Builder(this)
+                .setTitle("New Month — Set Your Budget")
+                .setMessage("Your monthly budget has been reset for $currentMonth. Would you like to set a new spending limit?")
+                .setPositiveButton("Set Budget") { _, _ -> showBudgetDialog() }
+                .setNegativeButton("Later", null)
+                .show()
+        }
+    }
+
+    /**
+     * Check lost card status from the API and update the banner accordingly.
+     * On card_replaced FCM (handled in FCMService), HomeActivity will be refreshed.
+     */
+    private fun checkLostCardStatus() {
+        val token = secureStorage.getAuthToken() ?: return
+        ApiClient.apiService.getLostCardStatus("Bearer $token")
+            .enqueue(object : retrofit2.Callback<LostCardStatusResponse> {
+                override fun onResponse(
+                    call: retrofit2.Call<LostCardStatusResponse>,
+                    response: retrofit2.Response<LostCardStatusResponse>
+                ) {
+                    val body = response.body() ?: return
+                    bannerLostCard.isVisible = body.reported
+                    if (body.reported && body.processed) {
+                        // Admin processed replacement
+                        secureStorage.clearLostCardReported()
+                        android.widget.Toast.makeText(
+                            this@HomeActivity,
+                            "Your replacement card has been activated!",
+                            android.widget.Toast.LENGTH_LONG
+                        ).show()
+                    }
+                }
+
+                override fun onFailure(
+                    call: retrofit2.Call<LostCardStatusResponse>,
+                    t: Throwable
+                ) {
+                    // Non-fatal — keep existing banner state
+                }
+            })
+    }
 
     private fun loadBudget() {
         budgetCard.isVisible = true
@@ -219,6 +278,10 @@ class HomeActivity : AppCompatActivity() {
                 val value = input.text.toString().toFloatOrNull()
                 if (value != null && value > 0) {
                     secureStorage.setBudgetLimit(value)
+                    // Record the month this budget was set
+                    val currentMonth = java.text.SimpleDateFormat("yyyy-MM", java.util.Locale.getDefault())
+                        .format(java.util.Date())
+                    secureStorage.setBudgetMonth(currentMonth)
                     loadBudget()
                 } else {
                     Toast.makeText(this, "Enter a valid amount", Toast.LENGTH_SHORT).show()

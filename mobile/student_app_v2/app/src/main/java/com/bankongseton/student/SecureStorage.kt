@@ -64,6 +64,28 @@ class SecureStorage(context: Context) {
         sharedPreferences.edit().remove(KEY_BUDGET_LIMIT).apply()
     }
 
+    // Budget month tracking — stores "YYYY-MM" of when budget was last set
+    fun getBudgetMonth(): String {
+        return sharedPreferences.getString(KEY_BUDGET_MONTH, "") ?: ""
+    }
+
+    fun setBudgetMonth(yearMonth: String) {
+        sharedPreferences.edit().putString(KEY_BUDGET_MONTH, yearMonth).apply()
+    }
+
+    // Lost card report state
+    fun setLostCardReported(reported: Boolean) {
+        sharedPreferences.edit().putBoolean(KEY_LOST_CARD_REPORTED, reported).apply()
+    }
+
+    fun isLostCardReported(): Boolean {
+        return sharedPreferences.getBoolean(KEY_LOST_CARD_REPORTED, false)
+    }
+
+    fun clearLostCardReported() {
+        sharedPreferences.edit().remove(KEY_LOST_CARD_REPORTED).apply()
+    }
+
     fun clearAuth() {
         sharedPreferences.edit()
             .remove(KEY_AUTH_TOKEN)
@@ -81,5 +103,7 @@ class SecureStorage(context: Context) {
         private const val KEY_DARK_MODE = "dark_mode"
         private const val KEY_THEME_MODE = "theme_mode"
         private const val KEY_BUDGET_LIMIT = "budget_limit"
+        private const val KEY_BUDGET_MONTH = "budget_month"
+        private const val KEY_LOST_CARD_REPORTED = "lost_card_reported"
     }
 }

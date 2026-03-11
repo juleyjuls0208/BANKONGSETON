@@ -71,3 +71,9 @@ data class NfcRegisterResponse(
     @SerializedName("virtual_card_token") val virtual_card_token: String,
     val message: String
 )
+
+data class LostCardStatusResponse(
+    val reported: Boolean,
+    val processed: Boolean,
+    @SerializedName("report_id") val reportId: String?
+)

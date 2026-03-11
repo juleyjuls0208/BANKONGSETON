@@ -101,7 +101,7 @@ def send_purchase_push(fcm_token: str, amount: float, new_balance: float) -> boo
         message = messaging.Message(
             notification=messaging.Notification(
                 title="Purchase Confirmed",
-                body=f"฿{amount:.2f} deducted. New balance: ฿{new_balance:.2f}",
+                body=f"₱{amount:.2f} deducted. New balance: ₱{new_balance:.2f}",
             ),
             token=fcm_token.strip(),
         )
@@ -136,7 +136,7 @@ def send_load_push(fcm_token: str, amount: float, new_balance: float) -> bool:
         message = messaging.Message(
             notification=messaging.Notification(
                 title="Money Loaded",
-                body=f"฿{amount:.2f} added to your account. Balance: ฿{new_balance:.2f}",
+                body=f"₱{amount:.2f} added to your account. Balance: ₱{new_balance:.2f}",
             ),
             token=fcm_token.strip(),
         )
@@ -145,4 +145,39 @@ def send_load_push(fcm_token: str, amount: float, new_balance: float) -> bool:
         return True
     except Exception as e:
         logger.error("event=fcm_load_send_failed error=%s", e)
+        return False
+
+
+def send_card_replaced_push(fcm_token: str, student_name: str) -> bool:
+    """
+    Notify student that their lost card replacement has been processed.
+
+    Args:
+        fcm_token: FCM device registration token
+        student_name: Student's name for personalisation
+
+    Returns:
+        True on success, False on failure (never raises).
+    """
+    if not fcm_token or not fcm_token.strip():
+        return False
+    try:
+        import firebase_admin
+        from firebase_admin import messaging
+
+        if not _init_firebase():
+            return False
+        message = messaging.Message(
+            notification=messaging.Notification(
+                title="Card Replacement Ready",
+                body=f"Hi {student_name}, your new card has been activated. You're all set!",
+            ),
+            data={"type": "card_replaced"},
+            token=fcm_token.strip(),
+        )
+        messaging.send(message)
+        logger.info("event=fcm_card_replaced_sent student=%s", student_name)
+        return True
+    except Exception as e:
+        logger.error("event=fcm_card_replaced_send_failed error=%s", e)
         return False

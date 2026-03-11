@@ -41,6 +41,11 @@ interface BangkoApiService {
         @Header("Authorization") token: String,
         @Body request: NfcUnregisterRequest
     ): retrofit2.Response<MessageResponse>
+
+    @GET("student/lost-card-status")
+    fun getLostCardStatus(
+        @Header("Authorization") token: String
+    ): Call<LostCardStatusResponse>
 }
 
 object ApiClient {

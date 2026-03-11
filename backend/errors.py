@@ -105,16 +105,8 @@ def setup_logging(log_level: str = 'INFO') -> logging.Logger:
 
 
 def get_logger(name: str = 'bangko') -> logging.Logger:
-    """Get a logger in the bangko.* hierarchy.
-
-    If name is 'bangko' or already starts with 'bangko.', returns the logger
-    as-is.  Otherwise, prepends 'bangko.' so callers using get_logger(__name__)
-    (e.g. 'admin_dashboard') automatically become children of the bangko logger
-    and inherit its StreamHandler without needing their own handler.
-    """
-    if name == 'bangko' or name.startswith('bangko.'):
-        return logging.getLogger(name)
-    return logging.getLogger(f'bangko.{name}')
+    """Get logger instance"""
+    return logging.getLogger(name)
 
 
 def log_error(error: Exception, context: Optional[Dict[str, Any]] = None):

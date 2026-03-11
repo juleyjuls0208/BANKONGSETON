@@ -14,16 +14,42 @@ class FCMService : FirebaseMessagingService() {
     
     override fun onNewToken(token: String) {
         super.onNewToken(token)
-        // Save token to register later when user logs in
+        // Save token locally for registration on next login
         getSharedPreferences("bangko_prefs", Context.MODE_PRIVATE)
             .edit()
             .putString("fcm_token", token)
             .apply()
+        // If already logged in, register immediately
+        val secureStorage = SecureStorage(this)
+        val authToken = secureStorage.getAuthToken()
+        if (!authToken.isNullOrEmpty()) {
+            ApiClient.apiService.registerFCMToken(
+                "Bearer $authToken",
+                FCMTokenRequest(token)
+            ).enqueue(object : retrofit2.Callback<MessageResponse> {
+                override fun onResponse(call: retrofit2.Call<MessageResponse>, response: retrofit2.Response<MessageResponse>) {}
+                override fun onFailure(call: retrofit2.Call<MessageResponse>, t: Throwable) {}
+            })
+        }
     }
     
     override fun onMessageReceived(message: RemoteMessage) {
         super.onMessageReceived(message)
-        
+
+        // Handle data messages (e.g. card_replaced)
+        val msgType = message.data["type"]
+        if (msgType == "card_replaced") {
+            // Clear lost card state so HomeActivity shows "Resolved"
+            val secureStorage = SecureStorage(this)
+            secureStorage.clearLostCardReported()
+            // Also show a notification
+            showNotification(
+                title = message.notification?.title ?: "Card Replacement Ready",
+                body = message.notification?.body ?: "Your new card has been activated."
+            )
+            return
+        }
+
         message.notification?.let { notification ->
             showNotification(
                 title = notification.title ?: "Bangko ng Seton",
