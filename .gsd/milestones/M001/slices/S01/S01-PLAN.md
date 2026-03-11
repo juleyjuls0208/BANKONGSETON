@@ -18,10 +18,17 @@
 
 ## Tasks
 
+<<<<<<< HEAD
 - [ ] **T01: Fraud Alert API endpoints + Sheets persistence**
   Wire FraudDetector to Google Sheets "Fraud Alerts" worksheet. Add /api/fraud/* routes to admin_dashboard.py.
 
 - [ ] **T02: Fraud Alerts admin dashboard page**
+=======
+- [x] **T01: Fraud Alert API endpoints + Sheets persistence**
+  Wire FraudDetector to Google Sheets "Fraud Alerts" worksheet. Add /api/fraud/* routes to admin_dashboard.py.
+
+- [x] **T02: Fraud Alerts admin dashboard page**
+>>>>>>> gsd/M001/S01
   Add fraud_alerts.html template and nav entry. Alerts table with resolve/suspend/unsuspend UI.
 
 ## Files Likely Touched

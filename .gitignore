@@ -73,11 +73,26 @@ captures/
 .externalNativeBuild/
 .cxx/
 
-# Arduino secrets — copy secrets.h.example to secrets.h and fill in credentials
-arduino/bankongseton_rfid/secrets.h
-
 # Temporary files
 *.tmp
 temp/
 tmp/
 
+
+# ── GSD baseline (auto-generated) ──
+.gsd/activity/
+.gsd/runtime/
+.gsd/auto.lock
+.gsd/metrics.json
+.gsd/STATE.md
+*.code-workspace
+.env.*
+!.env.example
+.next/
+*.pyc
+.venv/
+target/
+vendor/
+coverage/
+.cache/
+nul

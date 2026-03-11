@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "dynamic-skill-creator": "file:../../../gsd-skill-creator"
+  }
+}

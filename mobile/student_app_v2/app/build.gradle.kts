@@ -1,7 +1,15 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("com.google.gms.google-services")
+}
+
+// Load signing credentials from keystore.properties (never committed to VCS)
+val keystorePropertiesFile = rootProject.file("keystore.properties")
+val keystoreProperties = Properties().apply {
+    if (keystorePropertiesFile.exists()) load(keystorePropertiesFile.inputStream())
 }
 
 android {
@@ -18,10 +26,20 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        create("release") {
+            keyAlias = keystoreProperties["KEY_ALIAS"] as String
+            keyPassword = keystoreProperties["STORE_PASSWORD"] as String
+            storeFile = rootProject.file("release.jks")
+            storePassword = keystoreProperties["STORE_PASSWORD"] as String
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -34,9 +52,6 @@ android {
     }
     kotlinOptions {
         jvmTarget = "11"
-    }
-    buildFeatures {
-        buildConfig = true
     }
 }
 
@@ -70,11 +85,11 @@ dependencies {
     // Gson for JSON parsing
     implementation("com.google.code.gson:gson:2.10.1")
     
+    // Biometric authentication
+    implementation("androidx.biometric:biometric:1.1.0")
+
     // Security for encrypted storage
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
-    
-    // Biometric authentication for NFC payment authorization
-    implementation("androidx.biometric:biometric:1.1.0")
     
     // SharedPreferences for data persistence
     implementation("androidx.preference:preference-ktx:1.2.1")

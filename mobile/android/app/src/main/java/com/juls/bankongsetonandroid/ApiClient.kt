@@ -19,7 +19,7 @@ data class LoginResponse(
 )
 
 data class StudentData(
-    @com.google.gson.annotations.SerializedName("id")
+    @com.google.gson.annotations.SerializedName("student_id")
     val id: String,
     val name: String,
     val id_card: String,
@@ -47,7 +47,7 @@ data class NfcRegistrationRequest(
 )
 
 data class NfcRegistrationResponse(
-    val virtual_card_token: String,
+    val virtual_token: String,
     val expires_at: String
 )
 

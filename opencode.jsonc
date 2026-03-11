@@ -1,0 +1,56 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+
+    // ── ENABLED (no auth required) ──────────────────────────────────────────
+
+    // Sequential Thinking: step-by-step reasoning for complex tasks
+    // Useful for: NFC HCE flow, multi-station sync, parent portal architecture
+    "sequential-thinking": {
+      "type": "local",
+      "command": ["npx", "-y", "@modelcontextprotocol/server-sequential-thinking"],
+      "enabled": true
+    },
+
+    // Fetch: make real HTTP requests to any URL
+    // Useful for: testing Flask API endpoints (/api/nfc/pay, /api/student/balance, etc.)
+    "fetch": {
+      "type": "local",
+      "command": ["uvx", "mcp-fetch"],
+      "enabled": true
+    },
+
+    // Playwright: browser automation for web UI testing
+    // Useful for: testing the Flask admin dashboard, cashier UI, analytics pages
+    "playwright": {
+      "type": "local",
+      "command": ["npx", "-y", "@playwright/mcp@latest"],
+      "enabled": true
+    },
+
+    // ── DISABLED (needs credentials — see setup instructions below) ─────────
+
+    // GitHub MCP: manage issues, PRs, releases
+    // Setup: set GITHUB_PERSONAL_ACCESS_TOKEN in your environment, then set enabled: true
+    // Token needs: repo, read:org scopes — https://github.com/settings/tokens
+    "github": {
+      "type": "local",
+      "command": ["npx", "-y", "@modelcontextprotocol/server-github"],
+      "environment": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": ""
+      },
+      "enabled": false
+    },
+
+    // Google Drive/Sheets MCP: read/query Google Sheets (the project database)
+    // Useful for: inspecting student records, transaction history, balance debugging
+    // Setup: run `npx @modelcontextprotocol/server-google-drive` once to complete OAuth,
+    //        then set enabled: true. Uses same Google account as gspread credentials.
+    "google-drive": {
+      "type": "local",
+      "command": ["npx", "-y", "@modelcontextprotocol/server-google-drive"],
+      "enabled": false
+    }
+
+  }
+}

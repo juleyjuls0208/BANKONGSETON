@@ -16,7 +16,11 @@ A student should be able to tap their card at the cashier, have the transaction 
 - Android student app (Kotlin, Material 3, NFC HCE virtual card)
 - Parent portal (read-only balance + transaction view)
 - FCM push notifications (low balance only wired end-to-end)
+<<<<<<< HEAD
 - Fraud detection engine exists but has no admin UI
+=======
+- Fraud detection engine wired to admin dashboard: alerts panel, card suspend/unsuspend, Sheets persistence (S01 complete)
+>>>>>>> gsd/M001/S01
 - JWT auth for mobile API; session auth for admin dashboard
 - Multi-station support via STATION_ID env var
 - 170 passing tests

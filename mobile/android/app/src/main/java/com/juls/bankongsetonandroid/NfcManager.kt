@@ -30,7 +30,7 @@ class NfcManager private constructor(private val context: Context) {
     
     companion object {
         private const val PREFS_NAME = "banko_nfc_secure"
-        private const val KEY_VIRTUAL_CARD_TOKEN = "virtual_card_token"
+        private const val KEY_VIRTUAL_TOKEN = "virtual_token"
         private const val KEY_DEVICE_REGISTERED = "device_registered"
         private const val KEY_NFC_PIN = "nfc_pin"
         
@@ -83,12 +83,12 @@ class NfcManager private constructor(private val context: Context) {
     // Check if device is registered for NFC payments
     fun isDeviceRegistered(): Boolean {
         return securePrefs.getBoolean(KEY_DEVICE_REGISTERED, false) &&
-                securePrefs.getString(KEY_VIRTUAL_CARD_TOKEN, null) != null
+                securePrefs.getString(KEY_VIRTUAL_TOKEN, null) != null
     }
     
     // Get current virtual card token
     fun getVirtualToken(): String? {
-        return securePrefs.getString(KEY_VIRTUAL_CARD_TOKEN, null)
+        return securePrefs.getString(KEY_VIRTUAL_TOKEN, null)
     }
     
     // Register device for NFC payments
@@ -107,11 +107,11 @@ class NfcManager private constructor(private val context: Context) {
                 response: Response<NfcRegistrationResponse>
             ) {
                 if (response.isSuccessful && response.body() != null) {
-                    val token = response.body()!!.virtual_card_token
+                    val token = response.body()!!.virtual_token
                     
                     // Store token securely
                     securePrefs.edit()
-                        .putString(KEY_VIRTUAL_CARD_TOKEN, token)
+                        .putString(KEY_VIRTUAL_TOKEN, token)
                         .putBoolean(KEY_DEVICE_REGISTERED, true)
                         .putString(KEY_NFC_PIN, pin)
                         .apply()

@@ -28,8 +28,8 @@ class TestNormalizeCardUID:
     """Tests for the canonical normalize_card_uid() function."""
 
     def test_normalize_none(self):
-        """None input returns None (passes through unchanged)."""
-        assert normalize_card_uid(None) is None
+        """None input returns empty string (not a crash)."""
+        assert normalize_card_uid(None) == ""
 
     def test_normalize_empty(self):
         """Empty-string input returns empty string."""
