@@ -42,7 +42,28 @@ class SecureStorage(context: Context) {
     fun isDarkMode(): Boolean {
         return sharedPreferences.getBoolean(KEY_DARK_MODE, false)
     }
-    
+
+    fun saveThemeMode(mode: String) {
+        sharedPreferences.edit().putString(KEY_THEME_MODE, mode).apply()
+    }
+
+    fun getThemeMode(): String {
+        return sharedPreferences.getString(KEY_THEME_MODE, "system") ?: "system"
+    }
+
+    // Budget limit in PHP. -1f means no limit set.
+    fun getBudgetLimit(): Float {
+        return sharedPreferences.getFloat(KEY_BUDGET_LIMIT, -1f)
+    }
+
+    fun setBudgetLimit(limit: Float) {
+        sharedPreferences.edit().putFloat(KEY_BUDGET_LIMIT, limit).apply()
+    }
+
+    fun clearBudgetLimit() {
+        sharedPreferences.edit().remove(KEY_BUDGET_LIMIT).apply()
+    }
+
     fun clearAuth() {
         sharedPreferences.edit()
             .remove(KEY_AUTH_TOKEN)
@@ -53,20 +74,12 @@ class SecureStorage(context: Context) {
     fun isLoggedIn(): Boolean {
         return getAuthToken() != null
     }
-
-    fun saveLastBalance(balance: Double) {
-        sharedPreferences.edit().putFloat(KEY_LAST_BALANCE, balance.toFloat()).apply()
-    }
-
-    fun getLastBalance(): Double? {
-        val stored = sharedPreferences.getFloat(KEY_LAST_BALANCE, -1f)
-        return if (stored >= 0f) stored.toDouble() else null
-    }
-
+    
     companion object {
         private const val KEY_AUTH_TOKEN = "auth_token"
         private const val KEY_STUDENT_ID = "student_id"
         private const val KEY_DARK_MODE = "dark_mode"
-        private const val KEY_LAST_BALANCE = "last_balance"
+        private const val KEY_THEME_MODE = "theme_mode"
+        private const val KEY_BUDGET_LIMIT = "budget_limit"
     }
 }

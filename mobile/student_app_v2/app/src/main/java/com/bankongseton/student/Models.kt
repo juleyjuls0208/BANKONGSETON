@@ -27,9 +27,7 @@ data class Balance(
 
 data class TransactionsResponse(
     val transactions: List<Transaction>,
-    val count: Int,
-    val total: Int? = null,
-    @SerializedName("has_more") val hasMore: Boolean? = null
+    val count: Int
 )
 
 data class Transaction(
@@ -60,30 +58,16 @@ data class ErrorResponse(
     val error: String
 )
 
-// Budget Models
-data class BudgetResponse(
-    @SerializedName("monthly_limit") val monthlyLimit: Double?,
-    val currency: String
+data class NfcDeviceRequest(
+    @SerializedName("device_id") val deviceId: String,
+    val pin: String
 )
 
-data class SetBudgetRequest(
-    @SerializedName("monthly_limit") val monthlyLimit: Double
+data class NfcUnregisterRequest(
+    @SerializedName("device_id") val deviceId: String
 )
 
-data class SetBudgetResponse(
-    val success: Boolean,
-    @SerializedName("monthly_limit") val monthlyLimit: Double
-)
-
-// NFC Models
-data class NfcDeviceRequest(val device_id: String, val pin: String)
-data class NfcRegistrationResponse(val virtual_card_token: String)
-data class NfcUnregisterRequest(val device_id: String)
-
-// Lost Card Models
-data class LostCardResponse(val success: Boolean, val message: String)
-
-// Budget Summary Model
-data class BudgetSummaryResponse(
-    @SerializedName("monthly_spend") val spent: Double
+data class NfcRegisterResponse(
+    @SerializedName("virtual_card_token") val virtual_card_token: String,
+    val message: String
 )

@@ -35,9 +35,9 @@ class ReceiptActivity : AppCompatActivity() {
         val timeRowIndex = parentLayout.indexOfChild(receiptTimeView.parent as android.view.View)
         parentLayout.addView(typeLabel, timeRowIndex + 1)
 
-        findViewById<TextView>(R.id.receiptTotal).text = "฿%.2f".format(transaction.amount)
-        findViewById<TextView>(R.id.receiptBalanceBefore).text = "฿%.2f".format(transaction.balanceBefore)
-        findViewById<TextView>(R.id.receiptBalanceAfter).text = "฿%.2f".format(transaction.balance)
+        findViewById<TextView>(R.id.receiptTotal).text = "₱%.2f".format(transaction.amount)
+        findViewById<TextView>(R.id.receiptBalanceBefore).text = "₱%.2f".format(transaction.balanceBefore)
+        findViewById<TextView>(R.id.receiptBalanceAfter).text = "₱%.2f".format(transaction.balance)
 
         // Line items — use null-items fallback for NFC Purchase (or any transaction with no line items)
         val itemsContainer = findViewById<LinearLayout>(R.id.receiptItemsContainer)
@@ -51,17 +51,17 @@ class ReceiptActivity : AppCompatActivity() {
             )
             val row = layoutInflater.inflate(R.layout.item_receipt_line, itemsContainer, false)
             row.findViewById<TextView>(R.id.lineItemName).text = syntheticItem.name
-            row.findViewById<TextView>(R.id.lineItemUnitPrice).text = "฿%.2f".format(syntheticItem.price)
+            row.findViewById<TextView>(R.id.lineItemUnitPrice).text = "₱%.2f".format(syntheticItem.price)
             row.findViewById<TextView>(R.id.lineItemQty).text = getString(R.string.item_qty_format, syntheticItem.qty)
-            row.findViewById<TextView>(R.id.lineItemTotal).text = "฿%.2f".format(syntheticItem.price * syntheticItem.qty)
+            row.findViewById<TextView>(R.id.lineItemTotal).text = "₱%.2f".format(syntheticItem.price * syntheticItem.qty)
             itemsContainer.addView(row)
         } else {
             items.forEach { item ->
                 val row = layoutInflater.inflate(R.layout.item_receipt_line, itemsContainer, false)
                 row.findViewById<TextView>(R.id.lineItemName).text = item.name
-                row.findViewById<TextView>(R.id.lineItemUnitPrice).text = "฿%.2f".format(item.price)
+                row.findViewById<TextView>(R.id.lineItemUnitPrice).text = "₱%.2f".format(item.price)
                 row.findViewById<TextView>(R.id.lineItemQty).text = getString(R.string.item_qty_format, item.qty)
-                row.findViewById<TextView>(R.id.lineItemTotal).text = "฿%.2f".format(item.price * item.qty)
+                row.findViewById<TextView>(R.id.lineItemTotal).text = "₱%.2f".format(item.price * item.qty)
                 itemsContainer.addView(row)
             }
         }

@@ -1,12 +1,14 @@
 package com.bankongseton.student
 
 import android.os.Bundle
-import android.view.View
-import android.widget.TextView
+import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.isVisible
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.progressindicator.LinearProgressIndicator
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -16,77 +18,50 @@ class TransactionsActivity : AppCompatActivity() {
     private lateinit var recyclerView: RecyclerView
     private lateinit var adapter: TransactionsAdapter
     private lateinit var secureStorage: SecureStorage
-
-    private var currentOffset = 0
-    private var isLoading = false
-    private var hasMore = true
-    private val pageSize = 20
+    private lateinit var emptyStateLayout: LinearLayout
+    private lateinit var loadingIndicator: LinearProgressIndicator
+    private lateinit var toolbar: MaterialToolbar
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_transactions)
 
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        supportActionBar?.title = "Transaction History"
-
         secureStorage = SecureStorage(this)
 
-        recyclerView = findViewById(R.id.recyclerView)
-        recyclerView.layoutManager = LinearLayoutManager(this)
+        toolbar = findViewById(R.id.toolbar)
+        setSupportActionBar(toolbar)
+        toolbar.setNavigationOnClickListener { finish() }
 
+        recyclerView = findViewById(R.id.recyclerView)
+        emptyStateLayout = findViewById(R.id.emptyStateLayout)
+        loadingIndicator = findViewById(R.id.loadingIndicator)
+
+        recyclerView.layoutManager = LinearLayoutManager(this)
         adapter = TransactionsAdapter()
         recyclerView.adapter = adapter
-
-        recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
-            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
-                super.onScrolled(recyclerView, dx, dy)
-                val layoutManager = recyclerView.layoutManager as LinearLayoutManager
-                val totalItemCount = layoutManager.itemCount
-                val lastVisibleItem = layoutManager.findLastVisibleItemPosition()
-                if (!isLoading && hasMore && lastVisibleItem >= totalItemCount - 4) {
-                    loadTransactions(currentOffset)
-                }
-            }
-        })
 
         loadTransactions()
     }
 
-    private fun loadTransactions(offset: Int = 0) {
-        if (isLoading || !hasMore) return
+    private fun loadTransactions() {
         val token = secureStorage.getAuthToken() ?: return
-        isLoading = true
 
-        ApiClient.apiService.getTransactions("Bearer $token", pageSize, offset)
+        loadingIndicator.isVisible = true
+        emptyStateLayout.isVisible = false
+
+        ApiClient.apiService.getTransactions("Bearer $token", 100)
             .enqueue(object : Callback<TransactionsResponse> {
                 override fun onResponse(
                     call: Call<TransactionsResponse>,
                     response: Response<TransactionsResponse>
                 ) {
-                    isLoading = false
+                    loadingIndicator.isVisible = false
                     if (response.isSuccessful) {
-                        response.body()?.let { body ->
-                            if (offset == 0) {
-                                adapter.setTransactions(body.transactions)
-                                // Empty state: show friendly message if list is empty
-                                if (body.transactions.isEmpty()) {
-                                    findViewById<TextView>(R.id.emptyStateText)?.let {
-                                        it.text = "No transactions yet"
-                                        it.visibility = View.VISIBLE
-                                    }
-                                    recyclerView.visibility = View.GONE
-                                } else {
-                                    findViewById<TextView>(R.id.emptyStateText)?.visibility =
-                                        View.GONE
-                                    recyclerView.visibility = View.VISIBLE
-                                }
-                            } else {
-                                adapter.appendTransactions(body.transactions)
-                            }
-                            hasMore = body.hasMore ?: false
-                            currentOffset = offset + body.transactions.size
-                        }
+                        val transactions = response.body()?.transactions ?: emptyList()
+                        adapter.setTransactions(transactions)
+                        emptyStateLayout.isVisible = transactions.isEmpty()
                     } else {
+                        emptyStateLayout.isVisible = true
                         Toast.makeText(
                             this@TransactionsActivity,
                             "Failed to load transactions",
@@ -96,10 +71,11 @@ class TransactionsActivity : AppCompatActivity() {
                 }
 
                 override fun onFailure(call: Call<TransactionsResponse>, t: Throwable) {
-                    isLoading = false
+                    loadingIndicator.isVisible = false
+                    emptyStateLayout.isVisible = true
                     Toast.makeText(
                         this@TransactionsActivity,
-                        "Network error: ${t.message}",
+                        "Network error — check your connection",
                         Toast.LENGTH_LONG
                     ).show()
                 }

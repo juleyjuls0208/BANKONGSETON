@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Brand -->
+    <string name="app_name">Bangko ng Seton</string>
+
+    <!-- Login -->
+    <string name="login_greeting">Hello,\nStudent.</string>
+    <string name="login_subtitle">Sign in to your canteen wallet</string>
+    <string name="login_title">Welcome</string>
+    <string name="student_id_hint">Student ID</string>
+    <string name="login_button">Continue</string>
+
+    <!-- Home -->
+    <string name="balance_label">Available Balance</string>
+    <string name="balance_title">Current Balance</string>
+    <string name="home_banner_lost_card">⚠ Card reported lost — tap here for details</string>
+    <string name="quick_actions_label">Quick Actions</string>
+    <string name="action_history">History</string>
+    <string name="action_settings">Settings</string>
+    <string name="action_nfc_pay">Pay</string>
+
+    <!-- Transactions -->
+    <string name="transactions_title">History</string>
+    <string name="view_transactions">View Transactions</string>
+    <string name="no_transactions">No transactions yet</string>
+    <string name="no_transactions_sub">Transactions will appear here\nafter your first canteen purchase.</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_theme">Appearance</string>
+    <string name="theme_system">Follow System</string>
+    <string name="theme_light">Always Light</string>
+    <string name="theme_dark">Always Dark</string>
+    <string name="dark_mode">Dark Mode</string>
+    <string name="logout">Log Out</string>
+    <string name="refresh_balance">Refresh</string>
+
+    <!-- Budget -->
+    <string name="budget_monthly">This Month</string>
+    <string name="budget_no_limit">No limit set</string>
+    <string name="budget_set_limit">Set Limit</string>
+
+    <!-- NFC -->
+    <string name="nfc_pay_activate">Tap to Pay</string>
+    <string name="nfc_icon_description">NFC Payment</string>
+    <string name="nfc_hold_to_terminal">Hold near terminal</string>
+    <string name="nfc_countdown_start">Processing…</string>
+    <string name="nfc_seconds_remaining">seconds</string>
+    <string name="nfc_cancel">Cancel</string>
+    <string name="nfc_payment_section">NFC Payment</string>
+    <string name="nfc_status_not_set_up">Not configured</string>
+    <string name="nfc_setup_button">Set Up NFC Pay</string>
+    <string name="nfc_remove_button">Remove</string>
+
+    <!-- Lost Card -->
+    <string name="lost_card_section_title">Lost Card</string>
+    <string name="lost_card_section_desc">Immediately freeze your card to prevent unauthorized use.</string>
+    <string name="lost_card_report_btn">Report Lost Card</string>
+    <string name="lost_card_already_reported">Card is currently frozen</string>
+
+    <!-- HCE Service -->
+    <string name="hce_service_description">Bangko ng Seton contactless payment</string>
+    <string name="hce_aid_description">Bangko ng Seton payment AID</string>
+
+    <!-- Receipt -->
+    <string name="nfc_receipt_label">NFC Payment</string>
+    <string name="item_qty_format">×%d</string>
+</resources>

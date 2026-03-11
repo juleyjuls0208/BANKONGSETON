@@ -38,11 +38,34 @@ class BankoHceService : HostApduService() {
         
         // Current virtual card token (set by NfcManager when authenticated)
         @Volatile
-        var currentToken: String? = null
-        
+        private var currentToken: String? = null
+
         // Flag to check if payment is authorized (biometric/PIN verified)
         @Volatile
-        var isPaymentAuthorized: Boolean = false
+        private var isPaymentAuthorized: Boolean = false
+
+        fun loadToken(token: String) {
+            currentToken = token
+        }
+
+        fun authorize(token: String) {
+            currentToken = token
+            isPaymentAuthorized = true
+        }
+
+        fun deauthorize() {
+            isPaymentAuthorized = false
+            currentToken = null
+        }
+
+        fun reauthorize() {
+            // Only re-authorize if a token is already loaded (safe guard)
+            if (currentToken != null) {
+                isPaymentAuthorized = true
+            }
+        }
+
+        fun isAuthorized(): Boolean = isPaymentAuthorized
     }
 
     override fun processCommandApdu(commandApdu: ByteArray?, extras: Bundle?): ByteArray {
@@ -74,7 +97,7 @@ class BankoHceService : HostApduService() {
     override fun onDeactivated(reason: Int) {
         Log.d(TAG, "HCE deactivated, reason: $reason")
         // Reset authorization after each tap
-        isPaymentAuthorized = false
+        deauthorize()
     }
     
     private fun isSelectCommand(apdu: ByteArray): Boolean {

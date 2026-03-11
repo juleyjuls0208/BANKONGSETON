@@ -26,7 +26,7 @@ class NfcPayOverlayActivity : AppCompatActivity() {
         val cancelButton = findViewById<MaterialButton>(R.id.cancelButton)
 
         // Authorize payment in BankoHceService
-        BankoHceService.isPaymentAuthorized = true
+        BankoHceService.reauthorize()
 
         startCountdown()
 
@@ -39,7 +39,7 @@ class NfcPayOverlayActivity : AppCompatActivity() {
         super.onResume()
         // Poll: if payment authorization was cleared by HCE deactivation (terminal tap),
         // it means a successful tap occurred — finish with RESULT_OK
-        if (!userCancelled && !BankoHceService.isPaymentAuthorized) {
+        if (!userCancelled && !BankoHceService.isAuthorized()) {
             timer?.cancel()
             setResult(RESULT_OK)
             finish()
@@ -53,7 +53,7 @@ class NfcPayOverlayActivity : AppCompatActivity() {
             }
             override fun onFinish() {
                 // Timer expired without a tap — dismiss overlay
-                BankoHceService.isPaymentAuthorized = false
+                BankoHceService.deauthorize()
                 setResult(RESULT_CANCELED)
                 finish()
             }
@@ -63,7 +63,7 @@ class NfcPayOverlayActivity : AppCompatActivity() {
     private fun cancelPayment() {
         userCancelled = true
         timer?.cancel()
-        BankoHceService.isPaymentAuthorized = false
+        BankoHceService.deauthorize()
         setResult(RESULT_CANCELED)
         finish()
     }

@@ -6,36 +6,19 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Build
-import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
 class FCMService : FirebaseMessagingService() {
     
     override fun onNewToken(token: String) {
         super.onNewToken(token)
-        // Save token so LoginActivity can register it on next login
-        val prefs = getSharedPreferences("bangko_prefs", Context.MODE_PRIVATE)
-        prefs.edit().putString("fcm_token", token).apply()
-
-        // If user is already logged in, register the new token with the backend immediately
-        val authToken = SecureStorage(this).getAuthToken()
-        if (!authToken.isNullOrEmpty()) {
-            CoroutineScope(Dispatchers.IO).launch {
-                try {
-                    ApiClient.apiService.registerFCMToken(
-                        "Bearer $authToken",
-                        FCMTokenRequest(token)
-                    ).execute()
-                } catch (e: Exception) {
-                    Log.w("FCMService", "FCM register failed: ${e.message}")
-                }
-            }
-        }
+        // Save token to register later when user logs in
+        getSharedPreferences("bangko_prefs", Context.MODE_PRIVATE)
+            .edit()
+            .putString("fcm_token", token)
+            .apply()
     }
     
     override fun onMessageReceived(message: RemoteMessage) {

@@ -1,29 +1,25 @@
 package com.bankongseton.student
 
-import android.content.Intent
-import android.graphics.Color
+import android.animation.ObjectAnimator
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.core.view.isVisible
 import androidx.recyclerview.widget.RecyclerView
-import com.google.gson.Gson
+import com.google.android.material.card.MaterialCardView
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 class TransactionsAdapter : RecyclerView.Adapter<TransactionsAdapter.TransactionViewHolder>() {
 
-    private val transactions = mutableListOf<Transaction>()
+    private var transactions = listOf<Transaction>()
 
-    fun setTransactions(newTransactions: List<Transaction>) {
-        transactions.clear()
-        transactions.addAll(newTransactions)
+    fun setTransactions(transactions: List<Transaction>) {
+        this.transactions = transactions
         notifyDataSetChanged()
-    }
-
-    fun appendTransactions(newTransactions: List<Transaction>) {
-        val start = transactions.size
-        transactions.addAll(newTransactions)
-        notifyItemRangeInserted(start, newTransactions.size)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): TransactionViewHolder {
@@ -39,52 +35,95 @@ class TransactionsAdapter : RecyclerView.Adapter<TransactionsAdapter.Transaction
     override fun getItemCount() = transactions.size
 
     class TransactionViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        private val iconChip: MaterialCardView = itemView.findViewById(R.id.iconChip)
+        private val expandIcon: ImageView = itemView.findViewById(R.id.expandIcon)
         private val typeText: TextView = itemView.findViewById(R.id.typeText)
         private val timestampText: TextView = itemView.findViewById(R.id.timestampText)
         private val amountText: TextView = itemView.findViewById(R.id.amountText)
         private val balanceText: TextView = itemView.findViewById(R.id.balanceText)
-        private val typeIcon: ImageView = itemView.findViewById(R.id.expandIcon)
+        private val itemsContainer: LinearLayout = itemView.findViewById(R.id.itemsContainer)
+        private val itemsText: TextView = itemView.findViewById(R.id.itemsText)
+        private val chevronIcon: ImageView = itemView.findViewById(R.id.chevronIcon)
+
+        private var isExpanded = false
 
         fun bind(transaction: Transaction) {
-            itemView.isClickable = true
-            typeText.text = transaction.type
-            timestampText.text = transaction.timestamp
-            amountText.text = "₱%.2f".format(transaction.amount)
-            balanceText.text = "Balance: ₱%.2f".format(transaction.balance)
+            val ctx = itemView.context
+            val isDebit = transaction.type.lowercase() in
+                    listOf("purchase", "debit", "payment", "nfc")
 
-            val isPurchase = transaction.type.equals("Purchase", ignoreCase = true)
-                    || transaction.type.equals("NFC Purchase", ignoreCase = true)
-            val isTopUp = transaction.type.equals("Top-Up", ignoreCase = true)
-                    || transaction.type.equals("TopUp", ignoreCase = true)
+            // Type label
+            typeText.text = formatType(transaction.type)
 
-            // Color-code amount
+            // Timestamp
+            timestampText.text = formatTimestamp(transaction.timestamp)
+
+            // Balance after
+            balanceText.text = "Balance ₱%.2f".format(transaction.balance)
+
+            // Amount — color-coded
+            amountText.text = if (isDebit) "−₱%.2f".format(transaction.amount)
+                              else "+₱%.2f".format(transaction.amount)
             amountText.setTextColor(
-                when {
-                    isPurchase -> Color.parseColor("#F44336")  // red
-                    isTopUp    -> Color.parseColor("#4CAF50")  // green
-                    else       -> itemView.context.getColor(android.R.color.tab_indicator_text)
-                }
+                if (isDebit) ctx.getColor(R.color.md_theme_light_error)
+                else ctx.getColor(R.color.positive_green)
             )
 
-            // Type icon: show for all rows
-            typeIcon.visibility = View.VISIBLE
-            if (isPurchase) {
-                typeIcon.setImageResource(android.R.drawable.arrow_down_float)
-            } else {
-                typeIcon.setImageResource(android.R.drawable.arrow_up_float)
-            }
+            // Icon chip background color
+            val chipBg = if (isDebit)
+                ctx.getColorStateList(R.color.md_theme_light_errorContainer)
+            else
+                ctx.getColorStateList(R.color.positive_green_container)
+            iconChip.setCardBackgroundColor(chipBg)
 
-            // Navigation: Purchase → ReceiptActivity; others → no action
-            if (isPurchase) {
+            val iconTint = if (isDebit)
+                ctx.getColor(R.color.md_theme_light_onErrorContainer)
+            else
+                ctx.getColor(R.color.positive_green)
+            expandIcon.setColorFilter(iconTint)
+
+            // Expandable receipt items
+            val hasItems = !transaction.items.isNullOrEmpty()
+            chevronIcon.isVisible = hasItems
+            itemsContainer.isVisible = false
+            isExpanded = false
+            chevronIcon.rotation = 0f
+
+            if (hasItems) {
+                val itemsStr = transaction.items!!.joinToString("\n") {
+                    "• ${it.name} ×${it.qty}  ₱%.2f".format(it.price * it.qty)
+                }
+                itemsText.text = itemsStr
+
                 itemView.setOnClickListener {
-                    val intent = Intent(itemView.context, ReceiptActivity::class.java)
-                    intent.putExtra("transaction_json", Gson().toJson(transaction))
-                    itemView.context.startActivity(intent)
+                    isExpanded = !isExpanded
+                    itemsContainer.isVisible = isExpanded
+                    ObjectAnimator.ofFloat(
+                        chevronIcon, "rotation",
+                        if (isExpanded) 0f else 180f,
+                        if (isExpanded) 180f else 0f
+                    ).setDuration(200).start()
                 }
             } else {
+                itemsContainer.isVisible = false
                 itemView.setOnClickListener(null)
-                itemView.isClickable = false
             }
+        }
+
+        private fun formatType(type: String): String = when (type.lowercase()) {
+            "purchase" -> "Canteen Purchase"
+            "top_up", "topup", "credit" -> "Top Up"
+            "nfc" -> "NFC Payment"
+            "refund" -> "Refund"
+            else -> type.replaceFirstChar { it.uppercaseChar() }
+        }
+
+        private fun formatTimestamp(raw: String): String {
+            return try {
+                val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US)
+                val date = sdf.parse(raw) ?: return raw
+                SimpleDateFormat("MMM d, h:mm a", Locale.US).format(date)
+            } catch (_: Exception) { raw }
         }
     }
 }

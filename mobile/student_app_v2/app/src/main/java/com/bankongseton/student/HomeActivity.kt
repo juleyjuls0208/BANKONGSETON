@@ -1,52 +1,61 @@
 package com.bankongseton.student
 
-import android.app.AlertDialog
+import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
-import android.view.View
+import android.view.LayoutInflater
 import android.widget.EditText
-import android.widget.ImageButton
-import android.widget.ProgressBar
+import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.lifecycleScope
+import androidx.core.view.isVisible
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.progressindicator.CircularProgressIndicator
-import com.google.android.material.snackbar.Snackbar
-import kotlinx.coroutines.launch
+import com.google.android.material.progressindicator.LinearProgressIndicator
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Locale
 
 class HomeActivity : AppCompatActivity() {
 
     private lateinit var balanceText: TextView
-    private lateinit var balanceCard: MaterialCardView
-    private lateinit var transactionsButton: android.widget.Button
-    private lateinit var settingsButton: android.widget.Button
-    private lateinit var activateNfcPayButton: MaterialButton
+    private lateinit var balanceProgressBar: LinearProgressIndicator
+    private lateinit var tvGreeting: TextView
+    private lateinit var tvStudentName: TextView
+    private lateinit var tvCardHint: TextView
+    private lateinit var transactionsButton: LinearLayout
+    private lateinit var btnSeeAllTransactions: MaterialButton
+    private lateinit var settingsButton: MaterialButton
     private lateinit var swipeRefresh: SwipeRefreshLayout
-    private lateinit var progressBar: ProgressBar
-    private lateinit var balanceProgressBar: ProgressBar
-    private lateinit var refreshButton: ImageButton
+    private lateinit var progressBar: android.widget.ProgressBar
+    private lateinit var activateNfcPayButton: LinearLayout
+    private lateinit var bannerLostCard: MaterialCardView
+    private lateinit var recentTransactionsContainer: LinearLayout
+    private lateinit var emptyRecentState: LinearLayout
     private lateinit var secureStorage: SecureStorage
+    private lateinit var nfcManager: NfcManager
 
-    // Budget UI
+    // Budget views
     private lateinit var budgetCard: MaterialCardView
     private lateinit var budgetProgress: CircularProgressIndicator
     private lateinit var tvBudgetPercent: TextView
     private lateinit var tvBudgetSpend: TextView
     private lateinit var btnSetBudget: MaterialButton
-    private var monthlyLimit: Double? = null
 
-    // Lost card banner
-    private lateinit var bannerLostCard: MaterialCardView
-
-    companion object {
-        const val REQUEST_NFC_PAY = 1001
+    private val nfcPayLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            Toast.makeText(this, "Payment sent — tap terminal", Toast.LENGTH_SHORT).show()
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -54,28 +63,40 @@ class HomeActivity : AppCompatActivity() {
         setContentView(R.layout.activity_home)
 
         secureStorage = SecureStorage(this)
+        nfcManager = NfcManager.getInstance(this)
 
         balanceText = findViewById(R.id.balanceText)
-        balanceCard = findViewById(R.id.balanceCard)
+        balanceProgressBar = findViewById(R.id.balanceProgressBar)
+        tvGreeting = findViewById(R.id.tvGreeting)
+        tvStudentName = findViewById(R.id.tvStudentName)
+        tvCardHint = findViewById(R.id.tvCardHint)
         transactionsButton = findViewById(R.id.transactionsButton)
+        btnSeeAllTransactions = findViewById(R.id.btnSeeAllTransactions)
         settingsButton = findViewById(R.id.settingsButton)
-        activateNfcPayButton = findViewById(R.id.activateNfcPayButton)
         swipeRefresh = findViewById(R.id.swipeRefresh)
         progressBar = findViewById(R.id.progressBar)
-        balanceProgressBar = findViewById(R.id.balanceProgressBar)
-        refreshButton = findViewById(R.id.refreshButton)
+        activateNfcPayButton = findViewById(R.id.activateNfcPayButton)
+        bannerLostCard = findViewById(R.id.bannerLostCard)
+        recentTransactionsContainer = findViewById(R.id.recentTransactionsContainer)
+        emptyRecentState = findViewById(R.id.emptyRecentState)
 
-        // Budget views
         budgetCard = findViewById(R.id.budgetCard)
         budgetProgress = findViewById(R.id.budgetProgress)
         tvBudgetPercent = findViewById(R.id.tvBudgetPercent)
         tvBudgetSpend = findViewById(R.id.tvBudgetSpend)
         btnSetBudget = findViewById(R.id.btnSetBudget)
 
-        // Lost card banner
-        bannerLostCard = findViewById(R.id.bannerLostCard)
+        // Greet by time of day
+        tvGreeting.text = timeGreeting()
+
+        // Show stored name immediately while API loads
+        secureStorage.getStudentId()?.let { tvStudentName.text = it }
 
         transactionsButton.setOnClickListener {
+            startActivity(Intent(this, TransactionsActivity::class.java))
+        }
+
+        btnSeeAllTransactions.setOnClickListener {
             startActivity(Intent(this, TransactionsActivity::class.java))
         }
 
@@ -83,271 +104,309 @@ class HomeActivity : AppCompatActivity() {
             startActivity(Intent(this, SettingsActivity::class.java))
         }
 
-        swipeRefresh.setOnRefreshListener {
-            loadBalance()
+        activateNfcPayButton.setOnClickListener {
+            onNfcPayClicked()
         }
 
-        refreshButton.setOnClickListener { loadBalance() }
+        btnSetBudget.setOnClickListener {
+            showBudgetDialog()
+        }
 
-        btnSetBudget.setOnClickListener { showSetBudgetDialog() }
-
-        activateNfcPayButton.setOnClickListener {
-            val nfcManager = NfcManager.getInstance(this)
-            nfcManager.authenticateForPayment(
-                activity = this,
-                onSuccess = {
-                    startActivityForResult(
-                        Intent(this, NfcPayOverlayActivity::class.java),
-                        REQUEST_NFC_PAY
-                    )
-                },
-                onFailure = { reason ->
-                    if (reason == "NEEDS_PIN") {
-                        showPinDialog(nfcManager)
-                    } else {
-                        Toast.makeText(this, getString(R.string.nfc_pay_auth_failed, reason), Toast.LENGTH_SHORT).show()
-                    }
-                }
-            )
+        swipeRefresh.setOnRefreshListener {
+            loadBalance()
+            loadRecentTransactions()
+            loadBudget()
         }
 
         loadBalance()
-        loadAndDisplayBudget()
+        loadRecentTransactions()
+        loadBudget()
+        updateNfcButtonVisibility()
     }
 
     override fun onResume() {
         super.onResume()
-        refreshNfcButton()
-        // Show lost card banner if card has been reported lost
-        if (secureStorage.isCardLost()) {
-            bannerLostCard.visibility = View.VISIBLE
-        } else {
-            bannerLostCard.visibility = View.GONE
+        updateNfcButtonVisibility()
+        loadBudget()
+    }
+
+    // ── Greeting ──────────────────────────────────────────────────────────────
+
+    private fun timeGreeting(): String {
+        return when (Calendar.getInstance().get(Calendar.HOUR_OF_DAY)) {
+            in 0..11 -> "Good morning"
+            in 12..16 -> "Good afternoon"
+            else -> "Good evening"
         }
     }
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == REQUEST_NFC_PAY && resultCode == RESULT_OK) {
-            Toast.makeText(this, getString(R.string.nfc_pay_payment_successful), Toast.LENGTH_SHORT).show()
-            loadBalance()
-        }
-    }
+    // ── Budget ────────────────────────────────────────────────────────────────
 
-    private fun refreshNfcButton() {
-        val nfcManager = NfcManager.getInstance(this)
-        if (nfcManager.isNfcAvailable() && nfcManager.isDeviceRegistered()) {
-            activateNfcPayButton.visibility = View.VISIBLE
-        } else {
-            activateNfcPayButton.visibility = View.GONE
-        }
-    }
+    private fun loadBudget() {
+        budgetCard.isVisible = true
 
-    private fun showPinDialog(nfcManager: NfcManager) {
-        val pinInput = EditText(this).apply {
-            inputType = android.text.InputType.TYPE_CLASS_NUMBER or
-                    android.text.InputType.TYPE_NUMBER_VARIATION_PASSWORD
-            hint = getString(R.string.nfc_pin_hint)
-        }
-        AlertDialog.Builder(this)
-            .setTitle(getString(R.string.nfc_pay_dialog_title))
-            .setMessage(getString(R.string.nfc_pay_dialog_message))
-            .setView(pinInput)
-            .setPositiveButton(getString(R.string.nfc_pay_confirm_button)) { _, _ ->
-                val pin = pinInput.text.toString()
-                if (nfcManager.verifyPin(pin)) {
-                    startActivityForResult(
-                        Intent(this, NfcPayOverlayActivity::class.java),
-                        REQUEST_NFC_PAY
-                    )
-                } else {
-                    Toast.makeText(this, getString(R.string.nfc_pay_incorrect_pin), Toast.LENGTH_SHORT).show()
-                }
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
-    }
-
-    fun loadBalance() {
-        val token = secureStorage.getAuthToken() ?: return
-
-        balanceProgressBar.visibility = View.VISIBLE
-        balanceText.visibility = View.INVISIBLE  // hide while loading
-
-        ApiClient.apiService.getBalance("Bearer $token").enqueue(object : Callback<Balance> {
-            override fun onResponse(call: Call<Balance>, response: Response<Balance>) {
-                balanceProgressBar.visibility = View.GONE
-                balanceText.visibility = View.VISIBLE
-                progressBar.visibility = View.GONE
-                swipeRefresh.isRefreshing = false
-
-                if (response.isSuccessful) {
-                    response.body()?.let { balance ->
-                        balanceText.text = "₱%.2f".format(balance.balance)
-                        secureStorage.saveLastBalance(balance.balance)
-                    }
-                } else {
-                    val lastBalance = secureStorage.getLastBalance()
-                    if (lastBalance != null) {
-                        balanceText.text = "₱%.2f".format(lastBalance)
-                    }
-                    Snackbar.make(
-                        findViewById(android.R.id.content),
-                        "Couldn't update balance — check your connection",
-                        Snackbar.LENGTH_LONG
-                    ).show()
-                }
-            }
-
-            override fun onFailure(call: Call<Balance>, t: Throwable) {
-                balanceProgressBar.visibility = View.GONE
-                balanceText.visibility = View.VISIBLE
-                progressBar.visibility = View.GONE
-                swipeRefresh.isRefreshing = false
-
-                val lastBalance = secureStorage.getLastBalance()
-                if (lastBalance != null) {
-                    balanceText.text = "₱%.2f".format(lastBalance)
-                }
-                Snackbar.make(
-                    findViewById(android.R.id.content),
-                    "Couldn't update balance — check your connection",
-                    Snackbar.LENGTH_LONG
-                ).show()
-            }
-        })
-    }
-
-    // ── Budget Tracker ─────────────────────────────────────────────────────────
-
-    private fun loadAndDisplayBudget() {
-        val token = secureStorage.getAuthToken() ?: return
-
-        lifecycleScope.launch {
-            try {
-                val budgetResponse = ApiClient.apiService.getBudget("Bearer $token")
-                val summaryResponse = ApiClient.apiService.fetchBudgetSummary("Bearer $token")
-
-                val limit = if (budgetResponse.isSuccessful) budgetResponse.body()?.monthlyLimit else null
-                monthlyLimit = limit
-
-                val spent = if (summaryResponse.isSuccessful) summaryResponse.body()?.spent else null
-                updateBudgetUI(spent)
-            } catch (e: Exception) {
-                monthlyLimit = null
-                updateBudgetUI(null)
-            }
-        }
-    }
-
-    private fun updateBudgetUI(spent: Double?) {
-        val limit = monthlyLimit
-        if (limit == null || limit <= 0.0) {
-            tvBudgetSpend.text = getString(R.string.budget_no_limit)
-            tvBudgetPercent.text = "—"
+        val limit = secureStorage.getBudgetLimit()
+        if (limit < 0f) {
             budgetProgress.progress = 0
-            budgetCard.visibility = View.VISIBLE
+            tvBudgetPercent.text = "0%"
+            tvBudgetSpend.text = getString(R.string.budget_no_limit)
+            btnSetBudget.text = getString(R.string.budget_set_limit)
             return
         }
 
-        val actualSpent = spent ?: 0.0
-        val currentMonth = java.text.SimpleDateFormat("yyyy-MM", java.util.Locale.getDefault())
-            .format(java.util.Date())
+        val token = secureStorage.getAuthToken() ?: return
+        ApiClient.apiService.getTransactions("Bearer $token", 200)
+            .enqueue(object : Callback<TransactionsResponse> {
+                override fun onResponse(
+                    call: Call<TransactionsResponse>,
+                    response: Response<TransactionsResponse>
+                ) {
+                    if (!response.isSuccessful) return
+                    val transactions = response.body()?.transactions ?: return
+                    val spent = calcMonthlySpend(transactions)
+                    updateBudgetUI(spent, limit)
+                }
 
-        val percent = ((actualSpent / limit) * 100).toInt().coerceIn(0, 100)
-
-        tvBudgetPercent.text = "$percent%"
-        tvBudgetSpend.text = getString(R.string.budget_spent_format, actualSpent, limit)
-        budgetProgress.max = 100
-        budgetProgress.progress = percent
-        budgetCard.visibility = View.VISIBLE
-
-        checkBudgetAlerts(percent, currentMonth)
+                override fun onFailure(call: Call<TransactionsResponse>, t: Throwable) {
+                    updateBudgetUI(0.0, limit)
+                }
+            })
     }
 
-    private fun checkBudgetAlerts(percent: Int, currentMonth: String) {
-        val lastAlertMonth = secureStorage.getBudgetAlertMonth()
-        if (lastAlertMonth != currentMonth) {
-            // New month — reset flags
-            secureStorage.setBudgetAlertMonth(currentMonth)
-            secureStorage.setBudgetAlerted80(false)
-            secureStorage.setBudgetAlerted100(false)
-        }
-
-        if (percent >= 100 && !secureStorage.isBudgetAlerted100()) {
-            secureStorage.setBudgetAlerted100(true)
-            Snackbar.make(
-                findViewById(android.R.id.content),
-                getString(R.string.budget_alert_100),
-                Snackbar.LENGTH_LONG
-            ).show()
-        } else if (percent >= 80 && !secureStorage.isBudgetAlerted80()) {
-            secureStorage.setBudgetAlerted80(true)
-            Snackbar.make(
-                findViewById(android.R.id.content),
-                getString(R.string.budget_alert_80),
-                Snackbar.LENGTH_LONG
-            ).show()
-        }
+    private fun calcMonthlySpend(transactions: List<Transaction>): Double {
+        val cal = Calendar.getInstance()
+        val currentMonth = cal.get(Calendar.MONTH)
+        val currentYear = cal.get(Calendar.YEAR)
+        val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US)
+        return transactions
+            .filter { tx ->
+                if (tx.type.lowercase() !in listOf("purchase", "debit", "payment", "nfc")) return@filter false
+                try {
+                    val date = sdf.parse(tx.timestamp) ?: return@filter false
+                    val txCal = Calendar.getInstance().apply { time = date }
+                    txCal.get(Calendar.MONTH) == currentMonth && txCal.get(Calendar.YEAR) == currentYear
+                } catch (_: Exception) { false }
+            }
+            .sumOf { it.amount }
     }
 
-    private fun showSetBudgetDialog() {
+    private fun updateBudgetUI(spent: Double, limit: Float) {
+        val pct = if (limit > 0) ((spent / limit) * 100).coerceIn(0.0, 100.0).toInt() else 0
+        budgetProgress.progress = pct
+        tvBudgetPercent.text = "$pct%"
+        tvBudgetSpend.text = "₱%.2f / ₱%.2f".format(spent, limit)
+        btnSetBudget.text = "Change"
+
+        val color = if (pct >= 90)
+            getColor(com.google.android.material.R.color.design_default_color_error)
+        else
+            getColor(R.color.md_theme_light_primary)
+        budgetProgress.setIndicatorColor(color)
+    }
+
+    private fun showBudgetDialog() {
+        val current = secureStorage.getBudgetLimit()
         val input = EditText(this).apply {
+            hint = "Monthly limit (₱)"
             inputType = android.text.InputType.TYPE_CLASS_NUMBER or
                     android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
-            hint = "e.g. 1000"
-            monthlyLimit?.let { setText("%.2f".format(it)) }
+            if (current > 0f) setText("%.0f".format(current))
         }
-        AlertDialog.Builder(this)
-            .setTitle(getString(R.string.budget_set_limit))
+        val builder = AlertDialog.Builder(this)
+            .setTitle("Set Monthly Budget")
             .setView(input)
             .setPositiveButton("Save") { _, _ ->
-                val value = input.text.toString().toDoubleOrNull()
-                if (value != null && value >= 0) {
-                    saveBudgetLimit(value)
+                val value = input.text.toString().toFloatOrNull()
+                if (value != null && value > 0) {
+                    secureStorage.setBudgetLimit(value)
+                    loadBudget()
                 } else {
                     Toast.makeText(this, "Enter a valid amount", Toast.LENGTH_SHORT).show()
                 }
             }
             .setNegativeButton("Cancel", null)
+        if (current > 0f) {
+            builder.setNeutralButton("Remove") { _, _ ->
+                secureStorage.clearBudgetLimit()
+                loadBudget()
+            }
+        }
+        builder.show()
+    }
+
+    // ── Recent Transactions (home screen preview) ─────────────────────────────
+
+    private fun loadRecentTransactions() {
+        val token = secureStorage.getAuthToken() ?: return
+
+        ApiClient.apiService.getTransactions("Bearer $token", 5)
+            .enqueue(object : Callback<TransactionsResponse> {
+                override fun onResponse(
+                    call: Call<TransactionsResponse>,
+                    response: Response<TransactionsResponse>
+                ) {
+                    swipeRefresh.isRefreshing = false
+                    if (!response.isSuccessful) return
+                    val transactions = response.body()?.transactions ?: emptyList()
+                    renderRecentTransactions(transactions)
+                }
+
+                override fun onFailure(call: Call<TransactionsResponse>, t: Throwable) {
+                    swipeRefresh.isRefreshing = false
+                }
+            })
+    }
+
+    private fun renderRecentTransactions(transactions: List<Transaction>) {
+        recentTransactionsContainer.removeAllViews()
+        if (transactions.isEmpty()) {
+            emptyRecentState.isVisible = true
+            return
+        }
+        emptyRecentState.isVisible = false
+
+        val inflater = LayoutInflater.from(this)
+        transactions.forEach { tx ->
+            val row = inflater.inflate(R.layout.item_transaction, recentTransactionsContainer, false)
+
+            row.findViewById<TextView>(R.id.typeText).text = formatTransactionType(tx.type)
+            row.findViewById<TextView>(R.id.timestampText).text = formatTimestamp(tx.timestamp)
+            row.findViewById<TextView>(R.id.balanceText).text = "Balance ₱%.2f".format(tx.balance)
+
+            val amountView = row.findViewById<TextView>(R.id.amountText)
+            val isDebit = tx.type.lowercase() in listOf("purchase", "debit", "payment", "nfc")
+            amountView.text = if (isDebit) "−₱%.2f".format(tx.amount) else "+₱%.2f".format(tx.amount)
+            amountView.setTextColor(
+                if (isDebit) getColor(R.color.md_theme_light_error)
+                else getColor(R.color.positive_green)
+            )
+
+            recentTransactionsContainer.addView(row)
+        }
+    }
+
+    private fun formatTransactionType(type: String): String = when (type.lowercase()) {
+        "purchase" -> "Canteen Purchase"
+        "top_up", "topup", "credit" -> "Top Up"
+        "nfc" -> "NFC Payment"
+        "refund" -> "Refund"
+        else -> type.replaceFirstChar { it.uppercaseChar() }
+    }
+
+    private fun formatTimestamp(raw: String): String {
+        return try {
+            val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US)
+            val date = sdf.parse(raw) ?: return raw
+            SimpleDateFormat("MMM d, h:mm a", Locale.US).format(date)
+        } catch (_: Exception) { raw }
+    }
+
+    // ── NFC ───────────────────────────────────────────────────────────────────
+
+    private fun updateNfcButtonVisibility() {
+        val show = nfcManager.isNfcAvailable() && nfcManager.isNfcEnabled()
+        activateNfcPayButton.isVisible = show
+    }
+
+    private fun onNfcPayClicked() {
+        if (!nfcManager.isNfcEnabled()) {
+            Toast.makeText(this, "Please enable NFC in device settings", Toast.LENGTH_LONG).show()
+            return
+        }
+        if (!nfcManager.isDeviceRegistered()) {
+            showSetupPinDialog()
+            return
+        }
+        nfcManager.authenticateForPayment(
+            this,
+            onSuccess = {
+                nfcPayLauncher.launch(Intent(this, NfcPayOverlayActivity::class.java))
+            },
+            onFailure = { reason ->
+                if (reason == "NEEDS_PIN") showPinDialog()
+                else Toast.makeText(this, reason, Toast.LENGTH_LONG).show()
+            }
+        )
+    }
+
+    private fun showSetupPinDialog() {
+        val input = EditText(this).apply {
+            hint = "Enter 4–6 digit PIN"
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER or
+                    android.text.InputType.TYPE_NUMBER_VARIATION_PASSWORD
+        }
+        AlertDialog.Builder(this)
+            .setTitle("Set Up NFC Pay")
+            .setMessage("Choose a PIN to secure your NFC payments.")
+            .setView(input)
+            .setPositiveButton("Set Up") { _, _ ->
+                val pin = input.text.toString()
+                val token = secureStorage.getAuthToken() ?: return@setPositiveButton
+                nfcManager.registerDevice(pin, token) { success, message ->
+                    Toast.makeText(this, message, Toast.LENGTH_LONG).show()
+                    if (success) nfcPayLauncher.launch(Intent(this, NfcPayOverlayActivity::class.java))
+                }
+            }
+            .setNegativeButton("Cancel", null)
             .show()
     }
 
-    private fun saveBudgetLimit(limit: Double) {
-        val token = secureStorage.getAuthToken()
-        if (token == null) {
-            Toast.makeText(this, "Session expired, please log in again", Toast.LENGTH_SHORT).show()
-            return
+    private fun showPinDialog() {
+        val input = EditText(this).apply {
+            hint = "Enter PIN"
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER or
+                    android.text.InputType.TYPE_NUMBER_VARIATION_PASSWORD
         }
-        lifecycleScope.launch {
-            try {
-                val response = ApiClient.apiService.setBudget(
-                    "Bearer $token",
-                    SetBudgetRequest(limit)
-                )
-                if (response.isSuccessful) {
-                    monthlyLimit = limit
-                    loadAndDisplayBudget()
+        AlertDialog.Builder(this)
+            .setTitle("NFC Pay — Enter PIN")
+            .setView(input)
+            .setPositiveButton("Pay") { _, _ ->
+                if (nfcManager.verifyPin(input.text.toString())) {
+                    nfcPayLauncher.launch(Intent(this, NfcPayOverlayActivity::class.java))
                 } else {
-                    val errorMsg = try {
-                        val errorJson = response.errorBody()?.string()
-                        if (!errorJson.isNullOrBlank()) {
-                            org.json.JSONObject(errorJson).optString("error", "Failed to save budget")
-                        } else {
-                            "Failed to save budget (${response.code()})"
-                        }
-                    } catch (_: Exception) {
-                        "Failed to save budget (${response.code()})"
-                    }
-                    Toast.makeText(this@HomeActivity, errorMsg, Toast.LENGTH_LONG).show()
+                    Toast.makeText(this, "Incorrect PIN", Toast.LENGTH_SHORT).show()
                 }
-            } catch (e: Exception) {
-                Toast.makeText(
-                    this@HomeActivity,
-                    "Network error: ${e.message ?: "check your connection"}",
-                    Toast.LENGTH_LONG
-                ).show()
             }
-        }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    // ── Balance ───────────────────────────────────────────────────────────────
+
+    private fun loadBalance() {
+        val token = secureStorage.getAuthToken() ?: return
+
+        balanceProgressBar.isVisible = true
+        balanceText.visibility = android.view.View.INVISIBLE
+
+        ApiClient.apiService.getBalance("Bearer $token").enqueue(object : Callback<Balance> {
+            override fun onResponse(call: Call<Balance>, response: Response<Balance>) {
+                balanceProgressBar.isVisible = false
+                swipeRefresh.isRefreshing = false
+
+                if (response.isSuccessful) {
+                    response.body()?.let { balance ->
+                        balanceText.text = "₱%.2f".format(balance.balance)
+                        balanceText.isVisible = true
+                        // Show last 4 of card number
+                        val card = balance.moneyCard
+                        if (card.length >= 4) {
+                            tvCardHint.text = "•••• ${card.takeLast(4)}"
+                        }
+                    }
+                } else {
+                    balanceText.text = "—"
+                    balanceText.isVisible = true
+                }
+            }
+
+            override fun onFailure(call: Call<Balance>, t: Throwable) {
+                balanceProgressBar.isVisible = false
+                balanceText.text = "—"
+                balanceText.isVisible = true
+                swipeRefresh.isRefreshing = false
+                Toast.makeText(this@HomeActivity, "Network error", Toast.LENGTH_SHORT).show()
+            }
+        })
     }
 }
