@@ -36,6 +36,7 @@ try:
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
     from notifications import get_notification_manager, get_sms_notifier
     from fraud_detection import get_fraud_detector, FraudDetector, RiskLevel
     from scheduler import get_scheduler, run_low_balance_batch
@@ -51,6 +52,10 @@ try:
     from notifications import get_notification_manager
     from fraud_detection import get_fraud_detector, FraudDetector, RiskLevel
 >>>>>>> gsd/M001/S01
+=======
+    from notifications import get_notification_manager, get_sms_notifier
+    from fraud_detection import get_fraud_detector, FraudDetector, RiskLevel
+>>>>>>> gsd/M001/S02
     PHASE3_AVAILABLE = True
 except ImportError as e:
     print(f"Warning: Could not import modules: {e}")
@@ -996,6 +1001,9 @@ def load_balance():
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> gsd/M001/S02
 
         # Send SMS notification to parent
         try:
@@ -1011,6 +1019,7 @@ def load_balance():
                     )
         except Exception:
             pass  # SMS failure is non-blocking
+<<<<<<< HEAD
 
         # Send FCM push to student
         try:
@@ -1029,6 +1038,8 @@ def load_balance():
 >>>>>>> gsd/M001/S01
 =======
 >>>>>>> gsd/M001/S01
+=======
+>>>>>>> gsd/M001/S02
         
         return jsonify({
             'success': True,
@@ -1046,8 +1057,64 @@ def load_balance():
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 >>>>>>> gsd/M001/S01
+=======
+
+@app.route('/api/transactions/recent', methods=['GET'])
+@login_required
+def get_recent_transactions():
+    """Get recent transactions"""
+    try:
+        limit = int(request.args.get('limit', 50))
+        transactions_sheet = get_worksheet_with_retry('Transactions Log')
+        transactions = transactions_sheet.get_all_records()
+        
+        # Get users to map StudentID to Name
+        users_sheet = get_worksheet_with_retry('Users')
+        users = users_sheet.get_all_records()
+        
+        # Create mapping with normalized student IDs (strip whitespace, case insensitive)
+        user_map = {}
+        for u in users:
+            sid = str(u.get('StudentID', '')).strip()
+            if sid:
+                user_map[sid.lower()] = {
+                    'name': u.get('Name', 'Unknown'),
+                    'original_id': sid
+                }
+        
+        # Enrich transactions with student names
+        enriched_transactions = []
+        for t in transactions:
+            student_id = str(t.get('StudentID', '')).strip()
+            student_info = user_map.get(student_id.lower(), {'name': 'Unknown', 'original_id': student_id})
+            
+            enriched_transactions.append({
+                'TransactionID': t.get('TransactionID', ''),
+                'Date': t.get('Timestamp', ''),  # Map Timestamp to Date
+                'StudentID': student_info['original_id'],
+                'StudentName': student_info['name'],
+                'Type': t.get('TransactionType', ''),  # Map TransactionType to Type
+                'Amount': t.get('Amount', 0),
+                'BalanceBefore': t.get('BalanceBefore', 0),
+                'BalanceAfter': t.get('BalanceAfter', 0),
+                'Status': t.get('Status', '')
+            })
+        
+        # Sort by date (most recent first)
+        enriched_transactions.sort(key=lambda x: x.get('Date', ''), reverse=True)
+        
+        return jsonify({'transactions': enriched_transactions[:limit]})
+    except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
+            gspread.exceptions.WorksheetNotFound, ConnectionError, TimeoutError) as e:
+        logger.error(f"Google Sheets unavailable in get_recent_transactions: {e}")
+        return jsonify({'error': 'Service unavailable, please try again'}), 503
+    except Exception as e:
+        logger.error(f"Unexpected error in get_recent_transactions: {e}", exc_info=True)
+        return jsonify({'error': 'An unexpected error occurred'}), 500
+>>>>>>> gsd/M001/S02
 
 @app.route('/api/transactions/recent', methods=['GET'])
 @login_required
@@ -1105,6 +1172,7 @@ def get_recent_transactions():
 =======
 >>>>>>> gsd/M001/S01
 
+<<<<<<< HEAD
 @app.route('/api/transactions/recent', methods=['GET'])
 @login_required
 def get_recent_transactions():
@@ -1173,6 +1241,22 @@ def get_transactions_filtered():
         txn_type_filter = request.args.get('txn_type', '').strip().lower()
         limit = int(request.args.get('limit', 200))
 
+=======
+@app.route('/api/transactions/filtered', methods=['GET'])
+@login_required
+def get_transactions_filtered():
+    """
+    GET /api/transactions/filtered
+    Query params: date_from (YYYY-MM-DD), date_to (YYYY-MM-DD), student_id, txn_type, limit
+    """
+    try:
+        date_from = request.args.get('date_from', '').strip()
+        date_to = request.args.get('date_to', '').strip()
+        student_filter = request.args.get('student_id', '').strip().lower()
+        txn_type_filter = request.args.get('txn_type', '').strip().lower()
+        limit = int(request.args.get('limit', 200))
+
+>>>>>>> gsd/M001/S02
         transactions_sheet = get_worksheet_with_retry('Transactions Log')
         raw = transactions_sheet.get_all_records()
 
@@ -1226,6 +1310,7 @@ def get_transactions_filtered():
     except Exception as e:
         logger.error(f"Unexpected error in get_transactions_filtered: {e}", exc_info=True)
         return jsonify({'error': 'An unexpected error occurred'}), 500
+<<<<<<< HEAD
 =======
 >>>>>>> gsd/M001/S01
 
@@ -1281,10 +1366,14 @@ def get_recent_transactions():
     except Exception as e:
         logger.error(f"Unexpected error in get_recent_transactions: {e}", exc_info=True)
         return jsonify({'error': 'An unexpected error occurred'}), 500
+=======
+
+>>>>>>> gsd/M001/S02
 
 # ============= ADMIN-ONLY FEATURES =============
 # Serial Port Management, Card Registration, Lost Card Management
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 =======
 # ============= ADMIN-ONLY FEATURES =============
@@ -1299,6 +1388,8 @@ def get_recent_transactions():
 # Serial Port Management, Card Registration, Lost Card Management
 
 >>>>>>> gsd/M001/S01
+=======
+>>>>>>> gsd/M001/S02
 # Helper functions for Arduino communication
 def send_display(line1, line2=""):
     """Send display command to Arduino"""
@@ -2115,6 +2206,7 @@ def handle_replace_card(uid):
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 
         # Send FCM push to student
         try:
@@ -2134,6 +2226,8 @@ def handle_replace_card(uid):
 >>>>>>> gsd/M001/S01
 =======
 >>>>>>> gsd/M001/S01
+=======
+>>>>>>> gsd/M001/S02
         
         send_success("Replaced!")
         socketio.emit('card_replaced', {
@@ -2186,6 +2280,7 @@ def get_students_with_lost_reports():
         logger.error(f"Unexpected error in get_students_with_lost_reports: {e}", exc_info=True)
         return jsonify({'error': 'An unexpected error occurred'}), 500
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -2535,6 +2630,32 @@ def _ensure_fraud_sheets():
 _fraud_sheets_initialized = False
 
 >>>>>>> gsd/M001/S01
+=======
+# ============= FRAUD DETECTION ROUTES =============
+
+def _ensure_fraud_sheets():
+    """Get or create Fraud Alerts and Suspended Cards worksheets."""
+    db = get_sheets_client()
+    sheet_titles = [ws.title for ws in db.worksheets()]
+
+    if 'Fraud Alerts' not in sheet_titles:
+        fraud_ws = db.add_worksheet(title='Fraud Alerts', rows=1000, cols=10)
+        fraud_ws.append_row(FraudDetector.FRAUD_ALERTS_HEADERS)
+    else:
+        fraud_ws = db.worksheet('Fraud Alerts')
+
+    if 'Suspended Cards' not in sheet_titles:
+        suspended_ws = db.add_worksheet(title='Suspended Cards', rows=200, cols=4)
+        suspended_ws.append_row(FraudDetector.SUSPENDED_CARDS_HEADERS)
+    else:
+        suspended_ws = db.worksheet('Suspended Cards')
+
+    return fraud_ws, suspended_ws
+
+
+_fraud_sheets_initialized = False
+
+>>>>>>> gsd/M001/S02
 def _get_fraud_detector_with_sheets():
     """Get FraudDetector loaded from Sheets (loads once per process)."""
     global _fraud_sheets_initialized
@@ -2580,6 +2701,7 @@ def get_fraud_alerts():
         return jsonify({'alerts': alerts, 'count': len(alerts)})
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
     except (gspread.exceptions.APIError, ConnectionError, TimeoutError) as e:
         logger.error(f"Google Sheets unavailable in get_fraud_alerts: {e}")
@@ -2590,6 +2712,8 @@ def get_fraud_alerts():
         logger.error(f"Google Sheets unavailable in get_fraud_alerts: {e}")
         return jsonify({'error': 'Service unavailable, please try again'}), 503
 >>>>>>> gsd/M001/S01
+=======
+>>>>>>> gsd/M001/S02
     except Exception as e:
         logger.error(f"Unexpected error in get_fraud_alerts: {e}", exc_info=True)
         return jsonify({'error': 'An unexpected error occurred'}), 500
@@ -2618,6 +2742,7 @@ def resolve_fraud_alert(alert_id):
         return jsonify({'success': True})
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
     except (gspread.exceptions.APIError, ConnectionError, TimeoutError) as e:
         logger.error(f"Google Sheets unavailable in resolve_fraud_alert: {e}")
@@ -2628,6 +2753,8 @@ def resolve_fraud_alert(alert_id):
         logger.error(f"Google Sheets unavailable in resolve_fraud_alert: {e}")
         return jsonify({'error': 'Service unavailable, please try again'}), 503
 >>>>>>> gsd/M001/S01
+=======
+>>>>>>> gsd/M001/S02
     except Exception as e:
         logger.error(f"Unexpected error in resolve_fraud_alert: {e}", exc_info=True)
         return jsonify({'error': 'An unexpected error occurred'}), 500
@@ -2695,6 +2822,7 @@ def get_suspended_cards():
         return jsonify({'suspended': result, 'count': len(result)})
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
     except (gspread.exceptions.APIError, ConnectionError, TimeoutError) as e:
         logger.error(f"Google Sheets unavailable in get_suspended_cards: {e}")
@@ -2705,6 +2833,8 @@ def get_suspended_cards():
         logger.error(f"Google Sheets unavailable in get_suspended_cards: {e}")
         return jsonify({'error': 'Service unavailable, please try again'}), 503
 >>>>>>> gsd/M001/S01
+=======
+>>>>>>> gsd/M001/S02
     except Exception as e:
         logger.error(f"Unexpected error in get_suspended_cards: {e}", exc_info=True)
         return jsonify({'error': 'An unexpected error occurred'}), 500
@@ -2719,6 +2849,7 @@ def get_fraud_stats():
         return jsonify(detector.get_stats())
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
     except (gspread.exceptions.APIError, ConnectionError, TimeoutError) as e:
         logger.error(f"Google Sheets unavailable in get_fraud_stats: {e}")
@@ -2729,6 +2860,8 @@ def get_fraud_stats():
         logger.error(f"Google Sheets unavailable in get_fraud_stats: {e}")
         return jsonify({'error': 'Service unavailable, please try again'}), 503
 >>>>>>> gsd/M001/S01
+=======
+>>>>>>> gsd/M001/S02
     except Exception as e:
         logger.error(f"Unexpected error in get_fraud_stats: {e}", exc_info=True)
         return jsonify({'error': 'An unexpected error occurred'}), 500
@@ -2772,6 +2905,7 @@ if __name__ == '__main__':
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 
     # Start daily low-balance batch email scheduler
     if PHASE3_AVAILABLE:
@@ -2804,3 +2938,8 @@ if __name__ == '__main__':
     socketio.run(app, host='0.0.0.0', port=port, debug=debug)
 
 >>>>>>> gsd/M001/S01
+=======
+    
+    socketio.run(app, host='0.0.0.0', port=port, debug=debug)
+
+>>>>>>> gsd/M001/S02

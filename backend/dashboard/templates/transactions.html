@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -160,8 +161,21 @@
         <div class="mt-4 text-center" style="opacity: 0.7;">
             <small>Logged in as: {{ username }}</small>
         </div>
-    </div>
+=======
+{% extends "base.html" %}
 
+{% block title %}Transactions — Bangko ng Seton{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-1"><i class="bi bi-arrow-left-right me-2"></i>Transaction History</h2>
+        <p class="text-muted mb-0">View and filter all student transactions</p>
+>>>>>>> gsd/M001/S02
+    </div>
+</div>
+
+<<<<<<< HEAD
     <!-- Main Content -->
     <div class="main-content">
         <h1 class="mb-4">Transaction History</h1>
@@ -169,6 +183,13 @@
         <!-- Filter Bar -->
         <div class="content-card mb-3">
             <div class="row g-2 align-items-end">
+=======
+<!-- Filter Bar -->
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-body py-2">
+        <form id="filterForm" onsubmit="applyFilters(event)">
+            <div class="row g-2 align-items-end flex-wrap">
+>>>>>>> gsd/M001/S02
                 <div class="col-sm-6 col-md-3">
                     <label class="form-label small fw-semibold mb-1">From Date</label>
                     <input type="date" class="form-control form-control-sm" id="filterDateFrom">
@@ -184,23 +205,36 @@
                 <div class="col-sm-6 col-md-2">
                     <label class="form-label small fw-semibold mb-1">Type</label>
                     <select class="form-select form-select-sm" id="filterType">
+<<<<<<< HEAD
                         <option value="all">All types</option>
+=======
+                        <option value="">All types</option>
+>>>>>>> gsd/M001/S02
                         <option value="purchase">Purchase</option>
                         <option value="load">Load</option>
                         <option value="withdrawal">Withdrawal</option>
                         <option value="void">Void</option>
                     </select>
                 </div>
+<<<<<<< HEAD
                 <div class="col-sm-6 col-md-2 d-flex gap-2">
                     <button class="btn btn-primary btn-sm flex-grow-1" onclick="applyFilters()">
                         <i class="bi bi-search me-1"></i>Filter
                     </button>
                     <button class="btn btn-outline-secondary btn-sm" onclick="clearFilters()" title="Clear filters">
+=======
+                <div class="col-sm-6 col-md-2 d-flex gap-2 align-items-end flex-wrap" style="flex-direction: row;">
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        <i class="bi bi-search me-1"></i>Filter
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="clearFilters()" title="Clear filters">
+>>>>>>> gsd/M001/S02
                         <i class="bi bi-x-lg"></i>
                     </button>
                 </div>
             </div>
             <div class="mt-2 small text-muted" id="filterResultCount"></div>
+<<<<<<< HEAD
         </div>
         
         <div class="content-card">
@@ -226,9 +260,42 @@
                     </tbody>
                 </table>
             </div>
+=======
+        </form>
+    </div>
+</div>
+
+<!-- Transactions Table -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <h5 class="mb-0"><i class="bi bi-receipt me-2"></i>Transactions</h5>
+        <span class="badge bg-secondary" id="transactionCountBadge">Loading...</span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light sticky-top">
+                    <tr>
+                        <th>Date & Time</th>
+                        <th>Student ID</th>
+                        <th>Student Name</th>
+                        <th>Type</th>
+                        <th>Amount</th>
+                        <th>Balance After</th>
+                        <th>Processed By</th>
+                        <th>Details</th>
+                    </tr>
+                </thead>
+                <tbody id="transactionsTable">
+                    <tr><td colspan="8" class="text-center text-muted py-4"><div class="spinner-border spinner-border-sm me-2"></div>Loading transactions...</td></tr>
+                </tbody>
+            </table>
+>>>>>>> gsd/M001/S02
         </div>
     </div>
+</div>
 
+<<<<<<< HEAD
     <!-- Transaction Details Modal -->
     <div class="modal fade" id="transactionDetailsModal" tabindex="-1">
         <div class="modal-dialog">
@@ -258,10 +325,42 @@
                         </tfoot>
                     </table>
                 </div>
+=======
+<!-- Transaction Details Modal -->
+<div class="modal fade" id="transactionDetailsModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-receipt me-2"></i>Transaction Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p><strong>Transaction:</strong> <span id="detailsTimestamp"></span></p>
+                <hr>
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Item</th>
+                            <th class="text-center">Qty</th>
+                            <th class="text-end">Price</th>
+                            <th class="text-end">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody id="detailsItemsBody"></tbody>
+                    <tfoot>
+                        <tr>
+                            <th colspan="3" class="text-end">Total:</th>
+                            <th class="text-end" id="detailsTotal">₱0.00</th>
+                        </tr>
+                    </tfoot>
+                </table>
+>>>>>>> gsd/M001/S02
             </div>
         </div>
     </div>
+</div>
 
+<<<<<<< HEAD
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         function toggleSidebar() {
@@ -443,3 +542,175 @@
     </div>
 </body>
 </html>
+=======
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const RISK_BADGES = {
+    critical: '<span class="badge bg-danger">CRITICAL</span>',
+    high:     '<span class="badge" style="background:#fd7e14">HIGH</span>',
+    medium:   '<span class="badge bg-warning text-dark">MEDIUM</span>',
+    low:      '<span class="badge bg-secondary">LOW</span>',
+};
+
+const FRAUD_TYPE_LABELS = {
+    velocity:            'Velocity',
+    unusual_amount:      'Unusual Amount',
+    unusual_time:        'Unusual Time',
+    location_mismatch:   'Location Mismatch',
+    rapid_spending:      'Rapid Spending',
+    card_cloning:        'Card Cloning',
+    dormant_activation:  'Dormant Activation',
+};
+
+function fmtDate(isoStr) {
+    if (!isoStr) return '—';
+    try { return new Date(isoStr).toLocaleString('en-PH', {dateStyle:'short', timeStyle:'short'}); }
+    catch { return isoStr; }
+}
+
+async function loadTransactions(params = {}) {
+    const tbody = document.getElementById('transactionsTable');
+    const resultCount = document.getElementById('filterResultCount');
+    const badge = document.getElementById('transactionCountBadge');
+    
+    try {
+        const qs = new URLSearchParams({limit: 200, ...params}).toString();
+        const useFiltered = Object.keys(params).some(k => params[k] && k !== 'limit');
+        const url = useFiltered ? '/api/transactions/filtered?' + qs : '/api/transactions/recent?limit=200';
+        
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4"><div class="spinner-border spinner-border-sm me-2"></div>Loading transactions...</td></tr>';
+
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('Failed to load transactions');
+        
+        const data = await response.json();
+        const transactions = data.transactions || [];
+
+        if (resultCount && !useFiltered) {
+            resultCount.textContent = `Showing ${transactions.length} transaction(s)`;
+        }
+        badge.textContent = `${transactions.length}`;
+
+        if (!transactions.length) {
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">No transactions found</td></tr>';
+            return;
+        }
+
+        const rows = transactions.map(t => {
+            // Handle both string and number amounts
+            let amountNum = parseFloat(t.Amount);
+            if (isNaN(amountNum)) amountNum = 0;
+            
+            let balanceAfterNum = parseFloat(t.BalanceAfter);
+            if (isNaN(balanceAfterNum)) balanceAfterNum = 0;
+
+            const date = new Date(t.Date);
+            // Determine badge class based on transaction type string value
+            const typeStr = String(t.Type || '').toLowerCase();
+            let badgeClass = 'bg-warning';
+            if (typeStr === 'load') badgeClass = 'bg-success';
+            else if (typeStr === 'purchase') badgeClass = 'bg-primary';
+            else if (typeStr === 'void') badgeClass = 'bg-danger';
+
+            // Check if transaction has items (ItemsJson)
+            const hasItems = t.ItemsJson && String(t.ItemsJson).trim() !== '' && JSON.parse(String(t.ItemsJson))?.length > 0;
+            
+            return `
+                <tr>
+                    <td>${date.toLocaleString()}</td>
+                    <td>${t.StudentID}</td>
+                    <td>${t.StudentName}</td>
+                    <td><span class="badge ${badgeClass} badge-type">${t.Type || '-'}</span></td>
+                    <td>₱${amountNum.toFixed(2)}</td>
+                    <td>₱${balanceAfterNum.toFixed(2)}</td>
+                    <td>${t.ProcessedBy || '-'}</td>
+                    <td>${hasItems ? `<button class="btn btn-sm btn-info text-white" onclick='showTransactionDetails(${JSON.stringify(t)})'><i class="bi bi-receipt"></i></button>` : '<span class="text-muted">-</span>'}</td>
+                </tr>
+            `;
+        }).join('');
+
+    } catch (error) {
+        console.error('Error loading transactions:', error);
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center text-danger py-4">Failed to load: ${error.message}</td></tr>`;
+        if (resultCount) resultCount.textContent = '';
+    }
+}
+
+function showTransactionDetails(transaction) {
+    try {
+        const itemsJsonStr = String(transaction.ItemsJson || '').trim();
+        
+        let parsedItems = [];
+        if (itemsJsonStr.length > 0) {
+            parsedItems = JSON.parse(itemsJsonStr);
+        } else {
+            alert('No items found');
+            return;
+        }
+
+        const total = parsedItems.reduce((sum, item) => sum + ((item.price || 0) * (item.qty || 1)), 0);
+
+        if (!parsedItems.length) {
+            alert('No valid items data');
+            return;
+        }
+
+        const itemsHtml = parsedItems.map(item => `
+            <tr>
+                <td>${item.name || item.id}</td>
+                <td class="text-center">${item.qty || 1}</td>
+                <td class="text-end">₱${(item.price || 0).toFixed(2)}</td>
+                <td class="text-end fw-bold">₱${((item.price || 0) * (item.qty || 1)).toFixed(2)}</td>
+            </tr>
+        `).join('');
+
+        document.getElementById('detailsTimestamp').textContent = new Date(transaction.Date).toLocaleString() + ' - ' + transaction.StudentName;
+        document.getElementById('detailsItemsBody').innerHTML = itemsHtml;
+        document.getElementById('detailsTotal').textContent = `₱${total.toFixed(2)}`;
+
+        new bootstrap.Modal(document.getElementById('transactionDetailsModal')).show();
+    } catch (error) {
+        alert('Error parsing transaction details: ' + error.message);
+    }
+}
+
+function applyFilters(event) {
+    event.preventDefault();
+    
+    const params = {};
+    const dateFrom = document.getElementById('filterDateFrom').value;
+    const dateTo = document.getElementById('filterDateTo').value;
+    const student = document.getElementById('filterStudent').value.trim();
+    const type = document.getElementById('filterType').value;
+
+    if (dateFrom) params.date_from = dateFrom;
+    if (dateTo) params.date_to = dateTo;
+    if (student) params.student_id = student;
+    if (type && type !== '') params.txn_type = type;
+
+    loadTransactions(params);
+}
+
+function clearFilters() {
+    document.getElementById('filterDateFrom').value = '';
+    document.getElementById('filterDateTo').value = '';
+    document.getElementById('filterStudent').value = '';
+    document.getElementById('filterType').value = '';
+    document.getElementById('filterResultCount').textContent = '';
+    
+    // Reset to load recent transactions (no filters)
+    const tbody = document.getElementById('transactionsTable');
+    tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4"><div class="spinner-border spinner-border-sm me-2"></div>Loading...</td></tr>';
+    
+    setTimeout(() => loadTransactions({}), 100);
+}
+
+// Initial load on page ready
+document.addEventListener('DOMContentLoaded', () => {
+    loadTransactions();
+});
+</script>
+{% endblock %}
+>>>>>>> gsd/M001/S02

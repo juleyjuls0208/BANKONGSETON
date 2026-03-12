@@ -1,0 +1,108 @@
+workflows:
+  ios-student-app:
+    name: BankongSeton Student iOS
+    instance_type: mac_mini_m2
+    max_build_duration: 30
+
+    environment:
+      xcode: 16.4
+      cocoapods: default
+
+    triggering:
+      events:
+        - push
+        - pull_request
+      branch_patterns:
+        - pattern: main
+          include: true
+
+    scripts:
+      - name: Set Xcode version
+        script: xcode-select -p
+
+      - name: Debug clone contents
+        script: |
+          echo "=== Repo root ==="
+          ls -la
+          echo "=== BankongSetonStudent dir ==="
+          ls -la BankongSetonStudent/ || echo "MISSING: BankongSetonStudent/"
+          echo "=== App dir ==="
+          ls -la BankongSetonStudent/App/ || echo "MISSING: BankongSetonStudent/App/"
+          echo "=== Core dir ==="
+          ls -la BankongSetonStudent/Core/ || echo "MISSING: BankongSetonStudent/Core/"
+          echo "=== Models dir ==="
+          ls -la BankongSetonStudent/Models/ || echo "MISSING: BankongSetonStudent/Models/"
+          echo "=== ViewModels dir ==="
+          ls -la BankongSetonStudent/ViewModels/ || echo "MISSING: BankongSetonStudent/ViewModels/"
+          echo "=== Views dir ==="
+          ls -la BankongSetonStudent/Views/ || echo "MISSING: BankongSetonStudent/Views/"
+          echo "=== Assets ==="
+          ls -la BankongSetonStudent/Assets.xcassets/ || echo "MISSING: Assets.xcassets/"
+          echo "=== xcodeproj ==="
+          ls -la BankongSetonStudent/BankongSetonStudent.xcodeproj/ || echo "MISSING: xcodeproj/"
+          echo "=== git status ==="
+          git status
+          echo "=== git log ==="
+          git log --oneline -5
+
+      - name: Force checkout all tracked files
+        script: git checkout HEAD -- .
+
+      - name: Install dependencies (if needed)
+        script: |
+          cd BankongSetonStudent
+          if [ -f "Podfile" ]; then
+            pod install
+          else
+            echo "No Podfile — pure SwiftUI project, skipping CocoaPods"
+          fi
+
+      - name: Build (Simulator — no signing required)
+        script: |
+          xcodebuild build \
+            -project BankongSetonStudent/BankongSetonStudent.xcodeproj \
+            -scheme BankongSetonStudent \
+            -destination "generic/platform=iOS Simulator" \
+            -configuration Debug \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            ENABLE_USER_SCRIPT_SANDBOXING=NO
+
+      - name: Invariant checks
+        script: |
+          echo "--- Checking for Philippine Peso symbol ---"
+          if grep -r "฿" BankongSetonStudent/; then
+            echo "FAIL: Thai Baht symbol found — expected ₱ only"
+            exit 1
+          else
+            echo "PASS: No ฿ found"
+          fi
+
+          echo "--- Checking for deprecated NavigationView ---"
+          if grep -rn "NavigationView" BankongSetonStudent/; then
+            echo "FAIL: deprecated NavigationView found"
+            exit 1
+          else
+            echo "PASS: No NavigationView"
+          fi
+
+          echo "--- Checking MainTabView has no stubs ---"
+          if grep -n "struct BudgetView\|struct SettingsView" BankongSetonStudent/Views/MainTabView.swift; then
+            echo "FAIL: stubs found in MainTabView.swift"
+            exit 1
+          else
+            echo "PASS: No stubs in MainTabView.swift"
+          fi
+
+    artifacts:
+      - BankongSetonStudent/build/**/*.app
+      - /tmp/xcodebuild_logs/*.log
+
+    publishing:
+      email:
+        recipients:
+          - your-email@example.com
+        notify:
+          success: true
+          failure: true

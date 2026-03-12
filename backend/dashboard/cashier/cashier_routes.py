@@ -424,6 +424,7 @@ def complete_sale():
             print(f"Email send error (non-fatal): {e}")
             matched_user = None
 
+<<<<<<< HEAD
         # Send SMS notification to parent
         try:
             if matched_user:
@@ -435,6 +436,42 @@ def complete_sale():
                         f"{i.get('name','?')} x{i.get('qty',1)}" for i in items[:3]
                     )
                     sms = get_sms_notifier()
+=======
+        # Send SMS notification to parent (purchase + low-balance check)
+        try:
+            if matched_user:
+                # Defensive: try ParentPhone first, then PhoneNumber fallback
+                parent_phone = str(matched_user.get('ParentPhone') or matched_user.get('PhoneNumber', '')).strip()
+                
+                items_summary = ', '.join(
+                    f"{i.get('name','?')} x{i.get('qty',1)}" for i in items[:3]
+                )
+                
+                # Check if low balance before sending purchase SMS (for consistency)
+                LOW_BALANCE_THRESHOLD = float(os.getenv("LOW_BALANCE_THRESHOLD", 50))
+                new_balance_under_threshold = matched_user.get('Balance') is not None and float(matched_user.get('Balance', 999)) - total < LOW_BALANCE_THRESHOLD
+                
+                if parent_phone and parent_phone.startswith('+'):
+                    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
+                    from notifications import get_sms_notifier
+                    
+                    sms = get_sms_notifier()
+                    
+                    # Send low-balance SMS first (if applicable)
+                    if new_balance_under_threshold:
+                        student_name = matched_user.get('Name', 'Student')
+                        try:
+                            sms.send_low_balance_sms(
+                                to_number=parent_phone,
+                                student_name=student_name,
+                                balance=new_balance,
+                                threshold=LOW_BALANCE_THRESHOLD,
+                            )
+                        except Exception as low_bal_err:
+                            logger.warning(f"Low balance SMS failed for {matched_user.get('Name', 'Student')}: {low_bal_err}")
+                    
+                    # Then send purchase notification
+>>>>>>> gsd/M001/S02
                     sms.send_purchase_sms(
                         to_number=parent_phone,
                         student_name=matched_user.get('Name', 'Student'),
@@ -444,6 +481,7 @@ def complete_sale():
                     )
         except Exception:
             pass  # SMS failure is non-blocking
+<<<<<<< HEAD
 
         # Send FCM push to student
         try:
@@ -455,6 +493,8 @@ def complete_sale():
                     send_purchase_push(fcm_token, total, new_balance)
         except Exception:
             pass  # FCM failure is non-blocking
+=======
+>>>>>>> gsd/M001/S02
         
         return jsonify({
             'success': True,

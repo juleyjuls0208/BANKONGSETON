@@ -19,6 +19,7 @@ A student should be able to tap their card at the cashier, have the transaction 
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 - Fraud detection engine exists but has no admin UI
 =======
 - Fraud detection engine wired to admin dashboard: alerts panel, card suspend/unsuspend, Sheets persistence (S01 complete)
@@ -29,6 +30,9 @@ A student should be able to tap their card at the cashier, have the transaction 
 =======
 - Fraud detection engine wired to admin dashboard: alerts panel, card suspend/unsuspend, Sheets persistence (S01 complete)
 >>>>>>> gsd/M001/S01
+=======
+- Fraud detection engine exists but has no admin UI
+>>>>>>> gsd/M001/S02
 - JWT auth for mobile API; session auth for admin dashboard
 - Multi-station support via STATION_ID env var
 - 170 passing tests

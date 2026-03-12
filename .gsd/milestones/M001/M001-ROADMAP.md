@@ -65,7 +65,11 @@ This milestone is complete only when all are true:
 - [x] **S01: Fraud Alerts Panel & Card Suspension** `risk:high` `depends:[]`
   > After this: Admin can open the Fraud Alerts page in the dashboard, see all alerts with risk levels, resolve individual alerts, and manually suspend or unsuspend any student's money card.
 
+<<<<<<< HEAD
 - [ ] **S02: SMS Notifications & Transaction Filter** `risk:medium` `depends:[S01]`
+=======
+- [x] **S02: SMS Notifications & Transaction Filter** `risk:medium` `depends:[S01]`
+>>>>>>> gsd/M001/S02
   > After this: Admin can filter transactions by date range, student, and type in the dashboard; parents receive SMS for purchases and low balance when Twilio env vars are set.
 
 - [ ] **S03: Cashier Account Management & Transaction Void** `risk:medium` `depends:[S01]`

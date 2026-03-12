@@ -4,6 +4,7 @@ credentials.json
 token.json
 *.key
 *.pem
+nul
 
 # Config folder credentials
 config/credentials.json
@@ -82,6 +83,10 @@ tmp/
 # ── GSD baseline (auto-generated) ──
 .gsd/activity/
 .gsd/runtime/
+<<<<<<< HEAD
+=======
+.gsd/worktrees/
+>>>>>>> gsd/M001/S02
 .gsd/auto.lock
 .gsd/metrics.json
 .gsd/STATE.md
@@ -95,6 +100,7 @@ target/
 vendor/
 coverage/
 .cache/
+<<<<<<< HEAD
 nul
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -108,3 +114,5 @@ nul
 # ── GSD baseline (auto-generated) ──
 .gsd/worktrees/
 >>>>>>> gsd/M001/S01
+=======
+>>>>>>> gsd/M001/S02
