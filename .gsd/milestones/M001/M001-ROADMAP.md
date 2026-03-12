@@ -63,7 +63,11 @@ This milestone is complete only when all are true:
 ## Slices
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 - [ ] **S01: Fraud Alerts Panel & Card Suspension** `risk:high` `depends:[]`
+=======
+- [x] **S01: Fraud Alerts Panel & Card Suspension** `risk:high` `depends:[]`
+>>>>>>> gsd/M001/S01
 =======
 - [x] **S01: Fraud Alerts Panel & Card Suspension** `risk:high` `depends:[]`
 >>>>>>> gsd/M001/S01

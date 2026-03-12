@@ -7,7 +7,11 @@ This file is the explicit capability and coverage contract for the project.
 ### R001 — Fraud Alerts Admin UI
 - Class: failure-visibility
 <<<<<<< HEAD
+<<<<<<< HEAD
 - Status: active
+=======
+- Status: validated
+>>>>>>> gsd/M001/S01
 =======
 - Status: validated
 >>>>>>> gsd/M001/S01
@@ -17,6 +21,7 @@ This file is the explicit capability and coverage contract for the project.
 - Primary owning slice: M001/S01
 - Supporting slices: none
 <<<<<<< HEAD
+<<<<<<< HEAD
 - Validation: unmapped
 - Notes: FraudDetector is fully implemented in backend/fraud_detection.py but has no API endpoints or admin UI
 
@@ -24,12 +29,17 @@ This file is the explicit capability and coverage contract for the project.
 - Class: admin/support
 - Status: active
 =======
+=======
+>>>>>>> gsd/M001/S01
 - Validation: S01-UAT.md (artifact-driven)
 - Notes: All 6 API endpoints and admin dashboard page verified. Admins can view, filter, and resolve alerts; card suspend/unsuspend available with admin_only guard.
 
 ### R002 — Card Suspension Management
 - Class: admin/support
 - Status: validated
+<<<<<<< HEAD
+>>>>>>> gsd/M001/S01
+=======
 >>>>>>> gsd/M001/S01
 - Description: Admin can manually suspend and unsuspend a money card from the dashboard UI
 - Why it matters: Currently cards can only be auto-suspended by the fraud engine; admin has no manual override
@@ -37,8 +47,13 @@ This file is the explicit capability and coverage contract for the project.
 - Primary owning slice: M001/S01
 - Supporting slices: none
 <<<<<<< HEAD
+<<<<<<< HEAD
 - Validation: unmapped
 - Notes: suspend_card/unsuspend_card methods exist in FraudDetector but no API or UI exposes them
+=======
+- Validation: S01-UAT.md (artifact-driven)
+- Notes: POST /api/fraud/cards/<uid>/suspend and /unsuspend endpoints verified; admin_only decorator confirmed; suspended cards table in fraud_alerts.html verified.
+>>>>>>> gsd/M001/S01
 =======
 - Validation: S01-UAT.md (artifact-driven)
 - Notes: POST /api/fraud/cards/<uid>/suspend and /unsuspend endpoints verified; admin_only decorator confirmed; suspended cards table in fraud_alerts.html verified.
@@ -168,8 +183,11 @@ This file is the explicit capability and coverage contract for the project.
 ## Validated
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 (none yet — this is a new milestone)
 =======
+=======
+>>>>>>> gsd/M001/S01
 ### R001 — Fraud Alerts Admin UI
 - Class: failure-visibility
 - Status: validated
@@ -181,6 +199,9 @@ This file is the explicit capability and coverage contract for the project.
 - Status: validated
 - Validated by: M001/S01 (artifact-driven — route registration, admin_only decorator, template presence)
 - Proof: POST /api/fraud/cards/<uid>/suspend + unsuspend confirmed with admin_only; suspend modal and unsuspend button in template confirmed
+<<<<<<< HEAD
+>>>>>>> gsd/M001/S01
+=======
 >>>>>>> gsd/M001/S01
 
 ## Deferred
@@ -216,8 +237,13 @@ This file is the explicit capability and coverage contract for the project.
 | ID | Class | Status | Primary owner | Supporting | Proof |
 |---|---|---|---|---|---|
 <<<<<<< HEAD
+<<<<<<< HEAD
 | R001 | failure-visibility | active | M001/S01 | none | unmapped |
 | R002 | admin/support | active | M001/S01 | none | unmapped |
+=======
+| R001 | failure-visibility | validated | M001/S01 | none | S01-UAT.md |
+| R002 | admin/support | validated | M001/S01 | none | S01-UAT.md |
+>>>>>>> gsd/M001/S01
 =======
 | R001 | failure-visibility | validated | M001/S01 | none | S01-UAT.md |
 | R002 | admin/support | validated | M001/S01 | none | S01-UAT.md |
@@ -239,9 +265,15 @@ This file is the explicit capability and coverage contract for the project.
 ## Coverage Summary
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 - Active requirements: 13
 - Mapped to slices: 13
 - Validated: 0
+=======
+- Active requirements: 11
+- Mapped to slices: 13
+- Validated: 2
+>>>>>>> gsd/M001/S01
 =======
 - Active requirements: 11
 - Mapped to slices: 13

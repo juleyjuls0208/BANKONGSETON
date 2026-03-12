@@ -1,6 +1,7 @@
 ---
 id: S01
 <<<<<<< HEAD
+<<<<<<< HEAD
 milestone: M001
 provides:
   - FraudDetector Sheets persistence (load_from_sheets, save_alert_to_sheet, update_alert_in_sheet, save_suspended_card_to_sheet, remove_suspended_card_from_sheet)
@@ -10,6 +11,8 @@ provides:
   - base.html updated with Fraud Alerts nav item + unresolved badge (JS-driven from /api/fraud/stats)
   - "Fraud Alerts" and "Suspended Cards" Google Sheets worksheets auto-created on first use
 =======
+=======
+>>>>>>> gsd/M001/S01
 parent: M001
 milestone: M001
 provides:
@@ -31,6 +34,9 @@ affects:
   - S04
   - S05
   - S06
+<<<<<<< HEAD
+>>>>>>> gsd/M001/S01
+=======
 >>>>>>> gsd/M001/S01
 key_files:
   - backend/fraud_detection.py
@@ -38,6 +44,7 @@ key_files:
   - backend/dashboard/templates/fraud_alerts.html
   - backend/dashboard/templates/base.html
 key_decisions:
+<<<<<<< HEAD
 <<<<<<< HEAD
   - D001: Fraud alerts persisted to Google Sheets "Fraud Alerts" worksheet (consistent with all other data storage)
   - D002: Suspended cards persisted to Google Sheets "Suspended Cards" worksheet
@@ -52,6 +59,8 @@ duration: 1 session
 verification_result: pass
 completed_at: 2026-03-11T22:45:00+08:00
 =======
+=======
+>>>>>>> gsd/M001/S01
   - Sheets init is lazy to avoid blocking app boot when Sheets is unavailable
   - Fraud Alerts sheet columns: AlertID, MoneyCard, FraudType, RiskLevel, Description, CreatedAt, Resolved, ResolvedAt, ResolutionNotes, AutoAction
   - Suspended Cards sheet columns: MoneyCard, Reason, SuspendedAt, AutoSuspended
@@ -72,11 +81,15 @@ drill_down_paths:
 duration: 2 sessions (T01 + T02 implemented together in commit 6e0721d)
 verification_result: passed
 completed_at: 2026-03-11
+<<<<<<< HEAD
+>>>>>>> gsd/M001/S01
+=======
 >>>>>>> gsd/M001/S01
 ---
 
 # S01: Fraud Alerts Panel & Card Suspension
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 **Wired FraudDetector to Google Sheets persistence and admin dashboard UI — admin can now see, resolve, and act on fraud alerts.**
 
@@ -95,6 +108,8 @@ Added Sheets persistence methods to FraudDetector so alerts and suspended cards 
 - `backend/dashboard/templates/fraud_alerts.html` — new page (352 lines)
 - `backend/dashboard/templates/base.html` — Fraud Alerts nav item + badge JS
 =======
+=======
+>>>>>>> gsd/M001/S01
 **Wired FraudDetector to Google Sheets persistence and exposed six /api/fraud/* endpoints and a full admin dashboard page — admins can now see live fraud alerts with risk badges, resolve them with notes, and manually suspend or unsuspend any student card.**
 
 ## What Happened
@@ -170,4 +185,7 @@ load_from_sheets() consolidated two separate methods from the plan into one call
 
 ### What assumptions changed
 - T01 and T02 were both implemented in a single commit before this session, so S01 completion was a verification and artifact-writing exercise.
+<<<<<<< HEAD
+>>>>>>> gsd/M001/S01
+=======
 >>>>>>> gsd/M001/S01
