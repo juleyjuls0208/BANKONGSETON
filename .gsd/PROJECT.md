@@ -18,7 +18,11 @@ A student should be able to tap their card at the cashier, have the transaction 
 - FCM push notifications (low balance only wired end-to-end)
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 - Fraud detection engine exists but has no admin UI
+=======
+- Fraud detection engine wired to admin dashboard: alerts panel, card suspend/unsuspend, Sheets persistence (S01 complete)
+>>>>>>> gsd/M001/S01
 =======
 - Fraud detection engine wired to admin dashboard: alerts panel, card suspend/unsuspend, Sheets persistence (S01 complete)
 >>>>>>> gsd/M001/S01

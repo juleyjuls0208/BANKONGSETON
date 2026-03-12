@@ -16,7 +16,10 @@
 | D008 | M001 | pattern | Lost card FCM message type | New FCM data message type "card_replaced" handled in FCMService | Decoupled from notification; app can update state on receive | No |
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
+=======
+>>>>>>> gsd/M001/S01
 =======
 >>>>>>> gsd/M001/S01
 | D009 | M001/S01 | pattern | Fraud Sheets lazy init | _get_fraud_detector_with_sheets() called on first API request, not at app startup | Avoids blocking app boot when Sheets is unavailable; acceptable latency tradeoff on first fraud-page load | Yes — if strict cold-start time SLA required |
@@ -24,6 +27,9 @@
 | D011 | M001/S01 | security | resolve_fraud_alert authorization | @login_required only (finance role can resolve); suspend/unsuspend require @admin_only | Finance staff handle day-to-day alert triage; only admins should lock/unlock cards | Yes — if tighter access control needed |
 | D012 | M001/S01 | pattern | load_from_sheets consolidation | load_from_sheets(fraud_ws, suspended_ws) loads both worksheets in one call instead of two separate methods | Reduces Sheets round-trips; both datasets are always needed together on init | No |
 <<<<<<< HEAD
+<<<<<<< HEAD
+>>>>>>> gsd/M001/S01
+=======
 >>>>>>> gsd/M001/S01
 =======
 >>>>>>> gsd/M001/S01

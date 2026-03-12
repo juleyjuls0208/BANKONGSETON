@@ -97,6 +97,12 @@ coverage/
 .cache/
 nul
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+
+# ── GSD baseline (auto-generated) ──
+.gsd/worktrees/
+>>>>>>> gsd/M001/S01
 =======
 
 # ── GSD baseline (auto-generated) ──

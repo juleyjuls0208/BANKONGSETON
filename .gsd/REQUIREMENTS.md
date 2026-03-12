@@ -8,7 +8,11 @@ This file is the explicit capability and coverage contract for the project.
 - Class: failure-visibility
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 - Status: active
+=======
+- Status: validated
+>>>>>>> gsd/M001/S01
 =======
 - Status: validated
 >>>>>>> gsd/M001/S01
@@ -22,6 +26,7 @@ This file is the explicit capability and coverage contract for the project.
 - Supporting slices: none
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 - Validation: unmapped
 - Notes: FraudDetector is fully implemented in backend/fraud_detection.py but has no API endpoints or admin UI
 
@@ -31,6 +36,8 @@ This file is the explicit capability and coverage contract for the project.
 =======
 =======
 >>>>>>> gsd/M001/S01
+=======
+>>>>>>> gsd/M001/S01
 - Validation: S01-UAT.md (artifact-driven)
 - Notes: All 6 API endpoints and admin dashboard page verified. Admins can view, filter, and resolve alerts; card suspend/unsuspend available with admin_only guard.
 
@@ -38,6 +45,9 @@ This file is the explicit capability and coverage contract for the project.
 - Class: admin/support
 - Status: validated
 <<<<<<< HEAD
+<<<<<<< HEAD
+>>>>>>> gsd/M001/S01
+=======
 >>>>>>> gsd/M001/S01
 =======
 >>>>>>> gsd/M001/S01
@@ -48,8 +58,13 @@ This file is the explicit capability and coverage contract for the project.
 - Supporting slices: none
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 - Validation: unmapped
 - Notes: suspend_card/unsuspend_card methods exist in FraudDetector but no API or UI exposes them
+=======
+- Validation: S01-UAT.md (artifact-driven)
+- Notes: POST /api/fraud/cards/<uid>/suspend and /unsuspend endpoints verified; admin_only decorator confirmed; suspended cards table in fraud_alerts.html verified.
+>>>>>>> gsd/M001/S01
 =======
 - Validation: S01-UAT.md (artifact-driven)
 - Notes: POST /api/fraud/cards/<uid>/suspend and /unsuspend endpoints verified; admin_only decorator confirmed; suspended cards table in fraud_alerts.html verified.
@@ -184,8 +199,11 @@ This file is the explicit capability and coverage contract for the project.
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 (none yet — this is a new milestone)
 =======
+=======
+>>>>>>> gsd/M001/S01
 =======
 >>>>>>> gsd/M001/S01
 ### R001 — Fraud Alerts Admin UI
@@ -200,6 +218,9 @@ This file is the explicit capability and coverage contract for the project.
 - Validated by: M001/S01 (artifact-driven — route registration, admin_only decorator, template presence)
 - Proof: POST /api/fraud/cards/<uid>/suspend + unsuspend confirmed with admin_only; suspend modal and unsuspend button in template confirmed
 <<<<<<< HEAD
+<<<<<<< HEAD
+>>>>>>> gsd/M001/S01
+=======
 >>>>>>> gsd/M001/S01
 =======
 >>>>>>> gsd/M001/S01
@@ -238,8 +259,13 @@ This file is the explicit capability and coverage contract for the project.
 |---|---|---|---|---|---|
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 | R001 | failure-visibility | active | M001/S01 | none | unmapped |
 | R002 | admin/support | active | M001/S01 | none | unmapped |
+=======
+| R001 | failure-visibility | validated | M001/S01 | none | S01-UAT.md |
+| R002 | admin/support | validated | M001/S01 | none | S01-UAT.md |
+>>>>>>> gsd/M001/S01
 =======
 | R001 | failure-visibility | validated | M001/S01 | none | S01-UAT.md |
 | R002 | admin/support | validated | M001/S01 | none | S01-UAT.md |
@@ -266,9 +292,15 @@ This file is the explicit capability and coverage contract for the project.
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 - Active requirements: 13
 - Mapped to slices: 13
 - Validated: 0
+=======
+- Active requirements: 11
+- Mapped to slices: 13
+- Validated: 2
+>>>>>>> gsd/M001/S01
 =======
 - Active requirements: 11
 - Mapped to slices: 13
