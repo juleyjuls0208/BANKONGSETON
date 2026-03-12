@@ -1,9 +1,9 @@
 # GSD State
 
 **Active Milestone:** M001 — Operational Hardening & Feature Completion
-**Active Slice:** S02 — SMS Notifications & Transaction Filter
+**Active Slice:** S03 — Cashier Account Management & Transaction Void
 **Phase:** planning
-**Requirements Status:** 13 active · 2 validated · 0 deferred · 2 out of scope
+**Requirements Status:** 14 active · 2 validated · 0 deferred · 2 out of scope
 
 ## Milestone Registry
 - 🔄 **M001:** Operational Hardening & Feature Completion
@@ -15,4 +15,4 @@
 - None
 
 ## Next Action
-Plan slice S02 (SMS Notifications & Transaction Filter).
+Plan slice S03 (Cashier Account Management & Transaction Void).
