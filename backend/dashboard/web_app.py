@@ -78,6 +78,21 @@ if not FINANCE_PASSWORD or FINANCE_PASSWORD == _INSECURE_FINANCE_DEFAULT:
     )
     sys.exit(1)
 
+# --- WEB_CONCURRENCY guard (R016 / FraudDetector Worker Safety) ---
+def _parse_worker_count(env_var: str) -> int:
+    try:
+        return int(os.environ.get(env_var, "1") or "1")
+    except (ValueError, TypeError):
+        return 1
+
+if _parse_worker_count("WEB_CONCURRENCY") > 1 or _parse_worker_count("GUNICORN_WORKERS") > 1:
+    logger.critical(
+        "event=startup_aborted reason=multi_worker_forbidden "
+        "message=\"FraudDetector requires single-worker mode. "
+        "Set WEB_CONCURRENCY=1 in your gunicorn config.\""
+    )
+    sys.exit(1)
+
 # Arduino WiFi API key — loaded once at module level
 # Empty string means endpoint is disabled (returns 401 for any request)
 ARDUINO_API_KEY = os.environ.get("ARDUINO_API_KEY", "")

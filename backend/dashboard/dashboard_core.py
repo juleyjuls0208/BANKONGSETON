@@ -2950,12 +2950,36 @@ def register_routes(app, socketio):
 
     @app.route("/api/health", methods=["GET"])
     def health_check():
-        """Health check endpoint"""
+        """Health check endpoint — standardized contract (S03/R018)"""
+        import time as _time
+        t0 = _time.time()
+        sheets_ok = False
+        latency_ms = 0
         try:
-            status = get_health_status()
-            return jsonify(status)
-        except Exception as e:
-            return jsonify({"status": "error", "error": str(e)}), 500
+            if db is None:
+                sheets_ok = False
+                latency_ms = 0
+            else:
+                db.worksheets()
+                latency_ms = int((_time.time() - t0) * 1000)
+                sheets_ok = True
+        except Exception:
+            latency_ms = int((_time.time() - t0) * 1000)
+            sheets_ok = False
+
+        try:
+            pending = get_queue_status().get("pending", 0)
+        except Exception:
+            pending = 0
+
+        payload = {
+            "status": "ok" if sheets_ok else "degraded",
+            "sheets_ok": sheets_ok,
+            "latency_ms": latency_ms,
+            "queue_pending": pending,
+            "timestamp": datetime.now(PHILIPPINES_TZ).isoformat(),
+        }
+        return jsonify(payload), (200 if sheets_ok else 503)
 
     @app.route("/api/status", methods=["GET"])
     @login_required

@@ -38,6 +38,12 @@ except ImportError as _cache_import_err:
     def invalidate_cached(key): pass  # noqa: E704
     def invalidate_pattern(pat): pass  # noqa: E704
 
+try:
+    from offline_queue import get_offline_queue as _get_offline_queue
+    _OFFLINE_QUEUE_AVAILABLE = True
+except ImportError:
+    _OFFLINE_QUEUE_AVAILABLE = False
+
 nfc_service = NFCService() if NFCService else None
 sms_notifier = TwilioSMSNotifier() if TwilioSMSNotifier else None
 
@@ -191,12 +197,34 @@ def validate_card_uid(uid):
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
-    """API health check"""
-    return jsonify({
-        'status': 'ok',
-        'service': 'Bangko ng Seton API',
-        'version': '1.0.0'
-    })
+    """Health check endpoint — standardized contract (S03/R018)"""
+    t0 = time.time()
+    sheets_ok = False
+    latency_ms = 0
+    try:
+        probe_client = get_sheets_client()
+        probe_client.worksheets()
+        latency_ms = int((time.time() - t0) * 1000)
+        sheets_ok = True
+    except Exception:
+        latency_ms = int((time.time() - t0) * 1000)
+        sheets_ok = False
+
+    queue_pending = 0
+    if _OFFLINE_QUEUE_AVAILABLE:
+        try:
+            queue_pending = _get_offline_queue().get_status().get('pending', 0)
+        except Exception:
+            pass
+
+    payload = {
+        'status': 'ok' if sheets_ok else 'degraded',
+        'sheets_ok': sheets_ok,
+        'latency_ms': latency_ms,
+        'queue_pending': queue_pending,
+        'timestamp': datetime.now(PHILIPPINES_TZ).isoformat(),
+    }
+    return jsonify(payload), (200 if sheets_ok else 503)
 
 @app.route('/api/auth/login', methods=['POST'])
 def login():

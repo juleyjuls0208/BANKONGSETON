@@ -65,6 +65,18 @@ if not _secret_key or _secret_key == _INSECURE_DEFAULT:
     print("Generate one with: python -c \"import secrets; print(secrets.token_urlsafe(32))\"")
     sys.exit(1)
 
+# --- WEB_CONCURRENCY guard (R016 / FraudDetector Worker Safety) ---
+def _parse_worker_count(env_var: str) -> int:
+    try:
+        return int(os.environ.get(env_var, "1") or "1")
+    except (ValueError, TypeError):
+        return 1
+
+if _parse_worker_count("WEB_CONCURRENCY") > 1 or _parse_worker_count("GUNICORN_WORKERS") > 1:
+    print("FATAL: FraudDetector requires single-worker mode.")
+    print("Set WEB_CONCURRENCY=1 in your gunicorn config.")
+    sys.exit(1)
+
 # Timezone configuration
 PHILIPPINES_TZ = pytz.timezone('Asia/Manila')
 
@@ -438,17 +450,36 @@ def transactions_page():
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
-    """Health check endpoint - no auth required"""
+    """Health check endpoint — standardized contract (S03/R018)"""
+    import time as _time
+    t0 = _time.time()
+    sheets_ok = False
+    latency_ms = 0
     try:
-        health_status = get_health_status()
-        return jsonify(health_status), 200
-    except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
-            gspread.exceptions.WorksheetNotFound, ConnectionError, TimeoutError) as e:
-        logger.error(f"Google Sheets unavailable in health_check: {e}")
-        return jsonify({'status': 'error', 'message': 'Service unavailable, please try again'}), 503
-    except Exception as e:
-        logger.error(f"Unexpected error in health_check: {e}", exc_info=True)
-        return jsonify({'status': 'error', 'message': 'An unexpected error occurred'}), 500
+        if db is None:
+            sheets_ok = False
+            latency_ms = 0
+        else:
+            db.worksheets()
+            latency_ms = int((_time.time() - t0) * 1000)
+            sheets_ok = True
+    except Exception:
+        latency_ms = int((_time.time() - t0) * 1000)
+        sheets_ok = False
+
+    try:
+        pending = get_queue_status().get("pending", 0)
+    except Exception:
+        pending = 0
+
+    payload = {
+        'status': 'ok' if sheets_ok else 'degraded',
+        'sheets_ok': sheets_ok,
+        'latency_ms': latency_ms,
+        'queue_pending': pending,
+        'timestamp': datetime.now(PHILIPPINES_TZ).isoformat(),
+    }
+    return jsonify(payload), (200 if sheets_ok else 503)
 
 @app.route('/api/uptime', methods=['GET'])
 @login_required

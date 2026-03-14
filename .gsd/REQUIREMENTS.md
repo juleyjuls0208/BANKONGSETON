@@ -28,13 +28,13 @@ This file is the explicit capability and coverage contract for the project.
 
 ### R016 — FraudDetector Worker Safety
 - Class: failure-visibility
-- Status: active
+- Status: validated
 - Description: Admin server refuses to start if gunicorn workers > 1 with a clear human-readable error explaining the single-worker constraint
 - Why it matters: _fraud_sheets_initialized is a module-level bool — each gunicorn worker gets its own copy, producing split-brain alert state silently
 - Source: execution
 - Primary owning slice: M002/S03
 - Supporting slices: none
-- Validation: unmapped
+- Validation: WEB_CONCURRENCY guard at module level in web_app.py and admin_dashboard.py; both WEB_CONCURRENCY and GUNICORN_WORKERS checked; _parse_worker_count helper defaults to 1 on empty/invalid; guard message present in both files; sys.exit(1) confirmed; verify-s03.sh checks 5–8 pass
 - Notes: Hard-fail approach chosen over multi-worker refactor; single-worker is acceptable for current PythonAnywhere deployment scale
 
 ### R017 — Critical Path Unit Tests
@@ -50,14 +50,14 @@ This file is the explicit capability and coverage contract for the project.
 
 ### R018 — Health Check Standardization
 - Class: failure-visibility
-- Status: active
+- Status: validated
 - Description: Both app health endpoints return structured JSON with sheets_ok, latency_ms, and queue_pending fields; both return 503 when Sheets is unreachable
 - Why it matters: api_server.py health check returns {"status": "ok"} unconditionally — hardcoded, no real check; admin_dashboard.py has a rich HealthMonitor but currently returns 200 even when Sheets is down
 - Source: execution
 - Primary owning slice: M002/S03
 - Supporting slices: none
-- Validation: unmapped
-- Notes: admin_dashboard.py already has HealthMonitor class in health.py — api_server needs to adopt the same pattern
+- Validation: All three health handlers (dashboard_core.py, admin_dashboard.py, api_server.py) return {status, sheets_ok, latency_ms, queue_pending, timestamp}; 503 on Sheets failure confirmed in dashboard_core.py and api_server.py; verify-s03.sh checks 9–18 pass; all four files compile cleanly
+- Notes: api_server.py health uses fresh get_sheets_client() per request (not stale module-level db); latency_ms=0 is a sentinel for client-not-initialized
 
 ### R019 — Deployment Runbook
 - Class: operability
@@ -258,16 +258,16 @@ This file is the explicit capability and coverage contract for the project.
 | R013 | integration | validated | M001/S06 | none | validated |
 | R014 | operability | validated | M002/S01 | none | pip --dry-run exit 0 on both files |
 | R015 | quality-attribute | validated | M002/S02 | none | bash scripts/verify-s02.sh 32/32; python -m py_compile exit 0 |
-| R016 | failure-visibility | active | M002/S03 | none | unmapped |
+| R016 | failure-visibility | validated | M002/S03 | none | WEB_CONCURRENCY guard at module level; verify-s03.sh checks 5–8 pass |
 | R017 | quality-attribute | active | M002/S04 | none | unmapped |
-| R018 | failure-visibility | active | M002/S03 | none | unmapped |
+| R018 | failure-visibility | validated | M002/S03 | none | All three health handlers return structured JSON + 503; verify-s03.sh checks 9–18 pass |
 | R019 | operability | active | M002/S05 | none | unmapped |
 | R050 | integration | out-of-scope | none | none | n/a |
 | R051 | core-capability | out-of-scope | none | none | n/a |
 
 ## Coverage Summary
 
-- Active requirements: 4
-- Mapped to slices: 4
-- Validated: 15
+- Active requirements: 2
+- Mapped to slices: 2
+- Validated: 17
 - Unmapped active requirements: 0

@@ -61,7 +61,7 @@ This milestone is complete only when all are true:
 - [x] **S02: Cache Layer Wiring** `risk:medium` `depends:[S01]`
   > After this: Hot endpoints serve from cache; mutations invalidate correctly; `GET /api/cache/stats` shows hits during a simulated lunch-rush sequence.
 
-- [ ] **S03: FraudDetector Constraint & Health Standardization** `risk:low` `depends:[S01]`
+- [x] **S03: FraudDetector Constraint & Health Standardization** `risk:low` `depends:[S01]`
   > After this: Admin server refuses to start with `WEB_CONCURRENCY=2`; both `/api/health` endpoints return structured JSON with real Sheets connectivity status and return 503 when Sheets is unreachable.
 
 - [ ] **S04: Critical Path Unit Tests** `risk:medium` `depends:[S01]`

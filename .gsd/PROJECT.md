@@ -47,4 +47,4 @@ See `.gsd/REQUIREMENTS.md` for the explicit capability contract, requirement sta
 ## Milestone Sequence
 
 - [x] M001: Operational Hardening & Feature Completion — All 13 gaps closed. See `.gsd/milestones/M001/M001-SUMMARY.md`.
-- [ ] M002: Production Readiness & Deployment Stability — S01 + S02 complete (requirements fixed; cache layer wired). S03–S05 pending. See `.gsd/milestones/M002/M002-ROADMAP.md`.
+- [ ] M002: Production Readiness & Deployment Stability — S01 + S02 + S03 complete (requirements fixed; cache layer wired; startup guard + health standardization done). S04–S05 pending. See `.gsd/milestones/M002/M002-ROADMAP.md`.
