@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # S01: Fraud Alerts Panel & Card Suspension -- UAT
 
 **Milestone:** M001
@@ -119,32 +118,3 @@ Navigate to /fraud-alerts logged in as admin. Page loads with stats row, filter 
 - To generate test alerts quickly, call FraudDetector.analyze_transaction() in a Python REPL and verify via GET /api/fraud/alerts.
 - Sidebar badge updates on page load only (not live-polled). Refresh the page to see the latest count.
 - resolve_fraud_alert is accessible to finance-role users (not just admin) -- deliberate design choice.
-=======
-# S01: Recovery placeholder UAT
-
-**Milestone:** M001
-**Written:** 2026-03-12T11:00:13.925Z
-
-## Preconditions
-- Doctor created this placeholder because the expected UAT file was missing.
-
-## Smoke Test
-- Re-run the slice verification from the slice plan before shipping.
-
-## Test Cases
-### 1. Replace this placeholder
-1. Read the slice plan and task summaries.
-2. Write a real UAT script.
-3. **Expected:** This placeholder is replaced with meaningful human checks.
-
-## Edge Cases
-### Missing completion artifacts
-1. Confirm the summary, roadmap checkbox, and state file are coherent.
-2. **Expected:** GSD doctor reports no remaining completion drift for this slice.
-
-## Failure Signals
-- Placeholder content still present when treating the slice as done
-
-## Notes for Tester
-Doctor created this file only to restore the required artifact shape. Replace it with a real UAT script.
->>>>>>> gsd/M001/S02

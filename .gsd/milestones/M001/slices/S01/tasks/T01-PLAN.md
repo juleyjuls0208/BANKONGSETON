@@ -40,6 +40,27 @@ Add Google Sheets persistence to FraudDetector (load/save alerts to "Fraud Alert
 10. Add `GET /api/fraud/stats` route
 11. Protect all routes with @login_required; suspend/unsuspend also @admin_only
 
+## Observability Impact
+
+### Signals Changed by This Task
+- **event=fraud_alerts_loaded count=N** (INFO) — emitted by `load_from_sheets()` on first API request; confirms Sheets bootstrap succeeded.
+- **event=suspended_cards_loaded count=N** (INFO) — same bootstrap call, suspended card side.
+- **event=fraud_alerts_load_failed error=...** (WARNING) — sheet unreadable at startup; FraudDetector starts empty.
+- **event=fraud_alert_save_failed** / **event=fraud_alert_update_failed** (WARNING) — write-back failed after in-memory op succeeded.
+- **event=suspended_save_failed** / **event=suspended_remove_failed** (WARNING) — suspended card sheet write failed.
+- Route ERROR logs with `exc_info=True` — full tracebacks on unexpected exceptions in any /api/fraud/* route.
+
+### How a Future Agent Inspects This Task
+- `grep "event=fraud" <log-file>` — shows all sheet-level events for this subsystem.
+- `GET /api/fraud/stats` — live health check: confirms detector is alive, returns current counts.
+- `GET /api/fraud/alerts` / `GET /api/fraud/suspended` — enumerate in-memory state.
+- `_fraud_sheets_initialized` flag (module-level in admin_dashboard.py) — inspect to know if sheet bootstrap has run.
+
+### Failure State Visibility
+- If Sheets is unreachable: all six routes return HTTP 503 with `{"error": "Service temporarily unavailable"}`.
+- If sheet load fails at startup: detector starts empty (no crash); WARNING logged; `_fraud_sheets_initialized` remains False so next request retries.
+- In-memory FraudDetector is always the source of truth — sheet write failures are non-fatal by design (D010).
+
 ## Context
 - FraudDetector instance: use get_fraud_detector() from fraud_detection.py — it's a module-level singleton
 - Fraud Alerts sheet columns: AlertID, MoneyCard, FraudType, RiskLevel, Description, CreatedAt, Resolved, ResolvedAt, ResolutionNotes, AutoAction

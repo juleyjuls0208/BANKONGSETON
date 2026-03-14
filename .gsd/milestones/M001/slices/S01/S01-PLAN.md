@@ -24,6 +24,40 @@
 - [x] **T02: Fraud Alerts admin dashboard page**
   Add fraud_alerts.html template and nav entry. Alerts table with resolve/suspend/unsuspend UI.
 
+## Observability / Diagnostics
+
+### Runtime Signals
+- Structured log events on sheet bootstrap: `event=fraud_alerts_loaded count=N` (INFO) and `event=suspended_cards_loaded count=N` (INFO) emitted by `load_from_sheets()` on first API request.
+- Write failures are non-fatal WARNINGs: `event=fraud_alert_save_failed`, `event=fraud_alert_update_failed`, `event=suspended_save_failed`, `event=suspended_remove_failed` — all greppable by prefix.
+- All route-level exceptions logged at ERROR with `exc_info=True` for full tracebacks.
+
+### Inspection Surfaces
+- `GET /api/fraud/stats` — live counts: total_alerts, unresolved_alerts, today_alerts, suspended_cards. Zero-config health check for the fraud subsystem.
+- `GET /api/fraud/suspended` — enumerate all currently suspended cards with reason and timestamp.
+- `GET /api/fraud/alerts?unresolved_only=true` — current alert queue without noise from resolved history.
+- Browser Fraud Alerts page (`/fraud-alerts`) — human-readable view of the same data; sidebar badge shows unresolved count.
+
+### Failure Visibility
+- Google Sheets unavailable (gspread APIError / ConnectionError / TimeoutError): all six routes return HTTP 503 with `{"error": "Service temporarily unavailable"}`.
+- Sheet load failures at startup: logged at WARNING; FraudDetector starts with empty in-memory state and continues operating — no crash.
+- `_fraud_sheets_initialized` flag prevents repeated load attempts if the first fails.
+
+### Redaction
+- Card UIDs appear in logs at WARNING/ERROR level only — no sensitive financial amounts logged in fraud route handlers.
+
+## Verification
+
+- `pytest tests/test_fraud_api.py -v` → 33 tests pass (covers all 6 routes + all persistence methods + error paths)
+- `GET /api/fraud/stats` returns JSON with keys: total_alerts, unresolved_alerts, today_alerts, suspended_cards ✅
+- `GET /api/fraud/alerts` returns list with per-alert fields: id, money_card, fraud_type, risk_level, description, created_at, resolved ✅
+- `GET /api/fraud/alerts?unresolved_only=true` returns only unresolved alerts ✅
+- `POST /api/fraud/alerts/<id>/resolve` returns `{"success": true}` ✅
+- `POST /api/fraud/cards/<uid>/suspend` requires @admin_only; returns `{"success": true}` ✅
+- `POST /api/fraud/cards/<uid>/unsuspend` requires @admin_only; returns `{"success": true}` ✅
+- "Fraud Alerts" worksheet created with header row on first use ✅
+- Sheet write failure: route still returns success; WARNING logged with `event=` prefix ✅
+- gspread timeout: route returns 503 ✅
+
 ## Files Likely Touched
 
 - `backend/fraud_detection.py` — add sheet persistence methods

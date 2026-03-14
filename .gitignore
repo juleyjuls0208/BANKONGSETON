@@ -84,10 +84,8 @@ tmp/
 # ── GSD baseline (auto-generated) ──
 .gsd/activity/
 .gsd/runtime/
-<<<<<<< HEAD
-=======
 .gsd/worktrees/
->>>>>>> gsd/M001/S02
+.gsd/completed-units.json
 .gsd/auto.lock
 .gsd/metrics.json
 .gsd/STATE.md
@@ -101,22 +99,3 @@ target/
 vendor/
 coverage/
 .cache/
-<<<<<<< HEAD
-nul
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-
-# ── GSD baseline (auto-generated) ──
-.gsd/worktrees/
->>>>>>> gsd/M001/S01
-=======
-
-# ── GSD baseline (auto-generated) ──
-.gsd/worktrees/
->>>>>>> gsd/M001/S01
-=======
->>>>>>> gsd/M001/S02
-
-# ── GSD baseline (auto-generated) ──
-.gsd/completed-units.json
