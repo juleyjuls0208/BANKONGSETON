@@ -13,6 +13,15 @@ import gspread
 import logging
 import time
 
+try:
+    import sys as _sys
+    _sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
+    from cache import get_cached, set_cached, invalidate_pattern
+except ImportError:
+    def get_cached(key): return None
+    def set_cached(key, val, ttl=None): pass
+    def invalidate_pattern(pat): pass
+
 logger = logging.getLogger(__name__)
 
 cashier_bp = Blueprint('cashier', __name__, 
@@ -196,7 +205,10 @@ def get_products():
 
         db = get_sheets_client()
         products_sheet = db.worksheet('Products')
-        records = products_sheet.get_all_records()
+        records = get_cached("products_all")
+        if records is None:
+            records = products_sheet.get_all_records()
+            set_cached("products_all", records, ttl=30)
 
         products = []
         for idx, record in enumerate(records, start=2):
@@ -351,6 +363,8 @@ def complete_sale():
                 ]
 
                 trans_sheet.append_row(transaction_row)
+                invalidate_pattern("transactions")
+                invalidate_pattern("money_accounts")
                 last_error = None
                 break  # Success
 
@@ -424,19 +438,6 @@ def complete_sale():
             print(f"Email send error (non-fatal): {e}")
             matched_user = None
 
-<<<<<<< HEAD
-        # Send SMS notification to parent
-        try:
-            if matched_user:
-                parent_phone = str(matched_user.get('ParentPhone', '')).strip()
-                if parent_phone and parent_phone.startswith('+'):
-                    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
-                    from notifications import get_sms_notifier
-                    items_summary = ', '.join(
-                        f"{i.get('name','?')} x{i.get('qty',1)}" for i in items[:3]
-                    )
-                    sms = get_sms_notifier()
-=======
         # Send SMS notification to parent (purchase + low-balance check)
         try:
             if matched_user:
@@ -471,7 +472,6 @@ def complete_sale():
                             logger.warning(f"Low balance SMS failed for {matched_user.get('Name', 'Student')}: {low_bal_err}")
                     
                     # Then send purchase notification
->>>>>>> gsd/M001/S02
                     sms.send_purchase_sms(
                         to_number=parent_phone,
                         student_name=matched_user.get('Name', 'Student'),
@@ -481,7 +481,6 @@ def complete_sale():
                     )
         except Exception:
             pass  # SMS failure is non-blocking
-<<<<<<< HEAD
 
         # Send FCM push to student
         try:
@@ -493,9 +492,8 @@ def complete_sale():
                     send_purchase_push(fcm_token, total, new_balance)
         except Exception:
             pass  # FCM failure is non-blocking
-=======
->>>>>>> gsd/M001/S02
         
+
         return jsonify({
             'success': True,
             'new_balance': new_balance,

@@ -17,14 +17,14 @@ This file is the explicit capability and coverage contract for the project.
 
 ### R015 — Cache Layer Coverage
 - Class: quality-attribute
-- Status: active
+- Status: validated
 - Description: Hot Sheets-reading endpoints (product list, student list, money accounts, transaction recent, analytics summary) serve from cache on repeated requests; mutations (complete_sale, load_balance, void_transaction) invalidate the relevant cache keys
 - Why it matters: admin_dashboard.py has 2 cached calls vs 100 raw Sheets calls; cashier_routes.py has 0 cached; api_server.py has 8 cached vs 47 raw — Sheets quota (60 req/min) will be hit during lunch rush
 - Source: execution
 - Primary owning slice: M002/S02
 - Supporting slices: none
-- Validation: unmapped
-- Notes: backend/cache.py is a solid 254-line implementation — wiring work only, no new cache logic needed
+- Validation: bash scripts/verify-s02.sh — 32/32 checks pass; get_cached/set_cached wired to five admin hot endpoints and three cashier/API endpoints; invalidate_pattern wired to six mutation handlers; balance-deduction reads explicitly uncached; python -m py_compile exits 0 on all three files
+- Notes: backend/cache.py is a solid 254-line implementation — wiring work only, no new cache logic needed; balance reads in payment flows (complete_sale, process_cashier_transaction, nfc_pay) intentionally NOT cached to prevent overdraft
 
 ### R016 — FraudDetector Worker Safety
 - Class: failure-visibility
@@ -257,7 +257,7 @@ This file is the explicit capability and coverage contract for the project.
 | R012 | primary-user-loop | validated | M001/S05 | none | validated |
 | R013 | integration | validated | M001/S06 | none | validated |
 | R014 | operability | validated | M002/S01 | none | pip --dry-run exit 0 on both files |
-| R015 | quality-attribute | active | M002/S02 | none | unmapped |
+| R015 | quality-attribute | validated | M002/S02 | none | bash scripts/verify-s02.sh 32/32; python -m py_compile exit 0 |
 | R016 | failure-visibility | active | M002/S03 | none | unmapped |
 | R017 | quality-attribute | active | M002/S04 | none | unmapped |
 | R018 | failure-visibility | active | M002/S03 | none | unmapped |
@@ -267,7 +267,7 @@ This file is the explicit capability and coverage contract for the project.
 
 ## Coverage Summary
 
-- Active requirements: 5
-- Mapped to slices: 5
-- Validated: 14
+- Active requirements: 4
+- Mapped to slices: 4
+- Validated: 15
 - Unmapped active requirements: 0

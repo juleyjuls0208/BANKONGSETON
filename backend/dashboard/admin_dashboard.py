@@ -318,7 +318,10 @@ def get_products_list():
     """Get all products from Products sheet"""
     try:
         products_sheet = db.worksheet('Products')
-        records = products_sheet.get_all_records()
+        records = get_cached("products_all")
+        if records is None:
+            records = products_sheet.get_all_records()
+            set_cached("products_all", records, ttl=30)
         
         products = []
         for idx, record in enumerate(records, start=2):
@@ -377,10 +380,12 @@ def update_product():
         if product_row:
             # Update existing
             products_sheet.update(f'A{product_row}:G{product_row}', [product_data])
+            invalidate_pattern("products")
             return jsonify({'success': True, 'message': 'Product updated'})
         else:
             # Add new
             products_sheet.append_row(product_data)
+            invalidate_pattern("products")
             return jsonify({'success': True, 'message': 'Product created'})
     
     except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
@@ -408,6 +413,7 @@ def delete_product():
         for idx, record in enumerate(records, start=2):
             if record.get('ID') == product_id:
                 products_sheet.update_cell(idx, 6, 'FALSE')  # Column F (Active)
+                invalidate_pattern("products")
                 return jsonify({'success': True, 'message': 'Product deactivated'})
         
         return jsonify({'error': 'Product not found'}), 404
@@ -500,10 +506,16 @@ def analytics_summary():
     
     try:
         transactions_sheet = get_worksheet_with_retry('Transactions Log')
-        transactions = transactions_sheet.get_all_records()
+        transactions = get_cached("transactions_all")
+        if transactions is None:
+            transactions = transactions_sheet.get_all_records()
+            set_cached("transactions_all", transactions, ttl=10)
         
         accounts_sheet = get_worksheet_with_retry('Money Accounts')
-        accounts = accounts_sheet.get_all_records()
+        accounts = get_cached("money_accounts_all")
+        if accounts is None:
+            accounts = accounts_sheet.get_all_records()
+            set_cached("money_accounts_all", accounts, ttl=30)
         
         summary = get_analytics_summary(transactions, accounts)
         return jsonify(summary), 200
@@ -719,7 +731,10 @@ def get_stats():
     """Get dashboard statistics"""
     try:
         users_sheet = get_worksheet_with_retry('Users')
-        users = users_sheet.get_all_records()
+        users = get_cached("users_all")
+        if users is None:
+            users = users_sheet.get_all_records()
+            set_cached("users_all", users, ttl=30)
         
         # Get today's transactions (using Philippine time)
         today = get_philippines_time().strftime('%Y-%m-%d')
@@ -727,7 +742,10 @@ def get_stats():
         
         try:
             transactions_sheet = get_worksheet_with_retry('Transactions Log')
-            transactions = transactions_sheet.get_all_records()
+            transactions = get_cached("transactions_all")
+            if transactions is None:
+                transactions = transactions_sheet.get_all_records()
+                set_cached("transactions_all", transactions, ttl=10)
             today_transactions = [t for t in transactions if t.get('Timestamp', '').startswith(today)]
         except:
             pass
@@ -751,11 +769,17 @@ def get_students():
     """Get all students with balance from Money Accounts"""
     try:
         users_sheet = get_worksheet_with_retry('Users')
-        students = users_sheet.get_all_records()
+        students = get_cached("users_all")
+        if students is None:
+            students = users_sheet.get_all_records()
+            set_cached("users_all", students, ttl=30)
         
         # Get balances from Money Accounts
         money_sheet = get_worksheet_with_retry('Money Accounts')
-        money_accounts = money_sheet.get_all_records()
+        money_accounts = get_cached("money_accounts_all")
+        if money_accounts is None:
+            money_accounts = money_sheet.get_all_records()
+            set_cached("money_accounts_all", money_accounts, ttl=30)
         
         # Create balance lookup by MoneyCardNumber (normalized)
         balance_map = {}
@@ -939,6 +963,8 @@ def load_balance():
         timestamp = get_philippines_time().strftime('%Y-%m-%d %H:%M:%S')
         update_col = money_sheet.find('LastUpdated').col
         money_sheet.update_cell(row_index, update_col, timestamp)
+        invalidate_pattern("money_accounts")
+        invalidate_pattern("transactions")
         
         # Record transaction (with error handling)
         try:
@@ -1027,11 +1053,17 @@ def get_recent_transactions():
     try:
         limit = int(request.args.get('limit', 50))
         transactions_sheet = get_worksheet_with_retry('Transactions Log')
-        transactions = transactions_sheet.get_all_records()
+        transactions = get_cached("transactions_all")
+        if transactions is None:
+            transactions = transactions_sheet.get_all_records()
+            set_cached("transactions_all", transactions, ttl=10)
         
         # Get users to map StudentID to Name
         users_sheet = get_worksheet_with_retry('Users')
-        users = users_sheet.get_all_records()
+        users = get_cached("users_all")
+        if users is None:
+            users = users_sheet.get_all_records()
+            set_cached("users_all", users, ttl=30)
         
         # Create mapping with normalized student IDs (strip whitespace, case insensitive)
         user_map = {}
@@ -2250,6 +2282,8 @@ def void_transaction(txn_id):
             'Completed',
             f'Void of {txn_id}: {reason} (by {admin_user})',
         ])
+        invalidate_pattern("transactions")
+        invalidate_pattern("money_accounts")
 
         return jsonify({
             'success': True,

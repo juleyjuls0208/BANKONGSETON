@@ -58,7 +58,7 @@ This milestone is complete only when all are true:
 - [x] **S01: Requirements & Git Hygiene** `risk:high` `depends:[]`
   > After this: `pip install -r` succeeds for both Flask apps on a fresh virtualenv — merge conflict resolved, all missing packages added to api requirements.
 
-- [ ] **S02: Cache Layer Wiring** `risk:medium` `depends:[S01]`
+- [x] **S02: Cache Layer Wiring** `risk:medium` `depends:[S01]`
   > After this: Hot endpoints serve from cache; mutations invalidate correctly; `GET /api/cache/stats` shows hits during a simulated lunch-rush sequence.
 
 - [ ] **S03: FraudDetector Constraint & Health Standardization** `risk:low` `depends:[S01]`

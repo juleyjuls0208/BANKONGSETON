@@ -17,8 +17,29 @@ from functools import wraps
 import json
 import re
 import logging
+import sys
+import threading
+import uuid
+import time
 
 logger = logging.getLogger(__name__)
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+try:
+    from nfc_payments import NFCService, ensure_virtual_cards_sheet
+    from notifications import TwilioSMSNotifier
+    from cache import get_cached, set_cached, invalidate_cached, invalidate_pattern
+except ImportError as _cache_import_err:
+    logger.warning(f"Optional module import failed: {_cache_import_err}")
+    NFCService = None
+    TwilioSMSNotifier = None
+    def get_cached(key): return None  # noqa: E704
+    def set_cached(key, val, ttl=30): pass  # noqa: E704
+    def invalidate_cached(key): pass  # noqa: E704
+    def invalidate_pattern(pat): pass  # noqa: E704
+
+nfc_service = NFCService() if NFCService else None
+sms_notifier = TwilioSMSNotifier() if TwilioSMSNotifier else None
 
 load_dotenv()
 
@@ -85,6 +106,25 @@ def get_worksheet_with_retry(sheet_name, retries=2):
 
 # Simple token storage (in production, use Redis or database)
 active_sessions = {}
+SESSION_TTL_SECONDS = 8 * 3600  # 8-hour absolute TTL from login
+LOW_BALANCE_THRESHOLD = float(os.getenv("LOW_BALANCE_THRESHOLD", "50"))
+
+
+def _check_session(token):
+    """Return session dict if token is valid and not expired, else None.
+    Performs lazy eviction: deletes expired entry on lookup."""
+    session = active_sessions.get(token)
+    if session is None:
+        return None
+    if time.time() - session.get("login_time", 0) > SESSION_TTL_SECONDS:
+        del active_sessions[token]
+        return None
+    return session
+
+
+# Per-card locks to prevent double-spend race conditions
+_card_locks: dict = {}
+_card_locks_lock = threading.Lock()
 
 def generate_token():
     """Generate secure session token"""
@@ -258,7 +298,10 @@ def get_profile():
         
         # Get student data
         users_sheet = get_worksheet_with_retry('Users')
-        records = users_sheet.get_all_records()
+        records = get_cached("users_all")
+        if records is None:
+            records = users_sheet.get_all_records()
+            set_cached("users_all", records, ttl=30)
         
         student = None
         for record in records:
@@ -481,10 +524,8 @@ def logout():
         return jsonify({'error': 'Service unavailable, please try again'}), 503
     except Exception as e:
         logger.error(f"Unexpected error in logout: {e}", exc_info=True)
-<<<<<<< HEAD
-        return jsonify({'error': 'An unexpected error occurred'}), 500
-=======
         return jsonify({"error": "An unexpected error occurred"}), 500
+
 
 
 @app.route("/api/nfc/register", methods=["POST"])
@@ -845,7 +886,6 @@ def nfc_pay():
         logger.error(f"event=nfc_pay_error error={str(e)}")
         return jsonify({"error": "Service unavailable, please try again"}), 503
 
->>>>>>> gsd/M001/S02
 
 # ==================== NEW PHASE 1 ENDPOINTS ====================
 
@@ -861,7 +901,10 @@ def get_products():
         # Try to get products from Products sheet first
         try:
             products_sheet = get_worksheet_with_retry('Products')
-            records = products_sheet.get_all_records()
+            records = get_cached("products_all")
+            if records is None:
+                records = products_sheet.get_all_records()
+                set_cached("products_all", records, ttl=30)
             
             products = []
             for record in records:
@@ -1054,6 +1097,8 @@ def process_cashier_transaction():
         ]
         
         trans_sheet.append_row(transaction_row)
+        invalidate_pattern("transactions")
+        invalidate_pattern("money_accounts")
         
         # Send email receipt (async with retry)
         if student_id:
