@@ -21,6 +21,7 @@ __pycache__/
 venv/
 env/
 ENV/
+.gsd/
 .venv
 
 # Logs
@@ -116,3 +117,6 @@ nul
 >>>>>>> gsd/M001/S01
 =======
 >>>>>>> gsd/M001/S02
+
+# ── GSD baseline (auto-generated) ──
+.gsd/completed-units.json
