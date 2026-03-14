@@ -12,26 +12,33 @@ A student should be able to tap their card at the cashier, have the transaction 
 
 - Flask backend (Python 3.14) with Google Sheets as the database
 - Admin web dashboard (Bootstrap 5, Flask-SocketIO, PWA)
-- Cashier UI with Arduino RFID card reader integration
+- Cashier UI with Arduino RFID card reader integration and Quick Pay shortcut
 - Android student app (Kotlin, Material 3, NFC HCE virtual card)
 - Parent portal (read-only balance + transaction view)
-- FCM push notifications (low balance only wired end-to-end)
-- Fraud detection engine wired to admin dashboard: alerts panel, card suspend/unsuspend, Sheets persistence (S01 complete)
+- FCM push notifications for every purchase, load, and card replacement
+- SMS notifications via Twilio (gated on TWILIO_* env vars)
+- Fraud detection engine wired to admin dashboard: alerts panel, card suspend/unsuspend, Sheets persistence
+- Cashier accounts managed in Google Sheets (no hardcoded credentials)
+- Transaction void with balance restoration and audit log
+- Offline cashier queue backed by SQLite (survives process restart; syncs on reconnect)
+- Daily low-balance batch email via APScheduler; manual trigger endpoint
 - JWT auth for mobile API; session auth for admin dashboard
 - Multi-station support via STATION_ID env var
-- 170 passing tests
+- Android: transaction filter, monthly budget auto-reset, lost card status badge
 
 ## Architecture / Key Patterns
 
-- `backend/dashboard/admin_dashboard.py` — main Flask app (SocketIO, RFID card management, analytics, load balance)
-- `backend/dashboard/cashier/cashier_routes.py` — cashier Blueprint (JWT, process-sale, complete-sale)
-- `backend/api/api_server.py` — mobile REST API (student login, balance, transactions, NFC)
-- `backend/fraud_detection.py` — FraudDetector engine (in-memory, not yet wired to admin UI)
-- `backend/notifications.py` — EmailNotifier, NotificationManager
-- `backend/api/fcm_sender.py` — Firebase push (send_low_balance_push, send_purchase_push, send_load_push)
-- `backend/resilience.py` — WriteQueue (in-memory, not yet persisted to disk/SQLite)
-- Google Sheets worksheets: Users, Money Accounts, Transactions Log, Products
-- Android app: `mobile/student_app_v2/`
+- `backend/dashboard/admin_dashboard.py` — main Flask app (SocketIO, fraud panel, cashier accounts, transaction void, batch email trigger)
+- `backend/dashboard/cashier/cashier_routes.py` — cashier Blueprint (JWT, complete-sale with SQLite fallback, Quick Pay, queue sync)
+- `backend/api/api_server.py` — mobile REST API (student login, balance, transactions, NFC, lost card status)
+- `backend/fraud_detection.py` — FraudDetector (in-memory, Sheets-persisted; single-worker only — multi-worker causes split-brain)
+- `backend/notifications.py` — EmailNotifier, TwilioSMSNotifier (gated on env vars)
+- `backend/api/fcm_sender.py` — Firebase push (send_purchase_push, send_load_push, send_card_replaced_push)
+- `backend/offline_queue.py` — SQLiteWriteQueue (WAL mode; get_offline_queue() singleton)
+- `backend/scheduler.py` — DailyScheduler (APScheduler + threading.Timer fallback); run_low_balance_batch()
+- `backend/resilience.py` — legacy stub; replaced by offline_queue.py
+- Google Sheets worksheets: Users, Money Accounts, Transactions Log, Products, Fraud Alerts, Suspended Cards, Cashier Accounts, Scheduler Log
+- Android app: `mobile/student_app_v2/` (mobile/android/ is archived)
 
 ## Capability Contract
 
@@ -39,4 +46,5 @@ See `.gsd/REQUIREMENTS.md` for the explicit capability contract, requirement sta
 
 ## Milestone Sequence
 
-- [ ] M001: Operational Hardening & Feature Completion — Wire fraud alerts to admin UI, cashier account management, transaction filter, SMS notifications, transaction void/correction, offline cashier queue, quick-pay shortcut, push notifications for every transaction, Android transaction filter, monthly budget auto-reset, lost card status feedback, and daily low-balance batch email.
+- [x] M001: Operational Hardening & Feature Completion — All 13 gaps closed. See `.gsd/milestones/M001/M001-SUMMARY.md`.
+- [ ] M002: Production Readiness & Deployment Stability — Requirements audit, cache wiring, FraudDetector worker constraint, critical path tests, health check standardization, deployment runbook. See `.gsd/milestones/M002/M002-ROADMAP.md`.

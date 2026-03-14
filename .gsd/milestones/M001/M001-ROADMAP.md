@@ -65,19 +65,19 @@ This milestone is complete only when all are true:
 - [x] **S01: Fraud Alerts Panel & Card Suspension** `risk:high` `depends:[]`
   > After this: Admin can open the Fraud Alerts page in the dashboard, see all alerts with risk levels, resolve individual alerts, and manually suspend or unsuspend any student's money card.
 
-- [ ] **S02: SMS Notifications & Transaction Filter** `risk:medium` `depends:[S01]`
+- [x] **S02: SMS Notifications & Transaction Filter** `risk:medium` `depends:[S01]`
   > After this: Admin can filter transactions by date range, student, and type in the dashboard; parents receive SMS for purchases and low balance when Twilio env vars are set.
 
-- [ ] **S03: Cashier Account Management & Transaction Void** `risk:medium` `depends:[S01]`
+- [x] **S03: Cashier Account Management & Transaction Void** `risk:medium` `depends:[S01]`
   > After this: Admin manages named cashier accounts from the dashboard (no more hardcoded credentials); admin can void a transaction with a reason and the student's balance is restored.
 
-- [ ] **S04: Offline Cashier Queue & Quick-Pay Shortcut** `risk:medium` `depends:[S03]`
+- [x] **S04: Offline Cashier Queue & Quick-Pay Shortcut** `risk:medium` `depends:[S03]`
   > After this: Cashier processes sales during a Google Sheets outage with a visual offline indicator, and transactions sync automatically on reconnect; cashier can tap Quick Pay on any product to skip the cart.
 
-- [ ] **S05: Complete Push Notifications & Android Enhancements** `risk:low` `depends:[S04]`
+- [x] **S05: Complete Push Notifications & Android Enhancements** `risk:low` `depends:[S04]`
   > After this: Every purchase and load fires an FCM push to the student; Android app has transaction type/date filter; monthly budget auto-resets; student sees lost card status and gets FCM push when admin processes replacement.
 
-- [ ] **S06: Daily Low-Balance Batch Email** `risk:low` `depends:[S05]`
+- [x] **S06: Daily Low-Balance Batch Email** `risk:low` `depends:[S05]`
   > After this: Backend scheduler runs a daily job at configurable time, emails parents of all students below LOW_BALANCE_THRESHOLD, and logs the run result; admin can trigger it manually from the dashboard.
 
 ## Boundary Map
