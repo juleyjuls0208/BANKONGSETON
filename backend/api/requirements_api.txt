@@ -2,9 +2,24 @@
 flask==3.0.0
 flask-cors==4.0.0
 
-# Google Sheets (already in requirements.txt)
-# gspread
-# oauth2client
+# Environment configuration
+python-dotenv>=1.0.0
+pytz>=2024.1
+
+# Google Sheets
+gspread>=5.12.0
+
+# Firebase Admin (FCM push notifications)
+firebase-admin>=6.0.0
+
+# SMS notifications (optional — requires TWILIO_* env vars)
+twilio>=9.0.0
+
+# Password hashing for cashier accounts
+bcrypt>=4.0.0
+
+# Health monitoring
+psutil>=5.9.0
 
 # Production server
 gunicorn==21.2.0

@@ -55,7 +55,7 @@ This milestone is complete only when all are true:
 
 ## Slices
 
-- [ ] **S01: Requirements & Git Hygiene** `risk:high` `depends:[]`
+- [x] **S01: Requirements & Git Hygiene** `risk:high` `depends:[]`
   > After this: `pip install -r` succeeds for both Flask apps on a fresh virtualenv — merge conflict resolved, all missing packages added to api requirements.
 
 - [ ] **S02: Cache Layer Wiring** `risk:medium` `depends:[S01]`

@@ -6,14 +6,14 @@ This file is the explicit capability and coverage contract for the project.
 
 ### R014 — Requirements File Completeness
 - Class: operability
-- Status: active
+- Status: validated
 - Description: Both Flask apps install cleanly from their requirements files on a fresh virtualenv with no missing packages and no file errors
 - Why it matters: The api requirements file is missing gspread, firebase-admin, twilio, and bcrypt — a fresh api server deploy fails silently on multiple paths today; dashboard requirements.txt has an unresolved merge conflict that makes it invalid
 - Source: execution
 - Primary owning slice: M002/S01
 - Supporting slices: none
-- Validation: unmapped
-- Notes: Merge conflict (<<<< ==== >>>>) must be resolved first; pip install -r must be the verification
+- Validation: pip install --dry-run exits 0 on both backend/dashboard/requirements.txt and backend/api/requirements_api.txt; no merge conflict markers; all required packages present
+- Notes: Merge conflict (<<<< ==== >>>>) resolved; bcrypt>=4.0.0 and twilio>=9.0.0 both present in dashboard; six previously-missing packages added to api requirements
 
 ### R015 — Cache Layer Coverage
 - Class: quality-attribute
@@ -256,7 +256,7 @@ This file is the explicit capability and coverage contract for the project.
 | R011 | primary-user-loop | validated | M001/S05 | none | validated |
 | R012 | primary-user-loop | validated | M001/S05 | none | validated |
 | R013 | integration | validated | M001/S06 | none | validated |
-| R014 | operability | active | M002/S01 | none | unmapped |
+| R014 | operability | validated | M002/S01 | none | pip --dry-run exit 0 on both files |
 | R015 | quality-attribute | active | M002/S02 | none | unmapped |
 | R016 | failure-visibility | active | M002/S03 | none | unmapped |
 | R017 | quality-attribute | active | M002/S04 | none | unmapped |
@@ -267,7 +267,7 @@ This file is the explicit capability and coverage contract for the project.
 
 ## Coverage Summary
 
-- Active requirements: 6
-- Mapped to slices: 6
-- Validated: 13
+- Active requirements: 5
+- Mapped to slices: 5
+- Validated: 14
 - Unmapped active requirements: 0
