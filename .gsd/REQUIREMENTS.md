@@ -39,14 +39,14 @@ This file is the explicit capability and coverage contract for the project.
 
 ### R017 — Critical Path Unit Tests
 - Class: quality-attribute
-- Status: active
+- Status: validated
 - Description: ~35 unit tests cover complete_sale, load_balance, void_transaction, and cashier login auth with a mocked Sheets client — zero live Sheets calls, completes in under 10 seconds
 - Why it matters: admin_dashboard.py and cashier_routes.py are ~3000 lines combined and currently 0% unit-tested; untested money-moving code is the highest operational risk
 - Source: execution
 - Primary owning slice: M002/S04
 - Supporting slices: none
-- Validation: unmapped
-- Notes: Bar is risk-based (money-moving paths), not metric-based; broad 60%+ coverage is out of scope for this milestone
+- Validation: pytest tests/test_cashier_routes.py tests/test_admin_critical.py exits 0; 35 tests; 2.40s; zero live Sheets calls (all worksheet mocks); money-moving arithmetic verified (new_balance assertions on complete_sale, load_balance, void_transaction)
+- Notes: Bar is risk-based (money-moving paths), not metric-based; broad 60%+ coverage is out of scope for this milestone. Production bugfix discovered: transaction_row pre-built before retry loop in complete_sale (offline fallback UnboundLocalError)
 
 ### R018 — Health Check Standardization
 - Class: failure-visibility
@@ -259,7 +259,7 @@ This file is the explicit capability and coverage contract for the project.
 | R014 | operability | validated | M002/S01 | none | pip --dry-run exit 0 on both files |
 | R015 | quality-attribute | validated | M002/S02 | none | bash scripts/verify-s02.sh 32/32; python -m py_compile exit 0 |
 | R016 | failure-visibility | validated | M002/S03 | none | WEB_CONCURRENCY guard at module level; verify-s03.sh checks 5–8 pass |
-| R017 | quality-attribute | active | M002/S04 | none | unmapped |
+| R017 | quality-attribute | validated | M002/S04 | none | pytest exit 0; 35 tests; 2.40s; zero live Sheets calls |
 | R018 | failure-visibility | validated | M002/S03 | none | All three health handlers return structured JSON + 503; verify-s03.sh checks 9–18 pass |
 | R019 | operability | active | M002/S05 | none | unmapped |
 | R050 | integration | out-of-scope | none | none | n/a |
@@ -267,7 +267,7 @@ This file is the explicit capability and coverage contract for the project.
 
 ## Coverage Summary
 
-- Active requirements: 2
-- Mapped to slices: 2
-- Validated: 17
+- Active requirements: 1
+- Mapped to slices: 1
+- Validated: 18
 - Unmapped active requirements: 0

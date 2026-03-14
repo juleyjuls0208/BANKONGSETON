@@ -342,6 +342,18 @@ def complete_sale():
         last_error = None
         timestamp = get_philippines_time().strftime('%Y-%m-%d %H:%M:%S')
 
+        # Build transaction_row before the retry loop so it is always available
+        # for the offline-queue fallback even when update_cell fails on attempt 1.
+        transaction_row = [
+            timestamp,
+            normalized_card,
+            'Purchase',
+            -total,
+            new_balance,
+            'Success',
+            json.dumps(items)
+        ]
+
         for attempt in range(1, MAX_RETRIES + 1):
             try:
                 if not balance_deducted:
@@ -351,16 +363,6 @@ def complete_sale():
 
                 # Step 2: Log transaction
                 trans_sheet = db.worksheet('Transactions Log')
-
-                transaction_row = [
-                    timestamp,
-                    normalized_card,
-                    'Purchase',
-                    -total,
-                    new_balance,
-                    'Success',
-                    json.dumps(items)
-                ]
 
                 trans_sheet.append_row(transaction_row)
                 invalidate_pattern("transactions")

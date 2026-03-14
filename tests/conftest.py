@@ -3,7 +3,9 @@ Pytest fixtures and test configuration
 """
 import pytest
 import os
-from unittest.mock import Mock, MagicMock
+import sys
+import jwt
+from unittest.mock import Mock, MagicMock, patch
 from dotenv import load_dotenv
 
 # Load test environment variables
@@ -125,3 +127,167 @@ def mock_philippines_time():
     import pytz
     tz = pytz.timezone('Asia/Manila')
     return datetime(2026, 2, 2, 10, 30, 45, tzinfo=tz)
+
+
+# ---------------------------------------------------------------------------
+# S04 — Critical Path Unit Tests: shared Flask test infrastructure
+# ---------------------------------------------------------------------------
+
+# Module-level reference to the imported admin_dashboard — set by flask_app fixture.
+# Other fixtures reference this to replace adm.db per-test.
+_adm = None
+
+
+def _make_cashier_token(username: str, role: str) -> str:
+    """Return a signed JWT readable by cashier_routes' @jwt_required decorator.
+
+    Uses the same secret and algorithm as cashier_routes.py:
+        JWT_SECRET = os.getenv('JWT_SECRET', 'bangko-jwt-secret-2026')
+        JWT_ALGORITHM = 'HS256'
+    """
+    secret = os.getenv('JWT_SECRET', 'bangko-jwt-secret-2026')
+    payload = {'username': username, 'role': role}
+    return jwt.encode(payload, secret, algorithm='HS256')
+
+
+def _set_pending(client, items: list, total: float) -> None:
+    """Seed pending_transaction in Flask session via session_transaction().
+
+    Args:
+        client: Flask test client.
+        items: list of item dicts (e.g. [{'name': 'Item', 'price': 10.0, 'qty': 1}]).
+        total: numeric total of the transaction.
+    """
+    with client.session_transaction() as sess:
+        sess['pending_transaction'] = {'items': items, 'total': total}
+
+
+@pytest.fixture(scope='module')
+def flask_app():
+    """Module-scoped fixture: Flask test client with mocked Sheets.
+
+    Sets required env vars and starts gspread patches BEFORE importing
+    admin_dashboard (its module-level db = get_sheets_client() runs at import
+    time).  Also registers sys.modules['admin_dashboard'] so that cashier_routes'
+    inline `from admin_dashboard import get_sheets_client` resolves to the same
+    already-mocked module object.
+
+    Yields:
+        (Flask app, mock_spreadsheet) tuple so tests can destructure both.
+    """
+    global _adm
+
+    # Step 1 — env vars required by admin_dashboard startup guards
+    os.environ['FLASK_SECRET_KEY'] = 'test-secret-s04'
+    os.environ['GOOGLE_SHEETS_ID'] = 'fake-sheet-id-s04'
+    os.environ['WEB_CONCURRENCY'] = '1'
+    os.environ['ADMIN_USERNAME'] = 'admin'
+    os.environ['ADMIN_PASSWORD'] = 'adminpass'
+    os.environ['FINANCE_USERNAME'] = 'finance'
+    os.environ['FINANCE_PASSWORD'] = 'financepass'
+
+    # Step 2 — build mock spreadsheet used by all module-level tests
+    mock_spreadsheet = MagicMock()
+    mock_spreadsheet.worksheets.return_value = []
+    mock_spreadsheet.add_worksheet.return_value = MagicMock()
+    mock_spreadsheet.worksheet.return_value = MagicMock()
+
+    # Step 2b — add backend/dashboard to sys.path so cashier blueprint import succeeds
+    _dashboard_dir = os.path.join(os.path.dirname(__file__), '..', 'backend', 'dashboard')
+    if _dashboard_dir not in sys.path:
+        sys.path.insert(0, _dashboard_dir)
+
+    # Step 3 — start patches before import so module-level db = get_sheets_client() uses mocks
+    creds_patch = patch(
+        'google.oauth2.service_account.Credentials.from_service_account_file',
+        return_value=MagicMock()
+    )
+    gspread_patch = patch('gspread.authorize', return_value=MagicMock(
+        open_by_key=MagicMock(return_value=mock_spreadsheet)
+    ))
+
+    creds_patch.start()
+    gspread_patch.start()
+
+    # Step 4 — import (handles already-cached module from other test files)
+    try:
+        import backend.dashboard.admin_dashboard as adm  # noqa: F401
+    except Exception:
+        pass  # may already be cached; the second import below retrieves the cached copy
+
+    import backend.dashboard.admin_dashboard as adm
+
+    # Step 5 — stop patches (imports complete; patches no longer needed at runtime)
+    creds_patch.stop()
+    gspread_patch.stop()
+
+    # Step 6 — replace live db references on the already-imported module
+    adm.db = mock_spreadsheet
+    adm.get_sheets_client = lambda: mock_spreadsheet
+
+    # Step 7 — register under short name so cashier_routes' inline import resolves here
+    sys.modules['admin_dashboard'] = adm
+
+    # Step 8 — stash module reference for function-scoped db fixture
+    _adm = adm
+
+    # Step 9 — configure Flask for testing
+    adm.app.config['TESTING'] = True
+    adm.app.config['WTF_CSRF_ENABLED'] = False
+
+    yield adm.app, mock_spreadsheet
+
+
+@pytest.fixture
+def db(flask_app):
+    """Function-scoped fixture: fresh mock spreadsheet per test.
+
+    Prevents worksheet mock state (call counts, return_value changes) from
+    leaking between tests.  Reassigns adm.db and adm.get_sheets_client so
+    every request handler sees the fresh mock.
+    """
+    fresh = MagicMock()
+    fresh.worksheets.return_value = []
+    fresh.add_worksheet.return_value = MagicMock()
+    fresh.worksheet.return_value = MagicMock()
+
+    if _adm is not None:
+        _adm.db = fresh
+        _adm.get_sheets_client = lambda: fresh
+
+    yield fresh
+
+    # Restore a generic mock after test so module is not left in a broken state
+    if _adm is not None:
+        _adm.db = MagicMock()
+        _adm.get_sheets_client = lambda: _adm.db
+
+
+@pytest.fixture
+def admin_client(flask_app):
+    """Authenticated Flask test client logged in as admin."""
+    app, _ = flask_app
+    client = app.test_client()
+    client.post(
+        '/login',
+        json={
+            'username': os.environ.get('ADMIN_USERNAME', 'admin'),
+            'password': os.environ.get('ADMIN_PASSWORD', 'adminpass'),
+        }
+    )
+    return client
+
+
+@pytest.fixture
+def finance_client(flask_app):
+    """Authenticated Flask test client logged in as finance user."""
+    app, _ = flask_app
+    client = app.test_client()
+    client.post(
+        '/login',
+        json={
+            'username': os.environ.get('FINANCE_USERNAME', 'finance'),
+            'password': os.environ.get('FINANCE_PASSWORD', 'financepass'),
+        }
+    )
+    return client
