@@ -56,7 +56,7 @@ This milestone is complete only when all are true:
 - [x] **S03: WiFi Status Indicator** `risk:low` `depends:[S01]`
   > After this: Cashier UI shows a green "WiFi" badge when Arduino is heartbeating; badge turns red when Arduino goes offline; "Pay Now" enables without selecting a COM port.
 
-- [ ] **S04: Powerbank Hardening + Wireless Docs** `risk:low` `depends:[S01]`
+- [x] **S04: Powerbank Hardening + Wireless Docs** `risk:low` `depends:[S01]`
   > After this: Arduino reconnects automatically after a WiFi drop; stays powered for a full school day on a standard USB powerbank; `arduino/README-wireless.md` documents the complete standalone setup.
 
 ## Boundary Map

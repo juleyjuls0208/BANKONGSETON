@@ -68,7 +68,7 @@
 static const int MAX_RETRIES    = 3;
 static const int RETRY_DELAY_MS = 2000;
 static const int HTTP_TIMEOUT_MS = 5000;
-static const int HEARTBEAT_INTERVAL_MS = 30000;  // S04: heartbeat stub — POST not yet implemented
+static const int HEARTBEAT_INTERVAL_MS = 30000;  // 30s heartbeat interval — POST to /api/arduino/heartbeat keeps powerbank alive and drives WiFi badge in cashier UI
 
 // ── PN532 instance (Elechouse SPI — handles SPI.begin() internally) ─
 PN532_SPI pn532spi(SPI, PN532_SS);
@@ -423,6 +423,9 @@ void handleIncomingSerial() {
   }
 }
 
+// ── Heartbeat state ──────────────────────────────────────────────
+static unsigned long lastHeartbeatMs = 0;  // tracks last POST /api/arduino/heartbeat; file-scope so it survives across loop() calls
+
 void setup() {
   // 1. Serial at 9600 baud — ArduinoBridge expects this rate
   Serial.begin(9600);
@@ -472,6 +475,14 @@ void setup() {
 void loop() {
   // Process any commands sent by the dashboard (PING etc.) before doing NFC work.
   handleIncomingSerial();
+
+  // ── Heartbeat: keep powerbank alive + drive WiFi badge in cashier UI ──
+  unsigned long now = millis();
+  if (now - lastHeartbeatMs >= (unsigned long)HEARTBEAT_INTERVAL_MS) {
+    lastHeartbeatMs = now;
+    ensureWiFi();
+    httpPostJson("/api/arduino/heartbeat", "{\"status\":\"ok\"}");
+  }
 
   uint8_t uid[7];
   uint8_t uidLen = 0;

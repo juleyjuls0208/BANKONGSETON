@@ -258,7 +258,7 @@ This file is the explicit capability and coverage contract for the project.
 - Source: user
 - Primary owning slice: M003/S04
 - Supporting slices: none
-- Validation: unmapped
+- Validation: Contract verified — bash scripts/verify-m003-s04.sh 8/8 pass; firmware structure (lastHeartbeatMs, httpPostJson heartbeat call, ensureWiFi, no stub text) confirmed; runtime/operational proof (30-min idle, WiFi drop/reconnect) requires physical hardware UAT
 - Notes: Heartbeat POST every 30s provides consistent RF burst to keep powerbank alive; PN532 polling loop baseline draw is ~180-200mA which should keep most powerbanks above cutoff threshold; WiFi reconnect on ensureWiFi() call before each heartbeat and before each card POST
 
 ### R024 — Wireless Deployment Documentation
@@ -269,7 +269,7 @@ This file is the explicit capability and coverage contract for the project.
 - Source: user
 - Primary owning slice: M003/S04
 - Supporting slices: none
-- Validation: unmapped
+- Validation: Contract verified — test -f arduino/README-wireless.md exits 0; bash scripts/verify-m003-s04.sh checks (e–h) pass; README covers hardware, wiring, secrets.h (port 5003 + ARDUINO_API_KEY explicitly named), flashing, powerbank selection, verification, troubleshooting
 - Notes: Should cover: powerbank selection (minimum 2A output port), secrets.h fields, ARDUINO_API_KEY in .env, school LAN IP of Flask server, how to check the WiFi status badge in cashier UI
 
 ## Out of Scope
@@ -321,9 +321,9 @@ This file is the explicit capability and coverage contract for the project.
 | R019 | operability | validated | M002/S05 | none | test -f docs/DEPLOY.md exit 0; 8/8 grep checks pass |
 | R020 | primary-user-loop | active | M003/S01 | none | unmapped |
 | R021 | primary-user-loop | active | M003/S02 | none | contract verified (py_compile + verify-s02.sh 9/9); live hardware UAT pending |
-| R022 | operability | active | M003/S03 | none | contract verified (py_compile + verify-m003-s03.sh 12/12); live hardware badge green pending S04 |
-| R023 | continuity | active | M003/S04 | none | unmapped |
-| R024 | operability | active | M003/S04 | none | unmapped |
+| R022 | operability | active | M003/S03 | none | contract verified (py_compile + verify-m003-s03.sh 12/12); live hardware badge green confirmed by S04 heartbeat |
+| R023 | continuity | active | M003/S04 | none | contract verified (verify-m003-s04.sh 8/8); runtime/operational UAT (powerbank soak, WiFi drop) pending hardware |
+| R024 | operability | active | M003/S04 | none | contract verified (verify-m003-s04.sh 8/8 including README checks; test -f exits 0) |
 | R050 | integration | out-of-scope | none | none | n/a |
 | R051 | core-capability | out-of-scope | none | none | n/a |
 

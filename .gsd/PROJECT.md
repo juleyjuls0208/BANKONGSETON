@@ -31,7 +31,9 @@ A student should be able to tap their card at the cashier, have the transaction 
 - 35-test critical-path unit test suite (complete_sale, load_balance, void_transaction, cashier auth); 2.40s; zero live Sheets calls
 - docs/DEPLOY.md — complete PythonAnywhere deployment runbook (11 sections)
 - Arduino UNO R4 WiFi firmware (`arduino/bankongseton_rfid/`) — dual-mode: APDU (HCE phone) + UID (physical RFID), WiFiS3, PN532 over SPI, HTTP POST to Flask backend, serial fallback; **S01 fix: `httpPostCard(uid)` → `/api/arduino/card-read`, `httpPostNFC(token)` → `/api/nfc/tap`, dispatched by prefix in `deliver()`**
-- POST /api/arduino/heartbeat — API-key-auth, updates arduino_last_heartbeat, emits arduino_wifi_status socket event; GET /cashier/api/arduino-wifi-status — JWT-protected REST endpoint; #wifiBadge span in cashier header (green/red); arduinoConnected set from WiFi path
+- Arduino 30s heartbeat POST loop — `lastHeartbeatMs` file-scope variable + timer block in loop() before `if (!found) return`; keeps powerbank alive during idle; drives cashier #wifiBadge green via S03 backend
+- `arduino/README-wireless.md` — complete standalone wireless deployment guide (hardware, wiring, secrets.h field-by-field with explicit port 5003 + ARDUINO_API_KEY, flashing, powerbank selection, verification, troubleshooting)
+- `scripts/verify-m003-s04.sh` — 8-check assertion script; exits 0
 - Phone NFC payment wired at cashier (M003/S02): `POST /cashier/api/complete-sale-nfc` resolves virtual card token via VirtualCards sheet, debits balance, returns same payload as physical card tap; `socket.on('nfc_payment', ...)` in cashier UI calls `completeNFCSale(token)` — no arduinoConnected gate on inbound event
 
 ## Architecture / Key Patterns
@@ -64,3 +66,4 @@ See `.gsd/REQUIREMENTS.md` for the explicit capability contract, requirement sta
   - [x] S01: Firmware WiFi Routing Fix — complete
   - [x] S02: Phone NFC Cashier Payment — complete (contract + structural proof; human UAT pending live hardware)
   - [x] S03: WiFi Status Indicator — complete (contract-level proof: 12/12 verify checks pass; badge green requires S04 firmware heartbeat)
+  - [x] S04: Powerbank Hardening + Wireless Docs — complete (contract: 8/8 verify checks pass; hardware UAT pending — flash + badge green + 30-min powerbank soak)
