@@ -552,6 +552,267 @@ def complete_sale():
         return jsonify({'error': 'An unexpected error occurred'}), 500
 
 
+@cashier_bp.route('/api/complete-sale-nfc', methods=['POST'])
+@jwt_required(roles=['cashier', 'admin'])
+def complete_sale_nfc():
+    """Complete sale triggered by phone NFC tap.
+
+    Resolves virtual_card_token → MoneyCardNumber via VirtualCards sheet,
+    then debits balance with the same retry/rollback/offline-queue path as
+    complete_sale(). Requires pending_transaction in session (set by process-sale).
+
+    Returns 400 if no pending transaction or virtual_card_token is missing.
+    Returns 401 if token is invalid/inactive or has no linked money card.
+    Returns 503 if Sheets is unreachable after retries.
+
+    Note: VirtualCards worksheet must exist; if absent, raises WorksheetNotFound
+    which the outer handler returns as 503.
+    """
+    try:
+        from flask import session as flask_session, current_app
+        import sys
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
+
+        from admin_dashboard import get_sheets_client, get_philippines_time
+
+        data = request.get_json()
+        virtual_card_token = str(data.get('virtual_card_token', '')).strip()
+        if not virtual_card_token:
+            return jsonify({'error': 'virtual_card_token required'}), 400
+
+        # Get pending transaction
+        pending = flask_session.get('pending_transaction')
+        if not pending:
+            logger.warning("event=nfc_sale_no_pending")
+            return jsonify({'error': 'No pending transaction'}), 400
+
+        items = pending['items']
+        total = pending['total']
+
+        # Resolve virtual card token → MoneyCardNumber via VirtualCards sheet
+        db = get_sheets_client()
+        vc_records = db.worksheet('VirtualCards').get_all_records()
+        matched = next(
+            (r for r in vc_records
+             if r.get('VirtualCardToken') == virtual_card_token
+             and str(r.get('IsActive', '')).upper() == 'TRUE'),
+            None
+        )
+        if not matched:
+            return jsonify({'error': 'Invalid or inactive virtual card token'}), 401
+        money_card_number = str(matched.get('MoneyCardNumber', '')).strip()
+        if not money_card_number:
+            return jsonify({'error': 'Virtual card has no linked money card'}), 401
+
+        # Find money account — VirtualCards stores the canonical card number,
+        # so we use a direct string match (no normalize_card_uid needed).
+        money_sheet = db.worksheet('Money Accounts')
+        money_records = money_sheet.get_all_records()
+
+        account_row = None
+        current_balance = 0.0
+
+        for idx, record in enumerate(money_records, start=2):
+            if str(record.get('MoneyCardNumber', '')).strip() == money_card_number:
+                account_row = idx
+                current_balance = float(record.get('Balance', 0))
+                card_status = record.get('Status', '').strip().lower()
+
+                if card_status == 'lost':
+                    return jsonify({'error': 'Card reported as lost'}), 403
+                if card_status != 'active':
+                    return jsonify({'error': f'Card is {card_status}'}), 403
+                break
+
+        if not account_row:
+            return jsonify({'error': 'Card not found'}), 404
+
+        if current_balance < total:
+            return jsonify({
+                'error': 'Insufficient funds',
+                'balance': current_balance,
+                'required': total
+            }), 400
+
+        # Deduct balance and log transaction with retry + rollback
+        MAX_RETRIES = 3
+        new_balance = current_balance - total
+        balance_deducted = False
+        last_error = None
+        timestamp = get_philippines_time().strftime('%Y-%m-%d %H:%M:%S')
+
+        # Build transaction_row before the retry loop so it is always available
+        # for the offline-queue fallback even when update_cell fails on attempt 1.
+        transaction_row = [
+            timestamp,
+            money_card_number,
+            'NFC Purchase',
+            -total,
+            new_balance,
+            'Success',
+            json.dumps(items)
+        ]
+
+        for attempt in range(1, MAX_RETRIES + 1):
+            try:
+                if not balance_deducted:
+                    # Step 1: Deduct balance
+                    money_sheet.update_cell(account_row, 3, new_balance)
+                    balance_deducted = True
+
+                # Step 2: Log transaction
+                trans_sheet = db.worksheet('Transactions Log')
+
+                trans_sheet.append_row(transaction_row)
+                invalidate_pattern("transactions")
+                invalidate_pattern("money_accounts")
+                last_error = None
+                break  # Success
+
+            except (gspread.exceptions.APIError, ConnectionError, TimeoutError) as e:
+                last_error = e
+                logger.warning(f"complete_sale_nfc attempt {attempt}/{MAX_RETRIES} failed: {e}")
+                if attempt < MAX_RETRIES:
+                    time.sleep(2 ** attempt)  # Exponential backoff: 2s, 4s
+                else:
+                    # All retries exhausted — attempt rollback if balance was deducted
+                    if balance_deducted:
+                        try:
+                            money_sheet.update_cell(account_row, 3, current_balance)
+                            logger.error(
+                                f"complete_sale_nfc: all {MAX_RETRIES} attempts failed; "
+                                f"balance rolled back to {current_balance} for card {money_card_number}. Error: {e}"
+                            )
+                        except Exception as rollback_err:
+                            logger.error(
+                                f"complete_sale_nfc: CRITICAL — rollback also failed for card {money_card_number}. "
+                                f"Balance may be incorrect. Rollback error: {rollback_err}. Original error: {e}"
+                            )
+                    # Queue the transaction for later sync
+                    try:
+                        import sys as _sys
+                        _sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
+                        from offline_queue import get_offline_queue
+                        q = get_offline_queue()
+                        q.enqueue('append_row', 'Transactions Log', transaction_row)
+                        logger.info("event=offline_queued card=%s total=%.2f", money_card_number, total)
+                    except Exception as qe:
+                        logger.error("event=offline_queue_failed error=%s", qe)
+                    return jsonify({
+                        'success': True,
+                        'new_balance': new_balance,
+                        'timestamp': timestamp,
+                        'offline': True,
+                        'message': 'Sale processed offline — will sync when connection is restored.'
+                    })
+
+        if last_error:
+            # Should not reach here, but guard just in case
+            return jsonify({'error': 'Service unavailable, please try again'}), 503
+
+        # Clear pending transaction (replay prevention)
+        flask_session.pop('pending_transaction', None)
+
+        logger.info(
+            "event=nfc_sale_complete token_len=%d card=%s total=%.2f",
+            len(virtual_card_token), money_card_number, total
+        )
+
+        # Send email (async)
+        matched_user = None
+        try:
+            users_sheet = db.worksheet('Users')
+            user_records = users_sheet.get_all_records()
+
+            for user in user_records:
+                if str(user.get('MoneyCardNumber', '')).strip() == money_card_number:
+                    matched_user = user
+                    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'services'))
+                    from email_service import EmailService
+
+                    email_service = EmailService()
+                    email_service.send_receipt(
+                        user.get('ParentEmail', ''),
+                        user.get('Email', ''),
+                        user.get('Name', 'Student'),
+                        items,
+                        total,
+                        new_balance
+                    )
+                    break
+        except Exception as e:
+            print(f"Email send error (non-fatal): {e}")
+            matched_user = None
+
+        # Send SMS notification to parent (purchase + low-balance check)
+        try:
+            if matched_user:
+                # Defensive: try ParentPhone first, then PhoneNumber fallback
+                parent_phone = str(matched_user.get('ParentPhone') or matched_user.get('PhoneNumber', '')).strip()
+
+                items_summary = ', '.join(
+                    f"{i.get('name','?')} x{i.get('qty',1)}" for i in items[:3]
+                )
+
+                # Check if low balance before sending purchase SMS (for consistency)
+                LOW_BALANCE_THRESHOLD = float(os.getenv("LOW_BALANCE_THRESHOLD", 50))
+                new_balance_under_threshold = matched_user.get('Balance') is not None and float(matched_user.get('Balance', 999)) - total < LOW_BALANCE_THRESHOLD
+
+                if parent_phone and parent_phone.startswith('+'):
+                    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
+                    from notifications import get_sms_notifier
+
+                    sms = get_sms_notifier()
+
+                    # Send low-balance SMS first (if applicable)
+                    if new_balance_under_threshold:
+                        student_name = matched_user.get('Name', 'Student')
+                        try:
+                            sms.send_low_balance_sms(
+                                to_number=parent_phone,
+                                student_name=student_name,
+                                balance=new_balance,
+                                threshold=LOW_BALANCE_THRESHOLD,
+                            )
+                        except Exception as low_bal_err:
+                            logger.warning(f"Low balance SMS failed for {matched_user.get('Name', 'Student')}: {low_bal_err}")
+
+                    # Then send purchase notification
+                    sms.send_purchase_sms(
+                        to_number=parent_phone,
+                        student_name=matched_user.get('Name', 'Student'),
+                        amount=total,
+                        new_balance=new_balance,
+                        items_summary=items_summary,
+                    )
+        except Exception:
+            pass  # SMS failure is non-blocking
+
+        # Send FCM push to student
+        try:
+            if matched_user:
+                fcm_token = str(matched_user.get('FCMToken', '')).strip()
+                if fcm_token:
+                    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
+                    from api.fcm_sender import send_purchase_push
+                    send_purchase_push(fcm_token, total, new_balance)
+        except Exception:
+            pass  # FCM failure is non-blocking
+
+        return jsonify({
+            'success': True,
+            'new_balance': new_balance,
+            'timestamp': timestamp
+        })
+
+    except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
+            gspread.exceptions.WorksheetNotFound, ConnectionError, TimeoutError) as e:
+        logger.error(f"Google Sheets unavailable in complete_sale_nfc: {e}")
+        return jsonify({'error': 'Service unavailable, please try again'}), 503
+    except Exception as e:
+        logger.error(f"Unexpected error in complete_sale_nfc: {e}", exc_info=True)
+        return jsonify({'error': 'An unexpected error occurred'}), 500
+
 
 @cashier_bp.route('/api/queue/status', methods=['GET'])
 @jwt_required(roles=['cashier', 'admin'])

@@ -236,7 +236,7 @@ This file is the explicit capability and coverage contract for the project.
 - Source: user
 - Primary owning slice: M003/S02
 - Supporting slices: none
-- Validation: unmapped
+- Validation: Contract verified — py_compile exits 0; bash scripts/verify-s02.sh 9/9 pass. Runtime validation (live phone tap at deployed Arduino) pending human UAT.
 - Notes: New `complete_sale_nfc(token)` endpoint in cashier_routes.py resolves virtual_card_token → money_card_number via Sheets (same pattern as api_server.py nfc_pay), then debits balance and emits same success/failure as `complete_sale`
 
 ### R022 — Arduino WiFi Status in Cashier UI
@@ -320,7 +320,7 @@ This file is the explicit capability and coverage contract for the project.
 | R018 | failure-visibility | validated | M002/S03 | none | All three health handlers return structured JSON + 503; verify-s03.sh checks 9–18 pass |
 | R019 | operability | validated | M002/S05 | none | test -f docs/DEPLOY.md exit 0; 8/8 grep checks pass |
 | R020 | primary-user-loop | active | M003/S01 | none | unmapped |
-| R021 | primary-user-loop | active | M003/S02 | none | unmapped |
+| R021 | primary-user-loop | active | M003/S02 | none | contract verified (py_compile + verify-s02.sh 9/9); live hardware UAT pending |
 | R022 | operability | active | M003/S03 | none | unmapped |
 | R023 | continuity | active | M003/S04 | none | unmapped |
 | R024 | operability | active | M003/S04 | none | unmapped |

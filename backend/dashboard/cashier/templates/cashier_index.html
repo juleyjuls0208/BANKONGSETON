@@ -300,6 +300,10 @@
                 document.getElementById('modalTitle').textContent = 'Error';
                 document.getElementById('modalMessage').textContent = data.error;
             });
+
+            socket.on('nfc_payment', function(data) {
+                completeNFCSale(data.token);
+            });
         }
 
         // --- Checkout / Payment ---
@@ -364,6 +368,40 @@
                     renderCart();
                     checkQueueStatus();
 
+                    setTimeout(function() { closeModal(); }, 2000);
+                }
+            } catch (error) {
+                document.getElementById('modalTitle').textContent = 'Error';
+                document.getElementById('modalMessage').textContent = error.message;
+            }
+        }
+
+        async function completeNFCSale(token) {
+            // Ensure modal is visible — NFC tap may arrive before cashier opens checkout
+            var modal = document.getElementById('paymentModal');
+            if (modal.style.display !== 'flex') {
+                modal.style.display = 'flex';
+                document.getElementById('modalTitle').textContent = 'NFC Payment';
+                document.getElementById('modalMessage').textContent = 'Processing phone tap...';
+            }
+            try {
+                const response = await fetch('/cashier/api/complete-sale-nfc', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({virtual_card_token: token})
+                });
+                const data = await response.json();
+                if (data.error) {
+                    document.getElementById('modalTitle').textContent = 'Payment Failed';
+                    document.getElementById('modalMessage').textContent = data.error;
+                } else {
+                    const offlineNote = data.offline ? ' (Offline \u2014 will sync)' : '';
+                    document.getElementById('modalTitle').textContent = 'Success!';
+                    document.getElementById('modalMessage').textContent =
+                        'NFC Payment received!\nNew Balance: \u20B1' + data.new_balance.toFixed(2) + offlineNote;
+                    cart = [];
+                    renderCart();
+                    checkQueueStatus();
                     setTimeout(function() { closeModal(); }, 2000);
                 }
             } catch (error) {

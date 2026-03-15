@@ -50,7 +50,7 @@ This milestone is complete only when all are true:
 - [x] **S01: Firmware WiFi Routing Fix** `risk:high` `depends:[]`
   > After this: Physical RFID card tapped at a powerbank-powered Arduino posts to `/api/arduino/card-read` over WiFi, fires `card_read` in the cashier UI, and completes a real sale — no serial cable, no PC.
 
-- [ ] **S02: Phone NFC Cashier Payment** `risk:medium` `depends:[S01]`
+- [x] **S02: Phone NFC Cashier Payment** `risk:medium` `depends:[S01]`
   > After this: Student taps Android phone at the Arduino → `nfc_payment` socket event fires → cashier UI calls `complete-sale-nfc` → sale completes with balance debited — same success modal as a card tap.
 
 - [ ] **S03: WiFi Status Indicator** `risk:low` `depends:[S01]`

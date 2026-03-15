@@ -31,6 +31,7 @@ A student should be able to tap their card at the cashier, have the transaction 
 - 35-test critical-path unit test suite (complete_sale, load_balance, void_transaction, cashier auth); 2.40s; zero live Sheets calls
 - docs/DEPLOY.md — complete PythonAnywhere deployment runbook (11 sections)
 - Arduino UNO R4 WiFi firmware (`arduino/bankongseton_rfid/`) — dual-mode: APDU (HCE phone) + UID (physical RFID), WiFiS3, PN532 over SPI, HTTP POST to Flask backend, serial fallback; **S01 fix: `httpPostCard(uid)` → `/api/arduino/card-read`, `httpPostNFC(token)` → `/api/nfc/tap`, dispatched by prefix in `deliver()`**
+- Phone NFC payment wired at cashier (M003/S02): `POST /cashier/api/complete-sale-nfc` resolves virtual card token via VirtualCards sheet, debits balance, returns same payload as physical card tap; `socket.on('nfc_payment', ...)` in cashier UI calls `completeNFCSale(token)` — no arduinoConnected gate on inbound event
 
 ## Architecture / Key Patterns
 
@@ -59,3 +60,5 @@ See `.gsd/REQUIREMENTS.md` for the explicit capability contract, requirement sta
 - [x] M001: Operational Hardening & Feature Completion — All 13 gaps closed. See `.gsd/milestones/M001/M001-SUMMARY.md`.
 - [x] M002: Production Readiness & Deployment Stability — All 5 slices complete. Requirements fixed (R014), cache wired (R015), startup guard + health standardized (R016, R018), 35-test critical-path suite (R017), deployment runbook (R019). See `.gsd/milestones/M002/M002-SUMMARY.md`.
 - [ ] M003: Wireless Cashier Payment Terminal — Fix firmware WiFi routing bug; add phone NFC at cashier; WiFi status indicator; powerbank hardening + wireless deployment docs.
+  - [x] S01: Firmware WiFi Routing Fix — complete
+  - [x] S02: Phone NFC Cashier Payment — complete (contract + structural proof; human UAT pending live hardware)
