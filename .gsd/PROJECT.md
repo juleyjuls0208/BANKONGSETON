@@ -25,6 +25,11 @@ A student should be able to tap their card at the cashier, have the transaction 
 - JWT auth for mobile API; session auth for admin dashboard
 - Multi-station support via STATION_ID env var
 - Android: transaction filter, monthly budget auto-reset, lost card status badge
+- TTL cache (cache.py) wired to all hot Sheets-reading endpoints (30s products/users, 10s transactions); mutations invalidate on write
+- WEB_CONCURRENCY startup guard in both WSGI entry points (hard-fail on multi-worker config)
+- Standardized /api/health on all three app files ({status, sheets_ok, latency_ms, queue_pending, timestamp}; 503 on Sheets failure)
+- 35-test critical-path unit test suite (complete_sale, load_balance, void_transaction, cashier auth); 2.40s; zero live Sheets calls
+- docs/DEPLOY.md — complete PythonAnywhere deployment runbook (11 sections)
 
 ## Architecture / Key Patterns
 
@@ -47,4 +52,4 @@ See `.gsd/REQUIREMENTS.md` for the explicit capability contract, requirement sta
 ## Milestone Sequence
 
 - [x] M001: Operational Hardening & Feature Completion — All 13 gaps closed. See `.gsd/milestones/M001/M001-SUMMARY.md`.
-- [ ] M002: Production Readiness & Deployment Stability — **ALL SLICES COMPLETE.** S01 (requirements fixed) + S02 (cache layer wired) + S03 (startup guard + health standardization) + S04 (35-test critical-path suite) + S05 (deployment runbook) all done. See `.gsd/milestones/M002/M002-ROADMAP.md`.
+- [x] M002: Production Readiness & Deployment Stability — All 5 slices complete. Requirements fixed (R014), cache wired (R015), startup guard + health standardized (R016, R018), 35-test critical-path suite (R017), deployment runbook (R019). See `.gsd/milestones/M002/M002-SUMMARY.md`.
