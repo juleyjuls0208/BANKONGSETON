@@ -606,7 +606,38 @@ void loop() {
       // inDataExchange MUST be called after readPassiveTargetID (uses _inListedTag internally).
       bool apduOk = nfc.inDataExchange(apduCmd, 19, response, &responseLength);
 
-    if (apduOk && responseLength == 50 && response[48] == 0x90 && response[49] == 0x00) {
+      // ── APDU diagnostic: always print result so Serial Monitor shows what happened
+      Serial.print("APDU ok="); Serial.print(apduOk ? "YES" : "NO");
+      Serial.print(" rspLen="); Serial.print(responseLength);
+      if (responseLength >= 2) {
+        Serial.print(" lastBytes=");
+        Serial.print(response[responseLength >= 50 ? 48 : responseLength - 2], HEX);
+        Serial.print(" ");
+        Serial.print(response[responseLength >= 50 ? 49 : responseLength - 1], HEX);
+      }
+      Serial.println();
+
+      // ── Determine whether the APDU returned a valid 48-char token ──────────
+      // The HCE app sends: [48-byte ASCII token] + [0x90] + [0x00] = 50 bytes.
+      //
+      // Three cases handled:
+      //   A) responseLength == 50 — library returned actual byte count (normal)
+      //   B) responseLength >= 50 — some libraries leave it at the initial buffer
+      //      size (60); data at offsets 48-49 still holds SW1/SW2 correctly.
+      //   C) responseLength == 48 — library stripped SW1/SW2 before returning.
+      //
+      // A phone that has NOT authorized payment returns SW_NO_TOKEN [0x6A, 0x82]
+      // (2 bytes); this correctly fails all three cases and falls to CARD fallback.
+      bool nfcTokenOk = false;
+      if (apduOk) {
+        if (responseLength >= 50 && response[48] == 0x90 && response[49] == 0x00) {
+          nfcTokenOk = true;  // Case A / B
+        } else if (responseLength == 48) {
+          nfcTokenOk = true;  // Case C — no SW bytes, trust the data
+        }
+      }
+
+    if (nfcTokenOk) {
       // ── APDU success: extract 48-char ASCII token ──────────
       String token = "";
       for (int i = 0; i < 48; i++) token += (char)response[i];
@@ -634,7 +665,15 @@ void loop() {
       nfc.setRFField(0, 1);  // RF on, no autoRFCA
       delay(10);
 
-      Serial.println("APDU failed on 4-byte target — using UID fallback");
+      // Diagnose common failure: SW_NO_TOKEN means phone not yet authorized
+      if (apduOk && responseLength == 2 && response[0] == 0x6A && response[1] == 0x82) {
+        Serial.println("APDU: phone returned SW_NO_TOKEN (0x6A82) — authorize payment in the app first");
+      } else if (!apduOk) {
+        Serial.println("APDU: inDataExchange failed — RF error or phone not responding");
+      } else {
+        Serial.print("APDU: unexpected response — rspLen=");
+        Serial.println(responseLength);
+      }
 
       deliver(uidHex, "CARD");
 
