@@ -67,7 +67,7 @@ This milestone is complete only when all are true:
 - [x] **S04: Critical Path Unit Tests** `risk:medium` `depends:[S01]`
   > After this: `pytest` runs ~35 tests on complete_sale, load_balance, void_transaction, and cashier auth — green, zero live Sheets calls, under 10 seconds.
 
-- [ ] **S05: Deployment Runbook** `risk:low` `depends:[S01,S03,S04]`
+- [x] **S05: Deployment Runbook** `risk:low` `depends:[S01,S03,S04]`
   > After this: `docs/DEPLOY.md` exists with env vars, service account setup, first-run migration steps, health check sequence, and all known operational constraints documented.
 
 ## Boundary Map

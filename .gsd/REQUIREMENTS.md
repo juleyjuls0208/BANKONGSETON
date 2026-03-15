@@ -61,14 +61,14 @@ This file is the explicit capability and coverage contract for the project.
 
 ### R019 — Deployment Runbook
 - Class: operability
-- Status: active
+- Status: validated
 - Description: docs/DEPLOY.md covers PythonAnywhere setup, required env vars, Sheets service account config, first-run migration steps, health check sequence, and known operational constraints
 - Why it matters: No runbook exists; backend/api/wsgi.py targets PythonAnywhere but the setup steps, env vars, and first-run sequence are undocumented
 - Source: execution
 - Primary owning slice: M002/S05
 - Supporting slices: none
-- Validation: unmapped
-- Notes: Audience is the developer (Python/git familiar); no screenshots required; must document single-worker constraint, E.164 phone format requirement, and offline queue behavior on fresh deploy
+- Validation: test -f docs/DEPLOY.md exits 0; all 8 grep checks pass (FLASK_SECRET_KEY, WEB_CONCURRENCY, E.164, migrate_transactions.py, queue_pending, offline_queue.db, firebase-credentials.json, YOUR_USERNAME); 11-section runbook covers env vars (22 Dashboard + 10 API vars), WSGI corrected templates, startup guard quick-reference, health check failure-interpretation table, and all 8 known operational constraints
+- Notes: Audience is the developer (Python/git familiar); no screenshots required; single-worker constraint, E.164 phone format requirement, and offline queue behavior on fresh deploy all documented in Known Operational Constraints section
 
 ## Validated
 
@@ -261,13 +261,13 @@ This file is the explicit capability and coverage contract for the project.
 | R016 | failure-visibility | validated | M002/S03 | none | WEB_CONCURRENCY guard at module level; verify-s03.sh checks 5–8 pass |
 | R017 | quality-attribute | validated | M002/S04 | none | pytest exit 0; 35 tests; 2.40s; zero live Sheets calls |
 | R018 | failure-visibility | validated | M002/S03 | none | All three health handlers return structured JSON + 503; verify-s03.sh checks 9–18 pass |
-| R019 | operability | active | M002/S05 | none | unmapped |
+| R019 | operability | validated | M002/S05 | none | test -f docs/DEPLOY.md exit 0; 8/8 grep checks pass |
 | R050 | integration | out-of-scope | none | none | n/a |
 | R051 | core-capability | out-of-scope | none | none | n/a |
 
 ## Coverage Summary
 
-- Active requirements: 1
-- Mapped to slices: 1
-- Validated: 18
+- Active requirements: 0
+- Mapped to slices: 0
+- Validated: 19
 - Unmapped active requirements: 0
