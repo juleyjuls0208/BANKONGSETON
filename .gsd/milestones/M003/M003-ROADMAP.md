@@ -53,7 +53,7 @@ This milestone is complete only when all are true:
 - [x] **S02: Phone NFC Cashier Payment** `risk:medium` `depends:[S01]`
   > After this: Student taps Android phone at the Arduino → `nfc_payment` socket event fires → cashier UI calls `complete-sale-nfc` → sale completes with balance debited — same success modal as a card tap.
 
-- [ ] **S03: WiFi Status Indicator** `risk:low` `depends:[S01]`
+- [x] **S03: WiFi Status Indicator** `risk:low` `depends:[S01]`
   > After this: Cashier UI shows a green "WiFi" badge when Arduino is heartbeating; badge turns red when Arduino goes offline; "Pay Now" enables without selecting a COM port.
 
 - [ ] **S04: Powerbank Hardening + Wireless Docs** `risk:low` `depends:[S01]`

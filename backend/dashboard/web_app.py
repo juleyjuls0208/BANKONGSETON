@@ -11,6 +11,7 @@ from flask_socketio import SocketIO
 import os
 import sys
 import logging
+import time
 
 from dotenv import load_dotenv
 
@@ -104,6 +105,7 @@ if _parse_worker_count("WEB_CONCURRENCY") > 1 or _parse_worker_count("GUNICORN_W
 # Arduino WiFi API key — loaded once at module level
 # Empty string means endpoint is disabled (returns 401 for any request)
 ARDUINO_API_KEY = os.environ.get("ARDUINO_API_KEY", "")
+ARDUINO_WIFI_OFFLINE_S = int(os.environ.get("ARDUINO_WIFI_OFFLINE_S", "60"))
 
 # UID pattern for Arduino card reads
 import re
@@ -119,6 +121,7 @@ socketio = SocketIO(app, cors_allowed_origins=_allowed_origins)
 
 # Attach socketio to app for cashier blueprint access
 app.socketio = socketio
+app.arduino_last_heartbeat = 0.0
 
 # Register cashier blueprint
 if CASHIER_AVAILABLE:
@@ -284,6 +287,28 @@ def arduino_card_read():
     socketio.emit("card_read", {"success": True, "uid": uid})
     logger.info("event=arduino_card_read uid=%s remote=%s", uid, request.remote_addr)
 
+    return jsonify({"status": "ok"}), 200
+
+
+@app.route("/api/arduino/heartbeat", methods=["POST"])
+def arduino_heartbeat():
+    """
+    WiFi keep-alive / status heartbeat endpoint for Arduino UNO R4 WiFi.
+    Arduino POSTs every HEARTBEAT_INTERVAL_MS ms with X-API-Key header.
+    Emits arduino_wifi_status SocketIO event to cashier UI.
+    """
+    api_key = request.headers.get("X-API-Key", "")
+    if not ARDUINO_API_KEY or api_key != ARDUINO_API_KEY:
+        logger.warning(
+            "event=arduino_heartbeat_rejected reason=invalid_api_key remote=%s",
+            request.remote_addr,
+        )
+        return jsonify({"error": "Unauthorized"}), 401
+
+    app.arduino_last_heartbeat = time.time()
+    last_seen_s = 0.0  # just updated
+    socketio.emit("arduino_wifi_status", {"online": True, "last_seen_s": last_seen_s})
+    logger.info("event=arduino_heartbeat remote=%s", request.remote_addr)
     return jsonify({"status": "ok"}), 200
 
 

@@ -16,6 +16,9 @@
         .status-disconnected { background: #e74c3c; }
         .port-selector { padding: 6px 12px; border-radius: 4px; border: none; }
         .connect-btn { background: rgba(255,255,255,0.3); border: 2px solid white; color: white; padding: 6px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px; }
+        .wifi-badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; margin-left: 8px; letter-spacing: 0.03em; }
+        .wifi-badge.online { background: #27ae60; color: #fff; }
+        .wifi-badge.offline { background: #e74c3c; color: #fff; }
         .logout-btn { background: rgba(255,255,255,0.2); border: 2px solid white; color: white; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: 600; }
         .main-container { display: grid; grid-template-columns: 1fr 400px; gap: 24px; padding: 24px; height: calc(100vh - 72px); }
         .products-section { background: white; border-radius: 12px; padding: 24px; overflow-y: auto; }
@@ -59,6 +62,7 @@
                     <option value="">Select COM Port</option>
                 </select>
                 <button class="connect-btn" onclick="connectArduino()">Connect</button>
+                <span class="wifi-badge offline" id="wifiBadge">WiFi</span>
             </div>
             <button class="logout-btn" onclick="logout()">Logout</button>
         </div>
@@ -107,6 +111,7 @@
         document.addEventListener('DOMContentLoaded', function() {
             loadPorts();
             loadProducts();
+            fetchArduinoWifiStatus();
             initWebSocket();
         });
 
@@ -158,6 +163,35 @@
             arduinoConnected = connected;
             const indicator = document.getElementById('statusIndicator');
             indicator.className = 'status-indicator ' + (connected ? 'status-connected' : 'status-disconnected');
+        }
+
+        function updateWifiBadge(data) {
+            var badge = document.getElementById('wifiBadge');
+            if (data.online) {
+                arduinoConnected = true;
+                badge.className = 'wifi-badge online';
+            } else {
+                // Only clear arduinoConnected if serial is also disconnected
+                if (!document.getElementById('statusIndicator').classList.contains('status-connected')) {
+                    arduinoConnected = false;
+                }
+                badge.className = 'wifi-badge offline';
+            }
+        }
+
+        async function fetchArduinoWifiStatus() {
+            try {
+                var token = localStorage.getItem('cashier_token');
+                var resp = await fetch('/cashier/api/arduino-wifi-status', {
+                    headers: {'Authorization': 'Bearer ' + token}
+                });
+                if (resp.ok) {
+                    var data = await resp.json();
+                    updateWifiBadge(data);
+                }
+            } catch (e) {
+                // Network error — badge stays offline (correct)
+            }
         }
 
         // --- Products ---
@@ -304,13 +338,17 @@
             socket.on('nfc_payment', function(data) {
                 completeNFCSale(data.token);
             });
+
+            socket.on('arduino_wifi_status', function(data) {
+                updateWifiBadge(data);
+            });
         }
 
         // --- Checkout / Payment ---
 
         async function checkout() {
             if (!arduinoConnected) {
-                alert('Arduino not connected! Please connect to a COM port first.');
+                alert('Arduino not connected — check COM port or WiFi.');
                 return;
             }
 
@@ -429,7 +467,7 @@
 
         function quickPay(productId, productName, price) {
             if (!arduinoConnected) {
-                alert('Arduino not connected! Please connect to a COM port first.');
+                alert('Arduino not connected — check COM port or WiFi.');
                 return;
             }
             const items = [{name: productName, price: price, qty: 1}];

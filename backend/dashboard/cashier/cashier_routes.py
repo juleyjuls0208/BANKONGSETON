@@ -828,6 +828,23 @@ def queue_status():
         return jsonify({'error': 'An unexpected error occurred'}), 500
 
 
+@cashier_bp.route('/api/arduino-wifi-status', methods=['GET'])
+@jwt_required(roles=['cashier', 'admin'])
+def arduino_wifi_status():
+    """GET /cashier/api/arduino-wifi-status — returns {online, last_seen_s}."""
+    try:
+        from flask import current_app
+        last_hb = getattr(current_app, 'arduino_last_heartbeat', 0.0)
+        now = time.time()
+        last_seen_s = now - last_hb if last_hb > 0 else -1.0
+        offline_threshold = getattr(current_app, 'config', {}).get('ARDUINO_WIFI_OFFLINE_S', 60)
+        online = (last_hb > 0) and (last_seen_s < offline_threshold)
+        return jsonify({'online': online, 'last_seen_s': round(last_seen_s, 1)})
+    except Exception as e:
+        logger.error(f"arduino_wifi_status error: {e}", exc_info=True)
+        return jsonify({'error': 'An unexpected error occurred'}), 500
+
+
 @cashier_bp.route('/api/queue/sync', methods=['POST'])
 @jwt_required(roles=['cashier', 'admin'])
 def queue_sync():

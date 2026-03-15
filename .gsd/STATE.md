@@ -1,8 +1,8 @@
 # GSD State
 
 **Active Milestone:** M003 — Wireless Cashier Payment Terminal
-**Active Slice:** S02 — Phone NFC Cashier Payment
-**Phase:** executing
+**Active Slice:** S03 — WiFi Status Indicator
+**Phase:** execution — S03 planned, ready for T01
 **Requirements Status:** 6 active · 13 validated · 0 deferred · 2 out of scope
 
 ## Milestone Registry
@@ -17,4 +17,4 @@
 - None
 
 ## Next Action
-Execute T01: Add `complete_sale_nfc()` backend endpoint in `cashier_routes.py`.
+Execute T01: Add heartbeat endpoint + status query endpoint + verify script.

@@ -247,8 +247,8 @@ This file is the explicit capability and coverage contract for the project.
 - Source: user
 - Primary owning slice: M003/S03
 - Supporting slices: none
-- Validation: unmapped
-- Notes: Arduino POSTs to `/api/arduino/heartbeat` every 30s; backend stores `last_arduino_wifi_seen` and emits `arduino_wifi_status` SocketIO event; cashier UI sets `arduinoConnected = true` on either serial connect OR WiFi heartbeat
+- Validation: Contract verified — py_compile exits 0 on web_app.py and cashier_routes.py; bash scripts/verify-m003-s03.sh 12/12 pass. Runtime validation (badge going green on live Arduino heartbeat) pending S04 firmware heartbeat POST.
+- Notes: POST /api/arduino/heartbeat with API key auth; GET /cashier/api/arduino-wifi-status with JWT; #wifiBadge span green (.online) / red (.offline); arduinoConnected set from WiFi path without touching serial indicator; WiFi offline does not override active serial connection
 
 ### R023 — Arduino Stable on Powerbank
 - Class: continuity
@@ -321,7 +321,7 @@ This file is the explicit capability and coverage contract for the project.
 | R019 | operability | validated | M002/S05 | none | test -f docs/DEPLOY.md exit 0; 8/8 grep checks pass |
 | R020 | primary-user-loop | active | M003/S01 | none | unmapped |
 | R021 | primary-user-loop | active | M003/S02 | none | contract verified (py_compile + verify-s02.sh 9/9); live hardware UAT pending |
-| R022 | operability | active | M003/S03 | none | unmapped |
+| R022 | operability | active | M003/S03 | none | contract verified (py_compile + verify-m003-s03.sh 12/12); live hardware badge green pending S04 |
 | R023 | continuity | active | M003/S04 | none | unmapped |
 | R024 | operability | active | M003/S04 | none | unmapped |
 | R050 | integration | out-of-scope | none | none | n/a |
