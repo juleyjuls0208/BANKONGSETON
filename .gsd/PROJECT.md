@@ -30,12 +30,16 @@ A student should be able to tap their card at the cashier, have the transaction 
 - Standardized /api/health on all three app files ({status, sheets_ok, latency_ms, queue_pending, timestamp}; 503 on Sheets failure)
 - 35-test critical-path unit test suite (complete_sale, load_balance, void_transaction, cashier auth); 2.40s; zero live Sheets calls
 - docs/DEPLOY.md — complete PythonAnywhere deployment runbook (11 sections)
+- Arduino UNO R4 WiFi firmware (`arduino/bankongseton_rfid/`) — dual-mode: APDU (HCE phone) + UID (physical RFID), WiFiS3, PN532 over SPI, HTTP POST to Flask backend, serial fallback
 
 ## Architecture / Key Patterns
 
 - `backend/dashboard/admin_dashboard.py` — main Flask app (SocketIO, fraud panel, cashier accounts, transaction void, batch email trigger)
 - `backend/dashboard/cashier/cashier_routes.py` — cashier Blueprint (JWT, complete-sale with SQLite fallback, Quick Pay, queue sync)
 - `backend/api/api_server.py` — mobile REST API (student login, balance, transactions, NFC, lost card status)
+- `backend/dashboard/web_app.py` — cashier-facing Flask app; `/api/arduino/card-read` receives WiFi card reads (emits `card_read`); `/api/nfc/tap` receives WiFi NFC tokens (emits `nfc_payment`)
+- `backend/dashboard/dashboard_core.py` — shared Flask app factory; registers `/api/nfc/tap` endpoint
+- `backend/dashboard/arduino_bridge.py` — ArduinoBridge (serial path: reads `CARD|UID` + `NFC|token` lines, emits SocketIO events, calls `/api/nfc/pay` for phone taps)
 - `backend/fraud_detection.py` — FraudDetector (in-memory, Sheets-persisted; single-worker only — multi-worker causes split-brain)
 - `backend/notifications.py` — EmailNotifier, TwilioSMSNotifier (gated on env vars)
 - `backend/api/fcm_sender.py` — Firebase push (send_purchase_push, send_load_push, send_card_replaced_push)
@@ -44,6 +48,7 @@ A student should be able to tap their card at the cashier, have the transaction 
 - `backend/resilience.py` — legacy stub; replaced by offline_queue.py
 - Google Sheets worksheets: Users, Money Accounts, Transactions Log, Products, Fraud Alerts, Suspended Cards, Cashier Accounts, Scheduler Log
 - Android app: `mobile/student_app_v2/` (mobile/android/ is archived)
+- Arduino firmware: `arduino/bankongseton_rfid/bankongseton_rfid.ino` (R4 WiFi, payment reader) + `arduino/bankongseton_nfc_r3/` (R3, registration reader only)
 
 ## Capability Contract
 
@@ -53,3 +58,4 @@ See `.gsd/REQUIREMENTS.md` for the explicit capability contract, requirement sta
 
 - [x] M001: Operational Hardening & Feature Completion — All 13 gaps closed. See `.gsd/milestones/M001/M001-SUMMARY.md`.
 - [x] M002: Production Readiness & Deployment Stability — All 5 slices complete. Requirements fixed (R014), cache wired (R015), startup guard + health standardized (R016, R018), 35-test critical-path suite (R017), deployment runbook (R019). See `.gsd/milestones/M002/M002-SUMMARY.md`.
+- [ ] M003: Wireless Cashier Payment Terminal — Fix firmware WiFi routing bug; add phone NFC at cashier; WiFi status indicator; powerbank hardening + wireless deployment docs.

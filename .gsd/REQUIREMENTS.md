@@ -215,6 +215,63 @@ This file is the explicit capability and coverage contract for the project.
 - Validation: validated
 - Notes: DailyScheduler + run_low_balance_batch() in scheduler.py; POST /api/admin/batch/low-balance-email manual trigger; logs to Scheduler Log sheet.
 
+## Active
+
+### R020 — Correct WiFi Payment Routing
+- Class: primary-user-loop
+- Status: active
+- Description: Arduino WiFi path routes physical card UIDs to `/api/arduino/card-read` (emits `card_read`) and NFC phone tokens to `/api/nfc/tap` (emits `nfc_payment`) — not both to the same endpoint
+- Why it matters: Current firmware sends all WiFi POSTs to `/api/nfc/tap` with `{"token": value}`, so physical RFID card taps over WiFi go to the wrong endpoint and fire the wrong SocketIO event; the bug is masked today only because serial fallback via ArduinoBridge routes correctly — with a standalone powerbank Arduino (no serial/PC), every physical card tap silently fails
+- Source: execution
+- Primary owning slice: M003/S01
+- Supporting slices: none
+- Validation: unmapped
+- Notes: `deliver()` in bankongseton_rfid.ino must use two httpPost targets distinguished by prefix ("CARD" vs "NFC"); CARD → `{"uid": value}` to `/api/arduino/card-read`; NFC → `{"token": value}` to `/api/nfc/tap`
+
+### R021 — Phone NFC Payment at Cashier
+- Class: primary-user-loop
+- Status: active
+- Description: Student can tap an Android HCE phone at the cashier to complete a payment; cashier UI handles `nfc_payment` socket event and processes the sale via a new `/cashier/api/complete-sale-nfc` endpoint
+- Why it matters: The `nfc_payment` socket event from the Arduino is emitted but unhandled in the cashier UI — phone taps do nothing at the cashier today; cashier UI only listens for `card_read`
+- Source: user
+- Primary owning slice: M003/S02
+- Supporting slices: none
+- Validation: unmapped
+- Notes: New `complete_sale_nfc(token)` endpoint in cashier_routes.py resolves virtual_card_token → money_card_number via Sheets (same pattern as api_server.py nfc_pay), then debits balance and emits same success/failure as `complete_sale`
+
+### R022 — Arduino WiFi Status in Cashier UI
+- Class: operability
+- Status: active
+- Description: Cashier UI shows a WiFi status badge (green/red) indicating whether the Arduino is reachable wirelessly; "Pay Now" enables when Arduino is WiFi-connected even without a COM port selected
+- Why it matters: Currently `arduinoConnected` only goes true via the COM port selector; with a powerbank Arduino (no USB to PC), the checkout button stays disabled forever, blocking all payments
+- Source: user
+- Primary owning slice: M003/S03
+- Supporting slices: none
+- Validation: unmapped
+- Notes: Arduino POSTs to `/api/arduino/heartbeat` every 30s; backend stores `last_arduino_wifi_seen` and emits `arduino_wifi_status` SocketIO event; cashier UI sets `arduinoConnected = true` on either serial connect OR WiFi heartbeat
+
+### R023 — Arduino Stable on Powerbank
+- Class: continuity
+- Status: active
+- Description: Arduino UNO R4 WiFi runs reliably for a full school day on a USB powerbank without auto-shutoff; WiFi reconnects automatically if the connection drops between customers
+- Why it matters: Many powerbanks cut power when current drops below ~100mA; without active mitigation, the Arduino may shut off during quiet periods between card taps; WiFi drops must also self-heal without a person rebooting the Arduino
+- Source: user
+- Primary owning slice: M003/S04
+- Supporting slices: none
+- Validation: unmapped
+- Notes: Heartbeat POST every 30s provides consistent RF burst to keep powerbank alive; PN532 polling loop baseline draw is ~180-200mA which should keep most powerbanks above cutoff threshold; WiFi reconnect on ensureWiFi() call before each heartbeat and before each card POST
+
+### R024 — Wireless Deployment Documentation
+- Class: operability
+- Status: active
+- Description: `arduino/README-wireless.md` documents the complete standalone powerbank setup: hardware list, wiring, `secrets.h` configuration, flashing steps, and how to verify the Arduino is connected to the school LAN
+- Why it matters: Without docs, whoever sets up the cashier counter has no guide for the WiFi-only configuration — they'll fall back to USB serial mode
+- Source: user
+- Primary owning slice: M003/S04
+- Supporting slices: none
+- Validation: unmapped
+- Notes: Should cover: powerbank selection (minimum 2A output port), secrets.h fields, ARDUINO_API_KEY in .env, school LAN IP of Flask server, how to check the WiFi status badge in cashier UI
+
 ## Out of Scope
 
 ### R050 — GCash / Maya Online Top-Up
@@ -262,12 +319,17 @@ This file is the explicit capability and coverage contract for the project.
 | R017 | quality-attribute | validated | M002/S04 | none | pytest exit 0; 35 tests; 2.40s; zero live Sheets calls |
 | R018 | failure-visibility | validated | M002/S03 | none | All three health handlers return structured JSON + 503; verify-s03.sh checks 9–18 pass |
 | R019 | operability | validated | M002/S05 | none | test -f docs/DEPLOY.md exit 0; 8/8 grep checks pass |
+| R020 | primary-user-loop | active | M003/S01 | none | unmapped |
+| R021 | primary-user-loop | active | M003/S02 | none | unmapped |
+| R022 | operability | active | M003/S03 | none | unmapped |
+| R023 | continuity | active | M003/S04 | none | unmapped |
+| R024 | operability | active | M003/S04 | none | unmapped |
 | R050 | integration | out-of-scope | none | none | n/a |
 | R051 | core-capability | out-of-scope | none | none | n/a |
 
 ## Coverage Summary
 
-- Active requirements: 0
-- Mapped to slices: 0
+- Active requirements: 5
+- Mapped to slices: 5
 - Validated: 19
 - Unmapped active requirements: 0
