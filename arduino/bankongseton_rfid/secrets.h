@@ -18,4 +18,7 @@
 // Must match ARDUINO_API_KEY in Flask .env
 #define SECRET_API_KEY "testkey123"
 
+// HEARTBEAT_INTERVAL_MS (30000 ms) is defined as a constant in bankongseton_rfid.ino
+// (not here) — see the HTTP tuning section. S04 will add heartbeat POST logic there.
+
 #endif

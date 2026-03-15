@@ -47,7 +47,7 @@ This milestone is complete only when all are true:
 
 ## Slices
 
-- [ ] **S01: Firmware WiFi Routing Fix** `risk:high` `depends:[]`
+- [x] **S01: Firmware WiFi Routing Fix** `risk:high` `depends:[]`
   > After this: Physical RFID card tapped at a powerbank-powered Arduino posts to `/api/arduino/card-read` over WiFi, fires `card_read` in the cashier UI, and completes a real sale — no serial cable, no PC.
 
 - [ ] **S02: Phone NFC Cashier Payment** `risk:medium` `depends:[S01]`

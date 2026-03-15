@@ -30,7 +30,7 @@ A student should be able to tap their card at the cashier, have the transaction 
 - Standardized /api/health on all three app files ({status, sheets_ok, latency_ms, queue_pending, timestamp}; 503 on Sheets failure)
 - 35-test critical-path unit test suite (complete_sale, load_balance, void_transaction, cashier auth); 2.40s; zero live Sheets calls
 - docs/DEPLOY.md — complete PythonAnywhere deployment runbook (11 sections)
-- Arduino UNO R4 WiFi firmware (`arduino/bankongseton_rfid/`) — dual-mode: APDU (HCE phone) + UID (physical RFID), WiFiS3, PN532 over SPI, HTTP POST to Flask backend, serial fallback
+- Arduino UNO R4 WiFi firmware (`arduino/bankongseton_rfid/`) — dual-mode: APDU (HCE phone) + UID (physical RFID), WiFiS3, PN532 over SPI, HTTP POST to Flask backend, serial fallback; **S01 fix: `httpPostCard(uid)` → `/api/arduino/card-read`, `httpPostNFC(token)` → `/api/nfc/tap`, dispatched by prefix in `deliver()`**
 
 ## Architecture / Key Patterns
 

@@ -68,6 +68,7 @@
 static const int MAX_RETRIES    = 3;
 static const int RETRY_DELAY_MS = 2000;
 static const int HTTP_TIMEOUT_MS = 5000;
+static const int HEARTBEAT_INTERVAL_MS = 30000;  // S04: heartbeat stub — POST not yet implemented
 
 // ── PN532 instance (Elechouse SPI — handles SPI.begin() internally) ─
 PN532_SPI pn532spi(SPI, PN532_SS);
@@ -295,12 +296,14 @@ bool ensureWiFi() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// HTTP POST HELPER
+// HTTP POST HELPERS
 // ═══════════════════════════════════════════════════════════════
 
-// Posts {"token": "<value>"} to Flask /api/nfc/tap.
+// Shared TCP connect/header/response logic.
+// path: e.g. "/api/nfc/tap" or "/api/arduino/card-read"
+// body: raw JSON string to POST
 // Returns true on HTTP 200, false on any error.
-bool httpPost(const String &value) {
+bool httpPostJson(const String &path, const String &body) {
   WiFiClient client;
 
   String host = String(FLASK_HOST);
@@ -313,9 +316,7 @@ bool httpPost(const String &value) {
     return false;
   }
 
-  String body = "{\"token\":\"" + value + "\"}";
-
-  client.println("POST /api/nfc/tap HTTP/1.0");
+  client.println("POST " + path + " HTTP/1.0");
   client.println("Host: " + String(FLASK_HOST));
   client.println("Content-Type: application/json");
   client.println("X-API-Key: " + String(SECRET_API_KEY));
@@ -340,6 +341,16 @@ bool httpPost(const String &value) {
   return ok;
 }
 
+// POSTs {"uid": "<uid>"} to /api/arduino/card-read (physical RFID card tap).
+bool httpPostCard(const String &uid) {
+  return httpPostJson("/api/arduino/card-read", "{\"uid\":\"" + uid + "\"}");
+}
+
+// POSTs {"token": "<token>"} to /api/nfc/tap (HCE phone tap).
+bool httpPostNFC(const String &token) {
+  return httpPostJson("/api/nfc/tap", "{\"token\":\"" + token + "\"}");
+}
+
 // ═══════════════════════════════════════════════════════════════
 // UNIFIED DELIVERY
 // Tries WiFi POST first (with retries), then serial fallback.
@@ -356,7 +367,8 @@ void deliver(const String &value, const String &prefix) {
       Serial.print("/");
       Serial.println(MAX_RETRIES);
 
-      if (httpPost(value)) {
+      bool ok = (prefix == "CARD") ? httpPostCard(value) : httpPostNFC(value);
+      if (ok) {
         Serial.println("HTTP: delivered — " + prefix + "|" + value);
         return;  // success — no serial fallback needed
       }
