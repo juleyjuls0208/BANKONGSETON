@@ -49,7 +49,14 @@ struct ReceiptView: View {
         if let items = transaction.items, !items.isEmpty {
             return items
         }
-        return [TransactionItem(name: "NFC Payment", price: transaction.amount, qty: 1)]
+        // Fallback: synthesise a single line item from the transaction total.
+        let label: String = {
+            let t = transaction.type.lowercased()
+            if t.contains("purchase") || t == "nfc" || t == "payment" { return "Payment" }
+            if t.contains("load") || t.contains("top") || t == "credit" { return "Top Up" }
+            return transaction.type.isEmpty ? "Transaction" : transaction.type
+        }()
+        return [TransactionItem(name: label, price: abs(transaction.amount), qty: 1)]
     }
 
     // MARK: - Body
@@ -60,8 +67,8 @@ struct ReceiptView: View {
                 LabeledContent("Date", value: formattedDate)
                 LabeledContent("Time", value: formattedTime)
                 LabeledContent("Type", value: transaction.type)
-                LabeledContent("Total", value: "₱\(String(format: "%.2f", transaction.amount))")
-                LabeledContent("Balance Before", value: "₱\(String(format: "%.2f", transaction.balanceBefore))")
+                LabeledContent("Total", value: "₱\(String(format: "%.2f", abs(transaction.amount)))")
+                LabeledContent("Balance Before", value: transaction.balanceBefore.map { "₱\(String(format: "%.2f", $0))" } ?? "—")
                 LabeledContent("Balance After", value: "₱\(String(format: "%.2f", transaction.balance))")
             }
 

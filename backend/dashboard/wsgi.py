@@ -1,19 +1,32 @@
 # WSGI Configuration for PythonAnywhere
-# This file configures the web app for PythonAnywhere hosting
+# Replace YOUR_USERNAME with your actual PythonAnywhere username.
+#
+# On PythonAnywhere: Web tab → click your web app → WSGI configuration file
+# Paste this file's content (or point to it), replacing YOUR_USERNAME.
 
 import sys
 import os
+from dotenv import load_dotenv
 
-# Add your project directory to the path
-project_home = '/home/bankoseton/BANKONGSETON/backend/dashboard/'
-if project_home not in sys.path:
-    sys.path.insert(0, project_home)
+# Project root — MUST be the BANKONGSETON directory, not a subdirectory
+project_home = '/home/YOUR_USERNAME/BANKONGSETON'
 
-# Set non-secret config defaults only.
-# All secrets (SECRET_KEY, FLASK_SECRET_KEY, credentials, API keys) MUST be set via
-# the .env file or PythonAnywhere environment variables dashboard — never hardcoded here.
-os.environ['GOOGLE_SHEETS_ID'] = '1S8GHhRCb8rztEAJK2XhPD7t6Oy_UL2fiNrOVgUPQ_P0'
-os.environ['GOOGLE_CREDENTIALS_FILE'] = 'credentials.json'
+# Add all three levels to sys.path so backend/ and backend/dashboard/ modules resolve
+for _p in [
+    project_home,
+    os.path.join(project_home, 'backend'),
+    os.path.join(project_home, 'backend', 'dashboard'),
+]:
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
 
-# Import the Flask app (WEB-ONLY version without Arduino)
+# Load secrets from .env at project root (not committed to git — create it on the server)
+# Alternative: set env vars via PythonAnywhere Web tab → Environment variables panel
+load_dotenv(os.path.join(project_home, '.env'))
+
+# Non-secret config defaults (safe to set here)
+os.environ.setdefault('GOOGLE_SHEETS_ID', '1S8GHhRCb8rztEAJK2XhPD7t6Oy_UL2fiNrOVgUPQ_P0')
+os.environ.setdefault('GOOGLE_CREDENTIALS_FILE', 'credentials.json')
+
+# Import the Flask app (web-only version, no Arduino/serial dependencies)
 from web_app import app as application

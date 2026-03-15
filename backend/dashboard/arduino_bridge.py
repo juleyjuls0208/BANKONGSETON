@@ -20,6 +20,13 @@ import time
 import requests
 
 logger = logging.getLogger("bangko.arduino_bridge")
+# Ensure this logger's DEBUG lines reach the console even if root isn't configured
+if not logger.handlers:
+    _h = logging.StreamHandler()
+    _h.setLevel(logging.DEBUG)
+    _h.setFormatter(logging.Formatter("%(asctime)s [%(name)s] %(levelname)s %(message)s"))
+    logger.addHandler(_h)
+    logger.setLevel(logging.DEBUG)
 
 # ── Offline queue configuration ──────────────────────────────────────────────
 MAX_QUEUE_SIZE = 50          # max queued NFC payments (oldest dropped when full)
@@ -77,6 +84,7 @@ class ArduinoBridge:
 
     def _serial_loop(self):
         """Background loop: read lines from serial port and dispatch via _parse_line."""
+        logger.info("event=serial_loop_started")
         while self.arduino and self.arduino.is_open:
             try:
                 if self.arduino.in_waiting > 0:
@@ -85,8 +93,16 @@ class ArduinoBridge:
                     if line:
                         self._parse_line(line)
                 time.sleep(0.05)
-            except Exception:
-                break  # exit loop on serial error; bridge reconnect handled externally
+            except Exception as e:
+                logger.error("event=serial_loop_crashed error=%s", e, exc_info=True)
+                if self.socketio:
+                    self.socketio.emit("arduino_status", {
+                        "connected": False,
+                        "error": f"Serial read error: {e}"
+                    })
+                break  # exit loop; reconnect via admin dashboard
+        logger.warning("event=serial_loop_exited arduino_open=%s",
+                        self.arduino.is_open if self.arduino else "no-arduino")
 
     def _parse_line(self, line: str):
         """Parse one serial output line and emit appropriate SocketIO event.
@@ -96,21 +112,35 @@ class ArduinoBridge:
           CARD|<uid-hex>          → emit 'card_read' + trigger reading_active callback
           ERROR|<msg>             → emit 'nfc_payment_result' with success=False
         """
+        # Log every line so we can trace what Arduino is actually sending
+        logger.debug("event=serial_rx line=%r reading_active=%s", line, self.reading_active)
+
         if line.startswith("NFC|"):
             token = line[4:]
-            self.socketio.emit("nfc_payment", {"token": token})
+            logger.info("event=nfc_token_received len=%d", len(token))
+            if self.socketio:
+                self.socketio.emit("nfc_payment", {"token": token})
+                self.socketio.emit("status", {"type": "info", "message": f"NFC token received ({len(token)} chars)"})
             self._post_nfc_payment(token)
         elif line.startswith("CARD|"):
             uid = line[5:]
-            self.socketio.emit("card_read", {"success": True, "uid": uid})
+            logger.info("event=card_uid_received uid=%r reading_active=%s", uid, self.reading_active)
+            if self.socketio:
+                self.socketio.emit("card_read", {"success": True, "uid": uid})
+                self.socketio.emit("status", {"type": "info", "message": f"Card detected by reader: {uid}"})
             if self.reading_active and self.current_callback:
                 self.reading_active = False
                 cb = self.current_callback
                 self.current_callback = None
                 cb(uid)
+        elif line == "PONG":
+            logger.info("event=arduino_pong serial_channel=ok")
+            if self.socketio:
+                self.socketio.emit("arduino_status", {"connected": True})
         elif line.startswith("ERROR|"):
             error = line[6:]
-            self.socketio.emit("nfc_payment_result", {"success": False, "error": error})
+            if self.socketio:
+                self.socketio.emit("nfc_payment_result", {"success": False, "error": error})
 
     # ── NFC payment delivery (with offline queue) ─────────────────────────────
 
@@ -286,7 +316,8 @@ class ArduinoBridge:
         """Set up one-shot card read. Background serial loop will call callback
         when a CARD| line is received, or emit card_timeout after `timeout` seconds."""
         if not self.arduino or not self.arduino.is_open:
-            self.socketio.emit("card_error", {"message": "Arduino not connected"})
+            if self.socketio:
+                self.socketio.emit("card_error", {"message": "Arduino not connected"})
             return False
         self.reading_active = True
         self.current_callback = callback
@@ -301,10 +332,11 @@ class ArduinoBridge:
         if self.reading_active:
             self.reading_active = False
             self.current_callback = None
-            self.socketio.emit(
-                "card_timeout",
-                {"message": f"No card detected within {self.timeout_seconds} seconds"},
-            )
+            if self.socketio:
+                self.socketio.emit(
+                    "card_timeout",
+                    {"message": f"No card detected within {self.timeout_seconds} seconds"},
+                )
 
     def cancel_reading(self):
         """Cancel an in-progress read_card_with_timeout session."""

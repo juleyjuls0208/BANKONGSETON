@@ -2,8 +2,8 @@ import SwiftUI
 
 // MARK: - TransactionsView
 // Paginated transaction list.
-// Purchase / NFC Purchase rows → NavigationLink to ReceiptView.
-// Top-Up rows → non-tappable (no NavigationLink).
+// Purchase / NFC / Payment rows → NavigationLink to ReceiptView.
+// Top-Up / Load rows → non-tappable (no NavigationLink).
 
 struct TransactionsView: View {
     @EnvironmentObject var apiClient: APIClient
@@ -14,7 +14,7 @@ struct TransactionsView: View {
         NavigationStack {
             List {
                 ForEach(viewModel.transactions) { transaction in
-                    if transaction.isPurchaseType {
+                    if transaction.isNavigable {
                         NavigationLink(value: transaction) {
                             TransactionRowView(transaction: transaction)
                         }
@@ -86,13 +86,5 @@ struct TransactionsView: View {
                 ReceiptView(transaction: transaction)
             }
         }
-    }
-}
-
-// MARK: - Transaction convenience helper
-
-private extension Transaction {
-    var isPurchaseType: Bool {
-        ["purchase", "nfc purchase"].contains(type.lowercased())
     }
 }

@@ -2,31 +2,46 @@ import SwiftUI
 
 // MARK: - TransactionRowView
 // Color-coded row for a single transaction.
-// Red for Purchase/NFC Purchase, green for Top-Up.
+// Debit types (purchases, nfc, payment) are red; credits (top-up, load) are green.
 
 struct TransactionRowView: View {
     let transaction: Transaction
 
-    var amountColor: Color {
-        switch transaction.type.lowercased() {
-        case "purchase", "nfc purchase": return Color(hex: "#F44336")  // red
-        case "top-up", "topup":          return Color(hex: "#4CAF50")  // green
-        default:                          return .primary
-        }
+    // A "debit" if the type sounds like money leaving, OR amount is negative.
+    private var isDebit: Bool {
+        let t = transaction.type.lowercased()
+        let debitType = t.contains("purchase") || t == "nfc" || t == "payment" || t == "debit"
+        return debitType || transaction.amount < 0
     }
 
-    var isPurchase: Bool {
-        ["purchase", "nfc purchase"].contains(transaction.type.lowercased())
+    private var amountColor: Color {
+        isDebit ? Color(hex: "#F44336") : Color(hex: "#4CAF50")
+    }
+
+    // Always show positive amount — sign is conveyed by color + icon.
+    private var displayAmount: String {
+        "₱\(String(format: "%.2f", abs(transaction.amount)))"
+    }
+
+    private var displayLabel: String {
+        let t = transaction.type.lowercased()
+        switch t {
+        case "purchase":     return "Canteen Purchase"
+        case "nfc purchase": return "NFC Purchase"
+        case "nfc":          return "NFC Payment"
+        case "load", "top-up", "topup", "credit": return "Top Up"
+        default:             return transaction.type.prefix(1).uppercased() + transaction.type.dropFirst()
+        }
     }
 
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: isPurchase ? "arrow.down.circle.fill" : "arrow.up.circle.fill")
+            Image(systemName: isDebit ? "arrow.down.circle.fill" : "arrow.up.circle.fill")
                 .foregroundColor(amountColor)
                 .font(.title2)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(transaction.type)
+                Text(displayLabel)
                     .font(.subheadline)
                     .fontWeight(.medium)
                 Text(transaction.timestamp)
@@ -37,7 +52,7 @@ struct TransactionRowView: View {
             Spacer()
 
             VStack(alignment: .trailing, spacing: 2) {
-                Text("₱\(String(format: "%.2f", transaction.amount))")
+                Text(isDebit ? "−\(displayAmount)" : "+\(displayAmount)")
                     .foregroundColor(amountColor)
                     .fontWeight(.semibold)
                 Text("₱\(String(format: "%.2f", transaction.balance))")

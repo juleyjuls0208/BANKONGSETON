@@ -112,7 +112,7 @@ struct BudgetView: View {
             .navigationTitle("Budget")
             .task {
                 await viewModel.load(apiClient: apiClient, authManager: authManager)
-                if !hasEdited {
+                if !hasEdited && viewModel.limit > 0 {
                     limitInput = String(format: "%.2f", viewModel.limit)
                 }
             }

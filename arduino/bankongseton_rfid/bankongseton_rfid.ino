@@ -62,7 +62,7 @@
 
 // ── Tuning ───────────────────────────────────────────────────────
 #define SCAN_COOLDOWN_MS  1500  // ms pause after card read (prevents double-scan)
-#define NFC_TIMEOUT_MS    5000  // ms readPassiveTargetID blocks waiting for card
+#define NFC_TIMEOUT_MS    1000  // ms readPassiveTargetID blocks — shorter = more serial responsiveness
 
 // ── HTTP tuning ──────────────────────────────────────────────────
 static const int MAX_RETRIES    = 3;
@@ -251,8 +251,16 @@ void connectWiFi() {
   }
 
   if (WiFi.status() == WL_CONNECTED) {
+    // Wait for DHCP to assign a real IP (WL_CONNECTED fires before DHCP completes)
+    unsigned long dhcpStart = millis();
+    while (WiFi.localIP() == IPAddress(0, 0, 0, 0) && millis() - dhcpStart < 5000) {
+      delay(100);
+    }
     Serial.print("WiFi connected. IP: ");
     Serial.println(WiFi.localIP());
+    if (WiFi.localIP() == IPAddress(0, 0, 0, 0)) {
+      Serial.println("WARNING: DHCP failed — got 0.0.0.0. Check router or try again.");
+    }
   } else {
     Serial.println("WARNING: WiFi connect failed — will retry before each scan");
   }
@@ -370,6 +378,39 @@ void deliver(const String &value, const String &prefix) {
 // ARDUINO LIFECYCLE
 // ═══════════════════════════════════════════════════════════════
 
+// ═══════════════════════════════════════════════════════════════
+// INCOMING SERIAL COMMAND HANDLER
+// Dashboard → Arduino commands (newline-terminated):
+//   PING  → play connected sound + reply PONG
+//   (extensible: add more commands here)
+// Call at the start of every loop() so commands are handled promptly.
+// ═══════════════════════════════════════════════════════════════
+
+void handleIncomingSerial() {
+  while (Serial.available() > 0) {
+    String cmd = Serial.readStringUntil('\n');
+    cmd.trim();
+
+    if (cmd == "PING") {
+      // Three ascending tones — audible "I'm connected" confirmation
+      tone(PIEZO_PIN, 800,  100); delay(120);
+      tone(PIEZO_PIN, 1200, 100); delay(120);
+      tone(PIEZO_PIN, 1800, 150);
+
+      // Update LCD
+      lcd_clear();
+      lcd_set_cursor(0, 0);
+      lcd_print("Dashboard");
+      lcd_set_cursor(0, 1);
+      lcd_print("Connected!");
+      delay(1500);
+
+      // Reply so dashboard knows the channel is live
+      Serial.println("PONG");
+    }
+  }
+}
+
 void setup() {
   // 1. Serial at 9600 baud — ArduinoBridge expects this rate
   Serial.begin(9600);
@@ -417,6 +458,9 @@ void setup() {
 }
 
 void loop() {
+  // Process any commands sent by the dashboard (PING etc.) before doing NFC work.
+  handleIncomingSerial();
+
   uint8_t uid[7];
   uint8_t uidLen = 0;
 
@@ -482,42 +526,62 @@ void loop() {
   tone(PIEZO_PIN, 1000, 100);
 
   if (uidLen != 4) {
-    // ── Plain NFC tag (7-byte UID = NTAG21x, MIFARE, etc.) ──────
-    // Skip APDU — deliver UID directly
+    // ── 7-byte UID: plain NFC tag (NTAG21x, MIFARE Ultralight, etc.) ─────
+    // These never support ISO 7816-4 APDUs. Skip directly to UID delivery.
     Serial.print("CARD detected (uidLen=");
     Serial.print(uidLen);
     Serial.println(") — skipping APDU");
 
     deliver(uidHex, "CARD");
-
-    // Fallback beep: single 200 ms at 800 Hz
     tone(PIEZO_PIN, 800, 200);
 
-    // LCD: show card UID
     lcd_clear();
     lcd_set_cursor(0, 0);
     lcd_print("Card Read");
     lcd_set_cursor(0, 1);
-    // Show first 8 chars of UID on LCD
     lcd_print(uidHex.substring(0, LCD_COLS).c_str());
 
   } else {
-    // ── 4-byte UID: likely HCE phone — attempt APDU ─────────────
-    // APDU SELECT AID command (19 bytes):
-    //   CLA=0x00, INS=0xA4, P1=0x04, P2=0x00, Lc=0x0D
-    //   AID: F0 42 41 4E 4B 4F 4E 47 53 45 54 4F 4E  (BANKONGSETON)
-    //   Le=0x00
-    uint8_t apduCmd[19] = {
-      0x00, 0xA4, 0x04, 0x00, 0x0D,
-      0xF0, 0x42, 0x41, 0x4E, 0x4B, 0x4F, 0x4E, 0x47, 0x53, 0x45, 0x54, 0x4F, 0x4E,
-      0x00
-    };
+    // ── 4-byte UID ─────────────────────────────────────────────────────────
+    // Read SAK byte from PN532 response buffer (offset 11 after readPassiveTargetID).
+    // SAK bit 5 (0x20) = ISO 14443-4 compliant → card can handle APDUs (HCE phone / smart card).
+    // SAK without bit 5 (e.g. 0x08 MIFARE Classic, 0x00 Ultralight) = plain RFID → skip APDU.
+    uint8_t sak = nfc.pn532_packetbuffer[11];
+    bool iso14443_4 = (sak & 0x20) != 0;
 
-    uint8_t response[60];
-    uint8_t responseLength = 60;
+    Serial.print("4-byte UID SAK=0x");
+    Serial.print(sak, HEX);
+    Serial.println(iso14443_4 ? " → ISO14443-4 (try APDU)" : " → plain RFID (skip APDU)");
 
-    // inDataExchange MUST be called after readPassiveTargetID (uses _inListedTag internally).
-    bool apduOk = nfc.inDataExchange(apduCmd, 19, response, &responseLength);
+    if (!iso14443_4) {
+      // ── Plain RFID with 4-byte UID (MIFARE Classic 1K/4K etc.) ──────────
+      // No APDU attempt — instant UID delivery, no wasted timeout.
+      deliver(uidHex, "CARD");
+      tone(PIEZO_PIN, 800, 200);
+
+      lcd_clear();
+      lcd_set_cursor(0, 0);
+      lcd_print("Card Read");
+      lcd_set_cursor(0, 1);
+      lcd_print(uidHex.substring(0, LCD_COLS).c_str());
+
+    } else {
+      // ── ISO 14443-4 capable: attempt APDU (HCE phone / contactless smart card) ──
+      // APDU SELECT AID command (19 bytes):
+      //   CLA=0x00, INS=0xA4, P1=0x04, P2=0x00, Lc=0x0D
+      //   AID: F0 42 41 4E 4B 4F 4E 47 53 45 54 4F 4E  (BANKONGSETON)
+      //   Le=0x00
+      uint8_t apduCmd[19] = {
+        0x00, 0xA4, 0x04, 0x00, 0x0D,
+        0xF0, 0x42, 0x41, 0x4E, 0x4B, 0x4F, 0x4E, 0x47, 0x53, 0x45, 0x54, 0x4F, 0x4E,
+        0x00
+      };
+
+      uint8_t response[60];
+      uint8_t responseLength = 60;
+
+      // inDataExchange MUST be called after readPassiveTargetID (uses _inListedTag internally).
+      bool apduOk = nfc.inDataExchange(apduCmd, 19, response, &responseLength);
 
     if (apduOk && responseLength == 50 && response[48] == 0x90 && response[49] == 0x00) {
       // ── APDU success: extract 48-char ASCII token ──────────
@@ -561,10 +625,16 @@ void loop() {
       lcd_set_cursor(0, 1);
       lcd_print("Using card UID");
     }
-  }
+    } // end iso14443_4 else
+  } // end uidLen == 4 else
 
-  // Cooldown — prevents reading the same card/phone twice in quick succession
-  delay(SCAN_COOLDOWN_MS);
+  // Cooldown — prevents reading the same card/phone twice in quick succession.
+  // Check serial during the wait so PING is handled without a full loop delay.
+  unsigned long cooldownEnd = millis() + SCAN_COOLDOWN_MS;
+  while (millis() < cooldownEnd) {
+    handleIncomingSerial();
+    delay(50);
+  }
 
   // Idle state reset is handled at top of next loop() iteration
 }

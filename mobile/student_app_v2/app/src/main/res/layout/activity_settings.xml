@@ -75,7 +75,6 @@
                         android:text="@string/theme_system"
                         android:textAppearance="?attr/textAppearanceBodyLarge"
                         android:button="@null"
-                        android:drawableEnd="?attr/radioButtonStyle"
                         android:gravity="center_vertical" />
 
                     <View

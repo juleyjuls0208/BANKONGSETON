@@ -93,6 +93,7 @@ def get_cors_origins():
     if flask_env == 'development' or not origins:
         origins = origins + [
             'http://localhost', 'http://localhost:3000', 'http://localhost:5001',
+            'http://localhost:5003',
             'http://127.0.0.1', 'http://127.0.0.1:5001', 'http://127.0.0.1:5003'
         ]
     return origins
@@ -110,7 +111,7 @@ app.socketio = socketio
 # Register cashier blueprint
 if CASHIER_AVAILABLE:
     app.register_blueprint(cashier_bp)
-    print("✅ Cashier blueprint registered at /cashier")
+    print("[OK] Cashier blueprint registered at /cashier")
 
 # Global variables for admin features
 arduino = None
@@ -197,7 +198,48 @@ def invalidate_cache(sheet_name=None):
     else:
         _sheets_cache.clear()
 
-UID_PATTERN = re.compile(r'^[0-9A-Fa-f]{8}$')
+# Column names expected in the Transactions Log sheet (informational — not
+# passed to get_all_records to avoid crashing on schema drift).
+TRANSACTIONS_LOG_HEADERS = [
+    'TransactionID', 'Timestamp', 'StudentID', 'MoneyCardNumber',
+    'TransactionType', 'Amount', 'BalanceBefore', 'BalanceAfter',
+    'Status', 'ErrorMessage',
+]
+
+def get_transactions_records(sheet):
+    """Read all transaction records from the sheet.
+
+    Avoid passing expected_headers — gspread raises GSpreadException if any
+    listed header is absent from the sheet, which breaks the dashboard on any
+    schema drift.  Instead, handle the two known edge-cases defensively:
+
+    1. Trailing blank columns → gspread raises "duplicate headers: ['']".
+       We strip those by re-fetching raw values when that happens.
+    2. Missing/renamed columns → downstream callers already use .get('col', '')
+       so they degrade gracefully without crashing.
+    """
+    try:
+        return sheet.get_all_records()
+    except Exception as e:
+        err = str(e)
+        if "duplicate" in err.lower() and "''" in err:
+            # Trailing empty header columns — read raw and trim
+            rows = sheet.get_all_values()
+            if not rows:
+                return []
+            headers = rows[0]
+            # Find last non-empty header index
+            last = max((i for i, h in enumerate(headers) if h.strip()), default=None)
+            if last is None:
+                return []
+            headers = headers[: last + 1]
+            return [dict(zip(headers, row[: last + 1])) for row in rows[1:]]
+        raise
+
+
+# Accept 4-byte (8 hex chars, MIFARE Classic/Ultralight) and
+# 7-byte (14 hex chars, NTAG21x / ISO14443-3 NFC tags)
+UID_PATTERN = re.compile(r'^[0-9A-Fa-f]{8}(?:[0-9A-Fa-f]{6})?$')
 
 def validate_card_uid(uid):
     """Validate card UID format. Returns (is_valid, error_message)."""
@@ -303,18 +345,20 @@ def logout():
 @login_required
 def dashboard():
     """Main dashboard page"""
-    return render_template('dashboard.html', 
+    return render_template('dashboard.html',
                          username=session.get('admin_username'),
                          role=session.get('role', 'finance'),
-                         arduino_available=True)  # Arduino IS available in local version
+                         arduino_available=True,
+                         active_page='dashboard')
 
 @app.route('/students')
 @login_required
 def students_page():
     """Students management page"""
-    return render_template('students.html', 
+    return render_template('students.html',
                          username=session.get('admin_username'),
-                         role=session.get('role', 'finance'))
+                         role=session.get('role', 'finance'),
+                         active_page='students')
 
 @app.route('/products')
 @login_required
@@ -322,7 +366,8 @@ def products_page():
     """Products management page"""
     return render_template('products.html',
                          username=session.get('admin_username'),
-                         role=session.get('role', 'finance'))
+                         role=session.get('role', 'finance'),
+                         active_page='products')
 
 @app.route('/api/products/list', methods=['GET'])
 @login_required
@@ -442,9 +487,10 @@ def delete_product():
 @login_required
 def transactions_page():
     """Transactions view page"""
-    return render_template('transactions.html', 
+    return render_template('transactions.html',
                          username=session.get('admin_username'),
-                         role=session.get('role', 'finance'))
+                         role=session.get('role', 'finance'),
+                         active_page='transactions')
 
 # ============= HEALTH & MONITORING ROUTES =============
 
@@ -539,7 +585,7 @@ def analytics_summary():
         transactions_sheet = get_worksheet_with_retry('Transactions Log')
         transactions = get_cached("transactions_all")
         if transactions is None:
-            transactions = transactions_sheet.get_all_records()
+            transactions = get_transactions_records(transactions_sheet)
             set_cached("transactions_all", transactions, ttl=10)
         
         accounts_sheet = get_worksheet_with_retry('Money Accounts')
@@ -569,7 +615,7 @@ def analytics_spending():
         period = request.args.get('period', 'daily')  # daily, weekly, monthly
         
         transactions_sheet = get_worksheet_with_retry('Transactions Log')
-        transactions = transactions_sheet.get_all_records()
+        transactions = get_transactions_records(transactions_sheet)
         
         analytics = Analytics(transactions)
         totals = analytics.get_spending_totals(period)
@@ -598,7 +644,7 @@ def top_spenders():
         days = int(request.args.get('days', 30))
         
         transactions_sheet = get_worksheet_with_retry('Transactions Log')
-        transactions = transactions_sheet.get_all_records()
+        transactions = get_transactions_records(transactions_sheet)
         
         analytics = Analytics(transactions)
         top = analytics.get_top_spenders(limit=limit, days=days)
@@ -630,7 +676,7 @@ def low_balance_students():
         accounts = accounts_sheet.get_all_records()
         
         transactions_sheet = get_worksheet_with_retry('Transactions Log')
-        transactions = transactions_sheet.get_all_records()
+        transactions = get_transactions_records(transactions_sheet)
         
         analytics = Analytics(transactions)
         low_balance = analytics.get_low_balance_students(threshold=threshold, account_data=accounts)
@@ -661,7 +707,7 @@ def export_transactions_route():
         end_date = request.args.get('end_date')
         
         transactions_sheet = get_worksheet_with_retry('Transactions Log')
-        transactions = transactions_sheet.get_all_records()
+        transactions = get_transactions_records(transactions_sheet)
         
         data, mimetype, filename = export_transactions(
             transactions,
@@ -731,7 +777,7 @@ def monthly_statement(student_id):
             return jsonify({'error': 'Student not found'}), 404
         
         transactions_sheet = get_worksheet_with_retry('Transactions Log')
-        transactions = transactions_sheet.get_all_records()
+        transactions = get_transactions_records(transactions_sheet)
         
         statement = generate_monthly_statement(
             student_id=student_id,
@@ -775,7 +821,7 @@ def get_stats():
             transactions_sheet = get_worksheet_with_retry('Transactions Log')
             transactions = get_cached("transactions_all")
             if transactions is None:
-                transactions = transactions_sheet.get_all_records()
+                transactions = get_transactions_records(transactions_sheet)
                 set_cached("transactions_all", transactions, ttl=10)
             today_transactions = [t for t in transactions if t.get('Timestamp', '').startswith(today)]
         except:
@@ -1086,7 +1132,7 @@ def get_recent_transactions():
         transactions_sheet = get_worksheet_with_retry('Transactions Log')
         transactions = get_cached("transactions_all")
         if transactions is None:
-            transactions = transactions_sheet.get_all_records()
+            transactions = get_transactions_records(transactions_sheet)
             set_cached("transactions_all", transactions, ttl=10)
         
         # Get users to map StudentID to Name
@@ -1151,7 +1197,7 @@ def get_transactions_filtered():
         limit = int(request.args.get('limit', 200))
 
         transactions_sheet = get_worksheet_with_retry('Transactions Log')
-        raw = transactions_sheet.get_all_records()
+        raw = get_transactions_records(transactions_sheet)
 
         users_sheet = get_worksheet_with_retry('Users')
         users = users_sheet.get_all_records()
@@ -1252,14 +1298,20 @@ def connect_serial():
             arduino.close()
         
         arduino = serial.Serial(port, 9600, timeout=2)
-        time.sleep(2)
+        time.sleep(2)  # wait for Arduino reset + boot
+
+        # Send PING — Arduino plays a connected sound and replies PONG
+        arduino.write(b"PING\n")
+        arduino.flush()
         
         # Initialize arduino bridge
         from arduino_bridge import ArduinoBridge
         arduino_bridge = ArduinoBridge(arduino, socketio)
         
-        # Make bridge available to cashier
+        # Make bridge + serial ref available to cashier blueprint
         app.arduino_bridge = arduino_bridge
+        app.arduino = arduino
+        app.arduino_port = port
         
         send_display("Bangko Admin", "Connected!")
         
@@ -1270,7 +1322,7 @@ def connect_serial():
         return jsonify({'error': 'Service unavailable, please try again'}), 503
     except Exception as e:
         logger.error(f"Unexpected error in connect_serial: {e}", exc_info=True)
-        return jsonify({'error': 'An unexpected error occurred'}), 500
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/serial/disconnect', methods=['POST'])
 @desktop_features
@@ -1292,6 +1344,18 @@ def disconnect_serial():
         logger.error(f"Unexpected error in disconnect_serial: {e}", exc_info=True)
         return jsonify({'error': 'An unexpected error occurred'}), 500
 
+@app.route('/api/card/cancel', methods=['POST'])
+@desktop_features
+def cancel_card_reading():
+    """Cancel an in-progress card read (called when modal is dismissed)."""
+    global card_reading_active
+    card_reading_active = False
+    bridge = getattr(app, 'arduino_bridge', None)
+    if bridge:
+        bridge.cancel_reading()
+    send_display("BANKONGSETON", "Ready...")
+    return jsonify({'success': True})
+
 @app.route('/api/card/start-register', methods=['POST'])
 @desktop_features
 def start_register():
@@ -1303,7 +1367,7 @@ def start_register():
     
     card_reading_active = True
     send_display("Tap ID Card", "to register...")
-    socketio.emit('status', {'type': 'info', 'message': 'Waiting for ID card...'})
+    socketio.emit('status', {'type': 'info', 'message': 'Card reader armed — tap the ID card on the reader now'})
     
     thread = threading.Thread(target=read_card_thread, args=('id_card',))
     thread.daemon = True
@@ -1327,7 +1391,7 @@ def link_money_card():
     
     card_reading_active = True
     send_display("Tap Money Card", f"for {student_id[:8]}")
-    socketio.emit('status', {'type': 'info', 'message': f'Waiting for money card for {student_id}...'})
+    socketio.emit('status', {'type': 'info', 'message': f'Card reader armed — tap money card for {student_id}'})
     
     thread = threading.Thread(target=read_card_thread, args=('money_card',))
     thread.daemon = True
@@ -1336,65 +1400,74 @@ def link_money_card():
     return jsonify({'success': True})
 
 def read_card_thread(card_type):
-    """Background thread to read RFID card"""
-    global card_reading_active, arduino
-    
-    if not arduino or not arduino.is_open:
-        socketio.emit('card_error', {'message': 'Arduino not connected'})
-        return
-    
-    arduino.reset_input_buffer()
-    start_time = time.time()
-    
-    while card_reading_active and time.time() - start_time < 30:
-        try:
-            if arduino.in_waiting > 0:
-                line = arduino.readline().decode('utf-8', errors='ignore').strip()
-                
-                if line.startswith('<CARD|') and line.endswith('>'):
-                    uid = line[6:-1]
+    """Route card reading through arduino_bridge — no direct serial access.
 
-                    # Validate card UID format (BUG-02, SEC-04)
-                    if not uid:
-                        try:
-                            logger = get_logger('card_reader')
-                            logger.warning(f"Empty card UID received from Arduino (raw line: {line!r})")
-                        except Exception:
-                            print(f"[WARNING] Empty card UID received from Arduino (raw line: {line!r})")
-                        socketio.emit('card_error', {'message': 'Card scan failed -- please try again', 'requires_ack': True})
-                        continue
+    The bridge serial loop is the single reader. We register a one-shot
+    callback and then wait here so we can emit periodic 'still waiting'
+    status ticks and detect if the bridge loop died.
+    """
+    global card_reading_active
 
-                    if not UID_PATTERN.match(uid):
-                        try:
-                            logger = get_logger('card_reader')
-                            logger.warning(f"Malformed card UID received from Arduino: {uid!r}")
-                        except Exception:
-                            print(f"[WARNING] Malformed card UID received from Arduino: {uid!r}")
-                        socketio.emit('card_error', {'message': 'Card scan failed -- please try again', 'requires_ack': True})
-                        continue
-
-                    if len(uid) == 8:
-                        card_reading_active = False
-                        
-                        if card_type == 'id_card':
-                            handle_id_card(uid)
-                        elif card_type == 'money_card':
-                            handle_money_card(uid)
-                        elif card_type == 'replace_card':
-                            handle_replace_card(uid)
-                        return
-            
-            time.sleep(0.1)
-        except Exception as e:
-            print(f"Error reading card: {e}")
-            socketio.emit('card_error', {'message': str(e)})
-            card_reading_active = False
-            return
-    
-    if card_reading_active:
+    bridge = getattr(app, 'arduino_bridge', None)
+    if not bridge:
+        socketio.emit('card_error', {'message': 'Arduino not connected — connect a COM port first'})
+        socketio.emit('status', {'type': 'error', 'message': 'Arduino not connected'})
         card_reading_active = False
-        send_error("Timeout")
-        socketio.emit('card_timeout', {'message': 'Card reading timeout'})
+        return
+
+    # Check the bridge's serial thread is still alive
+    if bridge._serial_thread and not bridge._serial_thread.is_alive():
+        socketio.emit('card_error', {'message': 'Arduino serial loop stopped — try reconnecting the COM port'})
+        socketio.emit('status', {'type': 'error', 'message': 'Serial loop stopped — reconnect Arduino'})
+        card_reading_active = False
+        return
+
+    label = {'id_card': 'ID card', 'money_card': 'money card', 'replace_card': 'replacement card'}.get(card_type, 'card')
+    socketio.emit('status', {'type': 'info', 'message': f'Waiting for {label}... tap it on the reader'})
+
+    card_received = threading.Event()
+    timeout_secs = 60
+
+    def on_card(uid):
+        global card_reading_active
+        card_reading_active = False
+        card_received.set()
+
+        socketio.emit('status', {'type': 'info', 'message': f'Card detected: {uid}'})
+
+        # Validate UID — 4-byte (8 hex) or 7-byte (14 hex)
+        if not uid or not UID_PATTERN.match(uid):
+            try:
+                get_logger('card_reader').warning(f"Malformed UID from bridge: {uid!r}")
+            except Exception:
+                print(f"[WARNING] Malformed UID: {uid!r}")
+            socketio.emit('card_error', {'message': f'Unrecognised card format ({uid!r}) — try again', 'requires_ack': True})
+            socketio.emit('status', {'type': 'error', 'message': f'Bad UID format: {uid!r}'})
+            return
+
+        socketio.emit('status', {'type': 'info', 'message': f'Processing {label}...'})
+
+        if card_type == 'id_card':
+            handle_id_card(uid)
+        elif card_type == 'money_card':
+            handle_money_card(uid)
+        elif card_type == 'replace_card':
+            handle_replace_card(uid)
+
+    bridge.read_card_with_timeout(on_card, timeout=timeout_secs)
+
+    # Stay alive and emit heartbeat ticks so the status log shows we're waiting
+    tick = 0
+    while not card_received.is_set() and card_reading_active:
+        time.sleep(3)
+        tick += 3
+        if card_received.is_set() or not card_reading_active:
+            break
+        remaining = timeout_secs - tick
+        if remaining > 0:
+            socketio.emit('status', {'type': 'info', 'message': f'Still waiting for {label}... ({remaining}s left)'})
+        else:
+            break
 
 def handle_id_card(uid):
     """Handle ID card registration - check for duplicates in BOTH ID and money cards"""
@@ -2144,7 +2217,10 @@ def _ensure_cashier_accounts_sheet():
 @login_required
 @admin_only
 def cashier_accounts_page():
-    return render_template('cashier_accounts.html', active_page='cashier_accounts')
+    return render_template('cashier_accounts.html',
+                         username=session.get('admin_username'),
+                         role=session.get('role', 'finance'),
+                         active_page='cashier_accounts')
 
 
 @app.route('/api/cashier-accounts', methods=['GET'])
@@ -2254,7 +2330,7 @@ def void_transaction(txn_id):
 
         db = get_sheets_client()
         txn_sheet = get_worksheet_with_retry('Transactions Log')
-        txn_records = txn_sheet.get_all_records()
+        txn_records = get_transactions_records(txn_sheet)
 
         target = None
         for row in txn_records:
@@ -2371,7 +2447,10 @@ def _get_fraud_detector_with_sheets():
 @app.route('/fraud-alerts')
 @login_required
 def fraud_alerts_page():
-    return render_template('fraud_alerts.html', active_page='fraud_alerts')
+    return render_template('fraud_alerts.html',
+                         username=session.get('admin_username'),
+                         role=session.get('role', 'finance'),
+                         active_page='fraud_alerts')
 
 
 @app.route('/api/fraud/alerts', methods=['GET'])
@@ -2529,7 +2608,7 @@ def handle_disconnect():
 
 if __name__ == '__main__':
     print("\n" + "="*50)
-    print("🏦 BANGKO NG SETON - UNIFIED DASHBOARD")
+    print("=== BANGKO NG SETON - UNIFIED DASHBOARD ===")
     print("="*50 + "\n")
     
     port = int(os.getenv('FINANCE_PORT_WEB', 5003))
@@ -2567,5 +2646,5 @@ if __name__ == '__main__':
         except Exception as e:
             print(f"  Scheduler failed to start: {e}")
     
-    socketio.run(app, host='0.0.0.0', port=port, debug=debug)
+    socketio.run(app, host='0.0.0.0', port=port, debug=debug, allow_unsafe_werkzeug=True)
 

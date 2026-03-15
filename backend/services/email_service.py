@@ -10,7 +10,7 @@ class EmailService:
     def __init__(self):
         self.smtp_server = os.getenv('SMTP_SERVER', 'smtp.gmail.com')
         self.smtp_port = int(os.getenv('SMTP_PORT', 587))
-        self.sender_email = os.getenv('SMTP_EMAIL')
+        self.sender_email = os.getenv('SMTP_EMAIL') or os.getenv('SMTP_USER')
         self.sender_password = os.getenv('SMTP_PASSWORD')
         self.enabled = bool(self.sender_email and self.sender_password)
         self.max_retries = 3

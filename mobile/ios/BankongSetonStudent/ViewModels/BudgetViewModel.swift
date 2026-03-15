@@ -13,32 +13,57 @@ final class BudgetViewModel: ObservableObject {
     func load(apiClient: APIClient, authManager: AuthManager) async {
         isLoading = true
         defer { isLoading = false }
-        async let budgetResp = apiClient.getBudget()
-        async let summaryResp = apiClient.fetchBudgetSummary()
+
+        // Load both in parallel but handle errors independently so a
+        // summary failure doesn't wipe out the limit (and vice versa).
+        async let budgetTask: BudgetResponse = apiClient.getBudget()
+        async let summaryTask: BudgetSummaryResponse = apiClient.fetchBudgetSummary()
+
         do {
-            let (budget, summary) = try await (budgetResp, summaryResp)
-            limit = budget.monthlyLimit
-            spent = summary.spent
-            checkAlerts()
+            let budget = try await budgetTask
+            limit = budget.monthlyLimit ?? 0
         } catch APIError.unauthorized {
-            authManager.handleUnauthorized()
+            authManager.handleUnauthorized(); return
         } catch APIError.cardLost {
-            authManager.handleCardLost()
-        } catch { /* swallow other errors — UI shows stale data */ }
+            authManager.handleCardLost(); return
+        } catch {}
+
+        do {
+            let summary = try await summaryTask
+            spent = summary.spent
+        } catch APIError.unauthorized {
+            authManager.handleUnauthorized(); return
+        } catch APIError.cardLost {
+            authManager.handleCardLost(); return
+        } catch {}
+
+        checkAlerts()
     }
 
     func setBudget(limit newLimit: Double, apiClient: APIClient, authManager: AuthManager) async {
+        isLoading = true
+        defer { isLoading = false }
         do {
             let resp = try await apiClient.setBudget(monthlyLimit: newLimit)
             if resp.success {
-                limit = resp.monthlyLimit
+                limit = resp.monthlyLimit ?? newLimit
                 checkAlerts()
+                if !showAlert {
+                    alertMessage = "Budget limit saved successfully."
+                    showAlert = true
+                }
+            } else {
+                alertMessage = "Could not save budget. Please try again."
+                showAlert = true
             }
         } catch APIError.unauthorized {
             authManager.handleUnauthorized()
         } catch APIError.cardLost {
             authManager.handleCardLost()
-        } catch {}
+        } catch {
+            alertMessage = "Failed to save budget. Check your connection and try again."
+            showAlert = true
+        }
     }
 
     private static let monthPrefixFormatter: DateFormatter = {

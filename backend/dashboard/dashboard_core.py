@@ -2946,6 +2946,88 @@ def register_routes(app, socketio):
             )
             return jsonify({"error": "An unexpected error occurred"}), 500
 
+    @app.route("/api/transactions/filtered", methods=["GET"])
+    @login_required
+    def get_transactions_filtered():
+        """
+        GET /api/transactions/filtered
+        Query params: date_from (YYYY-MM-DD), date_to (YYYY-MM-DD), student_id, txn_type, limit
+        """
+        try:
+            date_from = request.args.get("date_from", "").strip()
+            date_to = request.args.get("date_to", "").strip()
+            student_filter = request.args.get("student_id", "").strip().lower()
+            txn_type_filter = request.args.get("txn_type", "").strip().lower()
+            limit = int(request.args.get("limit", 200))
+
+            transactions_sheet = get_worksheet_with_retry("Transactions Log")
+            raw = transactions_sheet.get_all_records()
+
+            users_sheet = get_worksheet_with_retry("Users")
+            users = users_sheet.get_all_records()
+            user_map = {
+                str(u.get("StudentID", "")).strip().lower(): u.get("Name", "Unknown")
+                for u in users
+            }
+
+            enriched = []
+            for t in raw:
+                student_id = str(t.get("StudentID", "")).strip()
+                txn_type = str(t.get("TransactionType", "")).strip()
+                timestamp = str(t.get("Timestamp", "")).strip()
+                student_name = user_map.get(student_id.lower(), "Unknown")
+                enriched.append(
+                    {
+                        "TransactionID": t.get("TransactionID", ""),
+                        "Date": timestamp,
+                        "StudentID": student_id,
+                        "StudentName": student_name,
+                        "Type": txn_type,
+                        "Amount": t.get("Amount", 0),
+                        "BalanceBefore": t.get("BalanceBefore", 0),
+                        "BalanceAfter": t.get("BalanceAfter", 0),
+                        "Status": t.get("Status", ""),
+                        "ProcessedBy": t.get("ProcessedBy", ""),
+                        "ItemsJson": t.get("ItemsJson", ""),
+                    }
+                )
+
+            # Apply filters
+            if date_from:
+                enriched = [t for t in enriched if t["Date"] >= date_from]
+            if date_to:
+                enriched = [t for t in enriched if t["Date"] <= date_to + "T23:59:59"]
+            if student_filter:
+                enriched = [
+                    t
+                    for t in enriched
+                    if student_filter in t["StudentID"].lower()
+                    or student_filter in t["StudentName"].lower()
+                ]
+            if txn_type_filter and txn_type_filter != "all":
+                enriched = [
+                    t for t in enriched if t["Type"].lower() == txn_type_filter
+                ]
+
+            enriched.sort(key=lambda x: x.get("Date", ""), reverse=True)
+            result = enriched[:limit]
+            return jsonify({"transactions": result, "count": len(result)})
+
+        except (
+            gspread.exceptions.APIError,
+            gspread.exceptions.SpreadsheetNotFound,
+            gspread.exceptions.WorksheetNotFound,
+            ConnectionError,
+            TimeoutError,
+        ) as e:
+            logger.error(f"Google Sheets unavailable in get_transactions_filtered: {e}")
+            return jsonify({"error": "Service unavailable, please try again"}), 503
+        except Exception as e:
+            logger.error(
+                f"Unexpected error in get_transactions_filtered: {e}", exc_info=True
+            )
+            return jsonify({"error": "An unexpected error occurred"}), 500
+
     # ============= HEALTH / STATUS =============
 
     @app.route("/api/health", methods=["GET"])

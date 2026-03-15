@@ -1,89 +1,77 @@
 /*
- * BANKONGSETON — Arduino UNO R3 NFC reader (PN532 over SPI)
+ * BANKONGSETON — Arduino UNO R3 RFID registration reader (RC522 over SPI)
  *
- * Dual-mode operation:
- *   1. APDU path  — phone running HCE app → Serial "NFC|{48-char-token}"
- *   2. UID fallback — plain RFID card (or APDU timeout) → Serial "CARD|{UID}"
+ * Role: card registration only.
+ *   Reads physical RFID cards (MIFARE, NTAG via RC522) and emits:
+ *     CARD|<UID-HEX>   → ArduinoBridge → link_money_card()
  *
- * Python ArduinoBridge reads this line and processes the payment.
- *
- * UNO R3 has no WiFi — serial is the ONLY delivery path.
- * Do NOT add WiFiS3.h or any HTTP logic here.
+ * No WiFi, no APDU, no phone NFC — RC522 is UID-read only.
  *
  * ═══════════════════════════════════════════════════════════════
  * HARDWARE WIRING
  * ═══════════════════════════════════════════════════════════════
  *
- * PN532 NFC Module (SPI mode — set SEL0=LOW, SEL1=HIGH on board):
- *   NSS/CS  → D10  (PN532_SS)
- *   MOSI    → D11  (SPI hardware, no define needed)
- *   MISO    → D12  (SPI hardware, no define needed)
- *   SCK     → D13  (SPI hardware, no define needed)
+ * RC522 RFID Module (SPI):
+ *   SDA/SS  → D10  (RC522_SS)
+ *   MOSI    → D11  (SPI hardware)
+ *   MISO    → D12  (SPI hardware)
+ *   SCK     → D13  (SPI hardware)
+ *   RST     → D8   (RC522_RST)
  *   VCC     → 3.3V
  *   GND     → GND
  *
- * LCD 16x2 with PCF8574 I2C backpack (software I2C, no extra lib):
- *   SDA     → D6  (LCD_SDA)
- *   SCL     → D7  (LCD_SCL)
+ * LCD 16x2 with PCF8574 I2C backpack (software I2C):
+ *   SDA     → D6   (LCD_SDA)
+ *   SCL     → D7   (LCD_SCL)
  *   VCC     → 5V
  *   GND     → GND
- *   Default I2C address: 0x27 (change LCD_ADDR below if needed)
+ *   Default I2C address: 0x27 (try 0x3F if LCD is blank)
  *
  * Piezo buzzer:
- *   +       → D9  (PIEZO_PIN)
+ *   +       → D9   (PIEZO_PIN)
  *   -       → GND
  *
  * ═══════════════════════════════════════════════════════════════
  * REQUIRED LIBRARIES (install via Arduino Library Manager)
  * ═══════════════════════════════════════════════════════════════
- *   - "PN532" by Elechouse  (also installs PN532_SPI, PN532_HSU, etc.)
+ *   - "MFRC522" by GithubCommunity
  *
  * LCD uses inline bit-bang I2C — no extra library required.
  * ═══════════════════════════════════════════════════════════════
  */
 
 #include <SPI.h>
-#include <PN532_SPI.h>
-#include <PN532.h>
+#include <MFRC522.h>
 
 // ── Pin assignments ──────────────────────────────────────────────
-#define PN532_SS   10   // SPI chip-select (NSS/CS on PN532 board)
-#define PIEZO_PIN   9   // Passive or active piezo buzzer
-#define LCD_SDA     6   // Software I2C data line to PCF8574
-#define LCD_SCL     7   // Software I2C clock line to PCF8574
+#define RC522_SS    10   // SPI chip-select
+#define RC522_RST    8   // RC522 reset line
+#define PIEZO_PIN    9   // Passive or active piezo buzzer
+#define LCD_SDA      6   // Software I2C data line to PCF8574
+#define LCD_SCL      7   // Software I2C clock line to PCF8574
 
 // ── LCD I2C configuration ────────────────────────────────────────
-// Default PCF8574 backpack address is 0x27.
-// If LCD does not respond, try 0x3F (some backpacks ship with this address).
 #define LCD_ADDR    0x27
 #define LCD_COLS    16
 #define LCD_ROWS     2
 
 // ── Tuning ───────────────────────────────────────────────────────
-#define SCAN_COOLDOWN_MS  1500  // ms pause after card read (prevents double-scan)
-#define NFC_TIMEOUT_MS     500  // ms readPassiveTargetID blocks waiting for card
+#define SCAN_COOLDOWN_MS  2000  // ms pause after card read (prevents double-scan)
 
-// ── PN532 instance (SPI mode — matches working reference) ────────
-PN532_SPI pn532spi(SPI, PN532_SS);
-PN532 nfc(pn532spi);
+// ── RC522 instance ───────────────────────────────────────────────
+MFRC522 rfid(RC522_SS, RC522_RST);
 
 // ═══════════════════════════════════════════════════════════════
 // INLINE BIT-BANG I2C + PCF8574 LCD DRIVER
 // No external library required — uses D6 (SDA) and D7 (SCL).
-// Implements HD44780 4-bit mode via PCF8574 I2C expander.
 // ═══════════════════════════════════════════════════════════════
 
-// PCF8574 bit layout for common LCD I2C backpacks:
-//   P7  P6  P5  P4  P3  P2  P1  P0
-//   D7  D6  D5  D4  BL  E   RW  RS
-#define LCD_BL  0x08  // backlight
-#define LCD_E   0x04  // enable strobe
-#define LCD_RW  0x02  // read/write (always 0 = write)
-#define LCD_RS  0x01  // register select (0=cmd, 1=data)
+#define LCD_BL  0x08
+#define LCD_E   0x04
+#define LCD_RW  0x02
+#define LCD_RS  0x01
 
-// ── Low-level bit-bang I2C ───────────────────────────────────────
-
-void i2c_sda_high() { pinMode(LCD_SDA, INPUT);  }   // open-drain: float = HIGH
+void i2c_sda_high() { pinMode(LCD_SDA, INPUT);  }
 void i2c_sda_low()  { pinMode(LCD_SDA, OUTPUT); digitalWrite(LCD_SDA, LOW); }
 void i2c_scl_high() { pinMode(LCD_SCL, INPUT);  }
 void i2c_scl_low()  { pinMode(LCD_SCL, OUTPUT); digitalWrite(LCD_SCL, LOW); }
@@ -105,7 +93,6 @@ void i2c_stop() {
   delayMicroseconds(4);
 }
 
-// Returns true if ACK received (SDA low after 9th clock).
 bool i2c_write_byte(uint8_t data) {
   for (int i = 7; i >= 0; i--) {
     if (data & (1 << i)) i2c_sda_high();
@@ -116,8 +103,7 @@ bool i2c_write_byte(uint8_t data) {
     i2c_scl_low();
     delayMicroseconds(1);
   }
-  // ACK cycle
-  i2c_sda_high();            // release SDA for slave to pull low
+  i2c_sda_high();
   delayMicroseconds(1);
   i2c_scl_high();
   delayMicroseconds(4);
@@ -126,17 +112,13 @@ bool i2c_write_byte(uint8_t data) {
   return ack;
 }
 
-// Send one byte to PCF8574 at LCD_ADDR.
 void pcf8574_write(uint8_t val) {
   i2c_start();
-  i2c_write_byte((LCD_ADDR << 1) | 0x00);  // address + write bit
+  i2c_write_byte((LCD_ADDR << 1) | 0x00);
   i2c_write_byte(val);
   i2c_stop();
 }
 
-// ── HD44780 via PCF8574 ──────────────────────────────────────────
-
-// Strobe the HD44780 Enable pin (E) to latch 4 bits.
 void lcd_pulse_enable(uint8_t val) {
   pcf8574_write(val | LCD_E);
   delayMicroseconds(1);
@@ -144,23 +126,20 @@ void lcd_pulse_enable(uint8_t val) {
   delayMicroseconds(50);
 }
 
-// Send a 4-bit nibble (upper nibble of `val` contains the data).
 void lcd_write_nibble(uint8_t nibble, uint8_t flags) {
-  uint8_t byte = (nibble & 0xF0) | flags | LCD_BL;
-  lcd_pulse_enable(byte);
+  uint8_t b = (nibble & 0xF0) | flags | LCD_BL;
+  lcd_pulse_enable(b);
 }
 
-// Send a full 8-bit command or data byte as two nibbles.
 void lcd_send(uint8_t data, bool rs) {
   uint8_t flags = rs ? LCD_RS : 0x00;
   lcd_write_nibble(data & 0xF0, flags);
   lcd_write_nibble((data << 4) & 0xF0, flags);
 }
 
-void lcd_command(uint8_t cmd)  { lcd_send(cmd,  false); }
-void lcd_data(uint8_t ch)      { lcd_send(ch,   true);  }
+void lcd_command(uint8_t cmd) { lcd_send(cmd, false); }
+void lcd_data(uint8_t ch)     { lcd_send(ch,  true);  }
 
-// ── HD44780 row addresses (standard 16x2) ───────────────────────
 static const uint8_t LCD_ROW_ADDR[2] = { 0x00, 0x40 };
 
 void lcd_set_cursor(uint8_t col, uint8_t row) {
@@ -169,7 +148,7 @@ void lcd_set_cursor(uint8_t col, uint8_t row) {
 
 void lcd_clear() {
   lcd_command(0x01);
-  delay(2);  // clear needs >1.5 ms
+  delay(2);
 }
 
 void lcd_print(const char *str) {
@@ -177,24 +156,14 @@ void lcd_print(const char *str) {
 }
 
 void lcd_init() {
-  delay(50);  // power-up settling
-
-  // Initialisation sequence per HD44780 datasheet (4-bit mode entry)
-  pcf8574_write(LCD_BL);  // backlight on, all control pins low
-
-  // Send 0x03 three times (8-bit mode reset)
+  delay(50);
+  pcf8574_write(LCD_BL);
   lcd_write_nibble(0x30, 0x00); delay(5);
   lcd_write_nibble(0x30, 0x00); delayMicroseconds(150);
   lcd_write_nibble(0x30, 0x00); delayMicroseconds(150);
-
-  // Switch to 4-bit mode
   lcd_write_nibble(0x20, 0x00);
-
-  // Configure: 4-bit, 2-line, 5x8 font
   lcd_command(0x28);
-  // Display ON, cursor OFF, blink OFF
   lcd_command(0x0C);
-  // Entry mode: increment, no shift
   lcd_command(0x06);
   lcd_clear();
 }
@@ -203,12 +172,11 @@ void lcd_init() {
 // UID HELPER
 // ═══════════════════════════════════════════════════════════════
 
-// Convert uid bytes to uppercase hex string (e.g. "A3B2C1D0").
-String uidToHex(uint8_t *uid, uint8_t len) {
+String uidToHex(byte *buf, byte len) {
   String result = "";
-  for (uint8_t i = 0; i < len; i++) {
-    if (uid[i] < 0x10) result += "0";
-    result += String(uid[i], HEX);
+  for (byte i = 0; i < len; i++) {
+    if (buf[i] < 0x10) result += "0";
+    result += String(buf[i], HEX);
   }
   result.toUpperCase();
   return result;
@@ -219,159 +187,71 @@ String uidToHex(uint8_t *uid, uint8_t len) {
 // ═══════════════════════════════════════════════════════════════
 
 void setup() {
-  // 1. Serial at 9600 baud — ArduinoBridge expects this rate
   Serial.begin(9600);
-  while (!Serial && millis() < 3000);  // wait up to 3 s for Serial Monitor
+  while (!Serial && millis() < 3000);
 
-  // 2. PN532 init (PN532_SPI handles SPI.begin() internally)
-  nfc.begin();
-  uint32_t versiondata = nfc.getFirmwareVersion();
-  if (!versiondata) {
-    Serial.println("ERROR: PN532 not found — check SPI wiring (NSS=D10, MOSI=D11, MISO=D12, SCK=D13)");
-    while (1) delay(1000);  // halt — cannot continue without NFC reader
-  }
-  nfc.SAMConfig();  // configure for ISO14443A cards
+  pinMode(PIEZO_PIN, OUTPUT);
 
-  // 3. LCD init
   lcd_init();
   lcd_set_cursor(0, 0);
   lcd_print("BANKONGSETON");
   lcd_set_cursor(0, 1);
-  lcd_print("Ready...");
+  lcd_print("Starting...");
 
-  // 4. Startup beep (100 ms) — confirms piezo wiring
-  pinMode(PIEZO_PIN, OUTPUT);   // required before tone() on UNO R3
-  tone(PIEZO_PIN, 1000, 200);   // 200 ms at 1 kHz — audible on both active and passive
+  SPI.begin();
+  rfid.PCD_Init();
 
-  // 5. Ready message — ArduinoBridge listens for this line at startup
-  Serial.println("BANKONGSETON NFC reader ready");
-}
+  // Verify RC522 is responding
+  byte ver = rfid.PCD_ReadRegister(MFRC522::VersionReg);
+  if (ver == 0x00 || ver == 0xFF) {
+    Serial.println("ERROR: RC522 not found — check SPI wiring (SS=D10, RST=D8)");
+    lcd_clear();
+    lcd_set_cursor(0, 0);
+    lcd_print("RC522 ERROR");
+    lcd_set_cursor(0, 1);
+    lcd_print("Check wiring");
+    while (1) delay(1000);
+  }
 
-void loop() {
-  uint8_t uid[7];
-  uint8_t uidLen = 0;
+  tone(PIEZO_PIN, 1000, 200);
 
-  // Show idle state: waiting for phone/card tap
   lcd_clear();
   lcd_set_cursor(0, 0);
   lcd_print("BANKONGSETON");
   lcd_set_cursor(0, 1);
-  lcd_print("Tap Phone...");
+  lcd_print("Register mode");
 
-  // RF field toggle: cycle off→on to reset any stuck NTAG state.
-  // Required for passive ISO14443A (NTAG215): autoRFCA must be 0.
-  nfc.setRFField(0, 0);  // RF off
-  delay(50);
-  nfc.setRFField(0, 1);  // RF on, no autoRFCA
-  delay(10);
+  Serial.println("BANKONGSETON RFID registration ready");
+}
 
-  // readPassiveTargetID blocks for NFC_TIMEOUT_MS waiting for a card.
-  // Returns true when a card/phone is in range and its UID is read.
-  bool found = nfc.readPassiveTargetID(
-    PN532_MIFARE_ISO14443A, uid, &uidLen, NFC_TIMEOUT_MS
-  );
+void loop() {
+  lcd_clear();
+  lcd_set_cursor(0, 0);
+  lcd_print("BANKONGSETON");
+  lcd_set_cursor(0, 1);
+  lcd_print("Tap card...");
 
-  if (!found) {
-    Serial.print("SCAN: no card — raw buf:");
-    for (int i = 0; i < 16; i++) {
-      Serial.print(" ");
-      if (nfc.pn532_packetbuffer[i] < 0x10) Serial.print("0");
-      Serial.print(nfc.pn532_packetbuffer[i], HEX);
-    }
-    Serial.println();
-    return;
-  }
+  // Wait for a card to be present
+  if (!rfid.PICC_IsNewCardPresent()) return;
+  if (!rfid.PICC_ReadCardSerial())   return;
 
-  // ── Target detected ──────────────────────────────────────────
-  // Detect beep: 1 kHz, 100 ms
+  String uidHex = uidToHex(rfid.uid.uidByte, rfid.uid.size);
+
+  // Emit to ArduinoBridge — triggers link_money_card()
+  Serial.print("CARD|");
+  Serial.println(uidHex);
+
   tone(PIEZO_PIN, 1000, 100);
 
-  String uidHex = uidToHex(uid, uidLen);
+  lcd_clear();
+  lcd_set_cursor(0, 0);
+  lcd_print("Card Read");
+  lcd_set_cursor(0, 1);
+  lcd_print(uidHex.substring(0, LCD_COLS).c_str());
 
-  if (uidLen != 4) {
-    // ── Plain NFC tag (7-byte UID = NTAG21x, MIFARE physical) ──
-    // Skip APDU — deliver UID directly via serial
-    Serial.print("CARD detected (uidLen=");
-    Serial.print(uidLen);
-    Serial.println(") — skipping APDU");
+  // Halt card and stop crypto — required before next read
+  rfid.PICC_HaltA();
+  rfid.PCD_StopCrypto1();
 
-    Serial.print("CARD|");
-    Serial.println(uidHex);
-
-    tone(PIEZO_PIN, 800, 200);
-    lcd_clear();
-    lcd_set_cursor(0, 0);
-    lcd_print("Card Read");
-    lcd_set_cursor(0, 1);
-    lcd_print(uidHex.substring(0, LCD_COLS).c_str());
-
-  } else {
-    // ── 4-byte UID: likely HCE phone — attempt APDU ─────────
-    // Show "Reading..." while we attempt APDU exchange
-    lcd_clear();
-    lcd_set_cursor(0, 0);
-    lcd_print("BANKONGSETON");
-    lcd_set_cursor(0, 1);
-    lcd_print("Reading...");
-
-    // APDU SELECT AID command (19 bytes):
-    //   CLA=0x00, INS=0xA4, P1=0x04, P2=0x00, Lc=0x0D
-    //   AID: F0 42 41 4E 4B 4F 4E 47 53 45 54 4F 4E  (BANKONGSETON)
-    //   Le=0x00
-    uint8_t apduCmd[19] = {
-      0x00, 0xA4, 0x04, 0x00, 0x0D,
-      0xF0, 0x42, 0x41, 0x4E, 0x4B, 0x4F, 0x4E, 0x47, 0x53, 0x45, 0x54, 0x4F, 0x4E,
-      0x00
-    };
-
-    uint8_t response[60];
-    uint8_t responseLength = 60;
-
-    // inDataExchange MUST be called after readPassiveTargetID (uses _inListedTag internally).
-    // Do NOT call inListPassiveTarget() directly.
-    bool apduOk = nfc.inDataExchange(apduCmd, 19, response, &responseLength);
-
-    if (apduOk && responseLength == 50 && response[48] == 0x90 && response[49] == 0x00) {
-      // ── APDU success: extract 48-char ASCII token ────────────
-      String token = "";
-      for (int i = 0; i < 48; i++) token += (char)response[i];
-
-      // Emit NFC token — ArduinoBridge handles "NFC|" prefix
-      Serial.print("NFC|");
-      Serial.println(token);
-
-      // Confirmation beep: two short tones
-      tone(PIEZO_PIN, 1500, 100);
-      delay(120);
-      tone(PIEZO_PIN, 1500, 100);
-
-      // LCD: show OK
-      lcd_clear();
-      lcd_set_cursor(0, 0);
-      lcd_print("OK");
-      lcd_set_cursor(0, 1);
-      lcd_print("Payment sent");
-
-    } else {
-      // ── APDU failed: fall back to UID emission ───────────────
-      // Emit UID — ArduinoBridge handles "CARD|" prefix (existing format)
-      Serial.print("CARD|");
-      Serial.println(uidHex);
-
-      // Single beep for UID fallback
-      tone(PIEZO_PIN, 800, 200);
-
-      // LCD: show NFC Error
-      lcd_clear();
-      lcd_set_cursor(0, 0);
-      lcd_print("NFC Error");
-      lcd_set_cursor(0, 1);
-      lcd_print("Using card UID");
-    }
-  }
-
-  // Cooldown — prevents reading the same card/phone twice in quick succession
   delay(SCAN_COOLDOWN_MS);
-
-  // Idle state reset is handled at top of next loop() iteration
 }

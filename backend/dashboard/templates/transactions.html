@@ -1,167 +1,3 @@
-<<<<<<< HEAD
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Transactions</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
-    <style>
-        body {
-            background-color: #f8f9fa;
-        }
-        .sidebar {
-            height: 100vh;
-            background: url('https://i.pinimg.com/736x/79/94/e6/7994e695f7880608742fd95317985060.jpg') no-repeat center center;
-            background-size: cover;
-            position: fixed;
-            left: 0;
-            top: 0;
-            width: 250px;
-            color: white;
-            padding: 20px;
-            z-index: 1000;
-            transition: transform 0.3s ease;
-        }
-        .sidebar-brand {
-            font-size: 24px;
-            font-weight: bold;
-            margin-bottom: 30px;
-            text-align: center;
-        }
-        .sidebar-menu {
-            list-style: none;
-            padding: 0;
-        }
-        .sidebar-menu li {
-            margin-bottom: 10px;
-        }
-        .sidebar-menu a {
-            color: white;
-            text-decoration: none;
-            padding: 12px 15px;
-            display: block;
-            border-radius: 8px;
-            transition: all 0.3s;
-        }
-        .sidebar-menu a:hover,
-        .sidebar-menu a.active {
-            background: rgba(255,255,255,0.2);
-        }
-        .main-content {
-            margin-left: 250px;
-            padding: 30px;
-            transition: margin-left 0.3s ease;
-        }
-        .content-card {
-            background: white;
-            border-radius: 12px;
-            padding: 25px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        .badge-type {
-            font-size: 12px;
-            padding: 5px 10px;
-        }
-        .mobile-header {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 15px 20px;
-            z-index: 999;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-        }
-        .mobile-header h5 {
-            margin: 0;
-            font-weight: bold;
-        }
-        .menu-toggle {
-            background: none;
-            border: none;
-            color: white;
-            font-size: 24px;
-            cursor: pointer;
-            padding: 0;
-        }
-        .sidebar-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.5);
-            z-index: 999;
-        }
-        
-        /* Mobile Responsive */
-        @media (max-width: 768px) {
-            .sidebar {
-                transform: translateX(-100%);
-            }
-            .sidebar.active {
-                transform: translateX(0);
-            }
-            .main-content {
-                margin-left: 0;
-                padding: 80px 15px 20px 15px;
-            }
-            .mobile-header {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-            }
-            .sidebar-overlay.active {
-                display: block;
-            }
-            .content-card {
-                padding: 15px;
-            }
-            h1 {
-                font-size: 1.5rem;
-            }
-            .table {
-                font-size: 0.85rem;
-            }
-            .table th, .table td {
-                padding: 0.5rem;
-                white-space: nowrap;
-            }
-        }
-    </style>
-</head>
-<body>
-    <!-- Mobile Header -->
-    <div class="mobile-header">
-        <h5>Banko ng Seton</h5>
-        <button class="menu-toggle" onclick="toggleSidebar()">
-            <i class="bi bi-list"></i>
-        </button>
-    </div>
-    
-    <!-- Sidebar Overlay -->
-    <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
-    
-    <!-- Sidebar -->
-    <div class="sidebar">
-        <div class="sidebar-brand">
-            Banko ng Seton
-        </div>
-        <ul class="sidebar-menu">
-            <li><a href="/dashboard"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
-            <li><a href="/students"><i class="bi bi-people"></i> Students</a></li>
-            <li><a href="/transactions" class="active"><i class="bi bi-credit-card"></i> Transactions</a></li>
-            <li><a href="/logout"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
-        </ul>
-        <div class="mt-4 text-center" style="opacity: 0.7;">
-            <small>Logged in as: {{ username }}</small>
-        </div>
-=======
 {% extends "base.html" %}
 
 {% block title %}Transactions — Bangko ng Seton{% endblock %}
@@ -171,25 +7,14 @@
     <div>
         <h2 class="mb-1"><i class="bi bi-arrow-left-right me-2"></i>Transaction History</h2>
         <p class="text-muted mb-0">View and filter all student transactions</p>
->>>>>>> gsd/M001/S02
     </div>
 </div>
 
-<<<<<<< HEAD
-    <!-- Main Content -->
-    <div class="main-content">
-        <h1 class="mb-4">Transaction History</h1>
-
-        <!-- Filter Bar -->
-        <div class="content-card mb-3">
-            <div class="row g-2 align-items-end">
-=======
 <!-- Filter Bar -->
 <div class="card border-0 shadow-sm mb-3">
     <div class="card-body py-2">
         <form id="filterForm" onsubmit="applyFilters(event)">
             <div class="row g-2 align-items-end flex-wrap">
->>>>>>> gsd/M001/S02
                 <div class="col-sm-6 col-md-3">
                     <label class="form-label small fw-semibold mb-1">From Date</label>
                     <input type="date" class="form-control form-control-sm" id="filterDateFrom">
@@ -205,62 +30,23 @@
                 <div class="col-sm-6 col-md-2">
                     <label class="form-label small fw-semibold mb-1">Type</label>
                     <select class="form-select form-select-sm" id="filterType">
-<<<<<<< HEAD
-                        <option value="all">All types</option>
-=======
                         <option value="">All types</option>
->>>>>>> gsd/M001/S02
                         <option value="purchase">Purchase</option>
                         <option value="load">Load</option>
                         <option value="withdrawal">Withdrawal</option>
                         <option value="void">Void</option>
                     </select>
                 </div>
-<<<<<<< HEAD
-                <div class="col-sm-6 col-md-2 d-flex gap-2">
-                    <button class="btn btn-primary btn-sm flex-grow-1" onclick="applyFilters()">
-                        <i class="bi bi-search me-1"></i>Filter
-                    </button>
-                    <button class="btn btn-outline-secondary btn-sm" onclick="clearFilters()" title="Clear filters">
-=======
-                <div class="col-sm-6 col-md-2 d-flex gap-2 align-items-end flex-wrap" style="flex-direction: row;">
+                <div class="col-sm-6 col-md-2 d-flex gap-2 align-items-end">
                     <button type="submit" class="btn btn-primary btn-sm">
                         <i class="bi bi-search me-1"></i>Filter
                     </button>
                     <button type="button" class="btn btn-outline-secondary btn-sm" onclick="clearFilters()" title="Clear filters">
->>>>>>> gsd/M001/S02
                         <i class="bi bi-x-lg"></i>
                     </button>
                 </div>
             </div>
             <div class="mt-2 small text-muted" id="filterResultCount"></div>
-<<<<<<< HEAD
-        </div>
-        
-        <div class="content-card">
-            <!-- Transactions Table -->
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th>Date & Time</th>
-                            <th>Student ID</th>
-                            <th>Student Name</th>
-                            <th>Type</th>
-                            <th>Amount</th>
-                            <th>Balance After</th>
-                            <th>Processed By</th>
-                            <th>Details</th>
-                        </tr>
-                    </thead>
-                    <tbody id="transactionsTable">
-                        <tr>
-                            <td colspan="8" class="text-center">Loading transactions...</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-=======
         </form>
     </div>
 </div>
@@ -282,50 +68,19 @@
                         <th>Type</th>
                         <th>Amount</th>
                         <th>Balance After</th>
-                        <th>Processed By</th>
                         <th>Details</th>
                     </tr>
                 </thead>
                 <tbody id="transactionsTable">
-                    <tr><td colspan="8" class="text-center text-muted py-4"><div class="spinner-border spinner-border-sm me-2"></div>Loading transactions...</td></tr>
+                    <tr><td colspan="7" class="text-center text-muted py-4">
+                        <div class="spinner-border spinner-border-sm me-2"></div>Loading transactions...
+                    </td></tr>
                 </tbody>
             </table>
->>>>>>> gsd/M001/S02
         </div>
     </div>
 </div>
 
-<<<<<<< HEAD
-    <!-- Transaction Details Modal -->
-    <div class="modal fade" id="transactionDetailsModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title"><i class="bi bi-receipt"></i> Transaction Details</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <p><strong>Transaction:</strong> <span id="detailsTimestamp"></span></p>
-                    <hr>
-                    <table class="table table-sm">
-                        <thead>
-                            <tr>
-                                <th>Item</th>
-                                <th class="text-center">Qty</th>
-                                <th class="text-end">Price</th>
-                                <th class="text-end">Total</th>
-                            </tr>
-                        </thead>
-                        <tbody id="detailsItemsBody"></tbody>
-                        <tfoot>
-                            <tr>
-                                <th colspan="3" class="text-end">Total:</th>
-                                <th class="text-end" id="detailsTotal">₱0.00</th>
-                            </tr>
-                        </tfoot>
-                    </table>
-                </div>
-=======
 <!-- Transaction Details Modal -->
 <div class="modal fade" id="transactionDetailsModal" tabindex="-1">
     <div class="modal-dialog">
@@ -354,319 +109,137 @@
                         </tr>
                     </tfoot>
                 </table>
->>>>>>> gsd/M001/S02
             </div>
         </div>
     </div>
 </div>
 
-<<<<<<< HEAD
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        function toggleSidebar() {
-            document.querySelector('.sidebar').classList.toggle('active');
-            document.querySelector('.sidebar-overlay').classList.toggle('active');
-        }
-        
-        document.querySelectorAll('.sidebar-menu a').forEach(link => {
-            link.addEventListener('click', () => {
-                if (window.innerWidth <= 768) {
-                    toggleSidebar();
-                }
-            });
-        });
-        
-        document.addEventListener('DOMContentLoaded', () => {
-            loadTransactions();
-        });
-
-        async function loadTransactions(params = {}) {
-            try {
-                const qs = new URLSearchParams({limit: 200, ...params}).toString();
-                const useFiltered = Object.keys(params).some(k => params[k] && k !== 'limit');
-                const url = useFiltered
-                    ? '/api/transactions/filtered?' + qs
-                    : '/api/transactions/recent?limit=200';
-                const response = await fetch(url);
-                const data = await response.json();
-
-                const tbody = document.getElementById('transactionsTable');
-                const resultCount = document.getElementById('filterResultCount');
-
-                if (!data.transactions || data.transactions.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-3">No transactions found</td></tr>';
-                    if (resultCount) resultCount.textContent = 'No results';
-                    return;
-                }
-
-                if (resultCount) resultCount.textContent = `Showing ${data.transactions.length} transaction(s)`;
-                
-                tbody.innerHTML = data.transactions.map(t => {
-                    const date = new Date(t.Date);
-                    const badgeClass = t.Type === 'Load' ? 'bg-success' : 
-                                      t.Type === 'Purchase' ? 'bg-primary' :
-                                      t.Type === 'Void' ? 'bg-danger' : 'bg-warning';
-                    
-                    // Check if transaction has items (ItemsJson)
-                    const hasItems = t.ItemsJson && t.ItemsJson !== '[]' && t.ItemsJson !== '';
-                    const detailsBtn = hasItems ? 
-                        `<button class="btn btn-sm btn-info" onclick='showTransactionDetails(${JSON.stringify(t)})'><i class="bi bi-receipt"></i></button>` : 
-                        '<span class="text-muted">-</span>';
-                    const canVoid = t.Type !== 'Void' && t.TransactionID;
-                    const voidBtn = canVoid
-                        ? `<button class="btn btn-sm btn-outline-danger ms-1" onclick='openVoidModal("${t.TransactionID}")' title="Void transaction"><i class="bi bi-x-circle"></i></button>`
-                        : '';
-                    
-                    return `
-                        <tr>
-                            <td>${date.toLocaleString()}</td>
-                            <td>${t.StudentID}</td>
-                            <td>${t.StudentName}</td>
-                            <td><span class="badge ${badgeClass} badge-type">${t.Type}</span></td>
-                            <td>₱${parseFloat(t.Amount).toFixed(2)}</td>
-                            <td>₱${parseFloat(t.BalanceAfter).toFixed(2)}</td>
-                            <td>${t.ProcessedBy || '-'}</td>
-                            <td>${detailsBtn}${voidBtn}</td>
-                        </tr>
-                    `;
-                }).join('');
-            } catch (error) {
-                console.error('Error loading transactions:', error);
-            }
-        }
-
-        function showTransactionDetails(transaction) {
-            try {
-                const items = transaction.ItemsJson ? JSON.parse(transaction.ItemsJson) : [];
-                
-                if (!items || items.length === 0) {
-                    alert('No items found');
-                    return;
-                }
-                
-                const total = items.reduce((sum, item) => sum + (item.price * (item.qty || 1)), 0);
-                
-                const itemsHtml = items.map(item => `
-                    <tr>
-                        <td>${item.name || item.id}</td>
-                        <td class="text-center">${item.qty || 1}</td>
-                        <td class="text-end">₱${(item.price || 0).toFixed(2)}</td>
-                        <td class="text-end fw-bold">₱${((item.price || 0) * (item.qty || 1)).toFixed(2)}</td>
-                    </tr>
-                `).join('');
-                
-                document.getElementById('detailsTimestamp').textContent = new Date(transaction.Date).toLocaleString() + ' - ' + transaction.StudentName;
-                document.getElementById('detailsItemsBody').innerHTML = itemsHtml;
-                document.getElementById('detailsTotal').textContent = `₱${total.toFixed(2)}`;
-                
-                new bootstrap.Modal(document.getElementById('transactionDetailsModal')).show();
-            } catch (error) {
-                alert('Error parsing transaction details: ' + error.message);
-            }
-        }
-
-        function applyFilters() {
-            const params = {};
-            const dateFrom = document.getElementById('filterDateFrom').value;
-            const dateTo = document.getElementById('filterDateTo').value;
-            const student = document.getElementById('filterStudent').value.trim();
-            const type = document.getElementById('filterType').value;
-            if (dateFrom) params.date_from = dateFrom;
-            if (dateTo) params.date_to = dateTo;
-            if (student) params.student_id = student;
-            if (type && type !== 'all') params.txn_type = type;
-            loadTransactions(params);
-        }
-
-        function clearFilters() {
-            document.getElementById('filterDateFrom').value = '';
-            document.getElementById('filterDateTo').value = '';
-            document.getElementById('filterStudent').value = '';
-            document.getElementById('filterType').value = 'all';
-            document.getElementById('filterResultCount').textContent = '';
-            loadTransactions();
-        }
-
-        let pendingVoidId = null;
-
-        function openVoidModal(txnId) {
-            pendingVoidId = txnId;
-            document.getElementById('voidReason').value = '';
-            document.getElementById('voidTxnId').textContent = txnId;
-            new bootstrap.Modal(document.getElementById('voidModal')).show();
-        }
-
-        async function confirmVoid() {
-            if (!pendingVoidId) return;
-            const reason = document.getElementById('voidReason').value.trim();
-            if (!reason) { alert('Please enter a reason for voiding this transaction.'); return; }
-            try {
-                const res = await fetch(`/api/admin/transactions/${pendingVoidId}/void`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({reason})
-                });
-                const data = await res.json();
-                if (data.success) {
-                    bootstrap.Modal.getInstance(document.getElementById('voidModal')).hide();
-                    pendingVoidId = null;
-                    loadTransactions();
-                } else {
-                    alert(data.error || 'Failed to void transaction');
-                }
-            } catch { alert('Network error'); }
-        }
-    </script>
-
-    <!-- Void Transaction Modal -->
-    <div class="modal fade" id="voidModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title text-danger"><i class="bi bi-x-circle me-2"></i>Void Transaction</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <p>Voiding transaction <strong id="voidTxnId"></strong>. The student's balance will be restored.</p>
-                    <label class="form-label fw-semibold">Reason <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control" id="voidReason" placeholder="e.g. Wrong student scanned">
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-danger" onclick="confirmVoid()">
-                        <i class="bi bi-x-circle me-1"></i>Void Transaction
-                    </button>
-                </div>
+<!-- Void Transaction Modal -->
+<div class="modal fade" id="voidModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-danger"><i class="bi bi-x-circle me-2"></i>Void Transaction</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Voiding transaction <strong id="voidTxnId"></strong>. The student's balance will be restored.</p>
+                <label class="form-label fw-semibold">Reason <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="voidReason" placeholder="e.g. Wrong student scanned">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" onclick="confirmVoid()">
+                    <i class="bi bi-x-circle me-1"></i>Void Transaction
+                </button>
             </div>
         </div>
     </div>
-</body>
-</html>
-=======
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-const RISK_BADGES = {
-    critical: '<span class="badge bg-danger">CRITICAL</span>',
-    high:     '<span class="badge" style="background:#fd7e14">HIGH</span>',
-    medium:   '<span class="badge bg-warning text-dark">MEDIUM</span>',
-    low:      '<span class="badge bg-secondary">LOW</span>',
-};
-
-const FRAUD_TYPE_LABELS = {
-    velocity:            'Velocity',
-    unusual_amount:      'Unusual Amount',
-    unusual_time:        'Unusual Time',
-    location_mismatch:   'Location Mismatch',
-    rapid_spending:      'Rapid Spending',
-    card_cloning:        'Card Cloning',
-    dormant_activation:  'Dormant Activation',
-};
-
-function fmtDate(isoStr) {
-    if (!isoStr) return '—';
-    try { return new Date(isoStr).toLocaleString('en-PH', {dateStyle:'short', timeStyle:'short'}); }
-    catch { return isoStr; }
-}
-
 async function loadTransactions(params = {}) {
     const tbody = document.getElementById('transactionsTable');
     const resultCount = document.getElementById('filterResultCount');
     const badge = document.getElementById('transactionCountBadge');
-    
+
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4"><div class="spinner-border spinner-border-sm me-2"></div>Loading transactions...</td></tr>';
+
     try {
         const qs = new URLSearchParams({limit: 200, ...params}).toString();
         const useFiltered = Object.keys(params).some(k => params[k] && k !== 'limit');
-        const url = useFiltered ? '/api/transactions/filtered?' + qs : '/api/transactions/recent?limit=200';
-        
-        tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4"><div class="spinner-border spinner-border-sm me-2"></div>Loading transactions...</td></tr>';
+        const url = useFiltered
+            ? '/api/transactions/filtered?' + qs
+            : '/api/transactions/recent?limit=200';
 
         const response = await fetch(url);
         if (!response.ok) throw new Error('Failed to load transactions');
-        
+
         const data = await response.json();
         const transactions = data.transactions || [];
 
-        if (resultCount && !useFiltered) {
+        if (resultCount) {
             resultCount.textContent = `Showing ${transactions.length} transaction(s)`;
         }
-        badge.textContent = `${transactions.length}`;
+        badge.textContent = String(transactions.length);
 
         if (!transactions.length) {
-            tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">No transactions found</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">No transactions found</td></tr>';
             return;
         }
 
         const rows = transactions.map(t => {
-            // Handle both string and number amounts
-            let amountNum = parseFloat(t.Amount);
-            if (isNaN(amountNum)) amountNum = 0;
-            
-            let balanceAfterNum = parseFloat(t.BalanceAfter);
-            if (isNaN(balanceAfterNum)) balanceAfterNum = 0;
-
+            const amountNum = parseFloat(t.Amount) || 0;
+            const balanceAfterNum = parseFloat(t.BalanceAfter) || 0;
             const date = new Date(t.Date);
-            // Determine badge class based on transaction type string value
+
             const typeStr = String(t.Type || '').toLowerCase();
-            let badgeClass = 'bg-warning';
+            let badgeClass = 'bg-warning text-dark';
             if (typeStr === 'load') badgeClass = 'bg-success';
             else if (typeStr === 'purchase') badgeClass = 'bg-primary';
             else if (typeStr === 'void') badgeClass = 'bg-danger';
 
-            // Check if transaction has items (ItemsJson)
-            const hasItems = t.ItemsJson && String(t.ItemsJson).trim() !== '' && JSON.parse(String(t.ItemsJson))?.length > 0;
-            
+            let hasItems = false;
+            try {
+                const itemsStr = String(t.ItemsJson || '').trim();
+                if (itemsStr) {
+                    const parsed = JSON.parse(itemsStr);
+                    hasItems = Array.isArray(parsed) && parsed.length > 0;
+                }
+            } catch {}
+
+            const canVoid = typeStr !== 'void' && t.TransactionID;
+            const detailsBtn = hasItems
+                ? `<button class="btn btn-sm btn-info text-white" onclick='showTransactionDetails(${JSON.stringify(t)})'><i class="bi bi-receipt"></i></button>`
+                : '<span class="text-muted">—</span>';
+            const voidBtn = canVoid
+                ? ` <button class="btn btn-sm btn-outline-danger ms-1" onclick='openVoidModal("${t.TransactionID}")' title="Void"><i class="bi bi-x-circle"></i></button>`
+                : '';
+
             return `
                 <tr>
-                    <td>${date.toLocaleString()}</td>
-                    <td>${t.StudentID}</td>
-                    <td>${t.StudentName}</td>
-                    <td><span class="badge ${badgeClass} badge-type">${t.Type || '-'}</span></td>
+                    <td class="small">${date.toLocaleString()}</td>
+                    <td>${t.StudentID || '—'}</td>
+                    <td>${t.StudentName || '—'}</td>
+                    <td><span class="badge ${badgeClass}">${t.Type || '—'}</span></td>
                     <td>₱${amountNum.toFixed(2)}</td>
                     <td>₱${balanceAfterNum.toFixed(2)}</td>
-                    <td>${t.ProcessedBy || '-'}</td>
-                    <td>${hasItems ? `<button class="btn btn-sm btn-info text-white" onclick='showTransactionDetails(${JSON.stringify(t)})'><i class="bi bi-receipt"></i></button>` : '<span class="text-muted">-</span>'}</td>
+                    <td>${detailsBtn}${voidBtn}</td>
                 </tr>
             `;
         }).join('');
 
+        tbody.innerHTML = rows;
+
     } catch (error) {
         console.error('Error loading transactions:', error);
-        tbody.innerHTML = `<tr><td colspan="8" class="text-center text-danger py-4">Failed to load: ${error.message}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center text-danger py-4">Failed to load: ${error.message}</td></tr>`;
         if (resultCount) resultCount.textContent = '';
+        badge.textContent = '0';
     }
 }
 
 function showTransactionDetails(transaction) {
     try {
         const itemsJsonStr = String(transaction.ItemsJson || '').trim();
-        
         let parsedItems = [];
-        if (itemsJsonStr.length > 0) {
-            parsedItems = JSON.parse(itemsJsonStr);
-        } else {
-            alert('No items found');
-            return;
-        }
+        if (itemsJsonStr) parsedItems = JSON.parse(itemsJsonStr);
+        if (!parsedItems.length) { alert('No items found'); return; }
 
         const total = parsedItems.reduce((sum, item) => sum + ((item.price || 0) * (item.qty || 1)), 0);
-
-        if (!parsedItems.length) {
-            alert('No valid items data');
-            return;
-        }
-
         const itemsHtml = parsedItems.map(item => `
             <tr>
-                <td>${item.name || item.id}</td>
+                <td>${item.name || item.id || '—'}</td>
                 <td class="text-center">${item.qty || 1}</td>
                 <td class="text-end">₱${(item.price || 0).toFixed(2)}</td>
                 <td class="text-end fw-bold">₱${((item.price || 0) * (item.qty || 1)).toFixed(2)}</td>
             </tr>
         `).join('');
 
-        document.getElementById('detailsTimestamp').textContent = new Date(transaction.Date).toLocaleString() + ' - ' + transaction.StudentName;
+        document.getElementById('detailsTimestamp').textContent =
+            new Date(transaction.Date).toLocaleString() + ' — ' + transaction.StudentName;
         document.getElementById('detailsItemsBody').innerHTML = itemsHtml;
         document.getElementById('detailsTotal').textContent = `₱${total.toFixed(2)}`;
 
@@ -678,39 +251,59 @@ function showTransactionDetails(transaction) {
 
 function applyFilters(event) {
     event.preventDefault();
-    
     const params = {};
     const dateFrom = document.getElementById('filterDateFrom').value;
-    const dateTo = document.getElementById('filterDateTo').value;
-    const student = document.getElementById('filterStudent').value.trim();
-    const type = document.getElementById('filterType').value;
-
+    const dateTo   = document.getElementById('filterDateTo').value;
+    const student  = document.getElementById('filterStudent').value.trim();
+    const type     = document.getElementById('filterType').value;
     if (dateFrom) params.date_from = dateFrom;
-    if (dateTo) params.date_to = dateTo;
-    if (student) params.student_id = student;
-    if (type && type !== '') params.txn_type = type;
-
+    if (dateTo)   params.date_to   = dateTo;
+    if (student)  params.student_id = student;
+    if (type)     params.txn_type  = type;
     loadTransactions(params);
 }
 
 function clearFilters() {
     document.getElementById('filterDateFrom').value = '';
-    document.getElementById('filterDateTo').value = '';
-    document.getElementById('filterStudent').value = '';
-    document.getElementById('filterType').value = '';
+    document.getElementById('filterDateTo').value   = '';
+    document.getElementById('filterStudent').value  = '';
+    document.getElementById('filterType').value     = '';
     document.getElementById('filterResultCount').textContent = '';
-    
-    // Reset to load recent transactions (no filters)
-    const tbody = document.getElementById('transactionsTable');
-    tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4"><div class="spinner-border spinner-border-sm me-2"></div>Loading...</td></tr>';
-    
-    setTimeout(() => loadTransactions({}), 100);
+    loadTransactions({});
 }
 
-// Initial load on page ready
+let pendingVoidId = null;
+
+function openVoidModal(txnId) {
+    pendingVoidId = txnId;
+    document.getElementById('voidReason').value = '';
+    document.getElementById('voidTxnId').textContent = txnId;
+    new bootstrap.Modal(document.getElementById('voidModal')).show();
+}
+
+async function confirmVoid() {
+    if (!pendingVoidId) return;
+    const reason = document.getElementById('voidReason').value.trim();
+    if (!reason) { alert('Please enter a reason for voiding this transaction.'); return; }
+    try {
+        const res = await fetch(`/api/transactions/${pendingVoidId}/void`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({reason})
+        });
+        const data = await res.json();
+        if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('voidModal')).hide();
+            pendingVoidId = null;
+            loadTransactions();
+        } else {
+            alert(data.error || 'Failed to void transaction');
+        }
+    } catch { alert('Network error'); }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     loadTransactions();
 });
 </script>
 {% endblock %}
->>>>>>> gsd/M001/S02

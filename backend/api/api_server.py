@@ -1266,6 +1266,136 @@ def get_lost_card_status():
         logger.error(f"Unexpected error in get_lost_card_status: {e}", exc_info=True)
         return jsonify({'error': 'An unexpected error occurred'}), 500
 
+
+@app.route('/api/student/lost-card', methods=['POST'])
+def report_lost_card():
+    """
+    Student self-reports their money card as lost.
+    POST /api/student/lost-card
+    Header: Authorization: Bearer <token>
+
+    Actions (all three must succeed):
+      1. Money Accounts  – set Status to 'Lost' for the student's card
+      2. Lost Card Reports – append a new Pending report row
+      3. Session          – invalidate so further requests require re-login
+
+    Response: { success: true, report_id: str, message: str }
+    """
+    try:
+        token = request.headers.get('Authorization', '').replace('Bearer ', '')
+        if token not in active_sessions:
+            return jsonify({'error': 'Invalid or expired token'}), 401
+
+        session_data = active_sessions[token]
+        student_id = str(session_data['student_id'])
+
+        # ── 1. Look up student record ─────────────────────────────────────
+        users_sheet = get_worksheet_with_retry('Users')
+        user_records = users_sheet.get_all_records()
+
+        student_row = None
+        money_card_number = None
+        student_name = ''
+        for idx, record in enumerate(user_records, start=2):
+            if str(record.get('StudentID', '')).strip() == student_id:
+                student_row = idx
+                money_card_number = str(record.get('MoneyCardNumber', '')).strip()
+                student_name = str(record.get('Name', '')).strip()
+                break
+
+        if not student_row:
+            return jsonify({'error': 'Student not found'}), 404
+
+        if not money_card_number:
+            return jsonify({'error': 'No money card registered for this account'}), 400
+
+        normalized_card = normalize_card_uid(money_card_number)
+
+        # ── 2. Check for an existing pending report (idempotency) ─────────
+        try:
+            lost_sheet = get_worksheet_with_retry('Lost Card Reports')
+            existing_reports = lost_sheet.get_all_records()
+        except Exception:
+            existing_reports = []
+
+        for report in existing_reports:
+            if (str(report.get('StudentID', '')).strip() == student_id
+                    and str(report.get('Status', '')).strip() == 'Pending'):
+                return jsonify({
+                    'success': True,
+                    'report_id': report.get('ReportID', ''),
+                    'message': 'A lost card report is already pending for your account.'
+                })
+
+        # ── 3. Get current balance from Money Accounts ────────────────────
+        money_sheet = get_worksheet_with_retry('Money Accounts')
+        money_records = money_sheet.get_all_records()
+
+        money_row = None
+        current_balance = 0.0
+        for idx, record in enumerate(money_records, start=2):
+            if normalize_card_uid(record.get('MoneyCardNumber', '')) == normalized_card:
+                money_row = idx
+                current_balance = float(record.get('Balance', 0))
+                break
+
+        # ── 4. Mark card as Lost in Money Accounts ────────────────────────
+        if money_row:
+            try:
+                status_col = money_sheet.find('Status').col
+                money_sheet.update_cell(money_row, status_col, 'Lost')
+                invalidate_cached('money_accounts')
+                invalidate_pattern('money_accounts')
+            except Exception as me:
+                logger.error(f"Failed to update Money Accounts status: {me}", exc_info=True)
+                return jsonify({'error': 'Failed to deactivate card. Please try again.'}), 503
+        else:
+            logger.warning(f"report_lost_card: no Money Accounts row for card {money_card_number}")
+
+        # ── 5. Append to Lost Card Reports ────────────────────────────────
+        timestamp = get_philippines_time().strftime('%Y-%m-%d %H:%M:%S')
+        report_id = f"LOST-{get_philippines_time().strftime('%Y%m%d%H%M%S')}-{student_id}"
+
+        try:
+            lost_sheet = get_worksheet_with_retry('Lost Card Reports')
+            lost_sheet.append_row([
+                report_id,        # ReportID
+                timestamp,        # ReportDate
+                student_id,       # StudentID
+                money_card_number,# OldCardNumber
+                '',               # NewCardNumber (filled when replaced)
+                current_balance,  # TransferredBalance
+                'student-app',    # ReportedBy
+                'Pending',        # Status
+            ])
+        except Exception as le:
+            logger.error(f"Failed to append Lost Card Reports row: {le}", exc_info=True)
+            # Money Accounts was already updated — log and continue rather than
+            # rolling back, so the card remains blocked. Admin can add the report row manually.
+
+        # ── 6. Invalidate session ─────────────────────────────────────────
+        if token in active_sessions:
+            del active_sessions[token]
+
+        logger.info(
+            f"event=lost_card_reported student_id={student_id} "
+            f"card={money_card_number} report_id={report_id}"
+        )
+
+        return jsonify({
+            'success': True,
+            'report_id': report_id,
+            'message': 'Card reported as lost. Please contact administration for a replacement.'
+        })
+
+    except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
+            gspread.exceptions.WorksheetNotFound, ConnectionError, TimeoutError) as e:
+        logger.error(f"Sheets unavailable in report_lost_card: {e}")
+        return jsonify({'error': 'Service unavailable, please try again'}), 503
+    except Exception as e:
+        logger.error(f"Unexpected error in report_lost_card: {e}", exc_info=True)
+        return jsonify({'error': 'An unexpected error occurred'}), 500
+
 if __name__ == '__main__':
     port = int(os.getenv('API_PORT', 5001))
     debug = os.getenv('API_DEBUG', 'False') == 'True'
@@ -1284,6 +1414,8 @@ if __name__ == '__main__':
     - GET  /api/student/profile
     - GET  /api/student/balance
     - GET  /api/student/transactions
+    - POST /api/student/lost-card
+    - GET  /api/student/lost-card-status
     - POST /api/users/fcm-token
     - POST /api/auth/logout
     

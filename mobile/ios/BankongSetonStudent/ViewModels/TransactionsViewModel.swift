@@ -36,7 +36,7 @@ final class TransactionsViewModel: ObservableObject {
             let resp = try await apiClient.getTransactions(limit: pageSize, offset: offset)
             transactions.append(contentsOf: resp.transactions)
             offset += resp.transactions.count
-            hasMore = resp.hasMore
+            hasMore = resp.hasMore ?? false
         } catch APIError.unauthorized {
             authManager.handleUnauthorized()
         } catch APIError.cardLost {

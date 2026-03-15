@@ -153,46 +153,87 @@ def get_ports():
 @cashier_bp.route('/api/connect-arduino', methods=['POST'])
 @jwt_required(roles=['cashier', 'admin'])
 def connect_arduino():
-    """Connect to Arduino on specified port"""
+    """Connect to Arduino on specified port.
+
+    The cashier and admin dashboard share the same Flask process, so if the
+    admin dashboard has already opened a port the cashier must reuse that
+    connection — opening the same COM port twice raises PermissionError(13).
+
+    Priority:
+      1. Port already open in this process for the requested port → reuse it.
+      2. Admin connected a *different* port → switch (close old, open new).
+      3. Nothing connected yet → open fresh.
+    """
     try:
+        import serial
         from flask import current_app
         data = request.get_json()
         port = data.get('port')
-        
+
         if not port:
             return jsonify({'error': 'Port required'}), 400
-        
-        # Try to connect Arduino
-        if hasattr(current_app, 'arduino_bridge'):
+
+        existing_arduino = getattr(current_app, 'arduino', None)
+        existing_port    = getattr(current_app, 'arduino_port', None)
+        existing_bridge  = getattr(current_app, 'arduino_bridge', None)
+
+        # ── Case 1: already connected to the requested port ──────────────
+        if (existing_arduino and existing_arduino.is_open
+                and existing_port == port and existing_bridge):
+            logger.info("event=cashier_reuse_bridge port=%s", port)
+            return jsonify({'success': True, 'message': f'Already connected to {port}'})
+
+        # ── Case 2/3: need to (re)open the port ──────────────────────────
+        # Only close if we own a *different* port; if admin owns the current
+        # port we must not close it — the admin bridge is still in use.
+        if existing_arduino and existing_arduino.is_open and existing_port != port:
             try:
-                import serial
-                # Close existing connection if any
-                if hasattr(current_app, 'arduino') and current_app.arduino:
-                    try:
-                        current_app.arduino.close()
-                    except:
-                        pass
-                
-                # Open new connection
-                arduino = serial.Serial(port, 9600, timeout=1)
-                current_app.arduino = arduino
-                current_app.arduino_port = port
-                
+                existing_arduino.close()
+            except Exception:
+                pass
+
+        try:
+            arduino = serial.Serial(port, 9600, timeout=1)
+        except serial.SerialException as e:
+            msg = str(e)
+            if 'PermissionError' in msg or 'Access is denied' in msg:
+                # Port is held by another process (e.g. Arduino IDE Serial Monitor).
+                # Give the user a clear actionable message.
                 return jsonify({
-                    'success': True,
-                    'message': f'Connected to {port}'
-                })
-            except Exception as e:
-                return jsonify({'error': f'Failed to connect: {str(e)}'}), 500
-        else:
-            return jsonify({'error': 'Arduino bridge not available'}), 500
-            
+                    'error': (
+                        f'Cannot open {port} — it is already in use by another program. '
+                        'Close Arduino IDE Serial Monitor (or any other serial terminal) '
+                        'and try again.'
+                    )
+                }), 409
+            raise
+
+        current_app.arduino = arduino
+        current_app.arduino_port = port
+
+        # Create (or replace) the ArduinoBridge
+        try:
+            from arduino_bridge import ArduinoBridge
+            socketio = getattr(current_app, 'socketio', None)
+            bridge = ArduinoBridge(arduino, socketio)
+            current_app.arduino_bridge = bridge
+            bridge.start_background_listener()
+            logger.info("event=cashier_arduino_bridge_created port=%s", port)
+        except Exception as bridge_err:
+            logger.warning(
+                "event=cashier_arduino_bridge_init_failed error=%s "
+                "(serial still connected, background listener unavailable)",
+                bridge_err,
+            )
+
+        return jsonify({'success': True, 'message': f'Connected to {port}'})
+
     except (ConnectionError, TimeoutError) as e:
         logger.error(f"Serial connection error in connect_arduino: {e}")
         return jsonify({'error': 'Service unavailable, please try again'}), 503
     except Exception as e:
         logger.error(f"Unexpected error in connect_arduino: {e}", exc_info=True)
-        return jsonify({'error': 'An unexpected error occurred'}), 500
+        return jsonify({'error': str(e)}), 500
 
 @cashier_bp.route('/api/products', methods=['GET'])
 @jwt_required(roles=['cashier', 'admin'])

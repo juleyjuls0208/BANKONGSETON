@@ -47,7 +47,15 @@ from dashboard_core import (
 )
 
 import gspread
+from functools import wraps
 
+# Import fraud detection (optional)
+try:
+    from fraud_detection import get_fraud_detector, FraudDetector, RiskLevel
+    FRAUD_DETECTION_AVAILABLE = True
+except ImportError:
+    FRAUD_DETECTION_AVAILABLE = False
+    logger.warning("event=import_failed module=fraud_detection")
 load_dotenv()
 
 # --- FLASK_SECRET_KEY startup guard (SEC-02) ---
@@ -198,6 +206,7 @@ def dashboard():
         username=session.get("admin_username"),
         role=session.get("role", "finance"),
         arduino_available=False,
+        active_page="dashboard",
         students=students,
     )
 
@@ -211,6 +220,7 @@ def students_page():
         "students.html",
         username=session.get("admin_username"),
         role=session.get("role", "finance"),
+        active_page="students",
     )
 
 
@@ -223,6 +233,7 @@ def products_page():
         "products.html",
         username=session.get("admin_username"),
         role=session.get("role", "finance"),
+        active_page="products",
     )
 
 
@@ -235,6 +246,7 @@ def transactions_page():
         "transactions.html",
         username=session.get("admin_username"),
         role=session.get("role", "finance"),
+        active_page="transactions",
     )
 
 
@@ -273,6 +285,329 @@ def arduino_card_read():
     logger.info("event=arduino_card_read uid=%s remote=%s", uid, request.remote_addr)
 
     return jsonify({"status": "ok"}), 200
+
+
+
+# ============= AUTH HELPERS =============
+
+def _login_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if "admin_logged_in" not in session:
+            return redirect(url_for("login"))
+        return f(*args, **kwargs)
+    return decorated
+
+def _admin_only(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if "admin_logged_in" not in session:
+            return redirect(url_for("login"))
+        if session.get("role") != "admin":
+            return jsonify({"error": "Unauthorized - Admin access required"}), 403
+        return f(*args, **kwargs)
+    return decorated
+
+
+# ============= CASHIER ACCOUNT MANAGEMENT =============
+
+CASHIER_ACCOUNTS_HEADERS = [
+    'AccountID', 'Username', 'PasswordHash', 'DisplayName', 'Status', 'CreatedAt', 'LastLogin'
+]
+
+def _ensure_cashier_accounts_sheet():
+    """Get or create Cashier Accounts worksheet."""
+    _db = get_sheets_client()
+    sheet_titles = [ws.title for ws in _db.worksheets()]
+    if 'Cashier Accounts' not in sheet_titles:
+        ws = _db.add_worksheet(title='Cashier Accounts', rows=200, cols=7)
+        ws.append_row(CASHIER_ACCOUNTS_HEADERS)
+        import secrets as _secrets
+        try:
+            import bcrypt as _bcrypt
+            hashed = _bcrypt.hashpw(b'cashier123', _bcrypt.gensalt()).decode()
+        except ImportError:
+            hashed = 'cashier123'
+        import datetime as _dt
+        ws.append_row(['CASHIER-001', 'cashier', hashed, 'Default Cashier', 'Active',
+                       _dt.datetime.now().strftime('%Y-%m-%d %H:%M:%S'), ''])
+    else:
+        ws = _db.worksheet('Cashier Accounts')
+    return ws
+
+
+@app.route('/cashier-accounts')
+@_admin_only
+def cashier_accounts_page():
+    return render_template('cashier_accounts.html',
+                           username=session.get('admin_username'),
+                           role=session.get('role', 'finance'),
+                           active_page='cashier_accounts')
+
+
+@app.route('/api/cashier-accounts', methods=['GET'])
+@_admin_only
+def list_cashier_accounts():
+    try:
+        ws = _ensure_cashier_accounts_sheet()
+        records = ws.get_all_records()
+        safe = [{k: v for k, v in r.items() if k != 'PasswordHash'} for r in records]
+        return jsonify({'accounts': safe})
+    except (gspread.exceptions.APIError, ConnectionError, TimeoutError) as e:
+        logger.error(f"Sheets unavailable in list_cashier_accounts: {e}")
+        return jsonify({'error': 'Service unavailable, please try again'}), 503
+    except Exception as e:
+        logger.error(f"Unexpected error in list_cashier_accounts: {e}", exc_info=True)
+        return jsonify({'error': 'An unexpected error occurred'}), 500
+
+
+@app.route('/api/cashier-accounts', methods=['POST'])
+@_admin_only
+def create_cashier_account():
+    try:
+        data = request.get_json() or {}
+        username = data.get('username', '').strip()
+        password = data.get('password', '')
+        display_name = data.get('display_name', '').strip()
+        if not username or not password:
+            return jsonify({'error': 'Username and password are required'}), 400
+        if len(password) < 6:
+            return jsonify({'error': 'Password must be at least 6 characters'}), 400
+        try:
+            import bcrypt as _bcrypt
+            hashed = _bcrypt.hashpw(password.encode(), _bcrypt.gensalt()).decode()
+        except ImportError:
+            hashed = password
+        import datetime as _dt, secrets as _secrets
+        account_id = 'CASHIER-' + _secrets.token_hex(3).upper()
+        ws = _ensure_cashier_accounts_sheet()
+        records = ws.get_all_records()
+        for r in records:
+            if r.get('Username') == username:
+                return jsonify({'error': 'Username already exists'}), 409
+        ws.append_row([account_id, username, hashed, display_name, 'Active',
+                       _dt.datetime.now().strftime('%Y-%m-%d %H:%M:%S'), ''])
+        return jsonify({'success': True, 'account_id': account_id})
+    except (gspread.exceptions.APIError, ConnectionError, TimeoutError) as e:
+        logger.error(f"Sheets unavailable in create_cashier_account: {e}")
+        return jsonify({'error': 'Service unavailable, please try again'}), 503
+    except Exception as e:
+        logger.error(f"Unexpected error in create_cashier_account: {e}", exc_info=True)
+        return jsonify({'error': 'An unexpected error occurred'}), 500
+
+
+@app.route('/api/cashier-accounts/<account_id>', methods=['PUT'])
+@_admin_only
+def update_cashier_account(account_id):
+    try:
+        data = request.get_json() or {}
+        ws = _ensure_cashier_accounts_sheet()
+        records = ws.get_all_records()
+        row_idx = None
+        for i, r in enumerate(records, start=2):
+            if r.get('AccountID') == account_id:
+                row_idx = i
+                break
+        if row_idx is None:
+            return jsonify({'error': 'Account not found'}), 404
+        if 'display_name' in data:
+            ws.update_cell(row_idx, 4, data['display_name'])
+        if 'password' in data and data['password']:
+            try:
+                import bcrypt as _bcrypt
+                hashed = _bcrypt.hashpw(data['password'].encode(), _bcrypt.gensalt()).decode()
+            except ImportError:
+                hashed = data['password']
+            ws.update_cell(row_idx, 3, hashed)
+        if 'status' in data:
+            ws.update_cell(row_idx, 5, data['status'])
+        return jsonify({'success': True})
+    except (gspread.exceptions.APIError, ConnectionError, TimeoutError) as e:
+        logger.error(f"Sheets unavailable in update_cashier_account: {e}")
+        return jsonify({'error': 'Service unavailable, please try again'}), 503
+    except Exception as e:
+        logger.error(f"Unexpected error in update_cashier_account: {e}", exc_info=True)
+        return jsonify({'error': 'An unexpected error occurred'}), 500
+
+
+# ============= FRAUD DETECTION ROUTES =============
+
+_fraud_sheets_initialized = False
+
+def _ensure_fraud_sheets():
+    """Get or create Fraud Alerts and Suspended Cards worksheets."""
+    _db = get_sheets_client()
+    sheet_titles = [ws.title for ws in _db.worksheets()]
+    if 'Fraud Alerts' not in sheet_titles:
+        fraud_ws = _db.add_worksheet(title='Fraud Alerts', rows=1000, cols=10)
+        fraud_ws.append_row(FraudDetector.FRAUD_ALERTS_HEADERS)
+    else:
+        fraud_ws = _db.worksheet('Fraud Alerts')
+    if 'Suspended Cards' not in sheet_titles:
+        suspended_ws = _db.add_worksheet(title='Suspended Cards', rows=200, cols=4)
+        suspended_ws.append_row(FraudDetector.SUSPENDED_CARDS_HEADERS)
+    else:
+        suspended_ws = _db.worksheet('Suspended Cards')
+    return fraud_ws, suspended_ws
+
+
+def _get_fraud_detector():
+    global _fraud_sheets_initialized
+    detector = get_fraud_detector()
+    if not _fraud_sheets_initialized:
+        try:
+            fraud_ws, suspended_ws = _ensure_fraud_sheets()
+            detector.load_from_sheets(fraud_ws, suspended_ws)
+            _fraud_sheets_initialized = True
+        except Exception as e:
+            logger.warning(f"Could not load fraud data from sheets: {e}")
+    return detector
+
+
+@app.route('/fraud-alerts')
+@_login_required
+def fraud_alerts_page():
+    return render_template('fraud_alerts.html',
+                           username=session.get('admin_username'),
+                           role=session.get('role', 'finance'),
+                           active_page='fraud_alerts')
+
+
+@app.route('/api/fraud/alerts', methods=['GET'])
+@_login_required
+def get_fraud_alerts():
+    if not FRAUD_DETECTION_AVAILABLE:
+        return jsonify({'alerts': [], 'count': 0})
+    try:
+        detector = _get_fraud_detector()
+        unresolved_only = request.args.get('unresolved_only', 'false').lower() == 'true'
+        risk_level_str = request.args.get('risk_level', '')
+        limit = int(request.args.get('limit', 100))
+        risk_level = None
+        if risk_level_str:
+            try:
+                risk_level = RiskLevel(risk_level_str.lower())
+            except ValueError:
+                pass
+        alerts = detector.get_alerts(risk_level=risk_level, unresolved_only=unresolved_only, limit=limit)
+        return jsonify({'alerts': alerts, 'count': len(alerts)})
+    except (gspread.exceptions.APIError, ConnectionError, TimeoutError) as e:
+        logger.error(f"Sheets unavailable in get_fraud_alerts: {e}")
+        return jsonify({'error': 'Service unavailable'}), 503
+    except Exception as e:
+        logger.error(f"Unexpected error in get_fraud_alerts: {e}", exc_info=True)
+        return jsonify({'error': 'An unexpected error occurred'}), 500
+
+
+@app.route('/api/fraud/stats', methods=['GET'])
+@_login_required
+def get_fraud_stats():
+    if not FRAUD_DETECTION_AVAILABLE:
+        return jsonify({'unresolved_alerts': 0, 'today_alerts': 0, 'total_alerts': 0, 'suspended_cards': 0})
+    try:
+        detector = _get_fraud_detector()
+        return jsonify(detector.get_stats())
+    except (gspread.exceptions.APIError, ConnectionError, TimeoutError) as e:
+        logger.error(f"Sheets unavailable in get_fraud_stats: {e}")
+        return jsonify({'error': 'Service unavailable'}), 503
+    except Exception as e:
+        logger.error(f"Unexpected error in get_fraud_stats: {e}", exc_info=True)
+        return jsonify({'error': 'An unexpected error occurred'}), 500
+
+
+@app.route('/api/fraud/suspended', methods=['GET'])
+@_login_required
+def get_suspended_cards():
+    if not FRAUD_DETECTION_AVAILABLE:
+        return jsonify({'suspended': [], 'count': 0})
+    try:
+        detector = _get_fraud_detector()
+        suspended = detector.get_suspended_cards()
+        result = [{'card': card, **data} for card, data in suspended.items()]
+        return jsonify({'suspended': result, 'count': len(result)})
+    except (gspread.exceptions.APIError, ConnectionError, TimeoutError) as e:
+        logger.error(f"Sheets unavailable in get_suspended_cards: {e}")
+        return jsonify({'error': 'Service unavailable'}), 503
+    except Exception as e:
+        logger.error(f"Unexpected error in get_suspended_cards: {e}", exc_info=True)
+        return jsonify({'error': 'An unexpected error occurred'}), 500
+
+
+@app.route('/api/fraud/alerts/<alert_id>/resolve', methods=['POST'])
+@_login_required
+def resolve_fraud_alert(alert_id):
+    if not FRAUD_DETECTION_AVAILABLE:
+        return jsonify({'error': 'Fraud detection not available'}), 503
+    try:
+        data = request.get_json() or {}
+        notes = data.get('notes', '')
+        detector = _get_fraud_detector()
+        resolved = detector.resolve_alert(alert_id, notes)
+        if not resolved:
+            return jsonify({'error': 'Alert not found'}), 404
+        try:
+            fraud_ws, _ = _ensure_fraud_sheets()
+            for alert in detector.alerts:
+                if alert.id == alert_id:
+                    detector.update_alert_in_sheet(fraud_ws, alert)
+                    break
+        except Exception as e:
+            logger.warning(f"Could not persist alert resolve: {e}")
+        return jsonify({'success': True})
+    except (gspread.exceptions.APIError, ConnectionError, TimeoutError) as e:
+        logger.error(f"Sheets unavailable in resolve_fraud_alert: {e}")
+        return jsonify({'error': 'Service unavailable'}), 503
+    except Exception as e:
+        logger.error(f"Unexpected error in resolve_fraud_alert: {e}", exc_info=True)
+        return jsonify({'error': 'An unexpected error occurred'}), 500
+
+
+@app.route('/api/fraud/cards/<uid>/suspend', methods=['POST'])
+@_admin_only
+def suspend_card_route(uid):
+    if not FRAUD_DETECTION_AVAILABLE:
+        return jsonify({'error': 'Fraud detection not available'}), 503
+    try:
+        data = request.get_json() or {}
+        reason = data.get('reason', 'Manually suspended by admin')
+        detector = _get_fraud_detector()
+        detector.suspend_card(uid, reason, auto=False)
+        try:
+            _, suspended_ws = _ensure_fraud_sheets()
+            detector.save_suspended_card_to_sheet(suspended_ws, uid, detector.suspended_cards[uid])
+        except Exception as e:
+            logger.warning(f"Could not persist card suspension: {e}")
+        return jsonify({'success': True, 'card': uid, 'reason': reason})
+    except (gspread.exceptions.APIError, ConnectionError, TimeoutError) as e:
+        logger.error(f"Sheets unavailable in suspend_card: {e}")
+        return jsonify({'error': 'Service unavailable'}), 503
+    except Exception as e:
+        logger.error(f"Unexpected error in suspend_card: {e}", exc_info=True)
+        return jsonify({'error': 'An unexpected error occurred'}), 500
+
+
+@app.route('/api/fraud/cards/<uid>/unsuspend', methods=['POST'])
+@_admin_only
+def unsuspend_card_route(uid):
+    if not FRAUD_DETECTION_AVAILABLE:
+        return jsonify({'error': 'Fraud detection not available'}), 503
+    try:
+        detector = _get_fraud_detector()
+        result = detector.unsuspend_card(uid)
+        if not result:
+            return jsonify({'error': 'Card is not suspended'}), 404
+        try:
+            _, suspended_ws = _ensure_fraud_sheets()
+            detector.remove_suspended_card_from_sheet(suspended_ws, uid)
+        except Exception as e:
+            logger.warning(f"Could not remove card from suspended sheet: {e}")
+        return jsonify({'success': True, 'card': uid})
+    except (gspread.exceptions.APIError, ConnectionError, TimeoutError) as e:
+        logger.error(f"Sheets unavailable in unsuspend_card: {e}")
+        return jsonify({'error': 'Service unavailable'}), 503
+    except Exception as e:
+        logger.error(f"Unexpected error in unsuspend_card: {e}", exc_info=True)
+        return jsonify({'error': 'An unexpected error occurred'}), 500
 
 
 if __name__ == "__main__":

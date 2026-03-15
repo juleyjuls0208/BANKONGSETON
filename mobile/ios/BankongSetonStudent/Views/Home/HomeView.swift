@@ -67,8 +67,16 @@ struct HomeView: View {
                                 .padding(.horizontal)
                         } else {
                             ForEach(viewModel.recentTransactions) { transaction in
-                                TransactionRowView(transaction: transaction)
-                                    .padding(.horizontal)
+                                if transaction.isNavigable {
+                                    NavigationLink(value: transaction) {
+                                        TransactionRowView(transaction: transaction)
+                                            .padding(.horizontal)
+                                    }
+                                    .buttonStyle(.plain)
+                                } else {
+                                    TransactionRowView(transaction: transaction)
+                                        .padding(.horizontal)
+                                }
                                 Divider()
                                     .padding(.leading)
                             }
@@ -85,6 +93,9 @@ struct HomeView: View {
             }
             .task {
                 await viewModel.load(apiClient: apiClient, authManager: authManager)
+            }
+            .navigationDestination(for: Transaction.self) { transaction in
+                ReceiptView(transaction: transaction)
             }
         }
     }

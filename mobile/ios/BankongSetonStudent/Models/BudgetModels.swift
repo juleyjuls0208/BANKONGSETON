@@ -3,7 +3,7 @@ import Foundation
 // MARK: - BudgetResponse
 
 struct BudgetResponse: Codable {
-    let monthlyLimit: Double
+    let monthlyLimit: Double?   // nil when no limit has been set yet
     let currency: String?
 
     enum CodingKeys: String, CodingKey {
@@ -26,7 +26,7 @@ struct BudgetRequest: Codable {
 
 struct BudgetSetResponse: Codable {
     let success: Bool
-    let monthlyLimit: Double
+    let monthlyLimit: Double?   // server may omit this field
 
     enum CodingKeys: String, CodingKey {
         case success

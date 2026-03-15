@@ -7,8 +7,8 @@
 // WiFi network credentials
 // Comment these out to disable WiFi and skip the ~21-second retry delay.
 // Uncomment and re-flash to enable wireless NFC tap delivery.
-// #define SECRET_SSID "LNC_Family_MESH1"
-// #define SECRET_PASS "PLDTWifi5678901234!"
+#define SECRET_SSID "LNC_Family_MESH1"
+#define SECRET_PASS "PLDTWifi5678901234!"
 
 // Flask server on the school LAN (no trailing slash)
 // Wireless mode (WiFi enabled above): use port 5003 — dashboard has /api/nfc/tap
