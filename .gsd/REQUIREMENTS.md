@@ -225,8 +225,8 @@ This file is the explicit capability and coverage contract for the project.
 - Source: execution
 - Primary owning slice: M003/S01
 - Supporting slices: none
-- Validation: unmapped
-- Notes: `deliver()` in bankongseton_rfid.ino must use two httpPost targets distinguished by prefix ("CARD" vs "NFC"); CARD → `{"uid": value}` to `/api/arduino/card-read`; NFC → `{"token": value}` to `/api/nfc/tap`
+- Validation: Contract verified — bash scripts/verify-s01.sh 8/8 pass; httpPostCard/httpPostNFC helpers defined, prefix=="CARD" dispatch in deliver(), /api/arduino/card-read path + {"uid": payload confirmed, no bare httpPost() call sites remain; runtime validation (flash + physical card tap → POST /api/arduino/card-read 200 in Flask log) requires physical hardware UAT
+- Notes: `deliver()` in bankongseton_rfid.ino uses httpPostCard(uid) → /api/arduino/card-read {"uid":uid} and httpPostNFC(token) → /api/nfc/tap {"token":token}, dispatched by prefix ("CARD" vs "NFC"); serial fallback format unchanged
 
 ### R021 — Phone NFC Payment at Cashier
 - Class: primary-user-loop
@@ -263,14 +263,14 @@ This file is the explicit capability and coverage contract for the project.
 
 ### R024 — Wireless Deployment Documentation
 - Class: operability
-- Status: active
+- Status: validated
 - Description: `arduino/README-wireless.md` documents the complete standalone powerbank setup: hardware list, wiring, `secrets.h` configuration, flashing steps, and how to verify the Arduino is connected to the school LAN
 - Why it matters: Without docs, whoever sets up the cashier counter has no guide for the WiFi-only configuration — they'll fall back to USB serial mode
 - Source: user
 - Primary owning slice: M003/S04
 - Supporting slices: none
-- Validation: Contract verified — test -f arduino/README-wireless.md exits 0; bash scripts/verify-m003-s04.sh checks (e–h) pass; README covers hardware, wiring, secrets.h (port 5003 + ARDUINO_API_KEY explicitly named), flashing, powerbank selection, verification, troubleshooting
-- Notes: Should cover: powerbank selection (minimum 2A output port), secrets.h fields, ARDUINO_API_KEY in .env, school LAN IP of Flask server, how to check the WiFi status badge in cashier UI
+- Validation: test -f arduino/README-wireless.md exits 0 (164 lines, 8 sections); bash scripts/verify-m003-s04.sh checks (e–h) all pass; README covers hardware, wiring, secrets.h (port 5003 + ARDUINO_API_KEY explicitly named), flashing, powerbank selection (≥2A/≥10,000mAh/name-brand), verification (Serial Monitor + badge), troubleshooting; no hardware required to validate documentation completeness
+- Notes: Covers powerbank selection (minimum 2A output port), secrets.h fields field-by-field, ARDUINO_API_KEY in .env, school LAN IP of Flask server, how to verify the WiFi status badge in cashier UI
 
 ## Out of Scope
 
@@ -319,17 +319,17 @@ This file is the explicit capability and coverage contract for the project.
 | R017 | quality-attribute | validated | M002/S04 | none | pytest exit 0; 35 tests; 2.40s; zero live Sheets calls |
 | R018 | failure-visibility | validated | M002/S03 | none | All three health handlers return structured JSON + 503; verify-s03.sh checks 9–18 pass |
 | R019 | operability | validated | M002/S05 | none | test -f docs/DEPLOY.md exit 0; 8/8 grep checks pass |
-| R020 | primary-user-loop | active | M003/S01 | none | unmapped |
+| R020 | primary-user-loop | active | M003/S01 | none | contract verified (verify-s01.sh 8/8); flash + physical card tap → /api/arduino/card-read 200 pending hardware |
 | R021 | primary-user-loop | active | M003/S02 | none | contract verified (py_compile + verify-s02.sh 9/9); live hardware UAT pending |
-| R022 | operability | active | M003/S03 | none | contract verified (py_compile + verify-m003-s03.sh 12/12); live hardware badge green confirmed by S04 heartbeat |
-| R023 | continuity | active | M003/S04 | none | contract verified (verify-m003-s04.sh 8/8); runtime/operational UAT (powerbank soak, WiFi drop) pending hardware |
-| R024 | operability | active | M003/S04 | none | contract verified (verify-m003-s04.sh 8/8 including README checks; test -f exits 0) |
+| R022 | operability | active | M003/S03 | none | contract verified (py_compile + verify-m003-s03.sh 12/12); badge green on live heartbeat pending hardware flash |
+| R023 | continuity | active | M003/S04 | none | contract verified (verify-m003-s04.sh 8/8); 30-min powerbank soak + WiFi drop recovery pending hardware |
+| R024 | operability | validated | M003/S04 | none | test -f README-wireless.md exit 0; verify-m003-s04.sh checks (e–h) pass; 164-line README all required sections present |
 | R050 | integration | out-of-scope | none | none | n/a |
 | R051 | core-capability | out-of-scope | none | none | n/a |
 
 ## Coverage Summary
 
-- Active requirements: 5
-- Mapped to slices: 5
-- Validated: 19
+- Active requirements: 4
+- Mapped to slices: 4
+- Validated: 20
 - Unmapped active requirements: 0

@@ -62,8 +62,8 @@ See `.gsd/REQUIREMENTS.md` for the explicit capability contract, requirement sta
 
 - [x] M001: Operational Hardening & Feature Completion — All 13 gaps closed. See `.gsd/milestones/M001/M001-SUMMARY.md`.
 - [x] M002: Production Readiness & Deployment Stability — All 5 slices complete. Requirements fixed (R014), cache wired (R015), startup guard + health standardized (R016, R018), 35-test critical-path suite (R017), deployment runbook (R019). See `.gsd/milestones/M002/M002-SUMMARY.md`.
-- [ ] M003: Wireless Cashier Payment Terminal — Fix firmware WiFi routing bug; add phone NFC at cashier; WiFi status indicator; powerbank hardening + wireless deployment docs.
-  - [x] S01: Firmware WiFi Routing Fix — complete
-  - [x] S02: Phone NFC Cashier Payment — complete (contract + structural proof; human UAT pending live hardware)
-  - [x] S03: WiFi Status Indicator — complete (contract-level proof: 12/12 verify checks pass; badge green requires S04 firmware heartbeat)
-  - [x] S04: Powerbank Hardening + Wireless Docs — complete (contract: 8/8 verify checks pass; hardware UAT pending — flash + badge green + 30-min powerbank soak)
+- [x] M003: Wireless Cashier Payment Terminal — All 4 slices complete (37/37 contract assertions pass; py_compile exit 0; R024 validated). Hardware UAT gate remaining: flash firmware → confirm POST /api/arduino/card-read on card tap → badge green within 30s → 30-min powerbank soak. See `.gsd/milestones/M003/M003-SUMMARY.md`.
+  - [x] S01: Firmware WiFi Routing Fix — complete (verify-s01.sh 8/8 pass)
+  - [x] S02: Phone NFC Cashier Payment — complete (verify-s02.sh 9/9 pass; py_compile exit 0; hardware UAT pending)
+  - [x] S03: WiFi Status Indicator — complete (verify-m003-s03.sh 12/12 pass; py_compile exit 0; badge green on live heartbeat pending hardware flash)
+  - [x] S04: Powerbank Hardening + Wireless Docs — complete (verify-m003-s04.sh 8/8 pass; 30-min powerbank soak + WiFi drop recovery pending hardware)
