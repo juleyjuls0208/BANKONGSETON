@@ -497,8 +497,13 @@ void loop() {
   // RF field toggle: cycle field off→on to reset any stuck NTAG state.
   // This forces the NTAG215 back to IDLE so the cascade anticollision
   // starts cleanly from the beginning each scan attempt.
+  //
+  // NOTE: Keep the off-time SHORT (10ms). A long off-time (50ms) resets
+  // Android HCE phones too aggressively: the ISO14443A layer (UID/SAK)
+  // comes back quickly, but the Android HCE service reinitializes slower.
+  // With 50ms off, inDataExchange fires before HCE is ready → APDU ok=NO.
   nfc.setRFField(0, 0);  // RF off
-  delay(50);
+  delay(10);             // 10ms: resets NTAG state without disrupting HCE
   nfc.setRFField(0, 1);  // RF on, no autoRFCA
   delay(10);
 
@@ -602,6 +607,15 @@ void loop() {
 
       uint8_t response[60];
       uint8_t responseLength = 60;
+
+      // ── HCE initialization delay ──────────────────────────────────────────
+      // After readPassiveTargetID returns, the phone is in ISO14443A SELECTED
+      // state but the Android HCE service may not be ready yet. ISO14443A
+      // hardware response (UID/SAK) is fast; the HCE service takes longer to
+      // wake up after an RF field cycle. Without this delay, inDataExchange
+      // sends RATS before the HCE stack is ready → phone doesn't respond →
+      // PN532 times out → ok=NO.
+      delay(150);
 
       // inDataExchange MUST be called after readPassiveTargetID (uses _inListedTag internally).
       bool apduOk = nfc.inDataExchange(apduCmd, 19, response, &responseLength);
