@@ -44,7 +44,7 @@ check_absent() {
 }
 
 echo ""
-echo "=== M004 verify: APDU retry firmware + py_compile ==="
+echo "=== M004 verify: APDU retry firmware + py_compile + D038 alignment ==="
 echo ""
 
 # (a) APDU_MAX_RETRIES constant defined in firmware
@@ -80,6 +80,18 @@ else
   echo "  FAIL  (e) py_compile $CASHIER"
   FAIL=$((FAIL + 1))
 fi
+
+# (f) direct string comparison used for Money Accounts lookup (D032/D038)
+check \
+  "(f) direct string comparison in complete_sale_nfc Money Accounts loop" \
+  "\.strip() == money_card_number" \
+  "backend/dashboard/cashier/cashier_routes.py"
+
+# (g) normalized_money_card intermediate variable absent — normalize_card_uid removed from NFC lookup
+check_absent \
+  "(g) normalized_money_card variable absent (normalize removed from NFC lookup)" \
+  "normalized_money_card" \
+  "backend/dashboard/cashier/cashier_routes.py"
 
 echo ""
 echo "=== Results: $PASS passed, $FAIL failed ==="

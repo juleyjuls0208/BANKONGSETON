@@ -225,7 +225,7 @@ This file is the explicit capability and coverage contract for the project.
 - Source: execution
 - Primary owning slice: M004/S01
 - Supporting slices: M004/S02
-- Validation: contract verified — bash scripts/verify-m004.sh 5/5 pass; APDU_MAX_RETRIES=3, APDU_RETRY_DELAY_MS=150 constants confirmed, retry loop wired, per-attempt diagnostic present, py_compile exit 0; hardware tap confirming APDU ok=YES attempt N/3 in Serial Monitor advances to validated in S02
+- Validation: contract verified — bash scripts/verify-m004.sh 7/7 pass (extended in S02 with checks f+g); APDU_MAX_RETRIES=3, APDU_RETRY_DELAY_MS=150 constants confirmed, retry loop wired, per-attempt diagnostic present, py_compile exit 0, D038 alignment confirmed, normalized_money_card absent; hardware tap confirming APDU ok=YES attempt N/3 in Serial Monitor advances to validated in S02
 - Notes: Retry constants at top of .ino file: APDU_MAX_RETRIES=3, APDU_RETRY_DELAY_MS=150. responseLength reset to 60 before each attempt. First success breaks early — no penalty for fast phones. Diagnostic output shows attempt N/3 on each try.
 
 ### R020 — Correct WiFi Payment Routing
@@ -247,7 +247,7 @@ This file is the explicit capability and coverage contract for the project.
 - Source: user
 - Primary owning slice: M003/S02
 - Supporting slices: none
-- Validation: Contract verified — py_compile exits 0; bash scripts/verify-s02.sh 9/9 pass. Runtime validation (live phone tap at deployed Arduino) advancing to validated in M004/S02 after APDU retry firmware fix (M004/S01) lands.
+- Validation: Contract verified — py_compile exits 0; bash scripts/verify-s02.sh 9/9 pass. D038 alignment fix applied in M004/S02 (direct string comparison in Money Accounts loop, normalized_money_card removed). Runtime validation (live phone tap at deployed Arduino) advancing to validated after hardware UAT in M004/S02.
 - Notes: New `complete_sale_nfc(token)` endpoint in cashier_routes.py resolves virtual_card_token → money_card_number via Sheets (same pattern as api_server.py nfc_pay), then debits balance and emits same success/failure as `complete_sale`. APDU timing bug (M004) is the blocker — phone taps currently fall back to CARD delivery path.
 
 ### R022 — Arduino WiFi Status in Cashier UI

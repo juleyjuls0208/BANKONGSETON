@@ -611,23 +611,19 @@ def complete_sale_nfc():
         if not money_card_number:
             return jsonify({'error': 'Virtual card has no linked money card'}), 401
 
-        normalized_money_card = normalize_card_uid(money_card_number)
-        print(f"[NFC DEBUG] raw_money_card={money_card_number!r} normalized={normalized_money_card!r}", flush=True)
+        print(f"[NFC DEBUG] raw_money_card={money_card_number!r}", flush=True)
 
         # Find money account
         money_sheet = db.worksheet('Money Accounts')
         money_records = money_sheet.get_all_records()
 
         print(f"[NFC DEBUG] money_accounts count={len(money_records)}", flush=True)
-        for r in money_records[:10]:
-            raw = str(r.get('MoneyCardNumber', ''))
-            print(f"[NFC DEBUG]   sheet card raw={raw!r} normalized={normalize_card_uid(raw)!r}", flush=True)
 
         account_row = None
         current_balance = 0.0
 
         for idx, record in enumerate(money_records, start=2):
-            if normalize_card_uid(str(record.get('MoneyCardNumber', ''))) == normalized_money_card:
+            if str(record.get('MoneyCardNumber', '')).strip() == money_card_number:
                 account_row = idx
                 current_balance = float(record.get('Balance', 0))
                 card_status = record.get('Status', '').strip().lower()
