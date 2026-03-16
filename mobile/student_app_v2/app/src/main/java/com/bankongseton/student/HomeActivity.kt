@@ -180,15 +180,17 @@ class HomeActivity : AppCompatActivity() {
                     response: retrofit2.Response<LostCardStatusResponse>
                 ) {
                     val body = response.body() ?: return
-                    bannerLostCard.isVisible = body.reported
                     if (body.reported && body.processed) {
-                        // Admin processed replacement
+                        // Admin processed replacement — hide banner and notify
+                        bannerLostCard.isVisible = false
                         secureStorage.clearLostCardReported()
                         android.widget.Toast.makeText(
                             this@HomeActivity,
                             "Your replacement card has been activated!",
                             android.widget.Toast.LENGTH_LONG
                         ).show()
+                    } else {
+                        bannerLostCard.isVisible = body.reported
                     }
                 }
 

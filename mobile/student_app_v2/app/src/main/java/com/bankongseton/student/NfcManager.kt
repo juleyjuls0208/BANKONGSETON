@@ -231,12 +231,14 @@ class NfcManager private constructor(private val context: Context) {
 
         return if (storedPin == expectedHash) {
             // Already hashed — normal path
-            BankoHceService.reauthorize()
+            val token = getVirtualToken()
+            if (token != null) BankoHceService.authorize(token)
             true
         } else if (storedPin == enteredPin) {
             // Legacy plaintext detected — migrate to hash transparently
             setPin(enteredPin)
-            BankoHceService.reauthorize()
+            val token = getVirtualToken()
+            if (token != null) BankoHceService.authorize(token)
             true
         } else {
             false
@@ -254,7 +256,8 @@ class NfcManager private constructor(private val context: Context) {
             object : BiometricPrompt.AuthenticationCallback() {
                 override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
                     super.onAuthenticationSucceeded(result)
-                    BankoHceService.reauthorize()
+                    val token = getVirtualToken()
+                    if (token != null) BankoHceService.authorize(token)
                     onSuccess()
                 }
                 

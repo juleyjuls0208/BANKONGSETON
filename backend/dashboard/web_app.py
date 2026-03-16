@@ -14,6 +14,8 @@ import logging
 import time
 
 from dotenv import load_dotenv
+load_dotenv()  # must run before any module-level os.getenv() calls in blueprints
+
 
 # Import Phase 1 modules (for setup_logging in __main__)
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
@@ -57,7 +59,6 @@ try:
 except ImportError:
     FRAUD_DETECTION_AVAILABLE = False
     logger.warning("event=import_failed module=fraud_detection")
-load_dotenv()
 
 # --- FLASK_SECRET_KEY startup guard (SEC-02) ---
 _secret_key = os.getenv("FLASK_SECRET_KEY", "").strip()
@@ -636,6 +637,7 @@ def unsuspend_card_route(uid):
 
 
 if __name__ == "__main__":
+    print(">>> BANGKO SERVER STARTING — new code is live <<<", flush=True)
     setup_logging()  # activate bangko StreamHandler before first log call
     port = int(os.getenv("FINANCE_PORT_WEB", 5003))
     debug = os.getenv("FLASK_DEBUG", "false").lower() == "true"

@@ -26,7 +26,13 @@ class NfcPayOverlayActivity : AppCompatActivity() {
         val cancelButton = findViewById<MaterialButton>(R.id.cancelButton)
 
         // Authorize payment in BankoHceService
-        BankoHceService.reauthorize()
+        val token = NfcManager.getInstance(applicationContext).getVirtualToken()
+        if (token == null) {
+            setResult(RESULT_CANCELED)
+            finish()
+            return
+        }
+        BankoHceService.authorize(token)
 
         startCountdown()
 

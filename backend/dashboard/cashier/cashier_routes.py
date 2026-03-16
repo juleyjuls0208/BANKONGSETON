@@ -40,21 +40,26 @@ def jwt_required(roles=None):
         @wraps(f)
         def decorated_function(*args, **kwargs):
             token = request.cookies.get('jwt_token')
-            
+
             if not token:
+                if request.is_json:
+                    return jsonify({'error': 'Not authenticated'}), 401
                 return redirect(url_for('cashier.login'))
-            
+
             try:
                 payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-                
+
                 if roles and payload.get('role') not in roles:
                     return jsonify({'error': 'Insufficient permissions'}), 403
-                
+
                 request.user = payload
                 return f(*args, **kwargs)
-            except:
+            except Exception as e:
+                print(f"[JWT] decode failed: {e}", flush=True)
+                if request.is_json:
+                    return jsonify({'error': 'Session expired, please log in again'}), 401
                 return redirect(url_for('cashier.login'))
-        
+
         return decorated_function
     return decorator
 
@@ -318,6 +323,7 @@ def process_sale():
 @cashier_bp.route('/api/complete-sale', methods=['POST'])
 @jwt_required(roles=['cashier', 'admin'])
 def complete_sale():
+    print("[NFC DEBUG] >>> complete_sale CALLED <<<", flush=True)
     """Complete sale after card is read"""
     try:
         from flask import session as flask_session, current_app
@@ -555,6 +561,7 @@ def complete_sale():
 @cashier_bp.route('/api/complete-sale-nfc', methods=['POST'])
 @jwt_required(roles=['cashier', 'admin'])
 def complete_sale_nfc():
+    print("[NFC DEBUG] >>> complete_sale_nfc CALLED <<<", flush=True)
     """Complete sale triggered by phone NFC tap.
 
     Resolves virtual_card_token → MoneyCardNumber via VirtualCards sheet,
@@ -573,7 +580,7 @@ def complete_sale_nfc():
         import sys
         sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
-        from admin_dashboard import get_sheets_client, get_philippines_time
+        from admin_dashboard import get_sheets_client, normalize_card_uid, get_philippines_time
 
         data = request.get_json()
         virtual_card_token = str(data.get('virtual_card_token', '')).strip()
@@ -604,16 +611,23 @@ def complete_sale_nfc():
         if not money_card_number:
             return jsonify({'error': 'Virtual card has no linked money card'}), 401
 
-        # Find money account — VirtualCards stores the canonical card number,
-        # so we use a direct string match (no normalize_card_uid needed).
+        normalized_money_card = normalize_card_uid(money_card_number)
+        print(f"[NFC DEBUG] raw_money_card={money_card_number!r} normalized={normalized_money_card!r}", flush=True)
+
+        # Find money account
         money_sheet = db.worksheet('Money Accounts')
         money_records = money_sheet.get_all_records()
+
+        print(f"[NFC DEBUG] money_accounts count={len(money_records)}", flush=True)
+        for r in money_records[:10]:
+            raw = str(r.get('MoneyCardNumber', ''))
+            print(f"[NFC DEBUG]   sheet card raw={raw!r} normalized={normalize_card_uid(raw)!r}", flush=True)
 
         account_row = None
         current_balance = 0.0
 
         for idx, record in enumerate(money_records, start=2):
-            if str(record.get('MoneyCardNumber', '')).strip() == money_card_number:
+            if normalize_card_uid(str(record.get('MoneyCardNumber', ''))) == normalized_money_card:
                 account_row = idx
                 current_balance = float(record.get('Balance', 0))
                 card_status = record.get('Status', '').strip().lower()

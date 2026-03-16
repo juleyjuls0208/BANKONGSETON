@@ -95,9 +95,16 @@ class BankoHceService : HostApduService() {
     }
 
     override fun onDeactivated(reason: Int) {
+        // Do NOT deauthorize here. The Arduino cycles the RF field (off→on) at the
+        // start of every scan loop to reset NTAG state. That brief field-off fires
+        // onDeactivated(LINK_LOSS) before the APDU exchange begins, which was
+        // clearing the token and auth flag too early.
+        //
+        // Deauthorization is handled in handleSelectCommand() immediately after the
+        // token bytes are captured — exactly once per successful exchange. Timer
+        // expiry and user cancellation in NfcPayOverlayActivity call deauthorize()
+        // explicitly.
         Log.d(TAG, "HCE deactivated, reason: $reason")
-        // Reset authorization after each tap
-        deauthorize()
     }
     
     private fun isSelectCommand(apdu: ByteArray): Boolean {
@@ -125,8 +132,13 @@ class BankoHceService : HostApduService() {
         
         Log.d(TAG, "Sending token response")
         
-        // Return token as bytes + SW_OK
+        // Capture bytes before deauthorizing
         val tokenBytes = token.toByteArray(Charsets.US_ASCII)
+        
+        // Deauthorize immediately after capturing the token — prevents replay
+        // and ensures the overlay detects success via !isAuthorized() on onResume.
+        deauthorize()
+        
         return tokenBytes + SW_OK
     }
     

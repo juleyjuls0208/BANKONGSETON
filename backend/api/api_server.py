@@ -118,11 +118,23 @@ LOW_BALANCE_THRESHOLD = float(os.getenv("LOW_BALANCE_THRESHOLD", "50"))
 
 def _check_session(token):
     """Return session dict if token is valid and not expired, else None.
-    Performs lazy eviction: deletes expired entry on lookup."""
+    Performs lazy eviction: deletes expired entry on lookup.
+    Handles login_time stored as either a Unix float (current) or an ISO
+    string (legacy sessions created before the timestamp fix)."""
     session = active_sessions.get(token)
     if session is None:
         return None
-    if time.time() - session.get("login_time", 0) > SESSION_TTL_SECONDS:
+    raw = session.get("login_time", 0)
+    if isinstance(raw, str):
+        # Legacy: ISO format string — parse to a Unix timestamp
+        try:
+            from datetime import datetime as _dt
+            login_timestamp = _dt.fromisoformat(raw).timestamp()
+        except Exception:
+            login_timestamp = 0.0
+    else:
+        login_timestamp = float(raw)
+    if time.time() - login_timestamp > SESSION_TTL_SECONDS:
         del active_sessions[token]
         return None
     return session
@@ -286,7 +298,7 @@ def login():
         active_sessions[token] = {
             'student_id': student['StudentID'],
             'card_number': student['IDCardNumber'],
-            'login_time': get_philippines_time().isoformat()
+            'login_time': time.time()
         }
         
         return jsonify({

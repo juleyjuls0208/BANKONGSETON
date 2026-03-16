@@ -12,6 +12,11 @@ from typing import Dict, List, Optional, Any, Tuple
 import pytz
 
 try:
+    import gspread
+except ImportError:
+    gspread = None
+
+try:
     from backend.errors import BankoError, ErrorCode, get_logger
 except ImportError:
     from errors import BankoError, ErrorCode, get_logger
@@ -400,3 +405,79 @@ def get_nfc_manager() -> NFCPaymentManager:
     if _nfc_manager is None:
         _nfc_manager = NFCPaymentManager()
     return _nfc_manager
+
+
+# ---------------------------------------------------------------------------
+# Google-Sheets-backed NFC service
+# ---------------------------------------------------------------------------
+
+VIRTUAL_CARDS_HEADERS = [
+    "StudentID",       # col 1
+    "VirtualCardToken",# col 2
+    "DeviceToken",     # col 3
+    "MoneyCardNumber", # col 4
+    "CreatedAt",       # col 5
+    "IsActive",        # col 6
+]
+
+
+def ensure_virtual_cards_sheet(db):
+    """Return (and lazily create) the VirtualCards worksheet."""
+    try:
+        return db.worksheet("VirtualCards")
+    except Exception:
+        # Worksheet doesn't exist yet — create it with headers
+        ws = db.add_worksheet(title="VirtualCards", rows=200, cols=len(VIRTUAL_CARDS_HEADERS))
+        ws.append_row(VIRTUAL_CARDS_HEADERS)
+        return ws
+
+
+class NFCService:
+    """Google-Sheets-backed NFC virtual card service used by the API server."""
+
+    logger = None
+
+    def __init__(self):
+        self.logger = get_logger()
+
+    def register_virtual_card(self, student_id: str, money_card: str, db) -> dict:
+        """
+        Register (or re-register) a virtual NFC card for a student.
+
+        Deactivates any existing active card for the student first, then
+        appends a new row to the VirtualCards sheet.
+
+        Returns:
+            dict with keys: virtual_card_token, device_token, money_card
+        """
+        vc_sheet = ensure_virtual_cards_sheet(db)
+        records = vc_sheet.get_all_records()
+
+        # Deactivate any existing active card for this student
+        for idx, r in enumerate(records, start=2):  # row 1 is the header
+            if (
+                str(r.get("StudentID", "")).strip() == str(student_id).strip()
+                and str(r.get("IsActive", "")).upper() == "TRUE"
+            ):
+                vc_sheet.update_cell(idx, 6, "FALSE")  # col 6 = IsActive
+
+        # Generate fresh tokens
+        virtual_card_token = secrets.token_hex(24)   # 48-char hex
+        device_token = str(uuid.uuid4())
+        created_at = datetime.now(pytz.timezone("Asia/Manila")).strftime(
+            "%Y-%m-%d %H:%M:%S"
+        )
+
+        vc_sheet.append_row(
+            [student_id, virtual_card_token, device_token, money_card, created_at, "TRUE"]
+        )
+
+        self.logger.info(
+            f"event=nfc_virtual_card_registered student_id={student_id}"
+        )
+
+        return {
+            "virtual_card_token": virtual_card_token,
+            "device_token": device_token,
+            "money_card": money_card,
+        }
