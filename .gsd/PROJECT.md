@@ -63,6 +63,7 @@ See `.gsd/REQUIREMENTS.md` for the explicit capability contract, requirement sta
 - [x] M001: Operational Hardening & Feature Completion — All 13 gaps closed. See `.gsd/milestones/M001/M001-SUMMARY.md`.
 - [x] M002: Production Readiness & Deployment Stability — All 5 slices complete. Requirements fixed (R014), cache wired (R015), startup guard + health standardized (R016, R018), 35-test critical-path suite (R017), deployment runbook (R019). See `.gsd/milestones/M002/M002-SUMMARY.md`.
 - [x] M003: Wireless Cashier Payment Terminal — All 4 slices complete (37/37 contract assertions pass; py_compile exit 0; R024 validated). Hardware UAT gate remaining: flash firmware → confirm POST /api/arduino/card-read on card tap → badge green within 30s → 30-min powerbank soak. See `.gsd/milestones/M003/M003-SUMMARY.md`.
+- [ ] M004: NFC Phone Payment Fix — Fix APDU timing bug that causes all phone NFC taps to fail with "Card not found"; add firmware retry loop; validate complete_sale_nfc on real hardware for the first time.
   - [x] S01: Firmware WiFi Routing Fix — complete (verify-s01.sh 8/8 pass)
   - [x] S02: Phone NFC Cashier Payment — complete (verify-s02.sh 9/9 pass; py_compile exit 0; hardware UAT pending)
   - [x] S03: WiFi Status Indicator — complete (verify-m003-s03.sh 12/12 pass; py_compile exit 0; badge green on live heartbeat pending hardware flash)

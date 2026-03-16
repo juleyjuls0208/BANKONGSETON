@@ -217,6 +217,17 @@ This file is the explicit capability and coverage contract for the project.
 
 ## Active
 
+### R025 — APDU Retry for Phone NFC Payments
+- Class: primary-user-loop
+- Status: active
+- Description: Arduino firmware retries the `inDataExchange` APDU call up to 3 times with 150ms between attempts so that Android HCE initialization latency variation across phone models doesn't cause silent fallback to CARD delivery
+- Why it matters: A single `inDataExchange` attempt (even with the 150ms pre-delay from the a036f7f fix) times out on at least one real phone — `APDU ok=NO rspLen=60` confirmed in Serial Monitor; Arduino falls back to `CARD|087EC8BE` which triggers `complete_sale()` with the phone's hardware UID, which is never in Money Accounts, causing 100% payment failure for all phone NFC taps
+- Source: execution
+- Primary owning slice: M004/S01
+- Supporting slices: M004/S02
+- Validation: unmapped
+- Notes: Retry constants at top of .ino file: APDU_MAX_RETRIES=3, APDU_RETRY_DELAY_MS=150. responseLength reset to 60 before each attempt. First success breaks early — no penalty for fast phones. Diagnostic output shows attempt N/3 on each try.
+
 ### R020 — Correct WiFi Payment Routing
 - Class: primary-user-loop
 - Status: active
@@ -236,8 +247,8 @@ This file is the explicit capability and coverage contract for the project.
 - Source: user
 - Primary owning slice: M003/S02
 - Supporting slices: none
-- Validation: Contract verified — py_compile exits 0; bash scripts/verify-s02.sh 9/9 pass. Runtime validation (live phone tap at deployed Arduino) pending human UAT.
-- Notes: New `complete_sale_nfc(token)` endpoint in cashier_routes.py resolves virtual_card_token → money_card_number via Sheets (same pattern as api_server.py nfc_pay), then debits balance and emits same success/failure as `complete_sale`
+- Validation: Contract verified — py_compile exits 0; bash scripts/verify-s02.sh 9/9 pass. Runtime validation (live phone tap at deployed Arduino) advancing to validated in M004/S02 after APDU retry firmware fix (M004/S01) lands.
+- Notes: New `complete_sale_nfc(token)` endpoint in cashier_routes.py resolves virtual_card_token → money_card_number via Sheets (same pattern as api_server.py nfc_pay), then debits balance and emits same success/failure as `complete_sale`. APDU timing bug (M004) is the blocker — phone taps currently fall back to CARD delivery path.
 
 ### R022 — Arduino WiFi Status in Cashier UI
 - Class: operability
@@ -324,12 +335,13 @@ This file is the explicit capability and coverage contract for the project.
 | R022 | operability | active | M003/S03 | none | contract verified (py_compile + verify-m003-s03.sh 12/12); badge green on live heartbeat pending hardware flash |
 | R023 | continuity | active | M003/S04 | none | contract verified (verify-m003-s04.sh 8/8); 30-min powerbank soak + WiFi drop recovery pending hardware |
 | R024 | operability | validated | M003/S04 | none | test -f README-wireless.md exit 0; verify-m003-s04.sh checks (e–h) pass; 164-line README all required sections present |
+| R025 | primary-user-loop | active | M004/S01 | M004/S02 | unmapped — APDU retry loop in firmware; hardware tap confirms ok=YES |
 | R050 | integration | out-of-scope | none | none | n/a |
 | R051 | core-capability | out-of-scope | none | none | n/a |
 
 ## Coverage Summary
 
-- Active requirements: 4
-- Mapped to slices: 4
+- Active requirements: 5
+- Mapped to slices: 5
 - Validated: 20
 - Unmapped active requirements: 0
