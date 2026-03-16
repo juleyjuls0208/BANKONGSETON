@@ -30,7 +30,7 @@ A student should be able to tap their card at the cashier, have the transaction 
 - Standardized /api/health on all three app files ({status, sheets_ok, latency_ms, queue_pending, timestamp}; 503 on Sheets failure)
 - 35-test critical-path unit test suite (complete_sale, load_balance, void_transaction, cashier auth); 2.40s; zero live Sheets calls
 - docs/DEPLOY.md — complete PythonAnywhere deployment runbook (11 sections)
-- Arduino UNO R4 WiFi firmware (`arduino/bankongseton_rfid/`) — dual-mode: APDU (HCE phone) + UID (physical RFID), WiFiS3, PN532 over SPI, HTTP POST to Flask backend, serial fallback; **S01 fix: `httpPostCard(uid)` → `/api/arduino/card-read`, `httpPostNFC(token)` → `/api/nfc/tap`, dispatched by prefix in `deliver()`**
+- Arduino UNO R4 WiFi firmware (`arduino/bankongseton_rfid/`) — dual-mode: APDU (HCE phone) + UID (physical RFID), WiFiS3, PN532 over SPI, HTTP POST to Flask backend, serial fallback; **M003/S01 fix: `httpPostCard(uid)` → `/api/arduino/card-read`, `httpPostNFC(token)` → `/api/nfc/tap`, dispatched by prefix in `deliver()`**; **M004/S01 fix: `inDataExchange` wrapped in 3-attempt retry loop (`APDU_MAX_RETRIES=3`, `APDU_RETRY_DELAY_MS=150`); per-attempt `"APDU attempt N/3 ok=YES/NO rspLen=N"` diagnostic in Serial Monitor**
 - Arduino 30s heartbeat POST loop — `lastHeartbeatMs` file-scope variable + timer block in loop() before `if (!found) return`; keeps powerbank alive during idle; drives cashier #wifiBadge green via S03 backend
 - `arduino/README-wireless.md` — complete standalone wireless deployment guide (hardware, wiring, secrets.h field-by-field with explicit port 5003 + ARDUINO_API_KEY, flashing, powerbank selection, verification, troubleshooting)
 - `scripts/verify-m003-s04.sh` — 8-check assertion script; exits 0
@@ -64,7 +64,5 @@ See `.gsd/REQUIREMENTS.md` for the explicit capability contract, requirement sta
 - [x] M002: Production Readiness & Deployment Stability — All 5 slices complete. Requirements fixed (R014), cache wired (R015), startup guard + health standardized (R016, R018), 35-test critical-path suite (R017), deployment runbook (R019). See `.gsd/milestones/M002/M002-SUMMARY.md`.
 - [x] M003: Wireless Cashier Payment Terminal — All 4 slices complete (37/37 contract assertions pass; py_compile exit 0; R024 validated). Hardware UAT gate remaining: flash firmware → confirm POST /api/arduino/card-read on card tap → badge green within 30s → 30-min powerbank soak. See `.gsd/milestones/M003/M003-SUMMARY.md`.
 - [ ] M004: NFC Phone Payment Fix — Fix APDU timing bug that causes all phone NFC taps to fail with "Card not found"; add firmware retry loop; validate complete_sale_nfc on real hardware for the first time.
-  - [x] S01: Firmware WiFi Routing Fix — complete (verify-s01.sh 8/8 pass)
-  - [x] S02: Phone NFC Cashier Payment — complete (verify-s02.sh 9/9 pass; py_compile exit 0; hardware UAT pending)
-  - [x] S03: WiFi Status Indicator — complete (verify-m003-s03.sh 12/12 pass; py_compile exit 0; badge green on live heartbeat pending hardware flash)
-  - [x] S04: Powerbank Hardening + Wireless Docs — complete (verify-m003-s04.sh 8/8 pass; 30-min powerbank soak + WiFi drop recovery pending hardware)
+  - [x] S01: Firmware APDU Retry — complete (`verify-m004.sh` 5/5 pass; APDU_MAX_RETRIES=3 + retry loop in firmware; hardware tap + Serial Monitor confirmation pending S02)
+  - [ ] S02: End-to-End Validation + Backend Cleanup — flash firmware; phone tap → `APDU ok=YES attempt N/3` in Serial Monitor → `complete_sale_nfc CALLED` in server log → cashier success modal

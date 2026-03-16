@@ -69,6 +69,8 @@ static const int MAX_RETRIES    = 3;
 static const int RETRY_DELAY_MS = 2000;
 static const int HTTP_TIMEOUT_MS = 5000;
 static const int HEARTBEAT_INTERVAL_MS = 30000;  // 30s heartbeat interval — POST to /api/arduino/heartbeat keeps powerbank alive and drives WiFi badge in cashier UI
+#define APDU_MAX_RETRIES    3    // max attempts for inDataExchange before falling back to CARD
+#define APDU_RETRY_DELAY_MS 150  // ms between APDU attempts — covers Android HCE startup latency
 
 // ── PN532 instance (Elechouse SPI — handles SPI.begin() internally) ─
 PN532_SPI pn532spi(SPI, PN532_SS);
@@ -606,7 +608,7 @@ void loop() {
       };
 
       uint8_t response[60];
-      uint8_t responseLength = 60;
+      uint8_t responseLength;
 
       // ── HCE initialization delay ──────────────────────────────────────────
       // After readPassiveTargetID returns, the phone is in ISO14443A SELECTED
@@ -618,18 +620,17 @@ void loop() {
       delay(150);
 
       // inDataExchange MUST be called after readPassiveTargetID (uses _inListedTag internally).
-      bool apduOk = nfc.inDataExchange(apduCmd, 19, response, &responseLength);
-
-      // ── APDU diagnostic: always print result so Serial Monitor shows what happened
-      Serial.print("APDU ok="); Serial.print(apduOk ? "YES" : "NO");
-      Serial.print(" rspLen="); Serial.print(responseLength);
-      if (responseLength >= 2) {
-        Serial.print(" lastBytes=");
-        Serial.print(response[responseLength >= 50 ? 48 : responseLength - 2], HEX);
-        Serial.print(" ");
-        Serial.print(response[responseLength >= 50 ? 49 : responseLength - 1], HEX);
+      bool apduOk = false;
+      for (int apduAttempt = 1; apduAttempt <= APDU_MAX_RETRIES; apduAttempt++) {
+        responseLength = 60;
+        apduOk = nfc.inDataExchange(apduCmd, 19, response, &responseLength);
+        Serial.print("APDU attempt "); Serial.print(apduAttempt);
+        Serial.print("/"); Serial.print(APDU_MAX_RETRIES);
+        Serial.print(" ok="); Serial.print(apduOk ? "YES" : "NO");
+        Serial.print(" rspLen="); Serial.println(responseLength);
+        if (apduOk) break;
+        if (apduAttempt < APDU_MAX_RETRIES) delay(APDU_RETRY_DELAY_MS);
       }
-      Serial.println();
 
       // ── Determine whether the APDU returned a valid 48-char token ──────────
       // The HCE app sends: [48-byte ASCII token] + [0x90] + [0x00] = 50 bytes.

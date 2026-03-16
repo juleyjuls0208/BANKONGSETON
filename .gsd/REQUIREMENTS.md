@@ -225,7 +225,7 @@ This file is the explicit capability and coverage contract for the project.
 - Source: execution
 - Primary owning slice: M004/S01
 - Supporting slices: M004/S02
-- Validation: unmapped
+- Validation: contract verified — bash scripts/verify-m004.sh 5/5 pass; APDU_MAX_RETRIES=3, APDU_RETRY_DELAY_MS=150 constants confirmed, retry loop wired, per-attempt diagnostic present, py_compile exit 0; hardware tap confirming APDU ok=YES attempt N/3 in Serial Monitor advances to validated in S02
 - Notes: Retry constants at top of .ino file: APDU_MAX_RETRIES=3, APDU_RETRY_DELAY_MS=150. responseLength reset to 60 before each attempt. First success breaks early — no penalty for fast phones. Diagnostic output shows attempt N/3 on each try.
 
 ### R020 — Correct WiFi Payment Routing
@@ -335,7 +335,7 @@ This file is the explicit capability and coverage contract for the project.
 | R022 | operability | active | M003/S03 | none | contract verified (py_compile + verify-m003-s03.sh 12/12); badge green on live heartbeat pending hardware flash |
 | R023 | continuity | active | M003/S04 | none | contract verified (verify-m003-s04.sh 8/8); 30-min powerbank soak + WiFi drop recovery pending hardware |
 | R024 | operability | validated | M003/S04 | none | test -f README-wireless.md exit 0; verify-m003-s04.sh checks (e–h) pass; 164-line README all required sections present |
-| R025 | primary-user-loop | active | M004/S01 | M004/S02 | unmapped — APDU retry loop in firmware; hardware tap confirms ok=YES |
+| R025 | primary-user-loop | active | M004/S01 | M004/S02 | contract verified (verify-m004.sh 5/5); hardware tap → ok=YES pending S02 |
 | R050 | integration | out-of-scope | none | none | n/a |
 | R051 | core-capability | out-of-scope | none | none | n/a |
 

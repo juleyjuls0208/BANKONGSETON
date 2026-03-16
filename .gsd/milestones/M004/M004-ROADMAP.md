@@ -45,7 +45,7 @@ This milestone is complete only when all are true:
 
 ## Slices
 
-- [ ] **S01: Firmware APDU Retry** `risk:high` `depends:[]`
+- [x] **S01: Firmware APDU Retry** `risk:high` `depends:[]`
   > After this: flash the updated firmware, tap a phone at the Arduino — Serial Monitor shows `APDU attempt N/3 ok=YES ... HTTP: delivered — NFC|<token>`, confirming the retry loop works and the correct NFC path is taken.
 
 - [ ] **S02: End-to-End Validation + Backend Cleanup** `risk:medium` `depends:[S01]`
