@@ -301,7 +301,7 @@ This file is the explicit capability and coverage contract for the project.
 - Source: user
 - Primary owning slice: M005/S03
 - Supporting slices: none
-- Validation: unmapped
+- Validation: contract verified — bash scripts/verify-m005-s03.sh exits 0 (14/14 checks pass); live Sheets debit pending S04 end-to-end
 
 ### R030 — Android App QR Scanner (Replaces NFC Pay)
 - Class: primary-user-loop
@@ -408,7 +408,7 @@ This file is the explicit capability and coverage contract for the project.
 | R026 | primary-user-loop | active | M005/S01 | none | contract verified; hardware tap pending |
 | R027 | primary-user-loop | active | M005/S01 | M005/S02 | Adafruit SSD1306 driver + renderQr() implemented in S02; contract verified; hardware scan UAT pending |
 | R028 | primary-user-loop | active | M005/S02 | none | httpGetBody + parseQrUrl + 500ms poll loop implemented; contract verified; live integration pending S03 |
-| R029 | primary-user-loop | active | M005/S03 | none | unmapped |
+| R029 | primary-user-loop | active | M005/S03 | none | contract verified (scripts/verify-m005-s03.sh exits 0); live debit pending S04 |
 | R030 | primary-user-loop | active | M005/S04 | none | unmapped |
 | R031 | operability | active | M005/S01 | none | contract verified; firmware already clean |
 | R032 | operability | active | M005/S05 | none | unmapped |

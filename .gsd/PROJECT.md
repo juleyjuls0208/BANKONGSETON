@@ -15,8 +15,9 @@ Physical RFID card tapped at the cashier counter completes a sale — balance de
 - Cashier browser UI with real-time SocketIO events
 - Arduino UNO R4 WiFi: **RC522 MFRC522 + SSD1306 OLED firmware** (M005/S01+S02 done) — WiFi card-read routing, heartbeat, WiFi badge preserved; Adafruit SSD1306 driver active; QR poll loop (500ms, GET /api/arduino/qr-pending) renders bitmaps on OLED; directory `bankongseton_r4/`
 - Arduino UNO R3: uses RC522 RFID — card registration and lost-card replacement only; README updated (M005/S01)
+- **Backend QR payment flow** (M005/S03 done): `POST /cashier/api/qr-generate` → `GET /api/arduino/qr-pending` → student scans → `GET /api/qr/<token>` → `POST /api/qr/confirm` → balance debited → `qr_payment` SocketIO → cashier success modal; `app.pending_qr_token` in-memory state; `jwt_token` in student login response; 14/14 contract checks pass
 - Android app (student_app_v2): balance, transactions, FCM push, NFC HCE pay (being removed in M005/S05)
-- iOS app (mobile/ios/BankongSetonStudent): balance, transactions, FCM push — no payment method yet (QR coming in M005/S04)
+- iOS app (mobile/ios/BankongSetonStudent): balance, transactions, FCM push — QR payment coming in M005/S04
 
 ## Architecture / Key Patterns
 
