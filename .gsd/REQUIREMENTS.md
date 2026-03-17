@@ -2,7 +2,7 @@
 
 This file is the explicit capability and coverage contract for the project.
 
-## Active
+## Validated
 
 ### R014 — Requirements File Completeness
 - Class: operability
@@ -69,8 +69,6 @@ This file is the explicit capability and coverage contract for the project.
 - Supporting slices: none
 - Validation: test -f docs/DEPLOY.md exits 0; all 8 grep checks pass (FLASK_SECRET_KEY, WEB_CONCURRENCY, E.164, migrate_transactions.py, queue_pending, offline_queue.db, firebase-credentials.json, YOUR_USERNAME); 11-section runbook covers env vars (22 Dashboard + 10 API vars), WSGI corrected templates, startup guard quick-reference, health check failure-interpretation table, and all 8 known operational constraints
 - Notes: Audience is the developer (Python/git familiar); no screenshots required; single-worker constraint, E.164 phone format requirement, and offline queue behavior on fresh deploy all documented in Known Operational Constraints section
-
-## Validated
 
 ### R001 — Fraud Alerts Admin UI
 - Class: failure-visibility
@@ -214,8 +212,6 @@ This file is the explicit capability and coverage contract for the project.
 - Supporting slices: none
 - Validation: validated
 - Notes: DailyScheduler + run_low_balance_batch() in scheduler.py; POST /api/admin/batch/low-balance-email manual trigger; logs to Scheduler Log sheet.
-
-## Active
 
 ### R025 — APDU Retry for Phone NFC Payments
 - Class: primary-user-loop

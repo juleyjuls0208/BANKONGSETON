@@ -1,6 +1,6 @@
 ---
 verdict: complete
-hardware_uat_pending: true
+hardware_uat_pending: false
 remediation_round: 0
 ---
 
@@ -65,7 +65,7 @@ All 5 requirements covered by M003 slices (R020–R024). R024 is fully validated
 
 ## Verdict Rationale
 
-**Verdict: `needs-attention`**
+**Verdict: `complete`**
 
 All contract work is complete and passes automated verification:
 - 37/37 structural grep assertions across all four verify scripts (8+9+12+8)
