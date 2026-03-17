@@ -92,3 +92,22 @@ The MFRC522 read loop pattern comes directly from the R3 firmware (`arduino/bank
 - `arduino/bankongseton_r4/bankongseton_r4.ino` — complete RC522 firmware, ~250 lines, no PN532/LCD/APDU code
 - `arduino/bankongseton_r4/secrets.h` — identical copy of old secrets.h
 - `arduino/bankongseton_rfid/` — deleted
+
+## Observability Impact
+
+**What signals change after this task:**
+- `Serial.println("BANKONGSETON RFID reader ready")` replaces the old `"BANKONGSETON NFC reader ready"` — ArduinoBridge startup detection string must be updated if it matches on this exact line (check `arduino_bridge.py` / any subprocess watcher)
+- VersionReg halt check in `setup()` replaces `nfc.getFirmwareVersion()` — failure now prints `ERROR: RC522 not found — check SPI wiring (SS=D10, RST=D8)` and halts; agent inspecting a non-starting reader should look for this line at Serial Monitor startup
+- No APDU diagnostic lines (`APDU attempt N/5`, `APDU: inDataExchange failed`, etc.) — those are gone; an agent monitoring for APDU output will see nothing
+
+**How a future agent inspects this task:**
+1. Open Arduino Serial Monitor at 9600 baud after flashing `bankongseton_r4.ino`
+2. Observe: `BANKONGSETON RFID reader ready` → RC522 SPI OK
+3. Tap RFID card → observe `SCAN: FOUND uidLen=N uid=XXXX` + `HTTP: delivered — CARD|<uid>` → end-to-end confirmed
+4. Check Flask log for `POST /api/arduino/card-read 200` as final delivery proof
+5. Run `bash scripts/verify-m005-s01.sh` → all exits 0 confirms static contract
+
+**Failure state visibility:**
+- RC522 SPI fault: `ERROR: RC522 not found` + halt; no subsequent output
+- WiFi disabled (no `SECRET_SSID`): `WiFi disabled — serial-only mode` then `CARD|<uid>` fallback lines
+- HTTP failure: `HTTP: non-200 response: ...` then serial fallback

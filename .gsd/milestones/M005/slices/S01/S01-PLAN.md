@@ -23,6 +23,31 @@
 - `bash scripts/verify-m005-s01.sh` — all grep/test assertions exit 0
 - Manual integration: flash `bankongseton_r4.ino` to R4 WiFi hardware, tap a physical RFID card, observe `POST /api/arduino/card-read 200` in Flask log
 
+## Observability / Diagnostics
+
+**Runtime signals this slice produces:**
+- `Serial.println("BANKONGSETON RFID reader ready")` — emitted at the end of `setup()`; ArduinoBridge waits for this line at startup to confirm the reader is live
+- `SCAN: FOUND uidLen=N uid=XXXXXXXX` — logged on every successful card present; visible in Arduino Serial Monitor and captured by ArduinoBridge
+- `HTTP attempt N/3` — logged before each WiFi POST so connection retries are traceable
+- `HTTP: delivered — CARD|<UID>` — logged on successful delivery; absent means all retries failed and serial fallback fired
+- `ERROR: RC522 not found ...` — logged + infinite halt in `setup()` if VersionReg returns 0x00 or 0xFF; indicates SPI wiring fault
+- `WiFi lost — reconnecting...` / `WARNING: WiFi connect failed` — logged when `ensureWiFi()` triggers reconnect
+
+**Inspection surfaces:**
+- Arduino Serial Monitor at 9600 baud — primary real-time observation channel
+- Flask log: `POST /api/arduino/card-read 200` confirms end-to-end delivery
+- Flask log: `POST /api/arduino/heartbeat 200` every 30 s confirms WiFi is live
+- ArduinoBridge stdout: echoes all `Serial.println` lines captured from the reader
+
+**Failure visibility:**
+- RC522 SPI fault → `ERROR: RC522 not found` on serial + no further output (halted)
+- WiFi misconfigured (no `SECRET_SSID`) → `WiFi disabled — serial-only mode`; HTTP attempts skipped; serial fallback `CARD|<UID>` emitted
+- All HTTP retries exhausted → serial fallback line `CARD|<UID>` still emitted; ArduinoBridge processes this
+
+**Redaction constraints:**
+- `SECRET_PASS` and `SECRET_API_KEY` are defined in `secrets.h` which is gitignored; the firmware never prints them to Serial
+- `FLASK_HOST` + API key are in `secrets.h` only; not echoed in any log
+
 ## Integration Closure
 
 - Upstream surfaces consumed: none (first slice — no dependencies)
@@ -31,7 +56,7 @@
 
 ## Tasks
 
-- [ ] **T01: Write R4 RC522 firmware and rename directory** `est:45m`
+- [x] **T01: Write R4 RC522 firmware and rename directory** `est:45m`
   - Why: Core of the slice — replace PN532+LCD+APDU with MFRC522 read loop; rename directory to bankongseton_r4/; copy secrets.h; delete old bankongseton_rfid/
   - Files: `arduino/bankongseton_r4/bankongseton_r4.ino` (new), `arduino/bankongseton_r4/secrets.h` (copy), `arduino/bankongseton_rfid/` (delete)
   - Do: Write the full firmware per the task plan. Copy `arduino/bankongseton_rfid/secrets.h` to `arduino/bankongseton_r4/secrets.h` unchanged. Delete `arduino/bankongseton_rfid/`.
