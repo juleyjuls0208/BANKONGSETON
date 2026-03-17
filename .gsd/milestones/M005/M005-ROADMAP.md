@@ -51,7 +51,7 @@ This milestone is complete only when all are true:
 - [x] **S01: RC522 Firmware Swap (R4 + R3)** `risk:high` `depends:[]`
   > After this: Physical RFID card tapped at powerbank-powered R4 POSTs to /api/arduino/card-read over WiFi and fires card_read in cashier UI — verified by POST appearing in Flask log. R3 reads UID via RC522 and echoes serial. Directory renamed to bankongseton_r4/.
 
-- [ ] **S02: OLED Driver + QR Polling on R4** `risk:high` `depends:[S01]`
+- [x] **S02: OLED Driver + QR Polling on R4** `risk:high` `depends:[S01]`
   > After this: R4 OLED shows "Ready" at idle; when backend has a pending QR token, OLED renders the QR bitmap within one poll cycle (~500ms); QR is scannable by a phone camera — verified on real hardware.
 
 - [ ] **S03: Backend QR Payment Flow** `risk:medium` `depends:[]`

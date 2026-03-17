@@ -281,7 +281,7 @@ This file is the explicit capability and coverage contract for the project.
 - Source: user
 - Primary owning slice: M005/S01
 - Supporting slices: M005/S02
-- Validation: Wire.h + OLED pin constants placeholder committed in S01; Adafruit_SSD1306 driver and display code deferred to S02
+- Validation: Adafruit SSD1306 driver activated in S02; oledShowReady() and renderQr() implemented; all 9 contract checks pass (scripts/verify-m005-s02.sh exits 0); hardware scan UAT pending
 
 ### R028 — QR Token Delivery to OLED via Arduino Polling
 - Class: primary-user-loop
@@ -291,7 +291,7 @@ This file is the explicit capability and coverage contract for the project.
 - Source: user
 - Primary owning slice: M005/S02
 - Supporting slices: none
-- Validation: unmapped
+- Validation: httpGetBody() + parseQrUrl() + renderQr() + 500ms poll loop implemented in firmware; contract verified (scripts/verify-m005-s02.sh exits 0); live integration pending S03 backend
 
 ### R029 — Backend QR Payment Flow
 - Class: primary-user-loop
@@ -406,8 +406,8 @@ This file is the explicit capability and coverage contract for the project.
 | R024 | operability | validated | M003/S04 | none | validated |
 | R025 | primary-user-loop | validated | M004/S01 | M004/S02 | validated (superseded by R026) |
 | R026 | primary-user-loop | active | M005/S01 | none | contract verified; hardware tap pending |
-| R027 | primary-user-loop | active | M005/S01 | M005/S02 | S01 placeholder committed; S02 completes |
-| R028 | primary-user-loop | active | M005/S02 | none | unmapped |
+| R027 | primary-user-loop | active | M005/S01 | M005/S02 | Adafruit SSD1306 driver + renderQr() implemented in S02; contract verified; hardware scan UAT pending |
+| R028 | primary-user-loop | active | M005/S02 | none | httpGetBody + parseQrUrl + 500ms poll loop implemented; contract verified; live integration pending S03 |
 | R029 | primary-user-loop | active | M005/S03 | none | unmapped |
 | R030 | primary-user-loop | active | M005/S04 | none | unmapped |
 | R031 | operability | active | M005/S01 | none | contract verified; firmware already clean |

@@ -13,7 +13,7 @@ Physical RFID card tapped at the cashier counter completes a sale — balance de
 - Flask backend deployed on PythonAnywhere (dashboard app + API server)
 - Google Sheets as the primary datastore
 - Cashier browser UI with real-time SocketIO events
-- Arduino UNO R4 WiFi: **RC522 MFRC522 firmware** (M005/S01 done) — WiFi card-read routing, heartbeat, WiFi badge preserved; OLED pin placeholder present; Adafruit_SSD1306 driver deferred to S02; directory renamed `bankongseton_r4/`
+- Arduino UNO R4 WiFi: **RC522 MFRC522 + SSD1306 OLED firmware** (M005/S01+S02 done) — WiFi card-read routing, heartbeat, WiFi badge preserved; Adafruit SSD1306 driver active; QR poll loop (500ms, GET /api/arduino/qr-pending) renders bitmaps on OLED; directory `bankongseton_r4/`
 - Arduino UNO R3: uses RC522 RFID — card registration and lost-card replacement only; README updated (M005/S01)
 - Android app (student_app_v2): balance, transactions, FCM push, NFC HCE pay (being removed in M005/S05)
 - iOS app (mobile/ios/BankongSetonStudent): balance, transactions, FCM push — no payment method yet (QR coming in M005/S04)
