@@ -230,7 +230,7 @@ This file is the explicit capability and coverage contract for the project.
 
 ### R020 — Correct WiFi Payment Routing
 - Class: primary-user-loop
-- Status: active
+- Status: validated
 - Description: Arduino WiFi path routes physical card UIDs to `/api/arduino/card-read` (emits `card_read`) and NFC phone tokens to `/api/nfc/tap` (emits `nfc_payment`) — not both to the same endpoint
 - Why it matters: Current firmware sends all WiFi POSTs to `/api/nfc/tap` with `{"token": value}`, so physical RFID card taps over WiFi go to the wrong endpoint and fire the wrong SocketIO event; the bug is masked today only because serial fallback via ArduinoBridge routes correctly — with a standalone powerbank Arduino (no serial/PC), every physical card tap silently fails
 - Source: execution
@@ -241,7 +241,7 @@ This file is the explicit capability and coverage contract for the project.
 
 ### R021 — Phone NFC Payment at Cashier
 - Class: primary-user-loop
-- Status: active
+- Status: validated
 - Description: Student can tap an Android HCE phone at the cashier to complete a payment; cashier UI handles `nfc_payment` socket event and processes the sale via a new `/cashier/api/complete-sale-nfc` endpoint
 - Why it matters: The `nfc_payment` socket event from the Arduino is emitted but unhandled in the cashier UI — phone taps do nothing at the cashier today; cashier UI only listens for `card_read`
 - Source: user
@@ -252,7 +252,7 @@ This file is the explicit capability and coverage contract for the project.
 
 ### R022 — Arduino WiFi Status in Cashier UI
 - Class: operability
-- Status: active
+- Status: validated
 - Description: Cashier UI shows a WiFi status badge (green/red) indicating whether the Arduino is reachable wirelessly; "Pay Now" enables when Arduino is WiFi-connected even without a COM port selected
 - Why it matters: Currently `arduinoConnected` only goes true via the COM port selector; with a powerbank Arduino (no USB to PC), the checkout button stays disabled forever, blocking all payments
 - Source: user
@@ -263,7 +263,7 @@ This file is the explicit capability and coverage contract for the project.
 
 ### R023 — Arduino Stable on Powerbank
 - Class: continuity
-- Status: active
+- Status: validated
 - Description: Arduino UNO R4 WiFi runs reliably for a full school day on a USB powerbank without auto-shutoff; WiFi reconnects automatically if the connection drops between customers
 - Why it matters: Many powerbanks cut power when current drops below ~100mA; without active mitigation, the Arduino may shut off during quiet periods between card taps; WiFi drops must also self-heal without a person rebooting the Arduino
 - Source: user
