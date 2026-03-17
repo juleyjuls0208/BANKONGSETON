@@ -69,8 +69,9 @@ static const int MAX_RETRIES    = 3;
 static const int RETRY_DELAY_MS = 2000;
 static const int HTTP_TIMEOUT_MS = 5000;
 static const int HEARTBEAT_INTERVAL_MS = 30000;  // 30s heartbeat interval — POST to /api/arduino/heartbeat keeps powerbank alive and drives WiFi badge in cashier UI
-#define APDU_MAX_RETRIES    3    // max attempts for inDataExchange before falling back to CARD
-#define APDU_RETRY_DELAY_MS 150  // ms between APDU attempts — covers Android HCE startup latency
+#define APDU_MAX_RETRIES    5    // Samsung HCE can be slower to respond after RF cycle
+#define APDU_RETRY_DELAY_MS 2000 // ms between APDU attempts (total retry budget ↑)
+#define ENABLE_RF_FIELD_CYCLE 0  // set 0 for Samsung test: avoid pre-scan RF off/on resets
 
 // ── PN532 instance (Elechouse SPI — handles SPI.begin() internally) ─
 PN532_SPI pn532spi(SPI, PN532_SS);
@@ -496,18 +497,15 @@ void loop() {
   lcd_set_cursor(0, 1);
   lcd_print("Tap card...");
 
+#if ENABLE_RF_FIELD_CYCLE
   // RF field toggle: cycle field off→on to reset any stuck NTAG state.
-  // This forces the NTAG215 back to IDLE so the cascade anticollision
-  // starts cleanly from the beginning each scan attempt.
-  //
-  // NOTE: Keep the off-time SHORT (10ms). A long off-time (50ms) resets
-  // Android HCE phones too aggressively: the ISO14443A layer (UID/SAK)
-  // comes back quickly, but the Android HCE service reinitializes slower.
-  // With 50ms off, inDataExchange fires before HCE is ready → APDU ok=NO.
+  // Disabled for Samsung HCE compatibility tests (some devices drop HCE route
+  // immediately after repeated RF resets between scans).
   nfc.setRFField(0, 0);  // RF off
-  delay(10);             // 10ms: resets NTAG state without disrupting HCE
+  delay(10);
   nfc.setRFField(0, 1);  // RF on, no autoRFCA
   delay(10);
+#endif
 
   // readPassiveTargetID blocks for NFC_TIMEOUT_MS waiting for a card.
   // Returns true when a card/phone is in range and its UID is read.
@@ -617,13 +615,13 @@ void loop() {
       // wake up after an RF field cycle. Without this delay, inDataExchange
       // sends RATS before the HCE stack is ready → phone doesn't respond →
       // PN532 times out → ok=NO.
-      delay(150);
+      delay(350);
 
       // inDataExchange MUST be called after readPassiveTargetID (uses _inListedTag internally).
       bool apduOk = false;
       for (int apduAttempt = 1; apduAttempt <= APDU_MAX_RETRIES; apduAttempt++) {
         responseLength = 60;
-        apduOk = nfc.inDataExchange(apduCmd, 19, response, &responseLength);
+        apduOk = nfc.inDataExchange(apduCmd, sizeof(apduCmd), response, &responseLength);
         Serial.print("APDU attempt "); Serial.print(apduAttempt);
         Serial.print("/"); Serial.print(APDU_MAX_RETRIES);
         Serial.print(" ok="); Serial.print(apduOk ? "YES" : "NO");

@@ -21,7 +21,6 @@ __pycache__/
 venv/
 env/
 ENV/
-.gsd/
 .venv
 
 # Logs
@@ -99,3 +98,11 @@ target/
 vendor/
 coverage/
 .cache/
+
+# ── GSD baseline (auto-generated) ──
+.gsd/forensics/
+.gsd/parallel/
+.gsd/gsd.db
+.gsd/DISCUSSION-MANIFEST.json
+.gsd/milestones/**/*-CONTINUE.md
+.gsd/milestones/**/continue.md

@@ -373,6 +373,35 @@ def complete_sale():
                 break
         
         if not account_row:
+            # ── PhoneUID fallback ─────────────────────────────────────────────
+            # Android HCE phones arrive as CARD|<phone_uid> (D039 — APDU removed).
+            # Check VirtualCards.PhoneUID; if matched, resolve to the student's
+            # physical MoneyCardNumber and re-search Money Accounts.
+            try:
+                vc_records = db.worksheet('VirtualCards').get_all_records()
+            except Exception:
+                vc_records = []
+            vc_match = next(
+                (r for r in vc_records
+                 if str(r.get('PhoneUID', '')).strip().upper() == card_uid.upper()
+                 and str(r.get('IsActive', '')).upper() == 'TRUE'),
+                None
+            )
+            if vc_match:
+                phone_money_card = str(vc_match.get('MoneyCardNumber', '')).strip()
+                normalized_card = normalize_card_uid(phone_money_card)
+                for idx, record in enumerate(money_records, start=2):
+                    if normalize_card_uid(record.get('MoneyCardNumber', '')) == normalized_card:
+                        account_row = idx
+                        current_balance = float(record.get('Balance', 0))
+                        card_status = record.get('Status', '').strip().lower()
+                        if card_status == 'lost':
+                            return jsonify({'error': 'Card reported as lost'}), 403
+                        if card_status != 'active':
+                            return jsonify({'error': f'Card is {card_status}'}), 403
+                        break
+
+        if not account_row:
             return jsonify({'error': 'Card not found'}), 404
         
         if current_balance < total:

@@ -1399,6 +1399,82 @@ def link_money_card():
     
     return jsonify({'success': True})
 
+@app.route('/api/phone/register-uid', methods=['POST'])
+@admin_only
+def register_phone_uid():
+    """Link an Android phone's NFC hardware UID to a student's money account.
+
+    When a student taps their phone at the payment terminal, the hardware UID
+    arrives as CARD|<uid> (D039 — APDU removed). This endpoint stores the UID
+    in the student's VirtualCards row so complete_sale() can resolve it.
+
+    Body: { "student_id": "STU001", "phone_uid": "0869016D" }
+    Returns 200: { "success": true, "message": "..." }
+    Returns 400/404/409: validation / not found / duplicate errors
+    """
+    try:
+        data = request.get_json() or {}
+        student_id = str(data.get('student_id', '')).strip()
+        phone_uid = str(data.get('phone_uid', '')).strip().upper()
+
+        if not student_id:
+            return jsonify({'error': 'student_id required'}), 400
+        if not phone_uid:
+            return jsonify({'error': 'phone_uid required'}), 400
+        if not re.match(r'^[0-9A-F]{8}$', phone_uid):
+            return jsonify({'error': 'phone_uid must be 8 hex characters (e.g. 0869016D)'}), 400
+
+        db = get_sheets_client()
+
+        # Verify student exists and get their MoneyCardNumber
+        users_records = get_worksheet_with_retry('Users').get_all_records()
+        user = next(
+            (r for r in users_records
+             if str(r.get('StudentID', '')).strip() == student_id),
+            None
+        )
+        if not user:
+            return jsonify({'error': f'Student {student_id} not found'}), 404
+
+        money_card = str(user.get('MoneyCardNumber', '')).strip()
+        if not money_card:
+            return jsonify({'error': f'Student {student_id} has no money card registered'}), 400
+
+        # Guard against registering the same UID to two different active students
+        vc_sheet = get_worksheet_with_retry('VirtualCards')
+        vc_records = vc_sheet.get_all_records()
+        for r in vc_records:
+            if (str(r.get('PhoneUID', '')).strip().upper() == phone_uid
+                    and str(r.get('IsActive', '')).upper() == 'TRUE'
+                    and str(r.get('StudentID', '')).strip() != student_id):
+                return jsonify({
+                    'error': f'Phone UID {phone_uid} is already registered to another student'
+                }), 409
+
+        # Update PhoneUID on the student's existing active VirtualCard row, or
+        # create a new row if none exists (phone-only registration without app token)
+        updated = False
+        for idx, r in enumerate(vc_records, start=2):
+            if (str(r.get('StudentID', '')).strip() == student_id
+                    and str(r.get('IsActive', '')).upper() == 'TRUE'):
+                vc_sheet.update_cell(idx, 7, phone_uid)  # col 7 = PhoneUID
+                updated = True
+                break
+
+        if not updated:
+            created_at = datetime.now(pytz.timezone('Asia/Manila')).strftime('%Y-%m-%d %H:%M:%S')
+            vc_sheet.append_row([student_id, '', '', money_card, created_at, 'TRUE', phone_uid])
+
+        logger.info(f'event=phone_uid_registered student_id={student_id} phone_uid={phone_uid}')
+        return jsonify({
+            'success': True,
+            'message': f'Phone {phone_uid} registered for student {student_id}'
+        }), 200
+
+    except Exception as e:
+        logger.error(f'register_phone_uid error: {e}')
+        return jsonify({'error': 'Service unavailable, please try again'}), 503
+
 def read_card_thread(card_type):
     """Route card reading through arduino_bridge — no direct serial access.
 

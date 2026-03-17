@@ -418,6 +418,7 @@ VIRTUAL_CARDS_HEADERS = [
     "MoneyCardNumber", # col 4
     "CreatedAt",       # col 5
     "IsActive",        # col 6
+    "PhoneUID",        # col 7 — Android NFC hardware UID (e.g. 0869016D); used by complete_sale() PhoneUID fallback
 ]
 
 
@@ -469,7 +470,7 @@ class NFCService:
         )
 
         vc_sheet.append_row(
-            [student_id, virtual_card_token, device_token, money_card, created_at, "TRUE"]
+            [student_id, virtual_card_token, device_token, money_card, created_at, "TRUE", ""]
         )
 
         self.logger.info(

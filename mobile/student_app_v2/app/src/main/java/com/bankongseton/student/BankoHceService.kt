@@ -123,12 +123,10 @@ class BankoHceService : HostApduService() {
             Log.w(TAG, "No virtual card token available")
             return SW_NO_TOKEN
         }
-        
-        // Check if payment is authorized (biometric/PIN verified)
-        if (!isPaymentAuthorized) {
-            Log.w(TAG, "Payment not authorized - biometric/PIN required")
-            return SW_NO_TOKEN
-        }
+
+        // NOTE (M004 follow-up): Do not gate APDU responses on in-app biometric
+        // authorization. Physical canteen flow requires tap-and-pay with screen-off
+        // tolerance. HCE availability is now controlled by token presence only.
         
         Log.d(TAG, "Sending token response")
         
