@@ -303,6 +303,7 @@ def login():
         
         return jsonify({
             'token': token,
+            'jwt_token': generate_jwt_token(student['StudentID'], role='student'),
             'student': {
                 'id': student['StudentID'],
                 'name': student['Name'],

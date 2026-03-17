@@ -110,6 +110,7 @@ ARDUINO_WIFI_OFFLINE_S = int(os.environ.get("ARDUINO_WIFI_OFFLINE_S", "60"))
 
 # UID pattern for Arduino card reads
 import re
+import jwt as _pyjwt  # aliased to avoid collision with any local 'jwt' variable
 
 UID_PATTERN = re.compile(r"^[0-9A-Fa-f]{8}$|^[0-9A-Fa-f]{14}$")
 
@@ -123,6 +124,7 @@ socketio = SocketIO(app, cors_allowed_origins=_allowed_origins)
 # Attach socketio to app for cashier blueprint access
 app.socketio = socketio
 app.arduino_last_heartbeat = 0.0
+app.pending_qr_token = None
 
 # Register cashier blueprint
 if CASHIER_AVAILABLE:
@@ -311,6 +313,46 @@ def arduino_heartbeat():
     socketio.emit("arduino_wifi_status", {"online": True, "last_seen_s": last_seen_s})
     logger.info("event=arduino_heartbeat remote=%s", request.remote_addr)
     return jsonify({"status": "ok"}), 200
+
+
+# ============= JWT HELPER =============
+
+def _decode_student_jwt(token_str: str):
+    """Decode a student JWT. Returns payload dict or None on failure."""
+    try:
+        return _pyjwt.decode(token_str, _jwt_secret, algorithms=["HS256"])
+    except Exception:
+        return None
+
+
+# ============= QR PAYMENT ROUTES =============
+
+@app.route("/api/arduino/qr-pending", methods=["GET"])
+def arduino_qr_pending():
+    api_key = request.headers.get("X-API-Key", "")
+    if not ARDUINO_API_KEY or api_key != ARDUINO_API_KEY:
+        return jsonify({"error": "Unauthorized"}), 401
+    t = app.pending_qr_token
+    if t is None or time.time() - t["created_at"] > 300:
+        return jsonify({"token": None}), 200
+    return jsonify({"token": t["token"], "url": t["url"]}), 200
+
+
+@app.route("/api/qr/<token>", methods=["GET"])
+def qr_cart(token):
+    auth_header = request.headers.get("Authorization", "")
+    token_str = auth_header.replace("Bearer ", "").strip()
+    payload = _decode_student_jwt(token_str)
+    if not payload:
+        return jsonify({"error": "Unauthorized"}), 401
+    t = app.pending_qr_token
+    if t is None or t["token"] != token or time.time() - t["created_at"] > 300:
+        return jsonify({"error": "QR expired or not found"}), 404
+    return jsonify({
+        "items": t["cart_snapshot"],
+        "total": t["total"],
+        "cashier": t["cashier_username"],
+    }), 200
 
 
 

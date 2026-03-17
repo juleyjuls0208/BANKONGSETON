@@ -25,6 +25,7 @@
 
 - `bash scripts/verify-m005-s03.sh` — exits 0; all grep and py_compile checks pass
 - All three Python files pass `python -m py_compile` individually
+- Failure-path check: `GET /api/arduino/qr-pending` with valid `X-API-Key` returns `{"token": null}` when `app.pending_qr_token` is None or expired (>300s) — confirms the OLED idle/clear state is machine-readable and not stuck on stale data
 
 ## Observability / Diagnostics
 
@@ -41,7 +42,7 @@
 
 ## Tasks
 
-- [ ] **T01: Add `pending_qr_token` init, JWT helper, `qr-pending` and `qr/<token>` routes — plus `jwt_token` in login** `est:45m`
+- [x] **T01: Add `pending_qr_token` init, JWT helper, `qr-pending` and `qr/<token>` routes — plus `jwt_token` in login** `est:45m`
   - Why: Establishes the in-memory QR state object, the student JWT decode helper, the Arduino polling route, and the cart-fetch route before the complex money-moving route is built. Also adds `jwt_token` to the api_server.py login response so S04 apps can authenticate.
   - Files: `backend/dashboard/web_app.py`, `backend/api/api_server.py`
   - Do: (1) In `web_app.py` line ~126, add `app.pending_qr_token = None` after `app.arduino_last_heartbeat = 0.0`. (2) Add `import jwt as _pyjwt` near the top of `web_app.py` (after existing imports). (3) Add `_decode_student_jwt(token_str)` helper that calls `_pyjwt.decode(token_str, _jwt_secret, algorithms=['HS256'])` wrapped in try/except returning None on failure. (4) Add `GET /api/arduino/qr-pending` route with `X-API-Key` auth (identical pattern to `arduino_heartbeat`): return `{token: null}` when `app.pending_qr_token` is None or expired (>300s), return `{token, url}` otherwise. (5) Add `GET /api/qr/<token>` route using `_decode_student_jwt`; return 401 if decode fails; return 404 if no pending token or token mismatch or expired (>300s); return `{items: t['cart_snapshot'], total: t['total'], cashier: t['cashier_username']}`. (6) In `api_server.py` login route, inside the existing `return jsonify({...})` block, add `'jwt_token': generate_jwt_token(student['StudentID'], role='student')` as a new field.
