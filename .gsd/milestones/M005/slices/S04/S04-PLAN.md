@@ -79,7 +79,7 @@ xcodebuild -scheme BankongSetonStudent -sdk iphonesimulator build   # must exit 
   - Verify: `grep -q 'QRPayActivity' mobile/student_app_v2/app/src/main/AndroidManifest.xml && grep -q 'CAMERA' mobile/student_app_v2/app/src/main/AndroidManifest.xml && grep -q 'qrPayButton' mobile/student_app_v2/app/src/main/java/com/bankongseton/student/HomeActivity.kt`
   - Done when: All 3 greps pass; `activity_qr_pay.xml` exists; `QRPayActivity.kt` compiles (no red underlines on ML Kit / CameraX imports)
 
-- [ ] **T03: Build iOS QR views — AVFoundation scanner, confirmation, HomeView wiring, pbxproj registration** `est:1h`
+- [x] **T03: Build iOS QR views — AVFoundation scanner, confirmation, HomeView wiring, pbxproj registration** `est:1h`
   - Why: Implements the full iOS QR payment user flow. Creates 4 new Swift files (QRModels, QRPayViewModel, QRScannerView, QRPayView), adds the "Pay with QR" button to HomeView, and correctly registers all new files in project.pbxproj so the iOS app compiles.
   - Files: `mobile/ios/BankongSetonStudent/Models/QRModels.swift` (new), `ViewModels/QRPayViewModel.swift` (new), `Views/QR/QRScannerView.swift` (new), `Views/QR/QRPayView.swift` (new), `Views/Home/HomeView.swift`, `BankongSetonStudent.xcodeproj/project.pbxproj`
   - Do: See T03-PLAN.md

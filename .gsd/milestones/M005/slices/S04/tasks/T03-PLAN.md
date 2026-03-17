@@ -542,3 +542,18 @@ grep -q 'NSCameraUsageDescription' mobile/ios/BankongSetonStudent/BankongSetonSt
 - `Views/QR/QRPayView.swift` — SwiftUI view orchestrating scan → load → confirm → success/error states
 - `Views/Home/HomeView.swift` — "Pay with QR" button + sheet presentation
 - `project.pbxproj` — 4 new PBXBuildFile + 4 new PBXFileReference + 1 new PBXGroup (EE000017) + 4 entries in PBXSourcesBuildPhase + camera usage description in both target build configs
+
+## Observability Impact
+
+- **New runtime signals introduced:** iOS QR payment flow emits inline state transitions visible in the UI — `scanning → loading → confirming → success/error`. These are the primary inspection surfaces.
+- **How a future agent inspects this task's output:**
+  - `grep -r 'QRPayState\|QRPayViewModel' mobile/ios/BankongSetonStudent/ViewModels/` — verifies ViewModel is present
+  - `grep 'showQrPay' mobile/ios/BankongSetonStudent/Views/Home/HomeView.swift` — confirms button is wired
+  - `grep 'NSCameraUsageDescription' mobile/ios/BankongSetonStudent/BankongSetonStudent.xcodeproj/project.pbxproj` — confirms camera permission is registered
+- **Failure state visibility:**
+  - **402 (Insufficient balance):** `state = .error("Insufficient balance. Please top up your card.")` — shown as red error screen with "Payment Error" title
+  - **404/410 (Expired QR):** `state = .error("QR code has expired. Ask the cashier to generate a new one.")` — same error screen
+  - **401 (Session expired):** `state = .error("Session expired. Please log out and log in again.")` — directs user to re-authenticate
+  - **Camera permission denied:** `ScannerViewController.setupSession()` returns early — scanner view shows black screen (no crash); diagnosis: check device Settings > Privacy > Camera for the app
+  - **jwt_token missing from Keychain:** `jwtRequest()` sends no Authorization header → backend returns 401 → ViewModel shows session-expired error
+- **Redaction:** QR token and JWT never printed to console — only surfaces as an error state in the UI

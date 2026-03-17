@@ -32,6 +32,10 @@
 		AA000023 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000023 /* SettingsView.swift */; };
 		AA000024 /* LostCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000024 /* LostCardView.swift */; };
 		AA000025 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = BB000025 /* Assets.xcassets */; };
+		AA000026 /* QRModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000026 /* QRModels.swift */; };
+		AA000027 /* QRPayViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000027 /* QRPayViewModel.swift */; };
+		AA000028 /* QRScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000028 /* QRScannerView.swift */; };
+		AA000029 /* QRPayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000029 /* QRPayView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -61,6 +65,10 @@
 		BB000024 /* LostCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LostCardView.swift; sourceTree = "<group>"; };
 		CC000001 /* BankongSetonStudent.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BankongSetonStudent.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		BB000025 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		BB000026 /* QRModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRModels.swift; sourceTree = "<group>"; };
+		BB000027 /* QRPayViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRPayViewModel.swift; sourceTree = "<group>"; };
+		BB000028 /* QRScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRScannerView.swift; sourceTree = "<group>"; };
+		BB000029 /* QRPayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRPayView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -154,6 +162,7 @@
 				BB000008 /* BalanceModels.swift */,
 				BB000009 /* TransactionModels.swift */,
 				BB000010 /* BudgetModels.swift */,
+				BB000026 /* QRModels.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -166,6 +175,7 @@
 				BB000016 /* TransactionsViewModel.swift */,
 				BB000020 /* BudgetViewModel.swift */,
 				BB000022 /* SettingsViewModel.swift */,
+				BB000027 /* QRPayViewModel.swift */,
 			);
 			path = ViewModels;
 			sourceTree = "<group>";
@@ -180,6 +190,7 @@
 				EE000014 /* Budget */,
 				EE000015 /* Settings */,
 				EE000016 /* LostCard */,
+				EE000017 /* QR */,
 				BB000019 /* MainTabView.swift */,
 			);
 			path = Views;
@@ -240,6 +251,15 @@
 				BB000024 /* LostCardView.swift */,
 			);
 			path = LostCard;
+			sourceTree = "<group>";
+		};
+		EE000017 /* QR */ = {
+			isa = PBXGroup;
+			children = (
+				BB000028 /* QRScannerView.swift */,
+				BB000029 /* QRPayView.swift */,
+			);
+			path = QR;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -335,6 +355,10 @@
 				AA000022 /* SettingsViewModel.swift in Sources */,
 				AA000023 /* SettingsView.swift in Sources */,
 				AA000024 /* LostCardView.swift in Sources */,
+				AA000026 /* QRModels.swift in Sources */,
+				AA000027 /* QRPayViewModel.swift in Sources */,
+				AA000028 /* QRScannerView.swift in Sources */,
+				AA000029 /* QRPayView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -468,6 +492,7 @@
 				DEVELOPMENT_ASSET_PATHS = "";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSCameraUsageDescription = "Bangko ng Seton uses the camera to scan QR codes for payment.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -495,6 +520,7 @@
 				DEVELOPMENT_ASSET_PATHS = "";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSCameraUsageDescription = "Bangko ng Seton uses the camera to scan QR codes for payment.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

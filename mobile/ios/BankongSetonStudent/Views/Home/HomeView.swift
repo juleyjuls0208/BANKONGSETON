@@ -8,6 +8,7 @@ struct HomeView: View {
     @EnvironmentObject var apiClient: APIClient
     @EnvironmentObject var authManager: AuthManager
     @StateObject private var viewModel = HomeViewModel()
+    @State private var showQrPay = false
 
     var body: some View {
         NavigationStack {
@@ -37,6 +38,24 @@ struct HomeView: View {
                     )
                     .cornerRadius(20)
                     .padding(.horizontal)
+
+                    // MARK: Pay with QR Button
+                    Button(action: { showQrPay = true }) {
+                        Label("Pay with QR", systemImage: "qrcode.viewfinder")
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(Color.accentColor)
+                            .foregroundColor(.white)
+                            .cornerRadius(14)
+                            .padding(.horizontal)
+                    }
+                    .sheet(isPresented: $showQrPay) {
+                        QRPayView {
+                            // On success, refresh balance
+                            Task { await viewModel.load(apiClient: apiClient, authManager: authManager) }
+                        }
+                        .environmentObject(apiClient)
+                    }
 
                     // MARK: Error message
                     if let error = viewModel.errorMessage {
