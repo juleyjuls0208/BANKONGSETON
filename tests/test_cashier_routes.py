@@ -236,7 +236,7 @@ class TestCompleteSale:
         trans_ws.append_row.assert_called_once()
 
     def test_complete_sale_requires_jwt(self, flask_app, db):
-        """No JWT cookie → route redirects to login (302 — jwt_required decorator)."""
+        """No JWT cookie on JSON request → 401 UNAUTHORIZED (jwt_required decorator)."""
         app, _ = flask_app
         db.worksheet.return_value.get_all_records.return_value = []
 
@@ -247,8 +247,8 @@ class TestCompleteSale:
             "/cashier/api/complete-sale", json={"card_uid": _VALID_UID}
         )
 
-        # jwt_required returns redirect(url_for('cashier.login')) — status 302
-        assert resp.status_code == 302
+        # jwt_required: JSON requests get 401 (not a redirect) — consistent API behavior
+        assert resp.status_code == 401
 
     def test_complete_sale_no_pending_transaction(self, flask_app, db):
         """Valid JWT but no pending_transaction in session → 400."""
