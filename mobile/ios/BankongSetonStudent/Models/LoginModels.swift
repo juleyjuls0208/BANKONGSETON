@@ -31,6 +31,13 @@ struct Student: Codable {
 struct LoginResponse: Codable {
     let token: String
     let student: Student
+    let jwtToken: String?
+
+    enum CodingKeys: String, CodingKey {
+        case token
+        case student
+        case jwtToken = "jwt_token"
+    }
 }
 
 // MARK: - GenericSuccessResponse

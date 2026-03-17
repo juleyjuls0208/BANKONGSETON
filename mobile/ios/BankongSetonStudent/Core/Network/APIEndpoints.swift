@@ -9,4 +9,6 @@ enum APIEndpoints {
     static let lostCard = "/student/lost-card"
     static let logout = "/auth/logout"
     static let budgetSummary = "/budget-summary"
+    static let qrCart = "/qr/"          // append token: /qr/<token>
+    static let qrConfirm = "/qr/confirm"
 }

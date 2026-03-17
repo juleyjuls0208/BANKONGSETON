@@ -45,6 +45,7 @@ xcodebuild -scheme BankongSetonStudent -sdk iphonesimulator build   # must exit 
 - Inspection surfaces: `grep 'event=qr_confirm' <flask_log>` confirms backend received the confirm; `GET /api/arduino/qr-pending` with API key confirms token cleared after payment
 - Failure visibility: 402 → "Insufficient balance" dialog; 404/410 → "QR expired" dialog; 401 → re-login prompt (same as existing 401 handling in both apps)
 - Redaction constraints: JWT token in Authorization header only; never logged
+- Failure-state diagnostics: `bash scripts/verify-m005-s04.sh 2>&1` prints each failing check with its label so the exact gap is identifiable without reading all source files; Android 401 on QR endpoints means `getJwtToken()` returned null — add `Log.d("JWT","jwt stored: ${secureStorage.getJwtToken() != null}")` in `HomeActivity.onCreate` to confirm storage; iOS 401 means `KeychainHelper.read(forKey:"jwt_token")` is nil — add `print("jwt stored: \(KeychainHelper.read(forKey:"jwt_token") != nil)")` in `AuthManager.login` to confirm
 
 ## Integration Closure
 
@@ -54,7 +55,7 @@ xcodebuild -scheme BankongSetonStudent -sdk iphonesimulator build   # must exit 
 
 ## Tasks
 
-- [ ] **T01: Fix JWT token storage and add QR API client methods in both apps** `est:45m`
+- [x] **T01: Fix JWT token storage and add QR API client methods in both apps** `est:45m`
   - Why: `/api/qr/<token>` and `/api/qr/confirm` require `Authorization: Bearer <jwt_token>` — a distinct token from the session token. Neither app stores the `jwt_token` from the login response. All QR calls will return 401 until this is fixed. Also adds CameraX + ML Kit to Android's build.gradle so T02 can compile.
   - Files: `mobile/student_app_v2/app/src/main/java/com/bankongseton/student/Models.kt`, `SecureStorage.kt`, `LoginActivity.kt`, `ApiClient.kt`, `app/build.gradle.kts`, `mobile/ios/BankongSetonStudent/Models/LoginModels.swift`, `Core/Auth/AuthManager.swift`, `Core/Network/APIClient.swift`, `Core/Network/APIEndpoints.swift`
   - Do: See T01-PLAN.md

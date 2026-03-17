@@ -86,10 +86,23 @@ class SecureStorage(context: Context) {
         sharedPreferences.edit().remove(KEY_LOST_CARD_REPORTED).apply()
     }
 
+    fun saveJwtToken(token: String) {
+        sharedPreferences.edit().putString(KEY_JWT_TOKEN, token).apply()
+    }
+
+    fun getJwtToken(): String? {
+        return sharedPreferences.getString(KEY_JWT_TOKEN, null)
+    }
+
+    fun clearJwtToken() {
+        sharedPreferences.edit().remove(KEY_JWT_TOKEN).apply()
+    }
+
     fun clearAuth() {
         sharedPreferences.edit()
             .remove(KEY_AUTH_TOKEN)
             .remove(KEY_STUDENT_ID)
+            .remove(KEY_JWT_TOKEN)
             .apply()
     }
     
@@ -105,5 +118,6 @@ class SecureStorage(context: Context) {
         private const val KEY_BUDGET_LIMIT = "budget_limit"
         private const val KEY_BUDGET_MONTH = "budget_month"
         private const val KEY_LOST_CARD_REPORTED = "lost_card_reported"
+        private const val KEY_JWT_TOKEN = "jwt_token"
     }
 }

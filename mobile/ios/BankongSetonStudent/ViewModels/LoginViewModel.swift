@@ -22,7 +22,7 @@ final class LoginViewModel: ObservableObject {
                 studentId: studentId.trimmingCharacters(in: .whitespaces),
                 pin: pin
             )
-            authManager.login(token: response.token, student: response.student)
+            authManager.login(token: response.token, student: response.student, jwtToken: response.jwtToken)
         } catch APIError.cardLost {
             errorMessage = "Your card has been reported lost. Please contact the canteen admin."
         } catch APIError.unauthorized {

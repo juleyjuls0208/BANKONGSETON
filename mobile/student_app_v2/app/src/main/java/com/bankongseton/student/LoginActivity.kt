@@ -68,6 +68,7 @@ class LoginActivity : AppCompatActivity() {
                         response.body()?.let { loginResponse ->
                             secureStorage.saveAuthToken(loginResponse.token)
                             secureStorage.saveStudentId(loginResponse.student.id)
+                            loginResponse.jwtToken?.let { secureStorage.saveJwtToken(it) }
                             goHome()
                         }
                     } else {

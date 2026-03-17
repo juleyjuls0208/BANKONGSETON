@@ -16,10 +16,13 @@ final class AuthManager: ObservableObject {
     }
 
     // Called after successful login
-    func login(token: String, student: Student) {
+    func login(token: String, student: Student, jwtToken: String? = nil) {
         KeychainHelper.save(token, forKey: "auth_token")
         KeychainHelper.save(student.studentId, forKey: "student_id")
         KeychainHelper.save(student.name, forKey: "student_name")
+        if let jwt = jwtToken {
+            KeychainHelper.save(jwt, forKey: "jwt_token")
+        }
         if student.cardStatus?.lowercased() == "active" {
             KeychainHelper.delete(forKey: "isCardLost")
         }
@@ -60,7 +63,8 @@ final class AuthManager: ObservableObject {
             "theme_mode",
             "budget_alert_month",
             "budgetAlerted80",
-            "budgetAlerted100"
+            "budgetAlerted100",
+            "jwt_token"
         ]
         keysToDelete.forEach { KeychainHelper.delete(forKey: $0) }
         isLoggedIn = false

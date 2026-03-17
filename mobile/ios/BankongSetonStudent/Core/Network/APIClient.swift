@@ -19,6 +19,7 @@ final class APIClient: ObservableObject {
     private let encoder = JSONEncoder()
 
     private var token: String? { KeychainHelper.read(forKey: "auth_token") }
+    private var jwtToken: String? { KeychainHelper.read(forKey: "jwt_token") }
 
     // MARK: - Private Helpers
 
@@ -35,6 +36,24 @@ final class APIClient: ObservableObject {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         if let token {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+        request.httpBody = body
+        return request
+    }
+
+    private func jwtRequest(
+        path: String,
+        method: String = "GET",
+        body: Data? = nil
+    ) throws -> URLRequest {
+        guard let url = URL(string: APIEndpoints.baseURL + path) else {
+            throw APIError.invalidURL
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = method
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        if let jwt = jwtToken {
+            request.setValue("Bearer \(jwt)", forHTTPHeaderField: "Authorization")
         }
         request.httpBody = body
         return request
@@ -120,6 +139,18 @@ final class APIClient: ObservableObject {
 
     func fetchBudgetSummary() async throws -> BudgetSummaryResponse {
         let req = try authenticatedRequest(path: APIEndpoints.budgetSummary)
+        return try await perform(req)
+    }
+
+    func getQrCart(token: String) async throws -> QrCartResponse {
+        let req = try jwtRequest(path: APIEndpoints.qrCart + token)
+        return try await perform(req)
+    }
+
+    func confirmQrPayment(token: String) async throws -> QrConfirmResponse {
+        let body = QrConfirmRequest(token: token)
+        let bodyData = try encoder.encode(body)
+        let req = try jwtRequest(path: APIEndpoints.qrConfirm, method: "POST", body: bodyData)
         return try await perform(req)
     }
 }

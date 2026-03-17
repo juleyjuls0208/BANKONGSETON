@@ -9,7 +9,8 @@ data class LoginRequest(
 
 data class LoginResponse(
     val token: String,
-    val student: Student
+    val student: Student,
+    @SerializedName("jwt_token") val jwtToken: String? = null
 )
 
 data class Student(
@@ -76,4 +77,25 @@ data class LostCardStatusResponse(
     val reported: Boolean,
     val processed: Boolean,
     @SerializedName("report_id") val reportId: String?
+)
+
+data class QrCartItem(
+    val name: String,
+    val price: Double,
+    val qty: Int = 1
+)
+
+data class QrCartResponse(
+    val items: List<QrCartItem>,
+    val total: Double,
+    val cashier: String
+)
+
+data class QrConfirmRequest(
+    val token: String
+)
+
+data class QrConfirmResponse(
+    val message: String,
+    @SerializedName("new_balance") val newBalance: Double
 )

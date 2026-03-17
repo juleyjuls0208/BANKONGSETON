@@ -46,6 +46,18 @@ interface BangkoApiService {
     fun getLostCardStatus(
         @Header("Authorization") token: String
     ): Call<LostCardStatusResponse>
+
+    @GET("qr/{token}")
+    fun getQrCart(
+        @Header("Authorization") bearerJwt: String,
+        @Path("token") token: String
+    ): Call<QrCartResponse>
+
+    @POST("qr/confirm")
+    fun confirmQrPayment(
+        @Header("Authorization") bearerJwt: String,
+        @Body request: QrConfirmRequest
+    ): Call<QrConfirmResponse>
 }
 
 object ApiClient {
