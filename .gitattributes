@@ -1,0 +1,2 @@
+# Force LF for GSD planning/validation files — gsd-pi regex requires LF frontmatter
+.gsd/**/*.md text eol=lf
