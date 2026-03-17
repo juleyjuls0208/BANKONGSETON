@@ -45,7 +45,7 @@
   - Verify: `grep -q 'Adafruit_SSD1306.h' arduino/bankongseton_r4/bankongseton_r4.ino && grep -q 'qr-pending' arduino/bankongseton_r4/bankongseton_r4.ino && grep -q 'renderQr' arduino/bankongseton_r4/bankongseton_r4.ino`
   - Done when: All 4 new functions present, poll loop in main loop AND cooldown loop, OLED init in setup(), auto-scale in renderQr(), `// TODO S02` comment removed
 
-- [ ] **T02: Write and run the S02 contract verify script** `est:20m`
+- [x] **T02: Write and run the S02 contract verify script** `est:20m`
   - Why: Provides the automated stopping condition for this slice; the same numbered-check pattern as S01's verify script
   - Files: `scripts/verify-m005-s02.sh`
   - Do: Write a 9-check bash script (same structure as `scripts/verify-m005-s01.sh`) that greps the firmware for all new S02 symbols; make it executable; run it — see T02-PLAN.md for exact checks

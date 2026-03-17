@@ -59,3 +59,13 @@ Exit code must be 0. All 9 `[N/9]` lines must be printed.
 ## Expected Output
 
 - `scripts/verify-m005-s02.sh` — executable 9-check verify script; exits 0 on the T01 firmware
+
+## Observability Impact
+
+**What changes:** `scripts/verify-m005-s02.sh` becomes the canonical automated probe for the S02 contract. Running it at any time tells a future agent whether the firmware still satisfies all 9 S02 symbol requirements.
+
+**How to inspect:** Run `bash scripts/verify-m005-s02.sh` from the project root. Each `[N/9]` line either prints (pass) or causes an immediate non-zero exit (fail with `set -euo pipefail`). The failing line number pinpoints which symbol is missing.
+
+**Failure state:** If any check fails the script exits non-zero immediately (due to `set -euo pipefail`) after printing the failing `[N/9]` line — no further lines are printed. The failing check name identifies which firmware symbol needs to be restored in `bankongseton_r4.ino`.
+
+**Regression detection:** Re-running `bash scripts/verify-m005-s02.sh` after any firmware edit is sufficient to confirm S02 contract is intact without re-reading the entire `.ino` source.
