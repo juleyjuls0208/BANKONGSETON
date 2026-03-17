@@ -8,6 +8,21 @@ estimated_files: 3
 **Slice:** S03 — Backend QR Payment Flow  
 **Milestone:** M005
 
+## Observability Impact
+
+**Signals this task adds:**
+- `scripts/verify-m005-s03.sh` is the primary inspection surface — run it from the project root to get a structured 14-check pass/fail report for all S03 artifacts. Exit 0 = slice complete; non-zero = which check failed is printed.
+- `SERVER_URL` absence is now visible at request time: `cashier_routes.py:qr_generate()` returns HTTP 500 `{"error": "SERVER_URL not configured"}` when the env var is missing, surfacing a misconfiguration that previously silently produced broken QR URLs.
+
+**Failure states now visible:**
+- Verify script fails with `grep: no match` + non-zero exit if any S03 endpoint was accidentally removed from a source file — makes regression immediately detectable in CI or manual pre-deploy checks.
+- `py_compile` failures in the script surface syntax errors in all three modified Python files before any deployment attempt.
+
+**How a future agent inspects this task:**
+- Run `bash scripts/verify-m005-s03.sh` from project root; all 14 lines should print `OK:`.
+- `grep SERVER_URL .env.example docs/DEPLOY.md` confirms documentation is in place.
+- `grep -n SERVER_URL backend/dashboard/cashier/cashier_routes.py` shows the consumption point.
+
 ## Description
 
 Creates the authoritative verification artifact for S03: `scripts/verify-m005-s03.sh`. This script is what the milestone Definition of Done checks — it must exit 0.

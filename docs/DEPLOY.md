@@ -76,6 +76,7 @@ Set these via the PythonAnywhere **Web** tab → **Environment variables**, or i
 | `BATCH_EMAIL_HOUR` | no | no | `7` | Hour (0–23 PH time) for daily low-balance email batch. |
 | `BATCH_EMAIL_MINUTE` | no | no | `0` | Minute (0–59) for daily low-balance email batch. |
 | `ARDUINO_API_KEY` | no | no | `""` | Only needed if the Arduino card-reader bridge is connected. Empty = endpoint disabled. |
+| `SERVER_URL` | **YES** (for QR payment) | no | `""` | Full base URL of the web_app deployment — no trailing slash. Used by `qr-generate` to build QR token URLs. Example: `https://juley2823.pythonanywhere.com`. **Note:** `app.pending_qr_token` is in-memory — it resets on process restart, clearing any pending QR. |
 | `TWILIO_ACCOUNT_SID` | no | no | `""` | SMS disabled when empty. All three Twilio vars must be set together. |
 | `TWILIO_AUTH_TOKEN` | no | no | `""` | Twilio auth token. |
 | `TWILIO_FROM` | no | no | `""` | Twilio sender number in **E.164 format** (e.g. `+12015551234`). |
