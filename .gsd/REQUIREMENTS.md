@@ -271,7 +271,7 @@ This file is the explicit capability and coverage contract for the project.
 - Source: user
 - Primary owning slice: M005/S01
 - Supporting slices: none
-- Validation: unmapped
+- Validation: contract verified (scripts/verify-m005-s01.sh exits 0); hardware integration (physical tap → POST 200) pending human verification
 
 ### R027 — OLED Replaces LCD on R4
 - Class: primary-user-loop
@@ -281,7 +281,7 @@ This file is the explicit capability and coverage contract for the project.
 - Source: user
 - Primary owning slice: M005/S01
 - Supporting slices: M005/S02
-- Validation: unmapped
+- Validation: Wire.h + OLED pin constants placeholder committed in S01; Adafruit_SSD1306 driver and display code deferred to S02
 
 ### R028 — QR Token Delivery to OLED via Arduino Polling
 - Class: primary-user-loop
@@ -321,7 +321,7 @@ This file is the explicit capability and coverage contract for the project.
 - Source: user
 - Primary owning slice: M005/S01
 - Supporting slices: none
-- Validation: unmapped
+- Validation: contract verified — R3 firmware and README confirmed PN532-free (scripts/verify-m005-s01.sh check [9/9]); no firmware changes needed (was already MFRC522); README updated to document RC522 hardware accurately
 
 ### R032 — Dead NFC/HCE Code Removed
 - Class: operability
@@ -405,12 +405,12 @@ This file is the explicit capability and coverage contract for the project.
 | R023 | continuity | validated | M003/S04 | none | validated |
 | R024 | operability | validated | M003/S04 | none | validated |
 | R025 | primary-user-loop | validated | M004/S01 | M004/S02 | validated (superseded by R026) |
-| R026 | primary-user-loop | active | M005/S01 | none | unmapped |
-| R027 | primary-user-loop | active | M005/S01 | M005/S02 | unmapped |
+| R026 | primary-user-loop | active | M005/S01 | none | contract verified; hardware tap pending |
+| R027 | primary-user-loop | active | M005/S01 | M005/S02 | S01 placeholder committed; S02 completes |
 | R028 | primary-user-loop | active | M005/S02 | none | unmapped |
 | R029 | primary-user-loop | active | M005/S03 | none | unmapped |
 | R030 | primary-user-loop | active | M005/S04 | none | unmapped |
-| R031 | operability | active | M005/S01 | none | unmapped |
+| R031 | operability | active | M005/S01 | none | contract verified; firmware already clean |
 | R032 | operability | active | M005/S05 | none | unmapped |
 | R033 | primary-user-loop | active | M005/S04 | none | unmapped |
 | R050 | integration | out-of-scope | none | none | n/a |

@@ -13,10 +13,10 @@ Physical RFID card tapped at the cashier counter completes a sale — balance de
 - Flask backend deployed on PythonAnywhere (dashboard app + API server)
 - Google Sheets as the primary datastore
 - Cashier browser UI with real-time SocketIO events
-- Arduino UNO R4 WiFi: currently uses PN532 (NFC/RFID) + LCD — WiFi card-read routing, heartbeat, WiFi badge all working (M003)
-- Arduino UNO R3: uses RC522 RFID — card registration and lost-card replacement only
-- Android app (student_app_v2): balance, transactions, FCM push, NFC HCE pay (being removed)
-- iOS app (mobile/ios/BankongSetonStudent): balance, transactions, FCM push — no payment method yet
+- Arduino UNO R4 WiFi: **RC522 MFRC522 firmware** (M005/S01 done) — WiFi card-read routing, heartbeat, WiFi badge preserved; OLED pin placeholder present; Adafruit_SSD1306 driver deferred to S02; directory renamed `bankongseton_r4/`
+- Arduino UNO R3: uses RC522 RFID — card registration and lost-card replacement only; README updated (M005/S01)
+- Android app (student_app_v2): balance, transactions, FCM push, NFC HCE pay (being removed in M005/S05)
+- iOS app (mobile/ios/BankongSetonStudent): balance, transactions, FCM push — no payment method yet (QR coming in M005/S04)
 
 ## Architecture / Key Patterns
 
@@ -24,7 +24,7 @@ Physical RFID card tapped at the cashier counter completes a sale — balance de
 - API Flask app: `backend/api/api_server.py` (student-facing REST)
 - Cache layer: `backend/cache.py` — get_cached/set_cached/invalidate_pattern
 - Offline queue: `backend/offline_queue.py` — SQLite WAL, syncs on reconnect
-- Arduino R4: `arduino/bankongseton_rfid/bankongseton_rfid.ino` (→ renamed `bankongseton_r4/` in M005)
+- Arduino R4: `arduino/bankongseton_r4/bankongseton_r4.ino` — RC522 MFRC522 firmware (M005/S01); OLED placeholder ready for S02
 - Arduino R3: `arduino/bankongseton_nfc_r3/bankongseton_nfc_r3.ino`
 - Android: `mobile/student_app_v2/` — Kotlin, Retrofit, Firebase FCM
 - iOS: `mobile/ios/BankongSetonStudent/` — SwiftUI, URLSession, no payment method pre-M005
