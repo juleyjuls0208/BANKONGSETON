@@ -248,32 +248,31 @@
 
                     </LinearLayout>
 
-                    <!-- NFC Pay (centre, larger) -->
+                    <!-- QR Pay (centre, larger) -->
                     <LinearLayout
-                        android:id="@+id/activateNfcPayButton"
+                        android:id="@+id/qrPayButton"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:orientation="vertical"
                         android:gravity="center"
                         android:background="?attr/selectableItemBackgroundBorderless"
-                        android:padding="8dp"
-                        android:visibility="gone">
+                        android:padding="8dp">
 
                         <com.google.android.material.card.MaterialCardView
                             android:layout_width="56dp"
                             android:layout_height="56dp"
                             app:cardCornerRadius="16dp"
                             app:cardElevation="0dp"
-                            app:cardBackgroundColor="?attr/colorTertiaryContainer">
+                            app:cardBackgroundColor="?attr/colorSecondaryContainer">
 
                             <ImageView
                                 android:layout_width="26dp"
                                 android:layout_height="26dp"
                                 android:layout_gravity="center"
-                                android:src="@android:drawable/stat_sys_data_bluetooth"
-                                android:tint="?attr/colorOnTertiaryContainer"
-                                android:contentDescription="@string/action_nfc_pay" />
+                                android:src="@android:drawable/ic_menu_camera"
+                                android:tint="?attr/colorOnSecondaryContainer"
+                                android:contentDescription="@string/action_qr_pay" />
 
                         </com.google.android.material.card.MaterialCardView>
 
@@ -281,7 +280,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="8dp"
-                            android:text="@string/action_nfc_pay"
+                            android:text="@string/action_qr_pay"
                             android:textAppearance="?attr/textAppearanceLabelMedium"
                             android:textColor="?attr/colorOnSurface" />
 

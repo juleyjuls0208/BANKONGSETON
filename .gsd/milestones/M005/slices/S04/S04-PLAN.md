@@ -29,6 +29,16 @@ bash scripts/verify-m005-s04.sh
 # All 12/12 checks must pass (exits 0)
 ```
 
+**Failure-state diagnostic checks (run when verify script has failures):**
+```bash
+# Check each major artifact exists — pinpoints which task's output is missing
+test -f mobile/student_app_v2/app/src/main/java/com/bankongseton/student/QRPayActivity.kt && echo "OK: QRPayActivity.kt" || echo "FAIL: QRPayActivity.kt missing — T02 incomplete"
+grep -q 'qrPayButton' mobile/student_app_v2/app/src/main/java/com/bankongseton/student/HomeActivity.kt && echo "OK: qrPayButton wired" || echo "FAIL: HomeActivity still uses activateNfcPayButton"
+grep -q 'android.permission.CAMERA' mobile/student_app_v2/app/src/main/AndroidManifest.xml && echo "OK: CAMERA permission" || echo "FAIL: CAMERA permission missing — QR scan will crash"
+test -f mobile/ios/BankongSetonStudent/Views/QR/QRPayView.swift && echo "OK: QRPayView.swift" || echo "FAIL: QRPayView.swift missing — T03 incomplete"
+grep -q 'AA000026' mobile/ios/BankongSetonStudent/BankongSetonStudent.xcodeproj/project.pbxproj && echo "OK: pbxproj has QR file entries" || echo "FAIL: pbxproj missing QR entries — iOS build will fail"
+```
+
 Build-level checks (run manually on dev machine with Android SDK / Xcode):
 ```bash
 # Android
@@ -62,7 +72,7 @@ xcodebuild -scheme BankongSetonStudent -sdk iphonesimulator build   # must exit 
   - Verify: `grep -q 'jwtToken' mobile/student_app_v2/app/src/main/java/com/bankongseton/student/Models.kt && grep -q 'saveJwtToken' mobile/student_app_v2/app/src/main/java/com/bankongseton/student/SecureStorage.kt && grep -q 'barcode-scanning' mobile/student_app_v2/app/build.gradle.kts && grep -q 'jwtToken' mobile/ios/BankongSetonStudent/Models/LoginModels.swift && grep -q 'jwt_token' mobile/ios/BankongSetonStudent/Core/Auth/AuthManager.swift`
   - Done when: All 5 greps pass; `getQrCart` and `confirmQrPayment` are declared in both `BangkoApiService` (Android) and `APIClient.swift` (iOS)
 
-- [ ] **T02: Build Android QRPayActivity — CameraX scanner, confirmation UI, HomeActivity wiring** `est:1h`
+- [x] **T02: Build Android QRPayActivity — CameraX scanner, confirmation UI, HomeActivity wiring** `est:1h`
   - Why: Implements the full Android QR payment user flow. Creates the new activity with ML Kit barcode scanning, cart confirmation view, error dialogs, and wires the always-visible "Scan QR" button in HomeActivity.
   - Files: `mobile/student_app_v2/app/src/main/java/com/bankongseton/student/QRPayActivity.kt` (new), `app/src/main/res/layout/activity_qr_pay.xml` (new), `HomeActivity.kt`, `app/src/main/res/layout/activity_home.xml`, `AndroidManifest.xml`, `app/src/main/res/values/strings.xml`
   - Do: See T02-PLAN.md

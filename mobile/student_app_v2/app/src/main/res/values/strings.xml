@@ -65,4 +65,10 @@
     <!-- Receipt -->
     <string name="nfc_receipt_label">NFC Payment</string>
     <string name="item_qty_format">×%d</string>
+
+    <!-- QR Pay -->
+    <string name="action_qr_pay">Scan QR</string>
+    <string name="qr_pay_scanning">Point camera at QR code on terminal</string>
+    <string name="qr_pay_confirm_title">Confirm Payment</string>
+    <string name="qr_pay_confirm_button">Pay Now</string>
 </resources>

@@ -453,6 +453,26 @@ test -f mobile/student_app_v2/app/src/main/java/com/bankongseton/student/QRPayAc
 test -f mobile/student_app_v2/app/src/main/res/layout/activity_qr_pay.xml && echo "OK: activity_qr_pay.xml exists"
 ```
 
+## Observability Impact
+
+**Signals added by this task:**
+- `Toast.makeText("Payment successful!")` — visible on-device confirmation that confirmQrPayment returned 200
+- `AlertDialog` with title "Payment Error" — surfaces 402/401/404/410 response codes as human-readable messages; visible in emulator/device UI
+- `setResult(RESULT_OK)` → `loadBalance()` chain in `HomeActivity` — updated balance in the hero card confirms the confirm round-trip succeeded
+
+**How a future agent inspects this task:**
+- Search for `QRPayActivity` in `AndroidManifest.xml` to confirm registration
+- Check `HomeActivity.kt` for `qrPayLauncher` and absence of `updateNfcButtonVisibility()` calls
+- Grep `activity_home.xml` for `qrPayButton` (not `activateNfcPayButton`) and absence of `visibility="gone"`
+- Grep `strings.xml` for `action_qr_pay` and `qr_pay_confirm_button`
+
+**Failure-state diagnostics:**
+- `QRPayActivity` crashes on launch → `CAMERA` permission missing in manifest, or CameraX/ML Kit not in `build.gradle.kts` (T01 incomplete)
+- Blank confirmation panel / no items → `item_receipt_line.xml` IDs don't match (`itemName`/`itemQty`/`itemPrice`)
+- 401 on `/api/qr/<token>` → `secureStorage.getJwtToken()` returned null → add `Log.d("JWT","jwt: ${secureStorage.getJwtToken()?.take(8)}")` in `fetchCart()` to confirm
+- `qrPayButton` not visible → check `activity_home.xml` for stale `android:visibility="gone"` attribute
+- Balance not refreshing after payment → check `qrPayLauncher` is registered before `onCreate()` returns and `loadBalance()` is called on `RESULT_OK`
+
 ## Inputs
 
 - T01 must be complete: `QrCartResponse`, `QrConfirmRequest`, `QrConfirmResponse` exist in `Models.kt`; `SecureStorage.getJwtToken()` is available; `BangkoApiService.getQrCart()` and `confirmQrPayment()` are declared; CameraX + ML Kit in `build.gradle.kts`

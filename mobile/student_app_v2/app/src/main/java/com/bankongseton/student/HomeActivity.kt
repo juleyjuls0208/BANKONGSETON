@@ -37,6 +37,7 @@ class HomeActivity : AppCompatActivity() {
     private lateinit var swipeRefresh: SwipeRefreshLayout
     private lateinit var progressBar: android.widget.ProgressBar
     private lateinit var activateNfcPayButton: LinearLayout
+    private lateinit var qrPayButton: LinearLayout
     private lateinit var bannerLostCard: MaterialCardView
     private lateinit var recentTransactionsContainer: LinearLayout
     private lateinit var emptyRecentState: LinearLayout
@@ -58,6 +59,14 @@ class HomeActivity : AppCompatActivity() {
         }
     }
 
+    private val qrPayLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            loadBalance()
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_home)
@@ -75,7 +84,7 @@ class HomeActivity : AppCompatActivity() {
         settingsButton = findViewById(R.id.settingsButton)
         swipeRefresh = findViewById(R.id.swipeRefresh)
         progressBar = findViewById(R.id.progressBar)
-        activateNfcPayButton = findViewById(R.id.activateNfcPayButton)
+        qrPayButton = findViewById(R.id.qrPayButton)
         bannerLostCard = findViewById(R.id.bannerLostCard)
         recentTransactionsContainer = findViewById(R.id.recentTransactionsContainer)
         emptyRecentState = findViewById(R.id.emptyRecentState)
@@ -104,8 +113,8 @@ class HomeActivity : AppCompatActivity() {
             startActivity(Intent(this, SettingsActivity::class.java))
         }
 
-        activateNfcPayButton.setOnClickListener {
-            onNfcPayClicked()
+        qrPayButton.setOnClickListener {
+            launchQrPay()
         }
 
         btnSetBudget.setOnClickListener {
@@ -121,12 +130,10 @@ class HomeActivity : AppCompatActivity() {
         loadBalance()
         loadRecentTransactions()
         loadBudget()
-        updateNfcButtonVisibility()
     }
 
     override fun onResume() {
         super.onResume()
-        updateNfcButtonVisibility()
         checkBudgetMonthReset()
         loadBudget()
         checkLostCardStatus()
@@ -371,6 +378,12 @@ class HomeActivity : AppCompatActivity() {
     private fun updateNfcButtonVisibility() {
         val show = nfcManager.isNfcAvailable() && nfcManager.isNfcEnabled()
         activateNfcPayButton.isVisible = show
+    }
+
+    // ── QR Pay ────────────────────────────────────────────────────────────────
+
+    private fun launchQrPay() {
+        qrPayLauncher.launch(Intent(this, QRPayActivity::class.java))
     }
 
     private fun onNfcPayClicked() {
