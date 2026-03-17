@@ -1,5 +1,5 @@
 ---
-verdict: complete
+verdict: needs-attention
 hardware_uat_pending: false
 remediation_round: 0
 ---
