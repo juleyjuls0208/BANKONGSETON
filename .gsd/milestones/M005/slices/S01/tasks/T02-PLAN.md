@@ -115,3 +115,21 @@ Two independent deliverables that close out the slice:
 
 - `arduino/bankongseton_nfc_r3/README.md` — rewritten to accurately describe RC522 hardware
 - `scripts/verify-m005-s01.sh` — executable script that exits 0 when all S01 outputs are correct
+
+## Observability Impact
+
+**Signals introduced by this task:**
+- `bash scripts/verify-m005-s01.sh` — the primary CI-able signal; exits 0 = all S01 contracts met, non-zero exit = specific failing check printed to stdout
+- Each check prints `[N/9] <description>...` before the assertion, so a failure is pinpointed to a numbered step in the script output
+
+**Inspection surfaces:**
+- `scripts/verify-m005-s01.sh` stdout — run from project root to see all 9 check results in sequence
+- `arduino/bankongseton_nfc_r3/README.md` — human-readable reference for actual R3 hardware wiring; no runtime signals but prevents future confusion about PN532 vs RC522
+
+**Failure visibility:**
+- Script fails at step N → stdout shows `[N/9] <description>...` then the `set -e` trap exits non-zero
+- Common failure: check [9/9] fails → README or R3 firmware still contains `PN532`/`pn532` text
+- Check [1/9] or [2/9] fail → T01 did not complete; firmware or secrets.h missing
+- Check [3/9] fails → old `bankongseton_rfid/` directory was not deleted
+
+**No runtime firmware signals** — this task only produces static files (README + verify script); all runtime signals for the slice come from T01's firmware.

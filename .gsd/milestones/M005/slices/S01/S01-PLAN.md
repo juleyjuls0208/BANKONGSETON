@@ -63,7 +63,7 @@
   - Verify: `test -f arduino/bankongseton_r4/bankongseton_r4.ino && ! test -d arduino/bankongseton_rfid && ! grep -qE 'PN532|pn532|lcd_|LCD_SDA|httpPostNFC|inDataExchange' arduino/bankongseton_r4/bankongseton_r4.ino`
   - Done when: File exists, old directory gone, no PN532/LCD/APDU symbols in new firmware
 
-- [ ] **T02: Fix R3 README and write verify script** `est:20m`
+- [x] **T02: Fix R3 README and write verify script** `est:20m`
   - Why: R3 README still documents PN532 hardware; verify script provides CI-able proof of the entire slice's contract
   - Files: `arduino/bankongseton_nfc_r3/README.md`, `scripts/verify-m005-s01.sh`
   - Do: Rewrite R3 README to reflect actual RC522 hardware and MFRC522 library. Write verify script with all grep/test checks per the task plan.

@@ -1,8 +1,8 @@
-# BANKONGSETON NFC Reader — Arduino UNO R3 (PN532 over SPI)
+# BANKONGSETON RFID Registration Reader — Arduino UNO R3 (RC522 over SPI)
 
-This sketch runs on an **Arduino UNO R3** with a **PN532 NFC module** connected via SPI. It reads NFC card UIDs and sends them over Serial for the Python `ArduinoBridge` to process payments.
+Reads physical RFID cards via RC522 over SPI and emits `CARD|<UID-HEX>` over Serial for the Python `ArduinoBridge` to process card registrations.
 
-> **Differences from the R4 WiFi sketch:** Serial-only delivery (no HTTP/WiFi), PN532 NFC module instead of MFRC522 RFID, UNO R3 pinout.
+> **Differences from the R4 WiFi sketch:** Serial-only delivery (no HTTP/WiFi), RC522 RFID module over SPI, UNO R3 pinout.
 
 ---
 
@@ -11,7 +11,7 @@ This sketch runs on an **Arduino UNO R3** with a **PN532 NFC module** connected 
 | Component | Notes |
 |-----------|-------|
 | Arduino UNO R3 | Any genuine or clone UNO R3 |
-| PN532 NFC/RFID module | Adafruit PN532 shield/breakout, or compatible |
+| RC522 RFID module | Any standard RC522 breakout board (3.3V) |
 | 16x2 LCD with PCF8574 I2C backpack | Most "I2C LCD" modules use PCF8574 |
 | Piezo buzzer | Passive or active (both work with `tone()`) |
 
@@ -19,16 +19,15 @@ This sketch runs on an **Arduino UNO R3** with a **PN532 NFC module** connected 
 
 ## Wiring
 
-### PN532 NFC Module → Arduino UNO R3
+### RC522 RFID Module → Arduino UNO R3
 
-> **SPI mode selection:** On the Adafruit PN532 board, set the DIP switches to **SEL0 = LOW (0), SEL1 = HIGH (1)** before wiring.
-
-| PN532 Pin | Arduino UNO R3 |
+| RC522 Pin | Arduino UNO R3 |
 |-----------|----------------|
-| NSS / CS  | D10            |
+| SDA/SS    | D10 (RC522_SS) |
 | MOSI      | D11            |
 | MISO      | D12            |
 | SCK       | D13            |
+| RST       | D8 (RC522_RST) |
 | VCC       | 3.3V           |
 | GND       | GND            |
 
@@ -58,8 +57,7 @@ Install via **Arduino IDE → Tools → Manage Libraries…**:
 
 | Library | Author | Notes |
 |---------|--------|-------|
-| **Adafruit PN532** | Adafruit | NFC reader driver |
-| **Adafruit BusIO** | Adafruit | Required dependency of Adafruit PN532 |
+| **MFRC522** | GithubCommunity (miguelbalboa/rfid) | RFID reader driver |
 
 > **No extra library for LCD.** The sketch uses an inline bit-bang I2C + PCF8574 driver (~70 lines) — nothing to install.
 
@@ -105,10 +103,11 @@ This line is used by `ArduinoBridge` to detect that the Arduino has booted.
 |-----|----------|
 | D6  | LCD SDA (software I2C) |
 | D7  | LCD SCL (software I2C) |
+| D8  | RC522 RST |
 | D9  | Piezo buzzer |
-| D10 | PN532 NSS/CS (SPI) |
+| D10 | RC522 SDA/SS (SPI) |
 | D11 | SPI MOSI (hardware, shared) |
 | D12 | SPI MISO (hardware, shared) |
 | D13 | SPI SCK (hardware, shared) |
-| 3.3V | PN532 VCC |
+| 3.3V | RC522 VCC |
 | 5V  | LCD backpack VCC |
