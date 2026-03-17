@@ -38,14 +38,18 @@
  *   - WiFiS3 (built-in for UNO R4 WiFi)
  *   - Wire (built-in)
  *   - SPI (built-in)
- *
- * Adafruit_SSD1306 is NOT included here — deferred to S02.
+ *   - "Adafruit SSD1306" by Adafruit
+ *   - "Adafruit GFX Library" by Adafruit
+ *   - "QRCode" by Richard Moore (ricmoo/qrcode)
  * ═══════════════════════════════════════════════════════════════
  */
 
 #include <SPI.h>
 #include <MFRC522.h>
 #include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+#include "qrcode.h"   // ricmoo/qrcode — QRCode, qrcode_initText, qrcode_getModule
 #include <WiFiS3.h>
 #include "secrets.h"
 
@@ -56,11 +60,12 @@
 // ── RC522 instance ───────────────────────────────────────────────
 MFRC522 rfid(RC522_SS, RC522_RST);
 
-// ── OLED placeholder (S02 will complete this) ────────────────────
+// ── OLED (SSD1306, I2C) ──────────────────────────────────────────
 #define OLED_WIDTH  128
 #define OLED_HEIGHT  64
 #define OLED_ADDR   0x3C
-// TODO S02: add #include <Adafruit_SSD1306.h>, Adafruit_SSD1306 display(...), and display.begin() here
+
+Adafruit_SSD1306 display(OLED_WIDTH, OLED_HEIGHT, &Wire, -1);
 
 // ── Piezo ────────────────────────────────────────────────────────
 #define PIEZO_PIN    9   // Passive or active piezo buzzer
@@ -266,9 +271,118 @@ void handleIncomingSerial() {
 // ── Heartbeat state ──────────────────────────────────────────────
 static unsigned long lastHeartbeatMs = 0;  // tracks last POST /api/arduino/heartbeat; file-scope so it survives across loop() calls
 
+// ── QR poll state ────────────────────────────────────────────────
+static const int     QR_POLL_INTERVAL_MS = 500;
+static unsigned long lastQrPollMs = 0;
+static String        lastQrUrl    = "";
+
 // ═══════════════════════════════════════════════════════════════
 // ARDUINO LIFECYCLE
 // ═══════════════════════════════════════════════════════════════
+
+void oledShowReady() {
+  display.clearDisplay();
+  display.setTextSize(2);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(22, 24);  // roughly centered on 128×64
+  display.print("Ready");
+  display.display();
+}
+
+void renderQr(const String &url) {
+  // Try versions 1–7 until the URL fits (ECC_LOW capacity: V1=17 … V7=154 bytes)
+  QRCode qrcode;
+  uint8_t qrData[qrcode_getBufferSize(7)];
+  int usedVersion = -1;
+  for (int v = 1; v <= 7; v++) {
+    if (qrcode_initText(&qrcode, qrData, v, ECC_LOW, url.c_str()) == true) {
+      usedVersion = v;
+      break;
+    }
+  }
+  if (usedVersion < 0) {
+    Serial.println("QR: version too small for URL length — max 154 chars (V7 ECC-L)");
+    oledShowReady();
+    return;
+  }
+  // Auto-scale: 2px/module if it fits in OLED_HEIGHT, else 1px
+  uint8_t scale = (qrcode.size * 2 <= OLED_HEIGHT) ? 2 : 1;
+  // Center on display
+  uint8_t xOff = (OLED_WIDTH  - qrcode.size * scale) / 2;
+  uint8_t yOff = (OLED_HEIGHT - qrcode.size * scale) / 2;
+  display.clearDisplay();
+  for (uint8_t y = 0; y < qrcode.size; y++) {
+    for (uint8_t x = 0; x < qrcode.size; x++) {
+      if (qrcode_getModule(&qrcode, x, y)) {
+        if (scale == 1) {
+          display.drawPixel(xOff + x, yOff + y, SSD1306_WHITE);
+        } else {
+          // 2×2 block per module
+          display.drawPixel(xOff + x*2,   yOff + y*2,   SSD1306_WHITE);
+          display.drawPixel(xOff + x*2+1, yOff + y*2,   SSD1306_WHITE);
+          display.drawPixel(xOff + x*2,   yOff + y*2+1, SSD1306_WHITE);
+          display.drawPixel(xOff + x*2+1, yOff + y*2+1, SSD1306_WHITE);
+        }
+      }
+    }
+  }
+  display.display();  // flush entire framebuffer ONCE — never inside the pixel loop
+  Serial.print("QR: rendering v");
+  Serial.print(usedVersion);
+  Serial.print(" scale=");
+  Serial.print(scale);
+  Serial.print("px url=");
+  Serial.println(url);
+}
+
+// Sends HTTP GET with X-API-Key header; reads through all headers (until blank line);
+// returns body string. Returns "" on failure.
+String httpGetBody(const String &path) {
+  WiFiClient client;
+  String host = String(FLASK_HOST);
+  int colonIdx = host.indexOf(':');
+  String ip   = (colonIdx >= 0) ? host.substring(0, colonIdx) : host;
+  int    port  = (colonIdx >= 0) ? host.substring(colonIdx + 1).toInt() : 80;
+
+  if (!client.connect(ip.c_str(), port)) return "";
+
+  client.println("GET " + path + " HTTP/1.0");
+  client.println("Host: " + String(FLASK_HOST));
+  client.println("X-API-Key: " + String(SECRET_API_KEY));
+  client.println("Connection: close");
+  client.println();
+
+  unsigned long start = millis();
+  while (!client.available() && millis() - start < HTTP_TIMEOUT_MS) delay(10);
+
+  // Skip headers: read lines until blank line (\r\n or \n only)
+  while (client.available()) {
+    String line = client.readStringUntil('\n');
+    line.trim();
+    if (line.length() == 0) break;  // blank line = end of headers
+  }
+
+  // Read body (first non-empty line after headers)
+  String body = "";
+  unsigned long bodyStart = millis();
+  while (client.available() && millis() - bodyStart < 2000) {
+    body = client.readStringUntil('\n');
+    body.trim();
+    if (body.length() > 0) break;
+  }
+  client.stop();
+  return body;
+}
+
+// Extracts "url" value from {"token":"...","url":"..."} or returns "" for {"token":null}.
+String parseQrUrl(const String &json) {
+  int idx = json.indexOf("\"url\":\"");
+  if (idx < 0) return "";
+  int start = idx + 7;  // length of "\"url\":\""
+  int end   = json.indexOf('"', start);
+  if (end < 0) return "";
+  return json.substring(start, end);
+}
 
 void setup() {
   // 1. Serial at 9600 baud — ArduinoBridge expects this rate
@@ -289,8 +403,18 @@ void setup() {
     while (1) delay(1000);  // halt — cannot continue without RFID reader
   }
 
-  // 5. Wire.begin() for I2C bus — OLED driver will be added in S02
+  // 5. Wire.begin() for I2C bus
   Wire.begin();
+
+  // 5b. OLED init (SSD1306, I2C)
+  if (!display.begin(SSD1306_SWITCHCAPVCC, OLED_ADDR)) {
+    Serial.println("OLED: init failed 0x3C — check I2C wiring (non-fatal)");
+    // Continue — RFID payment still works without OLED
+  } else {
+    display.clearDisplay();
+    display.display();
+    oledShowReady();
+  }
 
   // 6. WiFi connect
   connectWiFi();
@@ -312,6 +436,22 @@ void loop() {
     lastHeartbeatMs = now;
     ensureWiFi();
     httpPostJson("/api/arduino/heartbeat", "{\"status\":\"ok\"}");
+  }
+
+  // ── QR poll: fetch and render pending QR from backend ──
+  if (now - lastQrPollMs >= (unsigned long)QR_POLL_INTERVAL_MS) {
+    lastQrPollMs = now;
+    String body   = httpGetBody("/api/arduino/qr-pending");
+    String qrUrl  = parseQrUrl(body);
+    if (qrUrl != lastQrUrl) {
+      lastQrUrl = qrUrl;
+      if (qrUrl.length() == 0) {
+        oledShowReady();
+        Serial.println("QR: idle (Ready)");
+      } else {
+        renderQr(qrUrl);
+      }
+    }
   }
 
   // Wait for a card to be present — early-exit if none
@@ -343,6 +483,17 @@ void loop() {
   unsigned long cooldownEnd = millis() + SCAN_COOLDOWN_MS;
   while (millis() < cooldownEnd) {
     handleIncomingSerial();
+    unsigned long now2 = millis();
+    if (now2 - lastQrPollMs >= (unsigned long)QR_POLL_INTERVAL_MS) {
+      lastQrPollMs = now2;
+      String body  = httpGetBody("/api/arduino/qr-pending");
+      String qrUrl = parseQrUrl(body);
+      if (qrUrl != lastQrUrl) {
+        lastQrUrl = qrUrl;
+        if (qrUrl.length() == 0) { oledShowReady(); Serial.println("QR: idle (Ready)"); }
+        else                     { renderQr(qrUrl); }
+      }
+    }
     delay(50);
   }
 }

@@ -22,6 +22,7 @@
 
 - `bash scripts/verify-m005-s02.sh` — exits 0 with all 9 checks passing
 - Human UAT: flash firmware → Serial Monitor shows `BANKONGSETON RFID reader ready` → OLED shows "Ready" → uncomment hardcoded test URL call in `setup()` → scan with Android/iOS camera → confirms scannable → re-flash without stub
+- **Failure-path / diagnostic check:** If OLED is absent or mis-wired, Arduino Serial Monitor at 9600 baud must print `OLED: init failed 0x3C — check I2C wiring (non-fatal)` and continue booting (RFID still works). Verify by disconnecting OLED I2C lines and checking Serial output. If a URL exceeds 154 chars, Serial must print `QR: version too small for URL length — max 154 chars (V7 ECC-L)` and fall back to "Ready" display. If `/api/arduino/qr-pending` is unreachable, `httpGetBody` returns "" → `parseQrUrl` returns "" → `oledShowReady()` is called — no crash.
 
 ## Observability / Diagnostics
 
@@ -37,7 +38,7 @@
 
 ## Tasks
 
-- [ ] **T01: Add OLED driver, QR render, and poll loop to R4 firmware** `est:1h`
+- [x] **T01: Add OLED driver, QR render, and poll loop to R4 firmware** `est:1h`
   - Why: Core S02 deliverable — activates the OLED and implements the QR polling/rendering loop that R027 and R028 require
   - Files: `arduino/bankongseton_r4/bankongseton_r4.ino`
   - Do: Replace `// TODO S02` comment with `Adafruit_SSD1306.h`/`qrcode.h` includes and display global; add `oledShowReady()`, `renderQr()`, `httpGetBody()`, `parseQrUrl()` functions; add OLED init to `setup()`; add QR poll block to main `loop()` and inside cooldown `while` loop; add QR poll globals — see T01-PLAN.md for full steps and constraints
