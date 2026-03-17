@@ -339,6 +339,17 @@
                 completeNFCSale(data.token);
             });
 
+            socket.on('qr_payment', function(data) {
+                document.getElementById('paymentModal').style.display = 'flex';
+                document.getElementById('modalTitle').textContent = 'QR Payment Received!';
+                document.getElementById('modalMessage').textContent =
+                    'New Balance: \u20B1' + data.new_balance.toFixed(2);
+                cart = [];
+                renderCart();
+                checkQueueStatus();
+                setTimeout(function() { closeModal(); }, 2000);
+            });
+
             socket.on('arduino_wifi_status', function(data) {
                 updateWifiBadge(data);
             });

@@ -12,6 +12,7 @@ import os
 import sys
 import logging
 import time
+import json
 
 from dotenv import load_dotenv
 load_dotenv()  # must run before any module-level os.getenv() calls in blueprints
@@ -354,6 +355,149 @@ def qr_cart(token):
         "cashier": t["cashier_username"],
     }), 200
 
+
+@app.route("/api/qr/confirm", methods=["POST"])
+def qr_confirm():
+    """Student confirms QR payment. Debits balance and notifies cashier."""
+    auth_header = request.headers.get("Authorization", "")
+    token_str = auth_header.replace("Bearer ", "").strip()
+    payload = _decode_student_jwt(token_str)
+    if not payload:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    data = request.get_json() or {}
+    token_param = data.get("token", "")
+    t = app.pending_qr_token
+
+    if t is None or t["token"] != token_param:
+        return jsonify({"error": "QR expired or not found"}), 404
+    if time.time() - t["created_at"] > 300:
+        app.pending_qr_token = None
+        return jsonify({"error": "QR token expired"}), 410
+
+    student_id = str(payload.get("user_id", "")).strip()
+    items = t["cart_snapshot"]
+    total = t["total"]
+
+    try:
+        db = get_sheets_client()
+
+        # 1. Look up MoneyCardNumber from Users sheet
+        users_sheet = db.worksheet("Users")
+        user_records = users_sheet.get_all_records()
+        money_card_number = None
+        matched_user = None
+        for user in user_records:
+            if str(user.get("StudentID", "")).strip() == student_id:
+                money_card_number = str(user.get("MoneyCardNumber", "")).strip()
+                matched_user = user
+                break
+
+        if not money_card_number:
+            return jsonify({"error": "Student not found"}), 404
+
+        # 2. Read Money Accounts fresh — no cache (D018)
+        money_sheet = db.worksheet("Money Accounts")
+        money_records = money_sheet.get_all_records()
+        account_row = None
+        current_balance = 0.0
+        card_status = ""
+        for idx, record in enumerate(money_records, start=2):
+            if str(record.get("MoneyCardNumber", "")).strip() == money_card_number:
+                account_row = idx
+                current_balance = float(record.get("Balance", 0))
+                card_status = record.get("Status", "").strip().lower()
+                break
+
+        if not account_row:
+            return jsonify({"error": "Money account not found"}), 404
+        if card_status == "lost":
+            return jsonify({"error": "Card reported as lost"}), 403
+        if card_status != "active":
+            return jsonify({"error": f"Card is {card_status}"}), 403
+        if current_balance < total:
+            return jsonify({"error": "Insufficient funds", "balance": current_balance, "required": total}), 402
+
+        # 3. Debit with retry + rollback (clones complete_sale pattern)
+        MAX_RETRIES = 3
+        new_balance = current_balance - total
+        balance_deducted = False
+        last_error = None
+        timestamp = get_philippines_time().strftime("%Y-%m-%d %H:%M:%S")
+        transaction_row = [
+            timestamp, money_card_number, "QR Purchase",
+            -total, new_balance, "Success", json.dumps(items)
+        ]
+
+        for attempt in range(1, MAX_RETRIES + 1):
+            try:
+                if not balance_deducted:
+                    money_sheet.update_cell(account_row, 3, new_balance)
+                    balance_deducted = True
+                trans_sheet = db.worksheet("Transactions Log")
+                trans_sheet.append_row(transaction_row)
+                last_error = None
+                break
+            except (gspread.exceptions.APIError, ConnectionError, TimeoutError) as e:
+                last_error = e
+                logger.warning("qr_confirm attempt %d/%d failed: %s", attempt, MAX_RETRIES, e)
+                if attempt < MAX_RETRIES:
+                    time.sleep(2 ** attempt)
+                else:
+                    if balance_deducted:
+                        try:
+                            money_sheet.update_cell(account_row, 3, current_balance)
+                            logger.error("qr_confirm: rolled back balance for student %s", student_id)
+                        except Exception as rollback_err:
+                            logger.error("qr_confirm: CRITICAL rollback failed: %s", rollback_err)
+                    try:
+                        from offline_queue import get_offline_queue
+                        q = get_offline_queue()
+                        q.enqueue("append_row", "Transactions Log", transaction_row)
+                        logger.info("event=qr_offline_queued student=%s total=%.2f", student_id, total)
+                    except Exception as qe:
+                        logger.error("event=qr_offline_queue_failed error=%s", qe)
+                    # Emit to cashier and clear token before returning
+                    socketio.emit("qr_payment", {
+                        "success": True, "new_balance": new_balance,
+                        "timestamp": timestamp, "total": total,
+                        "cashier": t["cashier_username"], "offline": True,
+                    })
+                    app.pending_qr_token = None
+                    return jsonify({"success": True, "new_balance": new_balance,
+                                    "timestamp": timestamp, "offline": True})
+
+        if last_error:
+            return jsonify({"error": "Service unavailable, please try again"}), 503
+
+        # 4. Emit BEFORE clearing token (emit then clear)
+        socketio.emit("qr_payment", {
+            "success": True, "new_balance": new_balance,
+            "timestamp": timestamp, "total": total,
+            "cashier": t["cashier_username"],
+        })
+        app.pending_qr_token = None
+        logger.info("event=qr_confirm student=%s total=%.2f new_balance=%.2f", student_id, total, new_balance)
+
+        # 5. Non-fatal FCM push (clones complete_sale pattern)
+        try:
+            if matched_user:
+                fcm_token = str(matched_user.get("FCMToken", "")).strip()
+                if fcm_token:
+                    from api.fcm_sender import send_purchase_push
+                    send_purchase_push(fcm_token, total, new_balance)
+        except Exception:
+            pass
+
+        return jsonify({"success": True, "new_balance": new_balance, "timestamp": timestamp})
+
+    except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
+            gspread.exceptions.WorksheetNotFound, ConnectionError, TimeoutError) as e:
+        logger.error("Google Sheets unavailable in qr_confirm: %s", e)
+        return jsonify({"error": "Service unavailable, please try again"}), 503
+    except Exception as e:
+        logger.error("Unexpected error in qr_confirm: %s", e, exc_info=True)
+        return jsonify({"error": "An unexpected error occurred"}), 500
 
 
 # ============= AUTH HELPERS =============

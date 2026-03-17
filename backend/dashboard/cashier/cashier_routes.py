@@ -12,6 +12,7 @@ import re
 import gspread
 import logging
 import time
+import uuid
 
 try:
     import sys as _sys
@@ -900,3 +901,30 @@ def queue_sync():
     except Exception as e:
         logger.error(f"queue_sync error: {e}", exc_info=True)
         return jsonify({'error': 'An unexpected error occurred'}), 500
+
+
+@cashier_bp.route('/api/qr-generate', methods=['POST'])
+@jwt_required(roles=['cashier', 'admin'])
+def qr_generate():
+    """Generate a QR payment token and store it as the pending QR."""
+    from flask import current_app
+    data = request.get_json() or {}
+    items = data.get('items', [])
+    total = float(data.get('total', 0))
+    if not items or total <= 0:
+        return jsonify({'error': 'Invalid cart'}), 400
+    server_url = os.getenv('SERVER_URL', '').rstrip('/')
+    if not server_url:
+        return jsonify({'error': 'SERVER_URL not configured'}), 500
+    token = str(uuid.uuid4())
+    url = f"{server_url}/api/qr/{token}"
+    current_app.pending_qr_token = {
+        'token': token,
+        'url': url,
+        'cart_snapshot': items,
+        'total': total,
+        'created_at': time.time(),
+        'cashier_username': request.user.get('username', ''),
+    }
+    logger.info("event=qr_generate token=%s total=%.2f", token, total)
+    return jsonify({'token': token, 'url': url})
