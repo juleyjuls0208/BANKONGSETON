@@ -4,72 +4,6 @@ This file is the explicit capability and coverage contract for the project.
 
 ## Validated
 
-### R014 — Requirements File Completeness
-- Class: operability
-- Status: validated
-- Description: Both Flask apps install cleanly from their requirements files on a fresh virtualenv with no missing packages and no file errors
-- Why it matters: The api requirements file is missing gspread, firebase-admin, twilio, and bcrypt — a fresh api server deploy fails silently on multiple paths today; dashboard requirements.txt has an unresolved merge conflict that makes it invalid
-- Source: execution
-- Primary owning slice: M002/S01
-- Supporting slices: none
-- Validation: pip install --dry-run exits 0 on both backend/dashboard/requirements.txt and backend/api/requirements_api.txt; no merge conflict markers; all required packages present
-- Notes: Merge conflict (<<<< ==== >>>>) resolved; bcrypt>=4.0.0 and twilio>=9.0.0 both present in dashboard; six previously-missing packages added to api requirements
-
-### R015 — Cache Layer Coverage
-- Class: quality-attribute
-- Status: validated
-- Description: Hot Sheets-reading endpoints (product list, student list, money accounts, transaction recent, analytics summary) serve from cache on repeated requests; mutations (complete_sale, load_balance, void_transaction) invalidate the relevant cache keys
-- Why it matters: admin_dashboard.py has 2 cached calls vs 100 raw Sheets calls; cashier_routes.py has 0 cached; api_server.py has 8 cached vs 47 raw — Sheets quota (60 req/min) will be hit during lunch rush
-- Source: execution
-- Primary owning slice: M002/S02
-- Supporting slices: none
-- Validation: bash scripts/verify-s02.sh — 32/32 checks pass; get_cached/set_cached wired to five admin hot endpoints and three cashier/API endpoints; invalidate_pattern wired to six mutation handlers; balance-deduction reads explicitly uncached; python -m py_compile exits 0 on all three files
-- Notes: backend/cache.py is a solid 254-line implementation — wiring work only, no new cache logic needed; balance reads in payment flows (complete_sale, process_cashier_transaction, nfc_pay) intentionally NOT cached to prevent overdraft
-
-### R016 — FraudDetector Worker Safety
-- Class: failure-visibility
-- Status: validated
-- Description: Admin server refuses to start if gunicorn workers > 1 with a clear human-readable error explaining the single-worker constraint
-- Why it matters: _fraud_sheets_initialized is a module-level bool — each gunicorn worker gets its own copy, producing split-brain alert state silently
-- Source: execution
-- Primary owning slice: M002/S03
-- Supporting slices: none
-- Validation: WEB_CONCURRENCY guard at module level in web_app.py and admin_dashboard.py; both WEB_CONCURRENCY and GUNICORN_WORKERS checked; _parse_worker_count helper defaults to 1 on empty/invalid; guard message present in both files; sys.exit(1) confirmed; verify-s03.sh checks 5–8 pass
-- Notes: Hard-fail approach chosen over multi-worker refactor; single-worker is acceptable for current PythonAnywhere deployment scale
-
-### R017 — Critical Path Unit Tests
-- Class: quality-attribute
-- Status: validated
-- Description: ~35 unit tests cover complete_sale, load_balance, void_transaction, and cashier login auth with a mocked Sheets client — zero live Sheets calls, completes in under 10 seconds
-- Why it matters: admin_dashboard.py and cashier_routes.py are ~3000 lines combined and currently 0% unit-tested; untested money-moving code is the highest operational risk
-- Source: execution
-- Primary owning slice: M002/S04
-- Supporting slices: none
-- Validation: pytest tests/test_cashier_routes.py tests/test_admin_critical.py exits 0; 35 tests; 2.40s; zero live Sheets calls (all worksheet mocks); money-moving arithmetic verified (new_balance assertions on complete_sale, load_balance, void_transaction)
-- Notes: Bar is risk-based (money-moving paths), not metric-based; broad 60%+ coverage is out of scope for this milestone. Production bugfix discovered: transaction_row pre-built before retry loop in complete_sale (offline fallback UnboundLocalError)
-
-### R018 — Health Check Standardization
-- Class: failure-visibility
-- Status: validated
-- Description: Both app health endpoints return structured JSON with sheets_ok, latency_ms, and queue_pending fields; both return 503 when Sheets is unreachable
-- Why it matters: api_server.py health check returns {"status": "ok"} unconditionally — hardcoded, no real check; admin_dashboard.py has a rich HealthMonitor but currently returns 200 even when Sheets is down
-- Source: execution
-- Primary owning slice: M002/S03
-- Supporting slices: none
-- Validation: All three health handlers (dashboard_core.py, admin_dashboard.py, api_server.py) return {status, sheets_ok, latency_ms, queue_pending, timestamp}; 503 on Sheets failure confirmed in dashboard_core.py and api_server.py; verify-s03.sh checks 9–18 pass; all four files compile cleanly
-- Notes: api_server.py health uses fresh get_sheets_client() per request (not stale module-level db); latency_ms=0 is a sentinel for client-not-initialized
-
-### R019 — Deployment Runbook
-- Class: operability
-- Status: validated
-- Description: docs/DEPLOY.md covers PythonAnywhere setup, required env vars, Sheets service account config, first-run migration steps, health check sequence, and known operational constraints
-- Why it matters: No runbook exists; backend/api/wsgi.py targets PythonAnywhere but the setup steps, env vars, and first-run sequence are undocumented
-- Source: execution
-- Primary owning slice: M002/S05
-- Supporting slices: none
-- Validation: test -f docs/DEPLOY.md exits 0; all 8 grep checks pass (FLASK_SECRET_KEY, WEB_CONCURRENCY, E.164, migrate_transactions.py, queue_pending, offline_queue.db, firebase-credentials.json, YOUR_USERNAME); 11-section runbook covers env vars (22 Dashboard + 10 API vars), WSGI corrected templates, startup guard quick-reference, health check failure-interpretation table, and all 8 known operational constraints
-- Notes: Audience is the developer (Python/git familiar); no screenshots required; single-worker constraint, E.164 phone format requirement, and offline queue behavior on fresh deploy all documented in Known Operational Constraints section
-
 ### R001 — Fraud Alerts Admin UI
 - Class: failure-visibility
 - Status: validated
@@ -112,7 +46,7 @@ This file is the explicit capability and coverage contract for the project.
 - Primary owning slice: M001/S02
 - Supporting slices: none
 - Validation: validated
-- Notes: Three NFC SMS bugs fixed (wrong field name, wrong kwarg, missing send_purchase_sms call); twilio added to requirements_api.txt.
+- Notes: Three NFC SMS bugs fixed; twilio added to requirements_api.txt.
 
 ### R005 — Cashier Account Management
 - Class: admin/support
@@ -134,7 +68,6 @@ This file is the explicit capability and coverage contract for the project.
 - Primary owning slice: M001/S03
 - Supporting slices: none
 - Validation: validated
-- Notes: POST /api/admin/transactions/<txn_id>/void verified; double-void guard in place; void modal in transactions.html.
 
 ### R007 — Offline Cashier Queue
 - Class: continuity
@@ -145,7 +78,6 @@ This file is the explicit capability and coverage contract for the project.
 - Primary owning slice: M001/S04
 - Supporting slices: none
 - Validation: validated
-- Notes: SQLiteWriteQueue (WAL mode) in offline_queue.py; complete_sale() fallback verified; /cashier/api/queue/status endpoint live.
 
 ### R008 — Cashier Quick-Pay Shortcut
 - Class: primary-user-loop
@@ -156,7 +88,6 @@ This file is the explicit capability and coverage contract for the project.
 - Primary owning slice: M001/S04
 - Supporting slices: none
 - Validation: validated
-- Notes: Quick Pay button per product tile in cashier_index.html; single-item payload to complete_sale().
 
 ### R009 — Push Notification for Every Transaction
 - Class: integration
@@ -167,7 +98,6 @@ This file is the explicit capability and coverage contract for the project.
 - Primary owning slice: M001/S05
 - Supporting slices: none
 - Validation: validated
-- Notes: send_purchase_push, send_load_push, send_card_replaced_push all wired to their respective endpoints.
 
 ### R010 — Android Transaction Filter
 - Class: primary-user-loop
@@ -178,7 +108,6 @@ This file is the explicit capability and coverage contract for the project.
 - Primary owning slice: M001/S05
 - Supporting slices: none
 - Validation: validated
-- Notes: TransactionsActivity filter bar (type chip + date range picker) in student_app_v2.
 
 ### R011 — Monthly Budget Auto-Reset
 - Class: primary-user-loop
@@ -189,7 +118,6 @@ This file is the explicit capability and coverage contract for the project.
 - Primary owning slice: M001/S05
 - Supporting slices: none
 - Validation: validated
-- Notes: SecureStorage KEY_BUDGET_MONTH; on app resume, if stored month ≠ current month → clear budget + show prompt.
 
 ### R012 — Lost Card Status Feedback (Android)
 - Class: primary-user-loop
@@ -200,7 +128,6 @@ This file is the explicit capability and coverage contract for the project.
 - Primary owning slice: M001/S05
 - Supporting slices: none
 - Validation: validated
-- Notes: HomeActivity badge reads /api/student/lost-card-status; FCMService handles card_replaced message type.
 
 ### R013 — Daily Low-Balance Batch Email
 - Class: integration
@@ -211,73 +138,210 @@ This file is the explicit capability and coverage contract for the project.
 - Primary owning slice: M001/S06
 - Supporting slices: none
 - Validation: validated
-- Notes: DailyScheduler + run_low_balance_batch() in scheduler.py; POST /api/admin/batch/low-balance-email manual trigger; logs to Scheduler Log sheet.
 
-### R025 — APDU Retry for Phone NFC Payments
-- Class: primary-user-loop
+### R014 — Requirements File Completeness
+- Class: operability
 - Status: validated
-- Description: Arduino firmware retries the `inDataExchange` APDU call up to 3 times with 150ms between attempts so that Android HCE initialization latency variation across phone models doesn't cause silent fallback to CARD delivery
-- Why it matters: A single `inDataExchange` attempt (even with the 150ms pre-delay from the a036f7f fix) times out on at least one real phone — `APDU ok=NO rspLen=60` confirmed in Serial Monitor; Arduino falls back to `CARD|087EC8BE` which triggers `complete_sale()` with the phone's hardware UID, which is never in Money Accounts, causing 100% payment failure for all phone NFC taps
+- Description: Both Flask apps install cleanly from their requirements files on a fresh virtualenv with no missing packages and no file errors
+- Why it matters: The api requirements file was missing gspread, firebase-admin, twilio, and bcrypt
 - Source: execution
-- Primary owning slice: M004/S01
-- Supporting slices: M004/S02
-- Validation: Hardware UAT complete — APDU ok=YES on attempt N/3 confirmed in Serial Monitor; phone NFC tap completes sale end-to-end without falling back to CARD delivery
-- Notes: Retry constants at top of .ino file: APDU_MAX_RETRIES=3, APDU_RETRY_DELAY_MS=150. responseLength reset to 60 before each attempt. First success breaks early — no penalty for fast phones. Diagnostic output shows attempt N/3 on each try.
+- Primary owning slice: M002/S01
+- Supporting slices: none
+- Validation: validated
+
+### R015 — Cache Layer Coverage
+- Class: quality-attribute
+- Status: validated
+- Description: Hot Sheets-reading endpoints serve from cache on repeated requests; mutations invalidate the relevant cache keys
+- Why it matters: Sheets quota (60 req/min) will be hit during lunch rush
+- Source: execution
+- Primary owning slice: M002/S02
+- Supporting slices: none
+- Validation: validated
+
+### R016 — FraudDetector Worker Safety
+- Class: failure-visibility
+- Status: validated
+- Description: Admin server refuses to start if gunicorn workers > 1 with a clear human-readable error
+- Why it matters: Module-level bool causes split-brain alert state silently with multiple workers
+- Source: execution
+- Primary owning slice: M002/S03
+- Supporting slices: none
+- Validation: validated
+
+### R017 — Critical Path Unit Tests
+- Class: quality-attribute
+- Status: validated
+- Description: ~35 unit tests cover complete_sale, load_balance, void_transaction, and cashier login auth with mocked Sheets client
+- Why it matters: Money-moving code was 0% unit-tested
+- Source: execution
+- Primary owning slice: M002/S04
+- Supporting slices: none
+- Validation: validated
+
+### R018 — Health Check Standardization
+- Class: failure-visibility
+- Status: validated
+- Description: Both app health endpoints return structured JSON with sheets_ok, latency_ms, and queue_pending fields; both return 503 when Sheets is unreachable
+- Why it matters: api_server.py health check returned {"status": "ok"} unconditionally
+- Source: execution
+- Primary owning slice: M002/S03
+- Supporting slices: none
+- Validation: validated
+
+### R019 — Deployment Runbook
+- Class: operability
+- Status: validated
+- Description: docs/DEPLOY.md covers PythonAnywhere setup, required env vars, Sheets service account config, first-run migration steps, health check sequence, and known operational constraints
+- Why it matters: No runbook existed
+- Source: execution
+- Primary owning slice: M002/S05
+- Supporting slices: none
+- Validation: validated
 
 ### R020 — Correct WiFi Payment Routing
 - Class: primary-user-loop
 - Status: validated
-- Description: Arduino WiFi path routes physical card UIDs to `/api/arduino/card-read` (emits `card_read`) and NFC phone tokens to `/api/nfc/tap` (emits `nfc_payment`) — not both to the same endpoint
-- Why it matters: Current firmware sends all WiFi POSTs to `/api/nfc/tap` with `{"token": value}`, so physical RFID card taps over WiFi go to the wrong endpoint and fire the wrong SocketIO event; the bug is masked today only because serial fallback via ArduinoBridge routes correctly — with a standalone powerbank Arduino (no serial/PC), every physical card tap silently fails
+- Description: Arduino WiFi path routes physical card UIDs to /api/arduino/card-read and NFC phone tokens to /api/nfc/tap correctly
+- Why it matters: Firmware sent all WiFi POSTs to /api/nfc/tap; physical card taps silently failed without serial fallback
 - Source: execution
 - Primary owning slice: M003/S01
 - Supporting slices: none
-- Validation: Hardware UAT complete — physical RFID card tapped at powerbank-powered Arduino → POST /api/arduino/card-read 200 confirmed in Flask log → card_read event fired → cashier sale completed successfully
-- Notes: `deliver()` in bankongseton_rfid.ino uses httpPostCard(uid) → /api/arduino/card-read {"uid":uid} and httpPostNFC(token) → /api/nfc/tap {"token":token}, dispatched by prefix ("CARD" vs "NFC"); serial fallback format unchanged
+- Validation: validated
 
 ### R021 — Phone NFC Payment at Cashier
 - Class: primary-user-loop
 - Status: validated
-- Description: Student can tap an Android HCE phone at the cashier to complete a payment; cashier UI handles `nfc_payment` socket event and processes the sale via a new `/cashier/api/complete-sale-nfc` endpoint
-- Why it matters: The `nfc_payment` socket event from the Arduino is emitted but unhandled in the cashier UI — phone taps do nothing at the cashier today; cashier UI only listens for `card_read`
+- Description: Student can tap an Android HCE phone at the cashier to complete a payment
+- Why it matters: nfc_payment socket event was emitted but unhandled in cashier UI
 - Source: user
 - Primary owning slice: M003/S02
 - Supporting slices: none
-- Validation: Hardware UAT complete — Android phone tapped at Arduino → nfc_payment socket event → complete-sale-nfc 200 → Sheets balance debit confirmed → cashier success modal displayed
-- Notes: New `complete_sale_nfc(token)` endpoint in cashier_routes.py resolves virtual_card_token → money_card_number via Sheets (same pattern as api_server.py nfc_pay), then debits balance and emits same success/failure as `complete_sale`. APDU timing bug (M004) is the blocker — phone taps currently fall back to CARD delivery path.
+- Validation: validated
+- Notes: Superseded by R029/R030/R033 in M005 — QR payment replaces phone NFC entirely
 
 ### R022 — Arduino WiFi Status in Cashier UI
 - Class: operability
 - Status: validated
-- Description: Cashier UI shows a WiFi status badge (green/red) indicating whether the Arduino is reachable wirelessly; "Pay Now" enables when Arduino is WiFi-connected even without a COM port selected
-- Why it matters: Currently `arduinoConnected` only goes true via the COM port selector; with a powerbank Arduino (no USB to PC), the checkout button stays disabled forever, blocking all payments
+- Description: Cashier UI shows a WiFi status badge (green/red); Pay Now enables when Arduino is WiFi-connected even without a COM port selected
+- Why it matters: arduinoConnected only went true via COM port selector; powerbank Arduino had checkout button permanently disabled
 - Source: user
 - Primary owning slice: M003/S03
 - Supporting slices: none
-- Validation: Hardware UAT complete — WiFi badge turned green within 30s of Arduino boot (heartbeat POST received); badge correctly goes red when Arduino offline; Pay Now enabled on WiFi connection without COM port
-- Notes: POST /api/arduino/heartbeat with API key auth; GET /cashier/api/arduino-wifi-status with JWT; #wifiBadge span green (.online) / red (.offline); arduinoConnected set from WiFi path without touching serial indicator; WiFi offline does not override active serial connection
+- Validation: validated
 
 ### R023 — Arduino Stable on Powerbank
 - Class: continuity
 - Status: validated
-- Description: Arduino UNO R4 WiFi runs reliably for a full school day on a USB powerbank without auto-shutoff; WiFi reconnects automatically if the connection drops between customers
-- Why it matters: Many powerbanks cut power when current drops below ~100mA; without active mitigation, the Arduino may shut off during quiet periods between card taps; WiFi drops must also self-heal without a person rebooting the Arduino
+- Description: Arduino UNO R4 WiFi runs reliably for a full school day on a USB powerbank without auto-shutoff; WiFi reconnects automatically if the connection drops
+- Why it matters: Many powerbanks cut power when current drops below ~100mA
 - Source: user
 - Primary owning slice: M003/S04
 - Supporting slices: none
-- Validation: Hardware UAT complete — Arduino sustained 30-minute idle on USB powerbank without auto-shutoff; WiFi badge recovered red→green within two heartbeat intervals (~60s) after simulated WiFi drop
-- Notes: Heartbeat POST every 30s provides consistent RF burst to keep powerbank alive; PN532 polling loop baseline draw is ~180-200mA which should keep most powerbanks above cutoff threshold; WiFi reconnect on ensureWiFi() call before each heartbeat and before each card POST
+- Validation: validated
 
 ### R024 — Wireless Deployment Documentation
 - Class: operability
 - Status: validated
-- Description: `arduino/README-wireless.md` documents the complete standalone powerbank setup: hardware list, wiring, `secrets.h` configuration, flashing steps, and how to verify the Arduino is connected to the school LAN
-- Why it matters: Without docs, whoever sets up the cashier counter has no guide for the WiFi-only configuration — they'll fall back to USB serial mode
+- Description: arduino/README-wireless.md documents the complete standalone powerbank setup
+- Why it matters: Without docs, whoever sets up the cashier counter has no guide for WiFi-only configuration
 - Source: user
 - Primary owning slice: M003/S04
 - Supporting slices: none
-- Validation: test -f arduino/README-wireless.md exits 0 (164 lines, 8 sections); bash scripts/verify-m003-s04.sh checks (e–h) all pass; README covers hardware, wiring, secrets.h (port 5003 + ARDUINO_API_KEY explicitly named), flashing, powerbank selection (≥2A/≥10,000mAh/name-brand), verification (Serial Monitor + badge), troubleshooting; no hardware required to validate documentation completeness
-- Notes: Covers powerbank selection (minimum 2A output port), secrets.h fields field-by-field, ARDUINO_API_KEY in .env, school LAN IP of Flask server, how to verify the WiFi status badge in cashier UI
+- Validation: validated
+
+### R025 — APDU Retry for Phone NFC Payments
+- Class: primary-user-loop
+- Status: validated
+- Description: Arduino firmware retries the inDataExchange APDU call up to 3 times with 150ms between attempts
+- Why it matters: Single APDU attempt timed out on real phones causing 100% NFC payment failure
+- Source: execution
+- Primary owning slice: M004/S01
+- Supporting slices: M004/S02
+- Validation: validated
+- Notes: Superseded by R026 in M005 — PN532 removed entirely, RC522 replaces it
+
+## Active
+
+### R026 — RC522 RFID Reader on R4 (WiFi Payment Terminal)
+- Class: primary-user-loop
+- Status: active
+- Description: Arduino UNO R4 WiFi uses RC522 RFID module instead of PN532; physical RFID card tap POSTs to /api/arduino/card-read over WiFi and fires card_read event in cashier UI; WiFi, heartbeat, and powerbank behaviour unchanged
+- Why it matters: PN532 is being retired; RC522 is the unified reader hardware across both Arduinos; all prior phone HCE/NFC complexity disappears
+- Source: user
+- Primary owning slice: M005/S01
+- Supporting slices: none
+- Validation: unmapped
+
+### R027 — OLED Replaces LCD on R4
+- Class: primary-user-loop
+- Status: active
+- Description: Arduino UNO R4 WiFi uses a 128×64 SSD1306 OLED (Adafruit SSD1306 + GFX) instead of the 16×2 LCD with PCF8574 I2C backpack; OLED shows status messages at idle and renders QR codes for payment
+- Why it matters: OLED is the display surface for QR payment — the QR bitmap cannot be rendered on a 16×2 character LCD
+- Source: user
+- Primary owning slice: M005/S01
+- Supporting slices: M005/S02
+- Validation: unmapped
+
+### R028 — QR Token Delivery to OLED via Arduino Polling
+- Class: primary-user-loop
+- Status: active
+- Description: Arduino R4 polls GET /api/arduino/qr-pending every ~500ms; when a pending QR token exists (set by cashier hitting Pay Now), Arduino renders the encoded URL as a QR bitmap on the OLED; OLED returns to idle when token is cleared
+- Why it matters: The OLED must display the QR without a push connection — polling fits the existing heartbeat/WiFi pattern already proven in M003
+- Source: user
+- Primary owning slice: M005/S02
+- Supporting slices: none
+- Validation: unmapped
+
+### R029 — Backend QR Payment Flow
+- Class: primary-user-loop
+- Status: active
+- Description: POST /cashier/api/qr-generate creates a short-lived token and stores it as the pending QR; GET /api/arduino/qr-pending returns {token, url} when a QR is pending; POST /api/qr/confirm (authenticated by student JWT) resolves the token, debits balance via complete_sale logic, emits cashier socket event, and clears the pending QR
+- Why it matters: This is the server-side backbone of the QR payment flow — without it neither the OLED nor the apps can complete a sale
+- Source: user
+- Primary owning slice: M005/S03
+- Supporting slices: none
+- Validation: unmapped
+
+### R030 — Android App QR Scanner (Replaces NFC Pay)
+- Class: primary-user-loop
+- Status: active
+- Description: Android student app has a "Pay with QR" button on the home screen; tapping opens a camera QR scanner; scanning a valid QR URL fetches the pending cart from the server, shows items and total, student taps Confirm, backend debits balance, app shows receipt
+- Why it matters: NFC HCE phone payment is being removed; QR is the replacement that works on all Android devices
+- Source: user
+- Primary owning slice: M005/S04
+- Supporting slices: none
+- Validation: unmapped
+
+### R031 — RC522 RFID Reader on R3 (Registration Terminal)
+- Class: operability
+- Status: active
+- Description: Arduino UNO R3 uses RC522 RFID module (already in place per R3 firmware); firmware is cleaned up to remove any PN532/NFC references and restricted to card registration and lost-card replacement role only
+- Why it matters: R3 already uses MFRC522 but the firmware may carry dead NFC/PN532 references; role clarification ensures R3 never attempts payment flows
+- Source: user
+- Primary owning slice: M005/S01
+- Supporting slices: none
+- Validation: unmapped
+
+### R032 — Dead NFC/HCE Code Removed
+- Class: operability
+- Status: active
+- Description: BankoHceService.kt, NfcManager.kt, NfcPayOverlayActivity.kt removed from Android; nfc_payments.py deleted; /api/nfc/register|status|unregister|pay routes removed from api_server.py; complete_sale_nfc and socket.on('nfc_payment') removed from cashier; VirtualCards sheet logic removed; Android and iOS build clean
+- Why it matters: Dead HCE/NFC code is a maintenance liability and causes confusion about the current payment model
+- Source: user
+- Primary owning slice: M005/S05
+- Supporting slices: none
+- Validation: unmapped
+
+### R033 — iOS App QR Scanner (Same Flow as Android)
+- Class: primary-user-loop
+- Status: active
+- Description: iOS student app (SwiftUI) has a "Pay with QR" button on the home screen; tapping opens AVFoundation camera QR scanner; scanning fetches cart, shows confirmation view, student taps Confirm, backend debits balance, app shows receipt — identical user experience to Android
+- Why it matters: iOS app exists but has no payment method; QR is the first payment capability for iOS students
+- Source: user
+- Primary owning slice: M005/S04
+- Supporting slices: none
+- Validation: unmapped
 
 ## Out of Scope
 
@@ -290,18 +354,27 @@ This file is the explicit capability and coverage contract for the project.
 - Primary owning slice: none
 - Supporting slices: none
 - Validation: n/a
-- Notes: Out of scope for current school deployment; requires merchant account setup.
+- Notes: Requires merchant account setup; out of scope for current school deployment.
 
-### R051 — iOS App
+### R051 — New iOS App Build
 - Class: core-capability
 - Status: out-of-scope
-- Description: Native iOS student app with NFC HCE virtual card
-- Why it matters: Scope clarification — Android-only for current deployment
+- Description: Building a new iOS app from scratch
+- Why it matters: iOS app already exists at mobile/ios/BankongSetonStudent/ — M005 extends it, does not replace it
 - Source: user
 - Primary owning slice: none
 - Supporting slices: none
 - Validation: n/a
-- Notes: iOS NFC HCE is more restricted than Android; not planned.
+
+### R052 — QR Payment on R3
+- Class: primary-user-loop
+- Status: out-of-scope
+- Description: R3 (registration terminal) displays QR codes for payment
+- Why it matters: Scope boundary — R3 is registration and lost-card only; all payment flows go through R4
+- Source: user
+- Primary owning slice: none
+- Supporting slices: none
+- Validation: n/a
 
 ## Traceability
 
@@ -320,24 +393,33 @@ This file is the explicit capability and coverage contract for the project.
 | R011 | primary-user-loop | validated | M001/S05 | none | validated |
 | R012 | primary-user-loop | validated | M001/S05 | none | validated |
 | R013 | integration | validated | M001/S06 | none | validated |
-| R014 | operability | validated | M002/S01 | none | pip --dry-run exit 0 on both files |
-| R015 | quality-attribute | validated | M002/S02 | none | bash scripts/verify-s02.sh 32/32; python -m py_compile exit 0 |
-| R016 | failure-visibility | validated | M002/S03 | none | WEB_CONCURRENCY guard at module level; verify-s03.sh checks 5–8 pass |
-| R017 | quality-attribute | validated | M002/S04 | none | pytest exit 0; 35 tests; 2.40s; zero live Sheets calls |
-| R018 | failure-visibility | validated | M002/S03 | none | All three health handlers return structured JSON + 503; verify-s03.sh checks 9–18 pass |
-| R019 | operability | validated | M002/S05 | none | test -f docs/DEPLOY.md exit 0; 8/8 grep checks pass |
-| R020 | primary-user-loop | validated | M003/S01 | none | Hardware UAT complete — POST /api/arduino/card-read 200 confirmed; card_read event fired; sale completed |
-| R021 | primary-user-loop | validated | M003/S02 | none | Hardware UAT complete — phone tap → nfc_payment → complete-sale-nfc 200 → Sheets debit confirmed |
-| R022 | operability | validated | M003/S03 | none | Hardware UAT complete — badge green within 30s of boot; Pay Now enabled without COM port |
-| R023 | continuity | validated | M003/S04 | none | Hardware UAT complete — 30-min powerbank idle sustained; WiFi drop/reconnect within ~60s confirmed |
-| R024 | operability | validated | M003/S04 | none | test -f README-wireless.md exit 0; verify-m003-s04.sh checks (e–h) pass; 164-line README all required sections present |
-| R025 | primary-user-loop | validated | M004/S01 | M004/S02 | Hardware UAT complete — APDU ok=YES attempt N/3 in Serial Monitor; phone tap completes sale end-to-end |
+| R014 | operability | validated | M002/S01 | none | validated |
+| R015 | quality-attribute | validated | M002/S02 | none | validated |
+| R016 | failure-visibility | validated | M002/S03 | none | validated |
+| R017 | quality-attribute | validated | M002/S04 | none | validated |
+| R018 | failure-visibility | validated | M002/S03 | none | validated |
+| R019 | operability | validated | M002/S05 | none | validated |
+| R020 | primary-user-loop | validated | M003/S01 | none | validated |
+| R021 | primary-user-loop | validated | M003/S02 | none | validated (superseded by R029/R030/R033) |
+| R022 | operability | validated | M003/S03 | none | validated |
+| R023 | continuity | validated | M003/S04 | none | validated |
+| R024 | operability | validated | M003/S04 | none | validated |
+| R025 | primary-user-loop | validated | M004/S01 | M004/S02 | validated (superseded by R026) |
+| R026 | primary-user-loop | active | M005/S01 | none | unmapped |
+| R027 | primary-user-loop | active | M005/S01 | M005/S02 | unmapped |
+| R028 | primary-user-loop | active | M005/S02 | none | unmapped |
+| R029 | primary-user-loop | active | M005/S03 | none | unmapped |
+| R030 | primary-user-loop | active | M005/S04 | none | unmapped |
+| R031 | operability | active | M005/S01 | none | unmapped |
+| R032 | operability | active | M005/S05 | none | unmapped |
+| R033 | primary-user-loop | active | M005/S04 | none | unmapped |
 | R050 | integration | out-of-scope | none | none | n/a |
 | R051 | core-capability | out-of-scope | none | none | n/a |
+| R052 | primary-user-loop | out-of-scope | none | none | n/a |
 
 ## Coverage Summary
 
-- Active requirements: 0
-- Mapped to slices: 0
+- Active requirements: 8
+- Mapped to slices: 8
 - Validated: 25
 - Unmapped active requirements: 0
