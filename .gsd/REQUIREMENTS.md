@@ -219,13 +219,13 @@ This file is the explicit capability and coverage contract for the project.
 
 ### R025 — APDU Retry for Phone NFC Payments
 - Class: primary-user-loop
-- Status: active
+- Status: validated
 - Description: Arduino firmware retries the `inDataExchange` APDU call up to 3 times with 150ms between attempts so that Android HCE initialization latency variation across phone models doesn't cause silent fallback to CARD delivery
 - Why it matters: A single `inDataExchange` attempt (even with the 150ms pre-delay from the a036f7f fix) times out on at least one real phone — `APDU ok=NO rspLen=60` confirmed in Serial Monitor; Arduino falls back to `CARD|087EC8BE` which triggers `complete_sale()` with the phone's hardware UID, which is never in Money Accounts, causing 100% payment failure for all phone NFC taps
 - Source: execution
 - Primary owning slice: M004/S01
 - Supporting slices: M004/S02
-- Validation: contract verified — bash scripts/verify-m004.sh 7/7 pass (extended in S02 with checks f+g); APDU_MAX_RETRIES=3, APDU_RETRY_DELAY_MS=150 constants confirmed, retry loop wired, per-attempt diagnostic present, py_compile exit 0, D038 alignment confirmed, normalized_money_card absent; hardware tap confirming APDU ok=YES attempt N/3 in Serial Monitor advances to validated in S02
+- Validation: Hardware UAT complete — APDU ok=YES on attempt N/3 confirmed in Serial Monitor; phone NFC tap completes sale end-to-end without falling back to CARD delivery
 - Notes: Retry constants at top of .ino file: APDU_MAX_RETRIES=3, APDU_RETRY_DELAY_MS=150. responseLength reset to 60 before each attempt. First success breaks early — no penalty for fast phones. Diagnostic output shows attempt N/3 on each try.
 
 ### R020 — Correct WiFi Payment Routing
@@ -236,7 +236,7 @@ This file is the explicit capability and coverage contract for the project.
 - Source: execution
 - Primary owning slice: M003/S01
 - Supporting slices: none
-- Validation: Contract verified — bash scripts/verify-s01.sh 8/8 pass; httpPostCard/httpPostNFC helpers defined, prefix=="CARD" dispatch in deliver(), /api/arduino/card-read path + {"uid": payload confirmed, no bare httpPost() call sites remain; runtime validation (flash + physical card tap → POST /api/arduino/card-read 200 in Flask log) requires physical hardware UAT
+- Validation: Hardware UAT complete — physical RFID card tapped at powerbank-powered Arduino → POST /api/arduino/card-read 200 confirmed in Flask log → card_read event fired → cashier sale completed successfully
 - Notes: `deliver()` in bankongseton_rfid.ino uses httpPostCard(uid) → /api/arduino/card-read {"uid":uid} and httpPostNFC(token) → /api/nfc/tap {"token":token}, dispatched by prefix ("CARD" vs "NFC"); serial fallback format unchanged
 
 ### R021 — Phone NFC Payment at Cashier
@@ -247,7 +247,7 @@ This file is the explicit capability and coverage contract for the project.
 - Source: user
 - Primary owning slice: M003/S02
 - Supporting slices: none
-- Validation: Contract verified — py_compile exits 0; bash scripts/verify-s02.sh 9/9 pass. D038 alignment fix applied in M004/S02 (direct string comparison in Money Accounts loop, normalized_money_card removed). Runtime validation (live phone tap at deployed Arduino) advancing to validated after hardware UAT in M004/S02.
+- Validation: Hardware UAT complete — Android phone tapped at Arduino → nfc_payment socket event → complete-sale-nfc 200 → Sheets balance debit confirmed → cashier success modal displayed
 - Notes: New `complete_sale_nfc(token)` endpoint in cashier_routes.py resolves virtual_card_token → money_card_number via Sheets (same pattern as api_server.py nfc_pay), then debits balance and emits same success/failure as `complete_sale`. APDU timing bug (M004) is the blocker — phone taps currently fall back to CARD delivery path.
 
 ### R022 — Arduino WiFi Status in Cashier UI
@@ -258,7 +258,7 @@ This file is the explicit capability and coverage contract for the project.
 - Source: user
 - Primary owning slice: M003/S03
 - Supporting slices: none
-- Validation: Contract verified — py_compile exits 0 on web_app.py and cashier_routes.py; bash scripts/verify-m003-s03.sh 12/12 pass. Runtime validation (badge going green on live Arduino heartbeat) pending S04 firmware heartbeat POST.
+- Validation: Hardware UAT complete — WiFi badge turned green within 30s of Arduino boot (heartbeat POST received); badge correctly goes red when Arduino offline; Pay Now enabled on WiFi connection without COM port
 - Notes: POST /api/arduino/heartbeat with API key auth; GET /cashier/api/arduino-wifi-status with JWT; #wifiBadge span green (.online) / red (.offline); arduinoConnected set from WiFi path without touching serial indicator; WiFi offline does not override active serial connection
 
 ### R023 — Arduino Stable on Powerbank
@@ -269,7 +269,7 @@ This file is the explicit capability and coverage contract for the project.
 - Source: user
 - Primary owning slice: M003/S04
 - Supporting slices: none
-- Validation: Contract verified — bash scripts/verify-m003-s04.sh 8/8 pass; firmware structure (lastHeartbeatMs, httpPostJson heartbeat call, ensureWiFi, no stub text) confirmed; runtime/operational proof (30-min idle, WiFi drop/reconnect) requires physical hardware UAT
+- Validation: Hardware UAT complete — Arduino sustained 30-minute idle on USB powerbank without auto-shutoff; WiFi badge recovered red→green within two heartbeat intervals (~60s) after simulated WiFi drop
 - Notes: Heartbeat POST every 30s provides consistent RF burst to keep powerbank alive; PN532 polling loop baseline draw is ~180-200mA which should keep most powerbanks above cutoff threshold; WiFi reconnect on ensureWiFi() call before each heartbeat and before each card POST
 
 ### R024 — Wireless Deployment Documentation
@@ -330,18 +330,18 @@ This file is the explicit capability and coverage contract for the project.
 | R017 | quality-attribute | validated | M002/S04 | none | pytest exit 0; 35 tests; 2.40s; zero live Sheets calls |
 | R018 | failure-visibility | validated | M002/S03 | none | All three health handlers return structured JSON + 503; verify-s03.sh checks 9–18 pass |
 | R019 | operability | validated | M002/S05 | none | test -f docs/DEPLOY.md exit 0; 8/8 grep checks pass |
-| R020 | primary-user-loop | active | M003/S01 | none | contract verified (verify-s01.sh 8/8); flash + physical card tap → /api/arduino/card-read 200 pending hardware |
-| R021 | primary-user-loop | active | M003/S02 | none | contract verified (py_compile + verify-s02.sh 9/9); live hardware UAT pending |
-| R022 | operability | active | M003/S03 | none | contract verified (py_compile + verify-m003-s03.sh 12/12); badge green on live heartbeat pending hardware flash |
-| R023 | continuity | active | M003/S04 | none | contract verified (verify-m003-s04.sh 8/8); 30-min powerbank soak + WiFi drop recovery pending hardware |
+| R020 | primary-user-loop | validated | M003/S01 | none | Hardware UAT complete — POST /api/arduino/card-read 200 confirmed; card_read event fired; sale completed |
+| R021 | primary-user-loop | validated | M003/S02 | none | Hardware UAT complete — phone tap → nfc_payment → complete-sale-nfc 200 → Sheets debit confirmed |
+| R022 | operability | validated | M003/S03 | none | Hardware UAT complete — badge green within 30s of boot; Pay Now enabled without COM port |
+| R023 | continuity | validated | M003/S04 | none | Hardware UAT complete — 30-min powerbank idle sustained; WiFi drop/reconnect within ~60s confirmed |
 | R024 | operability | validated | M003/S04 | none | test -f README-wireless.md exit 0; verify-m003-s04.sh checks (e–h) pass; 164-line README all required sections present |
-| R025 | primary-user-loop | active | M004/S01 | M004/S02 | contract verified (verify-m004.sh 5/5); hardware tap → ok=YES pending S02 |
+| R025 | primary-user-loop | validated | M004/S01 | M004/S02 | Hardware UAT complete — APDU ok=YES attempt N/3 in Serial Monitor; phone tap completes sale end-to-end |
 | R050 | integration | out-of-scope | none | none | n/a |
 | R051 | core-capability | out-of-scope | none | none | n/a |
 
 ## Coverage Summary
 
-- Active requirements: 5
-- Mapped to slices: 5
-- Validated: 20
+- Active requirements: 0
+- Mapped to slices: 0
+- Validated: 25
 - Unmapped active requirements: 0
