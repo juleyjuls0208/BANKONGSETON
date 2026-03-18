@@ -40,4 +40,5 @@ See `.gsd/REQUIREMENTS.md` for the explicit capability contract, requirement sta
 - [x] M002: Production Readiness & Deployment Stability — requirements, cache, worker safety, tests, health checks, runbook
 - [x] M003: Wireless Cashier Payment Terminal — R4 WiFi routing fix, phone NFC cashier pay, WiFi badge, powerbank hardening
 - [x] M004: NFC Phone Payment Fix — APDU retry firmware, end-to-end NFC validation
-- [ ] M005: RC522 + OLED + QR Payment — swap PN532→RC522 on R4, LCD→OLED on R4, QR payment on both Android and iOS
+- [x] M005: RC522 + OLED + QR Payment — swap PN532→RC522 on R4, LCD→OLED on R4, QR payment on both Android and iOS
+- [ ] M006: Standalone Cashier Web App — dedicated port-5010 cashier site with modern POS UI, isolated from admin dashboard

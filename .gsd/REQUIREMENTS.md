@@ -376,10 +376,36 @@ This file is the explicit capability and coverage contract for the project.
 - Supporting slices: none
 - Validation: n/a
 
+## Active
+
+### R053 — Standalone Cashier Web App
+- Class: primary-user-loop
+- Status: active
+- Description: A standalone Flask app on port 5010 serves a cashier-only POS interface — login, product grid, order panel, and all three payment methods — without requiring the admin dashboard to be running
+- Why it matters: Cashiers need a dedicated URL with no admin clutter; process isolation means the cashier station can operate independently
+- Source: user
+- Primary owning slice: M006/S01
+- Supporting slices: M006/S02, M006/S03
+- Validation: unmapped
+- Notes: Reuses payment logic from cashier_routes.py; own SocketIO instance; port 5010
+
+### R054 — Modern POS UI for Cashier
+- Class: primary-user-loop
+- Status: active
+- Description: The cashier POS screen has a modern food-POS aesthetic: white background, left category sidebar with icons, center product grid with color-coded cards, right order panel, and a prominent coral Charge button
+- Why it matters: The current UI is generic and utilitarian; cashiers spend hours on it — a clean purpose-built interface reduces errors and fatigue
+- Source: user
+- Primary owning slice: M006/S02
+- Supporting slices: none
+- Validation: unmapped
+- Notes: Reference images provided; color-coded by category, no product photos needed
+
 ## Traceability
 
 | ID | Class | Status | Primary Owner | Supporting | Proof |
 |----|-------|--------|---------------|------------|-------|
+| R053 | primary-user-loop | active | M006/S01 | M006/S02, M006/S03 | unmapped |
+| R054 | primary-user-loop | active | M006/S02 | none | unmapped |
 | R001 | failure-visibility | validated | M001/S01 | none | validated |
 | R002 | admin/support | validated | M001/S01 | none | validated |
 | R003 | operability | validated | M001/S02 | none | validated |
@@ -419,7 +445,7 @@ This file is the explicit capability and coverage contract for the project.
 
 ## Coverage Summary
 
-- Active requirements: 8
-- Mapped to slices: 8
+- Active requirements: 10
+- Mapped to slices: 10
 - Validated: 25
 - Unmapped active requirements: 0
