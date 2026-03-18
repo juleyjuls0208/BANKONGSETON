@@ -86,7 +86,7 @@ xcodebuild -scheme BankongSetonStudent -sdk iphonesimulator build   # must exit 
   - Verify: `grep -q 'QRPayView' mobile/ios/BankongSetonStudent/Views/Home/HomeView.swift && grep -q 'AVCaptureMetadataOutput' mobile/ios/BankongSetonStudent/Views/QR/QRScannerView.swift && grep -q 'AA000026' mobile/ios/BankongSetonStudent/BankongSetonStudent.xcodeproj/project.pbxproj`
   - Done when: All 3 greps pass; all 4 new Swift files exist; `project.pbxproj` has 4 new PBXBuildFile + 4 new PBXFileReference entries + camera usage description key
 
-- [ ] **T04: Write verification script** `est:15m`
+- [x] **T04: Write verification script** `est:15m`
   - Why: Creates the objective stopping condition for the slice. Catches regressions in any of the preceding tasks.
   - Files: `scripts/verify-m005-s04.sh` (new)
   - Do: See T04-PLAN.md

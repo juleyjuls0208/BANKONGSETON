@@ -154,6 +154,13 @@ bash scripts/verify-m005-s04.sh
 # PASS — all 12 checks passed
 ```
 
+## Observability Impact
+
+- **Primary inspection surface:** `bash scripts/verify-m005-s04.sh 2>&1` — each of the 12 checks prints `[PASS]` or `[FAIL]` with a human-readable label, so failure pinpoints exactly which T01/T02/T03 artifact is absent or incomplete without reading source files.
+- **Failure-state visibility:** Script exits non-zero with `FAIL — N check(s) did not pass` printed to stdout; the individual `[FAIL]` lines identify the exact missing artifact (e.g. "getQrCart and confirmQrPayment in Android ApiClient.kt").
+- **Exit-code contract:** Exit 0 means all 12 S04 contract conditions are met; any non-zero exit means the slice is not complete — the label of each failing check identifies the exact gap.
+- **No runtime signals introduced:** This task creates only a static check script; it does not modify any app code or add runtime logging.
+
 ## Inputs
 
 - All T01, T02, T03 outputs present in the filesystem

@@ -57,7 +57,7 @@ This milestone is complete only when all are true:
 - [x] **S03: Backend QR Payment Flow** `risk:medium` `depends:[]`
   > After this: POST /cashier/api/qr-generate creates a token; GET /api/arduino/qr-pending returns it; POST /api/qr/confirm (JWT) debits balance and emits qr_payment socket event to cashier — all verified by scripts/verify-m005-s03.sh.
 
-- [ ] **S04: Android + iOS App QR Pay** `risk:medium` `depends:[S03]`
+- [x] **S04: Android + iOS App QR Pay** `risk:medium` `depends:[S03]`
   > After this: Android student taps "Pay with QR", scans OLED, sees cart, taps Confirm — sale completes. iOS student does the same. Both apps build. End-to-end verified on real devices against real backend.
 
 - [ ] **S05: NFC/HCE Cleanup + Rename** `risk:low` `depends:[S01,S03,S04]`
