@@ -301,7 +301,7 @@ This file is the explicit capability and coverage contract for the project.
 - Source: user
 - Primary owning slice: M005/S03
 - Supporting slices: none
-- Validation: contract verified — bash scripts/verify-m005-s03.sh exits 0 (14/14 checks pass); live Sheets debit pending S04 end-to-end
+- Validation: contract verified — bash scripts/verify-m005-s03.sh exits 0 (14/14 checks pass); live Sheets debit closure is now traced via S04 evidence artifacts `.gsd/milestones/M006/slices/S04/S04-LIVE-PROOF.{json,md}` (`qr_confirm` must be `live_success`).
 
 ### R030 — Android App QR Scanner (Replaces NFC Pay)
 - Class: primary-user-loop
@@ -386,8 +386,8 @@ This file is the explicit capability and coverage contract for the project.
 - Source: user
 - Primary owning slice: M006/S01
 - Supporting slices: M006/S02, M006/S03
-- Validation: contract + mixed runtime UAT in M006/S03 (py_compile + payment/arduino/pos route suites pass; standalone browser flow verifies RFID/QR/NFC orchestration on port 5010 with no :5003 dependency)
-- Notes: Reuses payment logic from cashier_routes.py; own SocketIO instance; port 5010. Live hardware tap + Sheets-backed non-mocked sale success still required to fully close milestone-level “real sale” proof.
+- Validation: contract + mixed runtime UAT in M006/S03 plus S04 live-proof evidence wiring (`rtk proxy bash scripts/verify-m006-s04.sh` emits `.gsd/milestones/M006/slices/S04/S04-LIVE-PROOF.{json,md}`)
+- Notes: Closure requires `overall.live_ready=true` with required flow classifications `products`, `rfid_complete_sale`, `qr_confirm`, `nfc_complete_sale` all `live_success`; any `offline_fallback` keeps R053 open.
 
 ## Validated
 
@@ -406,7 +406,7 @@ This file is the explicit capability and coverage contract for the project.
 
 | ID | Class | Status | Primary Owner | Supporting | Proof |
 |----|-------|--------|---------------|------------|-------|
-| R053 | primary-user-loop | active | M006/S01 | M006/S02, M006/S03 | contract + mixed runtime UAT in M006/S03 (all standalone route suites pass; browser verified endpoint wiring + no :5003 dependency; live hardware/Sheets sale proof pending) |
+| R053 | primary-user-loop | active | M006/S01 | M006/S02, M006/S03 | contract + mixed runtime UAT in M006/S03, with S04 closure gated by `scripts/verify-m006-s04.sh` and `.gsd/milestones/M006/slices/S04/S04-LIVE-PROOF.{json,md}` (`live_ready=true` + required flows all `live_success`) |
 | R054 | primary-user-loop | validated | M006/S02 | none | validated in M006/S02 runtime UAT (mocked `/api/products` success + real failure visibility) |
 | R001 | failure-visibility | validated | M001/S01 | none | validated |
 | R002 | admin/support | validated | M001/S01 | none | validated |
@@ -436,7 +436,7 @@ This file is the explicit capability and coverage contract for the project.
 | R026 | primary-user-loop | active | M005/S01 | none | contract verified; hardware tap pending |
 | R027 | primary-user-loop | active | M005/S01 | M005/S02 | Adafruit SSD1306 driver + renderQr() implemented in S02; contract verified; hardware scan UAT pending |
 | R028 | primary-user-loop | active | M005/S02 | none | httpGetBody + parseQrUrl + 500ms poll loop implemented; contract verified; live integration pending S03 |
-| R029 | primary-user-loop | active | M005/S03 | none | contract verified (scripts/verify-m005-s03.sh exits 0); live debit pending S04 |
+| R029 | primary-user-loop | active | M005/S03 | none | contract verified (scripts/verify-m005-s03.sh exits 0); live debit closure evidence now sourced from S04 proof artifacts (`qr_confirm=live_success`) |
 | R030 | primary-user-loop | active | M005/S04 | none | unmapped |
 | R031 | operability | active | M005/S01 | none | contract verified; firmware already clean |
 | R032 | operability | active | M005/S05 | none | unmapped |

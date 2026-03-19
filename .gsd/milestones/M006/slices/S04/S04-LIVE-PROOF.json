@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0.0",
-  "generated_at": "2026-03-19T05:40:02Z",
+  "generated_at": "2026-03-19T05:53:42Z",
   "base_url": "http://127.0.0.1:5010",
   "preflight": {
     "ok": false,
@@ -56,7 +56,7 @@
     "offline_fallback_count": 0,
     "failed_count": 0,
     "live_ready": false,
-    "dry_run_preflight": false,
+    "dry_run_preflight": true,
     "exit_code": 1,
     "schema_errors": [],
     "schema_valid": true

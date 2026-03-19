@@ -112,3 +112,15 @@ module = importlib.util.module_from_spec(spec)
 sys.modules[spec.name] = module
 spec.loader.exec_module(module)
 ```
+
+---
+
+## Windows shell constraint: `rtk proxy bash ...` fails when `/bin/bash` is unavailable
+
+In this harness, `rtk proxy bash ...` invokes `/bin/bash` through WSL. On hosts where WSL/bash is not installed, commands fail with:
+`execvpe(/bin/bash) failed: No such file or directory`.
+
+When this happens:
+1. Keep committed `.sh` wrappers as the canonical verifier entrypoints for Linux/CI parity.
+2. Run equivalent Python verification commands directly (`rtk proxy python ...`) so evidence artifacts can still be generated in Windows-only environments.
+3. Document the shell constraint explicitly in task verification evidence so future agents do not misclassify it as a code regression.

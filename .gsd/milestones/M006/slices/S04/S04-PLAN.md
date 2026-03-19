@@ -22,6 +22,7 @@
 - `rtk proxy python -m pytest -q tests/test_cashier_app_pos_route.py tests/test_cashier_app_payment_routes.py tests/test_cashier_app_arduino_routes.py`
 - `rtk proxy python scripts/verify-m006-s04-live.py --base-url http://127.0.0.1:5010 --evidence .gsd/milestones/M006/slices/S04/S04-LIVE-PROOF.json`
 - `rtk proxy python scripts/verify-m006-s04-live.py --base-url http://127.0.0.1:5010 --evidence .gsd/milestones/M006/slices/S04/S04-LIVE-PROOF.json --dry-run-preflight`
+- `rtk proxy python -c "import json; p='.gsd/milestones/M006/slices/S04/S04-LIVE-PROOF.json'; d=json.load(open(p, encoding='utf-8')); assert 'preflight' in d and isinstance(d['preflight'].get('errors', []), list)"`
 - `rtk proxy bash scripts/verify-m006-s04.sh`
 
 ## Observability / Diagnostics
@@ -46,7 +47,7 @@
   - Verify: `rtk proxy python -m pytest -q tests/test_verify_m006_s04_live.py`
   - Done when: Verifier + schema + tests exist, tests pass, and verifier contract guarantees that offline fallback cannot be misreported as live success.
 
-- [ ] **T02: Wire repeatable S04 verification command and publish milestone evidence handoff** `est:1h 10m`
+- [x] **T02: Wire repeatable S04 verification command and publish milestone evidence handoff** `est:1h 10m`
   - Why: Milestone closure needs one command that runs regression + live proof and emits evidence consumable by validation/requirements updates.
   - Files: `scripts/verify-m006-s04.sh`, `.gsd/milestones/M006/slices/S04/S04-LIVE-PROOF.md`, `.gsd/milestones/M006/M006-VALIDATION.md`, `.gsd/REQUIREMENTS.md`
   - Do: Add a wrapper verification script that runs route regression suites then the live verifier against `:5010`, materialize a markdown evidence summary from JSON output, and update milestone/requirement validation text with artifact paths plus pass/fail interpretation guidance (including explicit degraded-offline handling). Relevant skills: `test`, `fullstack-developer`, `agent-browser` (optional UI sanity checks only).
