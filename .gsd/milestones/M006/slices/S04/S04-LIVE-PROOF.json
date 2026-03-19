@@ -1,18 +1,30 @@
 {
   "schema_version": "1.0.0",
-  "generated_at": "2026-03-19T08:50:58Z",
+  "generated_at": "2026-03-19T09:55:18Z",
   "base_url": "http://127.0.0.1:5010",
   "preflight": {
-    "ok": true,
-    "missing_env": [],
-    "missing_inputs": [],
+    "ok": false,
+    "missing_env": [
+      "GOOGLE_SHEETS_ID",
+      "FLASK_SECRET_KEY",
+      "JWT_SECRET",
+      "FINANCE_PASSWORD"
+    ],
+    "missing_inputs": [
+      "card_uid (--card-uid or VERIFY_S04_CARD_UID)",
+      "virtual_card_token (--virtual-card-token or VERIFY_S04_VIRTUAL_CARD_TOKEN)",
+      "student_jwt (--student-jwt or VERIFY_S04_STUDENT_JWT)"
+    ],
     "missing_files": [],
-    "errors": [],
+    "errors": [
+      "Missing required environment variables: GOOGLE_SHEETS_ID, FLASK_SECRET_KEY, JWT_SECRET, FINANCE_PASSWORD",
+      "Missing verifier runtime inputs: card_uid (--card-uid or VERIFY_S04_CARD_UID), virtual_card_token (--virtual-card-token or VERIFY_S04_VIRTUAL_CARD_TOKEN), student_jwt (--student-jwt or VERIFY_S04_STUDENT_JWT)"
+    ],
     "checked_env": {
-      "GOOGLE_SHEETS_ID": true,
-      "FLASK_SECRET_KEY": true,
-      "JWT_SECRET": true,
-      "FINANCE_PASSWORD": true
+      "GOOGLE_SHEETS_ID": false,
+      "FLASK_SECRET_KEY": false,
+      "JWT_SECRET": false,
+      "FINANCE_PASSWORD": false
     },
     "credential_path": "C:\\Users\\admin\\Desktop\\projects\\BANKONGSETON\\config\\credentials.json",
     "credential_checked_paths": [
@@ -21,247 +33,11 @@
   },
   "inputs": {
     "cashier_username": "cashier",
-    "card_uid": "4***5",
-    "virtual_card_token": "bd***dc",
+    "card_uid": "",
+    "virtual_card_token": "",
     "student_jwt": "[REDACTED]"
   },
-  "phases": [
-    {
-      "phase": "login",
-      "endpoint": "/api/login",
-      "resolved_endpoint": "/api/login",
-      "status_code": 200,
-      "success": true,
-      "offline": false,
-      "latency_ms": 1042,
-      "classification": "live_success",
-      "error": null,
-      "response": {
-        "message": "Login successful",
-        "success": true
-      },
-      "attempts": [
-        {
-          "path": "/api/login",
-          "status": 200,
-          "exception": null
-        }
-      ]
-    },
-    {
-      "phase": "products",
-      "endpoint": "/api/products",
-      "resolved_endpoint": "/api/products",
-      "status_code": 500,
-      "success": false,
-      "offline": false,
-      "latency_ms": 970,
-      "classification": "failed",
-      "error": "Failed to load products",
-      "response": {
-        "error": "Failed to load products"
-      },
-      "attempts": [
-        {
-          "path": "/api/products",
-          "status": 500,
-          "exception": null
-        },
-        {
-          "path": "/cashier/api/products",
-          "status": 404,
-          "exception": null
-        }
-      ]
-    },
-    {
-      "phase": "rfid_process_sale",
-      "endpoint": "/api/process-sale",
-      "resolved_endpoint": "/api/process-sale",
-      "status_code": 200,
-      "success": true,
-      "offline": false,
-      "latency_ms": 15,
-      "classification": "live_success",
-      "error": null,
-      "response": {
-        "message": "Please tap student card",
-        "status": "waiting_for_card"
-      },
-      "attempts": [
-        {
-          "path": "/api/process-sale",
-          "status": 200,
-          "exception": null
-        }
-      ]
-    },
-    {
-      "phase": "rfid_complete_sale",
-      "endpoint": "/api/complete-sale",
-      "resolved_endpoint": "/api/complete-sale",
-      "status_code": 503,
-      "success": false,
-      "offline": false,
-      "latency_ms": 975,
-      "classification": "failed",
-      "error": "Service unavailable, please try again",
-      "response": {
-        "error": "Service unavailable, please try again"
-      },
-      "attempts": [
-        {
-          "path": "/api/complete-sale",
-          "status": 503,
-          "exception": null
-        },
-        {
-          "path": "/cashier/api/complete-sale",
-          "status": 404,
-          "exception": null
-        }
-      ]
-    },
-    {
-      "phase": "qr_process_sale",
-      "endpoint": "/api/process-sale",
-      "resolved_endpoint": "/api/process-sale",
-      "status_code": 200,
-      "success": true,
-      "offline": false,
-      "latency_ms": 15,
-      "classification": "live_success",
-      "error": null,
-      "response": {
-        "message": "Please tap student card",
-        "status": "waiting_for_card"
-      },
-      "attempts": [
-        {
-          "path": "/api/process-sale",
-          "status": 200,
-          "exception": null
-        }
-      ]
-    },
-    {
-      "phase": "qr_generate",
-      "endpoint": "/api/qr-generate",
-      "resolved_endpoint": "/api/qr-generate",
-      "status_code": 200,
-      "success": true,
-      "offline": false,
-      "latency_ms": 15,
-      "classification": "live_success",
-      "error": null,
-      "response": {
-        "expires_in_s": 300,
-        "token": "a0***44",
-        "url": "https://your-username.pythonanywhere.com/api/qr/a04e4d8a-da30-408b-8b57-2c0665f3ae44"
-      },
-      "attempts": [
-        {
-          "path": "/api/qr-generate",
-          "status": 200,
-          "exception": null
-        }
-      ]
-    },
-    {
-      "phase": "qr_confirm",
-      "endpoint": "/api/qr/confirm",
-      "resolved_endpoint": "/api/qr/confirm",
-      "status_code": 503,
-      "success": false,
-      "offline": false,
-      "latency_ms": 970,
-      "classification": "failed",
-      "error": "Service unavailable, please try again",
-      "response": {
-        "error": "Service unavailable, please try again"
-      },
-      "attempts": [
-        {
-          "path": "/api/qr/confirm",
-          "status": 503,
-          "exception": null
-        }
-      ]
-    },
-    {
-      "phase": "nfc_process_sale",
-      "endpoint": "/api/process-sale",
-      "resolved_endpoint": "/api/process-sale",
-      "status_code": 200,
-      "success": true,
-      "offline": false,
-      "latency_ms": 21,
-      "classification": "live_success",
-      "error": null,
-      "response": {
-        "message": "Please tap student card",
-        "status": "waiting_for_card"
-      },
-      "attempts": [
-        {
-          "path": "/api/process-sale",
-          "status": 200,
-          "exception": null
-        }
-      ]
-    },
-    {
-      "phase": "nfc_complete_sale",
-      "endpoint": "/api/complete-sale-nfc",
-      "resolved_endpoint": "/api/complete-sale-nfc",
-      "status_code": 503,
-      "success": false,
-      "offline": false,
-      "latency_ms": 970,
-      "classification": "failed",
-      "error": "Service unavailable, please try again",
-      "response": {
-        "error": "Service unavailable, please try again"
-      },
-      "attempts": [
-        {
-          "path": "/api/complete-sale-nfc",
-          "status": 503,
-          "exception": null
-        },
-        {
-          "path": "/cashier/api/complete-sale-nfc",
-          "status": 404,
-          "exception": null
-        }
-      ]
-    },
-    {
-      "phase": "queue_status",
-      "endpoint": "/api/queue/status",
-      "resolved_endpoint": "/api/queue/status",
-      "status_code": 200,
-      "success": true,
-      "offline": false,
-      "latency_ms": 15,
-      "classification": "live_success",
-      "error": null,
-      "response": {
-        "db_path": "C:\\Users\\admin\\Desktop\\projects\\BANKONGSETON\\.gsd\\worktrees\\M006\\backend\\offline_queue.db",
-        "failed": 0,
-        "last_sync_at": null,
-        "pending": 0,
-        "synced": 0
-      },
-      "attempts": [
-        {
-          "path": "/api/queue/status",
-          "status": 200,
-          "exception": null
-        }
-      ]
-    }
-  ],
+  "phases": [],
   "overall": {
     "required_phases": [
       "products",
@@ -276,9 +52,9 @@
       "nfc_complete_sale": "failed"
     },
     "required_live_success_count": 4,
-    "live_success_count": 6,
+    "live_success_count": 0,
     "offline_fallback_count": 0,
-    "failed_count": 4,
+    "failed_count": 0,
     "live_ready": false,
     "dry_run_preflight": false,
     "exit_code": 1,
@@ -286,13 +62,7 @@
     "schema_valid": true
   },
   "diagnostics": {
-    "queue_status": {
-      "db_path": "C:\\Users\\admin\\Desktop\\projects\\BANKONGSETON\\.gsd\\worktrees\\M006\\backend\\offline_queue.db",
-      "failed": 0,
-      "last_sync_at": null,
-      "pending": 0,
-      "synced": 0
-    },
+    "queue_status": null,
     "notes": []
   }
 }

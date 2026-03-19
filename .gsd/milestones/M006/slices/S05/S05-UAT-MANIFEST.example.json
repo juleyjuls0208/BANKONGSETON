@@ -1,0 +1,129 @@
+{
+  "schema_version": "1.0.0",
+  "generated_at": "2026-03-19T10:30:00Z",
+  "runtime": {
+    "base_url": "http://127.0.0.1:5010",
+    "admin_dashboard_process": "off",
+    "notes": "Cashier runtime only; no separate admin dashboard process running"
+  },
+  "operator": {
+    "name": "cashier-operator",
+    "shift": "lunch"
+  },
+  "artifacts": [
+    {
+      "artifact_id": "heartbeat-online-badge",
+      "type": "screenshot",
+      "path": ".gsd/milestones/M006/slices/S05/evidence/heartbeat-online-badge.png",
+      "captured_at": "2026-03-19T10:31:12Z",
+      "notes": "Arduino WiFi badge shows online"
+    },
+    {
+      "artifact_id": "rfid-card-read-success-video",
+      "type": "video",
+      "path": ".gsd/milestones/M006/slices/S05/evidence/rfid-card-read-success.mp4",
+      "captured_at": "2026-03-19T10:33:20Z",
+      "notes": "RFID tap to successful sale completion"
+    },
+    {
+      "artifact_id": "oled-qr-display",
+      "type": "screenshot",
+      "path": ".gsd/milestones/M006/slices/S05/evidence/oled-qr-display.png",
+      "captured_at": "2026-03-19T10:35:02Z",
+      "notes": "OLED displays generated student QR token"
+    },
+    {
+      "artifact_id": "student-qr-confirm-video",
+      "type": "video",
+      "path": ".gsd/milestones/M006/slices/S05/evidence/student-qr-confirm.mp4",
+      "captured_at": "2026-03-19T10:36:48Z",
+      "notes": "Student scans and confirms QR payment"
+    },
+    {
+      "artifact_id": "nfc-compatible-completion-screenshot",
+      "type": "screenshot",
+      "path": ".gsd/milestones/M006/slices/S05/evidence/nfc-compatible-completion.png",
+      "captured_at": "2026-03-19T10:38:27Z",
+      "notes": "NFC-compatible completion API path success"
+    },
+    {
+      "artifact_id": "request-trace-log",
+      "type": "trace",
+      "path": ".gsd/milestones/M006/slices/S05/evidence/request-trace.log",
+      "captured_at": "2026-03-19T10:39:10Z",
+      "notes": "Captured endpoint hits and status codes"
+    }
+  ],
+  "physical_checks": {
+    "arduino_heartbeat": {
+      "classification": "live_success",
+      "observed_at": "2026-03-19T10:31:12Z",
+      "artifact_refs": ["heartbeat-online-badge", "request-trace-log"],
+      "notes": "Heartbeat freshness remained under threshold"
+    },
+    "card_read_sale_completion": {
+      "classification": "live_success",
+      "observed_at": "2026-03-19T10:33:20Z",
+      "artifact_refs": ["rfid-card-read-success-video", "request-trace-log"],
+      "notes": "Card tap and sale completion verified"
+    },
+    "student_qr_confirm": {
+      "classification": "live_success",
+      "observed_at": "2026-03-19T10:36:48Z",
+      "artifact_refs": ["oled-qr-display", "student-qr-confirm-video", "request-trace-log"],
+      "notes": "OLED QR shown and student confirm completed"
+    },
+    "nfc_compatible_completion": {
+      "classification": "live_success",
+      "observed_at": "2026-03-19T10:38:27Z",
+      "artifact_refs": ["nfc-compatible-completion-screenshot", "request-trace-log"],
+      "notes": "NFC-compatible endpoint completes successfully"
+    }
+  },
+  "request_trace": [
+    {
+      "phase": "arduino_heartbeat",
+      "method": "POST",
+      "url": "http://127.0.0.1:5010/api/arduino/heartbeat",
+      "endpoint": "/api/arduino/heartbeat",
+      "resolved_endpoint": "/api/arduino/heartbeat",
+      "status_code": 200,
+      "classification": "live_success",
+      "timestamp": "2026-03-19T10:31:11Z"
+    },
+    {
+      "phase": "card_read",
+      "method": "POST",
+      "url": "http://127.0.0.1:5010/api/arduino/card-read",
+      "endpoint": "/api/arduino/card-read",
+      "resolved_endpoint": "/api/arduino/card-read",
+      "status_code": 200,
+      "classification": "live_success",
+      "timestamp": "2026-03-19T10:33:19Z"
+    },
+    {
+      "phase": "qr_confirm",
+      "method": "POST",
+      "url": "http://127.0.0.1:5010/api/qr/confirm",
+      "endpoint": "/api/qr/confirm",
+      "resolved_endpoint": "/api/qr/confirm",
+      "status_code": 200,
+      "classification": "live_success",
+      "timestamp": "2026-03-19T10:36:47Z"
+    },
+    {
+      "phase": "nfc_complete_sale",
+      "method": "POST",
+      "url": "http://127.0.0.1:5010/api/complete-sale-nfc",
+      "endpoint": "/api/complete-sale-nfc",
+      "resolved_endpoint": "/api/complete-sale-nfc",
+      "status_code": 200,
+      "classification": "live_success",
+      "timestamp": "2026-03-19T10:38:26Z"
+    }
+  ],
+  "capture_notes": [
+    "Do not include raw JWTs or full card UIDs in this manifest.",
+    "Ensure all artifact timestamps align with request trace timestamps."
+  ]
+}

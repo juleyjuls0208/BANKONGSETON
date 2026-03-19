@@ -21,6 +21,7 @@
 ## Verification
 
 - `rtk proxy python -m pytest -q tests/test_verify_m006_s05_bundle.py`
+- `rtk proxy python -m pytest -q tests/test_verify_m006_s05_bundle.py -k "offline or missing_artifact"`
 - `rtk proxy python scripts/verify-m006-s04-live.py --base-url http://127.0.0.1:5010 --evidence .gsd/milestones/M006/slices/S04/S04-LIVE-PROOF.json`
 - `rtk proxy python scripts/verify-m006-s05-bundle.py --base-url http://127.0.0.1:5010 --s04-evidence .gsd/milestones/M006/slices/S04/S04-LIVE-PROOF.json --manifest .gsd/milestones/M006/slices/S05/S05-UAT-MANIFEST.json --output .gsd/milestones/M006/slices/S05/S05-UAT-BUNDLE.json --markdown .gsd/milestones/M006/slices/S05/S05-UAT-BUNDLE.md`
 - `rtk proxy python -c "import json; p='.gsd/milestones/M006/slices/S05/S05-UAT-BUNDLE.json'; d=json.load(open(p, encoding='utf-8')); assert d['overall']['live_ready'] is True; req=d['required_flows']; assert all(v.get('classification')=='live_success' for v in req.values()); assert all(':5003' not in hit.get('url','') for hit in d.get('request_trace', []))"`
@@ -41,7 +42,7 @@
 
 ## Tasks
 
-- [ ] **T01: Build S05 evidence contract and verifier tests** `est:1h 15m`
+- [x] **T01: Build S05 evidence contract and verifier tests** `est:1h 15m`
   - Why: S05 needs deterministic closure logic that combines S04 live-proof output with physical UAT artifact requirements.
   - Files: `scripts/verify-m006-s05-bundle.py`, `tests/test_verify_m006_s05_bundle.py`, `.gsd/milestones/M006/slices/S05/S05-UAT-BUNDLE.schema.json`, `.gsd/milestones/M006/slices/S05/S05-UAT-MANIFEST.example.json`
   - Do: Define S05 bundle schema and implement verifier that ingests S04 proof + S05 manifest, validates required flow classifications and endpoint trace evidence, enforces degraded/offline failure semantics, and emits redacted JSON/markdown outputs. Relevant skills: `test`, `fullstack-developer`, `debug-like-expert`.
