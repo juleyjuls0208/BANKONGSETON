@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0.0",
-  "generated_at": "2026-03-19T10:15:22Z",
+  "generated_at": "2026-03-19T10:57:38Z",
   "base_url": "http://127.0.0.1:5010",
   "source_inputs": {
     "s04_evidence": ".gsd/milestones/M006/slices/S04/S04-LIVE-PROOF.json",
@@ -217,7 +217,7 @@
       "resolved_endpoint": "/cashier/api/products",
       "status_code": 200,
       "classification": "live_success",
-      "timestamp": "2026-03-19T06:21:30Z",
+      "timestamp": "2026-03-19T08:39:24Z",
       "notes": "derived_from_s04_evidence"
     },
     {
@@ -228,7 +228,7 @@
       "resolved_endpoint": "/cashier/api/complete-sale",
       "status_code": 200,
       "classification": "live_success",
-      "timestamp": "2026-03-19T06:21:30Z",
+      "timestamp": "2026-03-19T08:39:24Z",
       "notes": "derived_from_s04_evidence"
     },
     {
@@ -239,7 +239,7 @@
       "resolved_endpoint": "/api/qr/confirm",
       "status_code": 200,
       "classification": "live_success",
-      "timestamp": "2026-03-19T06:21:30Z",
+      "timestamp": "2026-03-19T08:39:24Z",
       "notes": "derived_from_s04_evidence"
     },
     {
@@ -250,7 +250,7 @@
       "resolved_endpoint": "/cashier/api/complete-sale-nfc",
       "status_code": 200,
       "classification": "live_success",
-      "timestamp": "2026-03-19T06:21:30Z",
+      "timestamp": "2026-03-19T08:39:24Z",
       "notes": "derived_from_s04_evidence"
     }
   ],

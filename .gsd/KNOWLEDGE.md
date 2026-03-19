@@ -136,3 +136,14 @@ Run in this order instead:
 2. Then run assertion command against `S05-UAT-BUNDLE.json`
 
 This avoids false negatives caused by command ordering rather than actual verification failures.
+
+---
+
+## S04 verifier side effect: preflight failures still overwrite `S04-LIVE-PROOF.json`
+
+`rtk proxy python scripts/verify-m006-s04-live.py ...` writes the evidence file even when preflight fails (`missing_env`/`missing_inputs`). That means a previously passing `S04-LIVE-PROOF.json` can be replaced by a failing artifact, which then cascades into S05 bundle regressions.
+
+Safe pattern when running docs/traceability work:
+1. Run S04 verifier only when required env/runtime inputs are present.
+2. If preflight fails but you need to preserve closure docs, regenerate/restore the intended S04 evidence before rerunning `verify-m006-s05-bundle.py`.
+3. Re-assert `S05-UAT-BUNDLE.json` (`overall.live_ready`, required flow classifications, no `:5003`) after restoration.

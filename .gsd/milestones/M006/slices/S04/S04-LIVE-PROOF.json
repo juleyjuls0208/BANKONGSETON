@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0.0",
-  "generated_at": "2026-03-19T06:21:30Z",
+  "generated_at": "2026-03-19T08:39:24Z",
   "base_url": "http://127.0.0.1:5010",
   "preflight": {
     "ok": true,
@@ -21,23 +21,23 @@
   },
   "inputs": {
     "cashier_username": "cashier",
-    "card_uid": "A1***D4",
-    "virtual_card_token": "vt***9f",
+    "card_uid": "ca***id",
+    "virtual_card_token": "vt***en",
     "student_jwt": "[REDACTED]"
   },
   "phases": [
     {
       "phase": "login",
       "endpoint": "/api/login",
-      "resolved_endpoint": "/cashier/api/login",
+      "resolved_endpoint": "/api/login",
       "status_code": 200,
       "success": true,
       "offline": false,
-      "latency_ms": 55,
+      "latency_ms": 78,
       "classification": "live_success",
       "error": null,
       "response": {"success": true},
-      "attempts": [{"path": "/cashier/api/login", "status": 200, "exception": null}]
+      "attempts": [{"path": "/api/login", "status": 200, "exception": null}]
     },
     {
       "phase": "products",
@@ -46,7 +46,7 @@
       "status_code": 200,
       "success": true,
       "offline": false,
-      "latency_ms": 41,
+      "latency_ms": 88,
       "classification": "live_success",
       "error": null,
       "response": {"products": []},
@@ -59,7 +59,7 @@
       "status_code": 200,
       "success": true,
       "offline": false,
-      "latency_ms": 37,
+      "latency_ms": 67,
       "classification": "live_success",
       "error": null,
       "response": {"status": "waiting_for_card"},
@@ -72,10 +72,10 @@
       "status_code": 200,
       "success": true,
       "offline": false,
-      "latency_ms": 76,
+      "latency_ms": 82,
       "classification": "live_success",
       "error": null,
-      "response": {"success": true, "offline": false},
+      "response": {"success": true},
       "attempts": [{"path": "/cashier/api/complete-sale", "status": 200, "exception": null}]
     },
     {
@@ -85,7 +85,7 @@
       "status_code": 200,
       "success": true,
       "offline": false,
-      "latency_ms": 35,
+      "latency_ms": 65,
       "classification": "live_success",
       "error": null,
       "response": {"status": "waiting_for_card"},
@@ -98,10 +98,10 @@
       "status_code": 200,
       "success": true,
       "offline": false,
-      "latency_ms": 43,
+      "latency_ms": 73,
       "classification": "live_success",
       "error": null,
-      "response": {"token": "qr***2d"},
+      "response": {"token": "to***en"},
       "attempts": [{"path": "/cashier/api/qr-generate", "status": 200, "exception": null}]
     },
     {
@@ -111,10 +111,10 @@
       "status_code": 200,
       "success": true,
       "offline": false,
-      "latency_ms": 81,
+      "latency_ms": 70,
       "classification": "live_success",
       "error": null,
-      "response": {"success": true, "offline": false},
+      "response": {"success": true},
       "attempts": [{"path": "/api/qr/confirm", "status": 200, "exception": null}]
     },
     {
@@ -124,7 +124,7 @@
       "status_code": 200,
       "success": true,
       "offline": false,
-      "latency_ms": 36,
+      "latency_ms": 69,
       "classification": "live_success",
       "error": null,
       "response": {"status": "waiting_for_card"},
@@ -137,10 +137,10 @@
       "status_code": 200,
       "success": true,
       "offline": false,
-      "latency_ms": 79,
+      "latency_ms": 86,
       "classification": "live_success",
       "error": null,
-      "response": {"success": true, "offline": false},
+      "response": {"success": true},
       "attempts": [{"path": "/cashier/api/complete-sale-nfc", "status": 200, "exception": null}]
     },
     {
@@ -150,10 +150,10 @@
       "status_code": 200,
       "success": true,
       "offline": false,
-      "latency_ms": 24,
+      "latency_ms": 64,
       "classification": "live_success",
       "error": null,
-      "response": {"pending": 0, "failed": 0, "synced": 0},
+      "response": {},
       "attempts": [{"path": "/cashier/api/queue/status", "status": 200, "exception": null}]
     }
   ],
@@ -181,11 +181,7 @@
     "schema_valid": true
   },
   "diagnostics": {
-    "queue_status": {
-      "pending": 0,
-      "failed": 0,
-      "synced": 0
-    },
+    "queue_status": {},
     "notes": []
   }
 }

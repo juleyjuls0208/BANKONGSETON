@@ -25,6 +25,7 @@
 - `rtk proxy python scripts/verify-m006-s04-live.py --base-url http://127.0.0.1:5010 --evidence .gsd/milestones/M006/slices/S04/S04-LIVE-PROOF.json`
 - `rtk proxy python scripts/verify-m006-s05-bundle.py --base-url http://127.0.0.1:5010 --s04-evidence .gsd/milestones/M006/slices/S04/S04-LIVE-PROOF.json --manifest .gsd/milestones/M006/slices/S05/S05-UAT-MANIFEST.json --output .gsd/milestones/M006/slices/S05/S05-UAT-BUNDLE.json --markdown .gsd/milestones/M006/slices/S05/S05-UAT-BUNDLE.md`
 - `rtk proxy python -c "import json; p='.gsd/milestones/M006/slices/S05/S05-UAT-BUNDLE.json'; d=json.load(open(p, encoding='utf-8')); assert d['overall']['live_ready'] is True; req=d['required_flows']; assert all(v.get('classification')=='live_success' for v in req.values()); assert all(':5003' not in hit.get('url','') for hit in d.get('request_trace', []))"`
+- `rtk proxy python -c "import json; p='.gsd/milestones/M006/slices/S05/S05-UAT-BUNDLE.json'; d=json.load(open(p, encoding='utf-8')); o=d.get('overall', {}); assert isinstance(o.get('failure_reasons', []), list); pc=d.get('physical_checks', {}); assert pc and all('missing_artifacts' in v and 'failure_reasons' in v for v in pc.values()); print('diagnostics-surface-ok')"`
 - Operator check from `.gsd/milestones/M006/slices/S05/S05-UAT.md`: screenshots/video artifacts exist and timestamps match verifier phases.
 
 ## Observability / Diagnostics
@@ -56,7 +57,7 @@
   - Verify: `rtk proxy python scripts/verify-m006-s05-bundle.py --base-url http://127.0.0.1:5010 --s04-evidence .gsd/milestones/M006/slices/S04/S04-LIVE-PROOF.json --manifest .gsd/milestones/M006/slices/S05/S05-UAT-MANIFEST.json --output .gsd/milestones/M006/slices/S05/S05-UAT-BUNDLE.json --markdown .gsd/milestones/M006/slices/S05/S05-UAT-BUNDLE.md`
   - Done when: Bundle artifacts are generated, all required flows classify `live_success`, and evidence includes traceable hardware screenshots/video + request-path proof without `:5003` dependency.
 
-- [ ] **T03: Publish S05 closure evidence into milestone and requirement traceability docs** `est:50m`
+- [x] **T03: Publish S05 closure evidence into milestone and requirement traceability docs** `est:50m`
   - Why: Closure must be visible to future agents/operators in milestone and requirement records, not only raw artifacts.
   - Files: `.gsd/milestones/M006/slices/S05/S05-SUMMARY.md`, `.gsd/milestones/M006/M006-VALIDATION.md`, `.gsd/REQUIREMENTS.md`, `.gsd/milestones/M006/slices/S05/S05-ASSESSMENT.md`
   - Do: Summarize S05 run outcomes, link artifact files/commands, and update validation + R053 traceability notes (status change only if bundle gate passes); explicitly document any residual blockers if gate fails. Relevant skills: `test`, `fullstack-developer`.

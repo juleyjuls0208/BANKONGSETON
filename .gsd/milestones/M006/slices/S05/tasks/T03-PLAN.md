@@ -33,6 +33,12 @@ Relevant skills to load: `test`, `fullstack-developer`.
 - `rtk proxy python -c "from pathlib import Path; files=['.gsd/milestones/M006/slices/S05/S05-SUMMARY.md','.gsd/milestones/M006/M006-VALIDATION.md','.gsd/REQUIREMENTS.md','.gsd/milestones/M006/slices/S05/S05-ASSESSMENT.md']; [Path(f).read_text(encoding='utf-8') for f in files]; print('docs-readable')"`
 - `rtk proxy python -c "from pathlib import Path; t=Path('.gsd/milestones/M006/M006-VALIDATION.md').read_text(encoding='utf-8'); assert 'S05-UAT-BUNDLE.json' in t; r=Path('.gsd/REQUIREMENTS.md').read_text(encoding='utf-8'); assert 'S05-UAT-BUNDLE.json' in r"`
 
+## Observability Impact
+
+- Signals updated by this task: milestone closure gate status for S05, R053 requirement validation status/notes, and explicit links from documentation to machine-readable flow classifications.
+- How future agents/operators inspect outcomes: read `.gsd/milestones/M006/slices/S05/S05-SUMMARY.md` for per-flow evidence mapping, `.gsd/milestones/M006/M006-VALIDATION.md` for closure gate commands, `.gsd/REQUIREMENTS.md` for R053 traceability state, and `.gsd/milestones/M006/slices/S05/S05-ASSESSMENT.md` for rerun/remediation guidance.
+- Failure visibility added: if S05 gate regresses, docs now surface blocking `offline_fallback`/`failed` classifications, rerun commands, and artifact locations needed to reproduce and diagnose the failing phase.
+
 ## Inputs
 
 - `.gsd/milestones/M006/slices/S05/S05-UAT-BUNDLE.json` — Final machine-readable gate verdict and classifications.

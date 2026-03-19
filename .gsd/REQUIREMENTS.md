@@ -376,20 +376,18 @@ This file is the explicit capability and coverage contract for the project.
 - Supporting slices: none
 - Validation: n/a
 
-## Active
+## Validated
 
 ### R053 — Standalone Cashier Web App
 - Class: primary-user-loop
-- Status: active
+- Status: validated
 - Description: A standalone Flask app on port 5010 serves a cashier-only POS interface — login, product grid, order panel, and all three payment methods — without requiring the admin dashboard to be running
 - Why it matters: Cashiers need a dedicated URL with no admin clutter; process isolation means the cashier station can operate independently
 - Source: user
 - Primary owning slice: M006/S01
-- Supporting slices: M006/S02, M006/S03
-- Validation: contract + mixed runtime UAT in M006/S03 plus S04 live-proof evidence wiring (`rtk proxy bash scripts/verify-m006-s04.sh` emits `.gsd/milestones/M006/slices/S04/S04-LIVE-PROOF.{json,md}`)
-- Notes: Closure requires `overall.live_ready=true` with required flow classifications `products`, `rfid_complete_sale`, `qr_confirm`, `nfc_complete_sale` all `live_success`; any `offline_fallback` keeps R053 open.
-
-## Validated
+- Supporting slices: M006/S02, M006/S03, M006/S04, M006/S05
+- Validation: validated via S05 final gate — `.gsd/milestones/M006/slices/S05/S05-UAT-BUNDLE.json` reports `overall.live_ready=true` with required flows (`products_live_data`, `arduino_heartbeat`, `card_read_sale_completion`, `student_qr_confirm`, `nfc_compatible_completion`) all `live_success` on `http://127.0.0.1:5010` and no `:5003` request-trace hits
+- Notes: S04 verifier artifacts (`.gsd/milestones/M006/slices/S04/S04-LIVE-PROOF.{json,md}`) remain prerequisite evidence, while S05 bundle artifacts (`.gsd/milestones/M006/slices/S05/S05-UAT-BUNDLE.{json,md}`) are the closure gate outputs; evidence remains redacted (no raw JWT/API keys/full UID/unredacted student IDs).
 
 ### R054 — Modern POS UI for Cashier
 - Class: primary-user-loop
@@ -406,7 +404,7 @@ This file is the explicit capability and coverage contract for the project.
 
 | ID | Class | Status | Primary Owner | Supporting | Proof |
 |----|-------|--------|---------------|------------|-------|
-| R053 | primary-user-loop | active | M006/S01 | M006/S02, M006/S03 | contract + mixed runtime UAT in M006/S03, with S04 closure gated by `scripts/verify-m006-s04.sh` and `.gsd/milestones/M006/slices/S04/S04-LIVE-PROOF.{json,md}` (`live_ready=true` + required flows all `live_success`) |
+| R053 | primary-user-loop | validated | M006/S01 | M006/S02, M006/S03, M006/S04, M006/S05 | validated via S05 closure bundle `.gsd/milestones/M006/slices/S05/S05-UAT-BUNDLE.{json,md}` (`overall.live_ready=true`, required flows all `live_success`, request trace pinned to `:5010` with no `:5003`) |
 | R054 | primary-user-loop | validated | M006/S02 | none | validated in M006/S02 runtime UAT (mocked `/api/products` success + real failure visibility) |
 | R001 | failure-visibility | validated | M001/S01 | none | validated |
 | R002 | admin/support | validated | M001/S01 | none | validated |
@@ -447,7 +445,7 @@ This file is the explicit capability and coverage contract for the project.
 
 ## Coverage Summary
 
-- Active requirements: 9
+- Active requirements: 8
 - Mapped to slices: 9
-- Validated: 26
+- Validated: 27
 - Unmapped active requirements: 0
