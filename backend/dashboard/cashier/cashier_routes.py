@@ -2,6 +2,7 @@
 Cashier Web Application Blueprint
 JWT-authenticated interface for processing sales with RC522 card reader
 """
+import requests as _http
 
 from flask import Blueprint, render_template, jsonify, request, redirect, url_for
 from functools import wraps
@@ -854,6 +855,27 @@ def complete_sale_nfc():
         return jsonify({'error': 'An unexpected error occurred'}), 500
 
 
+@cashier_bp.route('/api/cancel-sale', methods=['POST'])
+@jwt_required(roles=['cashier', 'admin'])
+def cancel_sale():
+    """Cancel a pending card-read or QR payment session.
+    - Clears pending_qr_token so the Arduino stops rendering the QR.
+    - Clears the pending_transaction session so complete-sale rejects stale taps.
+    - Emits sale_cancelled via SocketIO so any in-flight card_read events are ignored.
+    - Cancels the token on PythonAnywhere if cloud sync is enabled.
+    """
+    from flask import current_app, session as flask_session
+    t = current_app.pending_qr_token
+    token = (t or {}).get("token", "")
+    flask_session.pop('pending_transaction', None)
+    current_app.pending_qr_token = None
+    current_app.socketio.emit('sale_cancelled', {})
+    if token:
+        _cancel_qr_on_cloud(token)
+    logger.info("event=sale_cancelled user=%s", request.user.get('username', ''))
+    return jsonify({'status': 'cancelled'})
+
+
 @cashier_bp.route('/api/queue/status', methods=['GET'])
 @jwt_required(roles=['cashier', 'admin'])
 def queue_status():
@@ -903,11 +925,61 @@ def queue_sync():
         return jsonify({'error': 'An unexpected error occurred'}), 500
 
 
+def _cloud_headers():
+    """Headers for local→cloud cashier calls."""
+    return {"X-Cashier-Secret": os.getenv("CASHIER_SHARED_SECRET", ""),
+            "Content-Type": "application/json"}
+
+
+def _push_qr_to_cloud(pending: dict, req):
+    """Push pending QR token to PythonAnywhere (fire-and-forget).
+    Builds a cashier_callback_url so PythonAnywhere can notify us on payment.
+    """
+    pa_url = os.getenv("PYTHONANYWHERE_URL", "").rstrip("/")
+    if not pa_url or not os.getenv("CASHIER_SHARED_SECRET"):
+        return  # cloud sync disabled — local/LAN-only mode
+    try:
+        scheme = "https" if req.is_secure else "http"
+        callback_url = f"{scheme}://{req.host}/api/cashier/qr-paid"
+        _http.post(
+            f"{pa_url}/api/cashier/qr-register",
+            json={k: v for k, v in pending.items() if k != "cashier_callback_url"},
+            headers=_cloud_headers(),
+            timeout=5,
+        )
+        logger.info("event=qr_pushed_to_cloud token=%s", pending.get("token"))
+    except Exception as e:
+        logger.warning("event=qr_cloud_push_failed error=%s (LAN-only fallback)", e)
+
+
+def _cancel_qr_on_cloud(token: str):
+    """Tell PythonAnywhere to clear the pending QR token (fire-and-forget)."""
+    pa_url = os.getenv("PYTHONANYWHERE_URL", "").rstrip("/")
+    if not pa_url or not os.getenv("CASHIER_SHARED_SECRET"):
+        return
+    try:
+        _http.post(
+            f"{pa_url}/api/cashier/qr-cancel",
+            json={"token": token},
+            headers=_cloud_headers(),
+            timeout=5,
+        )
+    except Exception as e:
+        logger.warning("event=qr_cloud_cancel_failed error=%s", e)
+
+
 @cashier_bp.route('/api/qr-generate', methods=['POST'])
 @jwt_required(roles=['cashier', 'admin'])
 def qr_generate():
-    """Generate a QR payment token and store it as the pending QR."""
+    """Generate a QR payment token and store it as the pending QR.
+
+    Token is 8 hex chars (not a full UUID) to keep the QR URL short enough
+    for V3 ECC-Low (≤53 bytes), which renders at 2px/module (58×58px) on the
+    128×64 OLED — readable by a phone camera. A full UUID pushes the URL to
+    V4 which renders at 1px/module and is nearly impossible to scan.
+    """
     from flask import current_app
+    import secrets as _secrets
     data = request.get_json() or {}
     items = data.get('items', [])
     total = float(data.get('total', 0))
@@ -915,16 +987,24 @@ def qr_generate():
         return jsonify({'error': 'Invalid cart'}), 400
     server_url = os.getenv('SERVER_URL', '').rstrip('/')
     if not server_url:
-        return jsonify({'error': 'SERVER_URL not configured'}), 500
-    token = str(uuid.uuid4())
+        # Use the Host header so the URL contains the real LAN IP, not localhost.
+        # request.host includes port (e.g. 192.168.68.104:5003).
+        scheme = 'https' if request.is_secure else 'http'
+        server_url = f"{scheme}://{request.host}"
+    token = _secrets.token_hex(4)  # 8 hex chars — keeps URL ≤53 bytes for V3 QR
     url = f"{server_url}/api/qr/{token}"
     current_app.pending_qr_token = {
         'token': token,
         'url': url,
+        'qr_value': token,   # encode only the token in the QR — V1 scale=3 (63×63px on OLED)
         'cart_snapshot': items,
         'total': total,
         'created_at': time.time(),
         'cashier_username': request.user.get('username', ''),
     }
-    logger.info("event=qr_generate token=%s total=%.2f", token, total)
+
+    # Push token to PythonAnywhere so student phone can find it over mobile data
+    _push_qr_to_cloud(current_app.pending_qr_token, request)
+
+    logger.info("event=qr_generate token=%s url=%s total=%.2f", token, url, total)
     return jsonify({'token': token, 'url': url})

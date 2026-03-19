@@ -112,7 +112,7 @@ class TransactionsActivity : AppCompatActivity() {
 
     private fun applyFilters() {
         val cal = Calendar.getInstance()
-        val sdf = SimpleDateFormat("yyyy-MM", Locale.getDefault())
+        val sdf = SimpleDateFormat("yyyy-MM", Locale.US)
 
         val thisMonth = sdf.format(cal.time)
         cal.add(Calendar.MONTH, -1)
@@ -120,8 +120,8 @@ class TransactionsActivity : AppCompatActivity() {
 
         val filtered = allTransactions.filter { txn ->
             val typeMatch = when (activeTypeFilter) {
-                "Purchase" -> txn.type.equals("Purchase", ignoreCase = true)
-                "Load" -> txn.type.equals("Load", ignoreCase = true)
+                "Purchase" -> txn.type.lowercase() in listOf("purchase", "debit", "payment", "nfc")
+                "Load" -> txn.type.lowercase() in listOf("load", "top_up", "topup", "credit")
                 else -> true
             }
 

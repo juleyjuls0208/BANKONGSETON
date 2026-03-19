@@ -115,9 +115,15 @@ class QRPayActivity : AppCompatActivity() {
             .addOnSuccessListener { barcodes ->
                 for (barcode in barcodes) {
                     val rawValue = barcode.rawValue ?: continue
-                    // Extract token from URL last path segment
-                    val token = rawValue.trimEnd('/').substringAfterLast('/')
-                    if (token.isNotEmpty() && rawValue.contains("/api/qr/")) {
+                    // Accept either a bare 8-char hex token or a full /api/qr/<token> URL
+                    val token = when {
+                        rawValue.contains("/api/qr/") ->
+                            rawValue.trimEnd('/').substringAfterLast('/')
+                        rawValue.matches(Regex("[0-9a-fA-F]{8}")) ->
+                            rawValue
+                        else -> continue
+                    }
+                    if (token.isNotEmpty()) {
                         scanning = false
                         runOnUiThread { fetchCart(token) }
                         break

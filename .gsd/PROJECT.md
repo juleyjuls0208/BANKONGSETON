@@ -18,6 +18,7 @@ Physical RFID card tapped at the cashier counter completes a sale — balance de
 - **Backend QR payment flow** (M005/S03 done): `POST /cashier/api/qr-generate` → `GET /api/arduino/qr-pending` → student scans → `GET /api/qr/<token>` → `POST /api/qr/confirm` → balance debited → `qr_payment` SocketIO → cashier success modal; `app.pending_qr_token` in-memory state; `jwt_token` in student login response; 14/14 contract checks pass
 - Android app (student_app_v2): balance, transactions, FCM push, NFC HCE pay (being removed in M005/S05)
 - iOS app (mobile/ios/BankongSetonStudent): balance, transactions, FCM push — QR payment coming in M005/S04
+- Standalone cashier app (M006/S01+S02+S03): login + JWT cookie auth + `/api/products` + modern POS screen + standalone payment/Arduino/QR APIs on port 5010 (`/api/process-sale`, `/api/complete-sale`, `/api/complete-sale-nfc`, `/api/qr-generate`, `/api/cancel-sale`, `/api/queue/status`, `/api/queue/sync`, `/api/arduino/*`); POS now orchestrates RFID/QR/NFC flows with queue/WiFi diagnostics and no `:5003` dependency verified in runtime UAT (live hardware + non-mocked Sheets sale still recommended for final ops sign-off)
 
 ## Architecture / Key Patterns
 
@@ -41,4 +42,4 @@ See `.gsd/REQUIREMENTS.md` for the explicit capability contract, requirement sta
 - [x] M003: Wireless Cashier Payment Terminal — R4 WiFi routing fix, phone NFC cashier pay, WiFi badge, powerbank hardening
 - [x] M004: NFC Phone Payment Fix — APDU retry firmware, end-to-end NFC validation
 - [x] M005: RC522 + OLED + QR Payment — swap PN532→RC522 on R4, LCD→OLED on R4, QR payment on both Android and iOS
-- [ ] M006: Standalone Cashier Web App — dedicated port-5010 cashier site with modern POS UI, isolated from admin dashboard
+- [ ] M006: Standalone Cashier Web App — dedicated port-5010 cashier site with modern POS UI, isolated from admin dashboard (**S01 + S02 + S03 complete; perform live hardware + non-mocked Sheets sale UAT for full milestone sign-off**)

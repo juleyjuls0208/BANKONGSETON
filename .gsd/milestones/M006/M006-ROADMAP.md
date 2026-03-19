@@ -30,7 +30,7 @@
 
 This milestone is complete only when all are true:
 
-- All three slices complete
+- All planned slices (including remediation slices, if any) complete
 - Login → POS → payment end-to-end works in the standalone app
 - New UI (category sidebar, color-coded cards, coral Charge button) renders correctly
 - App starts and functions with admin dashboard off
@@ -45,14 +45,20 @@ This milestone is complete only when all are true:
 
 ## Slices
 
-- [ ] **S01: Standalone Flask app scaffold** `risk:medium` `depends:[]`
+- [x] **S01: Standalone Flask app scaffold** `risk:medium` `depends:[]`
   > After this: `python backend/cashier_app/app.py` starts on port 5010; login page loads; JWT auth works; cashier reaches the POS screen (no products yet — product grid placeholder).
 
-- [ ] **S02: New POS UI — product grid and order panel** `risk:low` `depends:[S01]`
+- [x] **S02: New POS UI — product grid and order panel** `risk:low` `depends:[S01]`
   > After this: products load from Google Sheets with category sidebar; color-coded cards; clicking adds to order panel; total updates live; Charge button activates.
 
-- [ ] **S03: Payment flows — RFID, QR, NFC** `risk:medium` `depends:[S02]`
+- [x] **S03: Payment flows — RFID, QR, NFC** `risk:medium` `depends:[S02]`
   > After this: full sale end-to-end — RFID WiFi tap deducts balance; QR flow generates token and confirms on student scan; NFC phone tap completes sale. Arduino WiFi badge reflects heartbeat.
+
+- [ ] **S04: Live Google Sheets runtime proof (non-mocked)** `risk:medium` `depends:[S03]`
+  > After this: `/api/products` and all checkout completion paths (`/api/complete-sale`, `/api/qr/confirm`, `/api/complete-sale-nfc`) are verified against live Google Sheets with no mocked success handlers.
+
+- [ ] **S05: Physical hardware UAT + evidence bundle** `risk:medium` `depends:[S04]`
+  > After this: Arduino R4 heartbeat/card-read and student QR confirm are executed with real devices while admin dashboard is OFF; evidence bundle (screenshots/video + request traces) confirms real RFID, QR, and NFC-compatible sale completion on port 5010.
 
 ## Boundary Map
 

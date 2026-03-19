@@ -386,26 +386,28 @@ This file is the explicit capability and coverage contract for the project.
 - Source: user
 - Primary owning slice: M006/S01
 - Supporting slices: M006/S02, M006/S03
-- Validation: unmapped
-- Notes: Reuses payment logic from cashier_routes.py; own SocketIO instance; port 5010
+- Validation: contract + mixed runtime UAT in M006/S03 (py_compile + payment/arduino/pos route suites pass; standalone browser flow verifies RFID/QR/NFC orchestration on port 5010 with no :5003 dependency)
+- Notes: Reuses payment logic from cashier_routes.py; own SocketIO instance; port 5010. Live hardware tap + Sheets-backed non-mocked sale success still required to fully close milestone-level “real sale” proof.
+
+## Validated
 
 ### R054 — Modern POS UI for Cashier
 - Class: primary-user-loop
-- Status: active
+- Status: validated
 - Description: The cashier POS screen has a modern food-POS aesthetic: white background, left category sidebar with icons, center product grid with color-coded cards, right order panel, and a prominent coral Charge button
 - Why it matters: The current UI is generic and utilitarian; cashiers spend hours on it — a clean purpose-built interface reduces errors and fatigue
 - Source: user
 - Primary owning slice: M006/S02
 - Supporting slices: none
-- Validation: unmapped
-- Notes: Reference images provided; color-coded by category, no product photos needed
+- Validation: validated in M006/S02 runtime UAT (login to standalone POS, dynamic category sidebar, color-coded cards, interactive order panel, and Charge button total updates verified)
+- Notes: Reference images provided; color-coded by category, no product photos needed; live Sheets was unavailable in this environment, so happy-path rendering was verified with mocked `/api/products` while real 500 failure visibility was also verified
 
 ## Traceability
 
 | ID | Class | Status | Primary Owner | Supporting | Proof |
 |----|-------|--------|---------------|------------|-------|
-| R053 | primary-user-loop | active | M006/S01 | M006/S02, M006/S03 | unmapped |
-| R054 | primary-user-loop | active | M006/S02 | none | unmapped |
+| R053 | primary-user-loop | active | M006/S01 | M006/S02, M006/S03 | contract + mixed runtime UAT in M006/S03 (all standalone route suites pass; browser verified endpoint wiring + no :5003 dependency; live hardware/Sheets sale proof pending) |
+| R054 | primary-user-loop | validated | M006/S02 | none | validated in M006/S02 runtime UAT (mocked `/api/products` success + real failure visibility) |
 | R001 | failure-visibility | validated | M001/S01 | none | validated |
 | R002 | admin/support | validated | M001/S01 | none | validated |
 | R003 | operability | validated | M001/S02 | none | validated |
@@ -445,7 +447,7 @@ This file is the explicit capability and coverage contract for the project.
 
 ## Coverage Summary
 
-- Active requirements: 10
-- Mapped to slices: 10
-- Validated: 25
+- Active requirements: 9
+- Mapped to slices: 9
+- Validated: 26
 - Unmapped active requirements: 0

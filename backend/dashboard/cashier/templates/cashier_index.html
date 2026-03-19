@@ -45,6 +45,8 @@
         .cart-total { font-size: 24px; font-weight: 700; text-align: right; margin-bottom: 16px; color: #667eea; }
         .checkout-btn { width: 100%; padding: 16px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: 700; cursor: pointer; }
         .checkout-btn:disabled { background: #ccc; cursor: not-allowed; }
+        .qr-btn { width: 100%; padding: 16px; background: #667eea; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: 700; cursor: pointer; margin-bottom: 8px; }
+        .qr-btn:disabled { background: #ccc; cursor: not-allowed; }
         .clear-btn { width: 100%; padding: 12px; background: #e74c3c; color: white; border: none; border-radius: 8px; margin-bottom: 12px; cursor: pointer; }
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
         .modal-content { background: white; padding: 40px; border-radius: 16px; text-align: center; max-width: 400px; }
@@ -87,7 +89,8 @@
             </div>
             <div class="cart-total" id="cartTotal">Total: &#8369;0.00</div>
             <button class="clear-btn" onclick="clearCart()">Clear Cart</button>
-            <button class="checkout-btn" id="checkoutBtn" onclick="checkout()" disabled>Pay Now</button>
+            <button class="qr-btn" id="qrBtn" onclick="qrCheckout()" disabled>&#x1F4F1; QR Pay</button>
+            <button class="checkout-btn" id="checkoutBtn" onclick="checkout()" disabled>&#x1F4B3; Tap Card</button>
         </div>
     </div>
 
@@ -106,6 +109,7 @@
         let selectedCategory = 'All';
         let socket = null;
         let arduinoConnected = false;
+        let saleInProgress = false;  // true while waiting for card tap or QR scan
 
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
@@ -289,6 +293,7 @@
             if (cart.length === 0) {
                 document.getElementById('cartItems').innerHTML = '<p style="text-align: center; color: #999;">Cart is empty</p>';
                 document.getElementById('checkoutBtn').disabled = true;
+                document.getElementById('qrBtn').disabled = true;
             } else {
                 document.getElementById('cartItems').innerHTML = cart.map(item => `
                     <div class="cart-item">
@@ -303,6 +308,7 @@
                     </div>
                 `).join('');
                 document.getElementById('checkoutBtn').disabled = false;
+                document.getElementById('qrBtn').disabled = false;
             }
 
             const total = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
@@ -322,6 +328,7 @@
             socket = io();
 
             socket.on('card_read', function(data) {
+                if (!saleInProgress) return;  // stale tap after cancel
                 completeSale(data.uid);
             });
 
@@ -340,6 +347,8 @@
             });
 
             socket.on('qr_payment', function(data) {
+                if (!saleInProgress) return;  // stale payment after cancel
+                saleInProgress = false;
                 document.getElementById('paymentModal').style.display = 'flex';
                 document.getElementById('modalTitle').textContent = 'QR Payment Received!';
                 document.getElementById('modalMessage').textContent =
@@ -350,12 +359,76 @@
                 setTimeout(function() { closeModal(); }, 2000);
             });
 
-            socket.on('arduino_wifi_status', function(data) {
+            socket.on('sale_cancelled', function() {
+                saleInProgress = false;
+            });
                 updateWifiBadge(data);
             });
         }
 
         // --- Checkout / Payment ---
+
+        async function qrCheckout() {
+            if (cart.length === 0) return;
+
+            const items = cart.map(item => ({name: item.name, price: item.price, qty: item.qty}));
+            const total = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+
+            document.getElementById('paymentModal').style.display = 'flex';
+            document.getElementById('modalTitle').textContent = '\uD83D\uDCF1 QR Pay';
+            document.getElementById('modalMessage').textContent = 'Generating QR code\u2026';
+            saleInProgress = true;
+
+            try {
+                const response = await fetch('/cashier/api/qr-generate', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({items, total})
+                });
+
+                if (!response.ok) {
+                    const err = await response.json().catch(() => ({}));
+                    throw new Error(err.error || 'Failed to generate QR (' + response.status + ')');
+                }
+
+                const data = await response.json();
+                const token = data.token;
+
+                document.getElementById('modalTitle').textContent = '\uD83D\uDCF1 Scan QR on OLED';
+                document.getElementById('modalMessage').textContent =
+                    'QR code shown on the reader display.\nAsk student to scan with their app.\nTotal: \u20B1' + total.toFixed(2);
+
+                // Poll PythonAnywhere (via local proxy) every second for payment confirmation
+                const pollInterval = setInterval(async function() {
+                    if (!saleInProgress) { clearInterval(pollInterval); return; }
+                    try {
+                        const pr = await fetch('/api/cashier/qr-paid', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({token: token})
+                        });
+                        if (!pr.ok) return;
+                        const pd = await pr.json();
+                        if (pd.paid) {
+                            clearInterval(pollInterval);
+                            saleInProgress = false;
+                            document.getElementById('modalTitle').textContent = '\u2705 Payment Received!';
+                            document.getElementById('modalMessage').textContent =
+                                'New Balance: \u20B1' + pd.new_balance.toFixed(2);
+                            cart = [];
+                            renderCart();
+                            checkQueueStatus();
+                            setTimeout(function() { closeModal(); }, 2000);
+                        }
+                    } catch(e) { /* network blip — keep polling */ }
+                }, 1000);
+
+            } catch (error) {
+                saleInProgress = false;
+                document.getElementById('modalTitle').textContent = 'QR Error';
+                document.getElementById('modalMessage').textContent = error.message;
+            }
+        }
 
         async function checkout() {
             if (!arduinoConnected) {
@@ -377,6 +450,7 @@
             document.getElementById('paymentModal').style.display = 'flex';
             document.getElementById('modalTitle').textContent = 'Tap Student Card';
             document.getElementById('modalMessage').textContent = 'Waiting for card...';
+            saleInProgress = true;
 
             try {
                 const response = await fetch('/cashier/api/process-sale', {
@@ -405,9 +479,11 @@
                 const data = await response.json();
 
                 if (data.error) {
+                    saleInProgress = false;
                     document.getElementById('modalTitle').textContent = 'Payment Failed';
                     document.getElementById('modalMessage').textContent = data.error;
                 } else {
+                    saleInProgress = false;
                     const offlineNote = data.offline ? ' (Offline — will sync)' : '';
                     document.getElementById('modalTitle').textContent = 'Success!';
                     document.getElementById('modalMessage').textContent =
@@ -462,7 +538,10 @@
         // --- Modal / Auth ---
 
         function closeModal() {
+            saleInProgress = false;
             document.getElementById('paymentModal').style.display = 'none';
+            // Tell the server to clear pending QR + session so Arduino returns to Ready
+            fetch('/cashier/api/cancel-sale', {method: 'POST'}).catch(function() {});
         }
 
         function logout() {

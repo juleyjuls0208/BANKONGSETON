@@ -16,19 +16,22 @@
  *   MOSI    → D11  (SPI hardware, no define needed)
  *   MISO    → D12  (SPI hardware, no define needed)
  *   SCK     → D13  (SPI hardware, no define needed)
- *   RST     → D8   (RC522_RST)
+ *   RST     → D9   (RC522_RST)   ← RC522_RST is defined as pin 9
  *   VCC     → 3.3V
  *   GND     → GND
  *
- * OLED 128x64 (hardware I2C — deferred to S02):
- *   SDA     → SDA (hardware I2C)
- *   SCL     → SCL (hardware I2C)
+ * OLED 128x64 (hardware I2C):
+ *   SDA     → SDA (hardware I2C, same as A4)
+ *   SCL     → SCL (hardware I2C, same as A5)
  *   VCC     → 3.3V or 5V
  *   GND     → GND
- *   I2C address: 0x3C (OLED_ADDR)
+ *   I2C address: 0x3C (OLED_ADDR) — run I2C scanner if display blank
+ *   NOTE: UNO R4 WiFi has NO built-in I2C pull-ups. Most OLED breakout
+ *         boards include them on-module. If yours doesn't, add 4.7kΩ
+ *         from SDA→3.3V and SCL→3.3V.
  *
  * Piezo buzzer:
- *   +       → D9   (PIEZO_PIN)
+ *   +       → D8   (PIEZO_PIN)   ← PIEZO_PIN is defined as pin 8
  *   -       → GND
  *
  * ═══════════════════════════════════════════════════════════════
@@ -55,7 +58,7 @@
 
 // ── RC522 pin assignments ────────────────────────────────────────
 #define RC522_SS    10   // SPI chip-select (SDA/SS on RC522 board)
-#define RC522_RST    8   // RC522 reset line
+#define RC522_RST    9   // RC522 reset line
 
 // ── RC522 instance ───────────────────────────────────────────────
 MFRC522 rfid(RC522_SS, RC522_RST);
@@ -68,7 +71,7 @@ MFRC522 rfid(RC522_SS, RC522_RST);
 Adafruit_SSD1306 display(OLED_WIDTH, OLED_HEIGHT, &Wire, -1);
 
 // ── Piezo ────────────────────────────────────────────────────────
-#define PIEZO_PIN    9   // Passive or active piezo buzzer
+#define PIEZO_PIN    8   // Passive or active piezo buzzer
 
 // ── Tuning ───────────────────────────────────────────────────────
 #define SCAN_COOLDOWN_MS  1500  // ms pause after card read (prevents double-scan)
@@ -295,7 +298,7 @@ void renderQr(const String &url) {
   uint8_t qrData[qrcode_getBufferSize(7)];
   int usedVersion = -1;
   for (int v = 1; v <= 7; v++) {
-    if (qrcode_initText(&qrcode, qrData, v, ECC_LOW, url.c_str()) == true) {
+    if (qrcode_initText(&qrcode, qrData, v, ECC_LOW, url.c_str()) == 0) {
       usedVersion = v;
       break;
     }
@@ -305,8 +308,9 @@ void renderQr(const String &url) {
     oledShowReady();
     return;
   }
-  // Auto-scale: 2px/module if it fits in OLED_HEIGHT, else 1px
-  uint8_t scale = (qrcode.size * 2 <= OLED_HEIGHT) ? 2 : 1;
+  // Scale: 3px/module if it fits in OLED_HEIGHT (V1=21 → 63px ✓), else 2px, else 1px
+  uint8_t scale = (qrcode.size * 3 <= OLED_HEIGHT) ? 3 :
+                  (qrcode.size * 2 <= OLED_HEIGHT) ? 2 : 1;
   // Center on display
   uint8_t xOff = (OLED_WIDTH  - qrcode.size * scale) / 2;
   uint8_t yOff = (OLED_HEIGHT - qrcode.size * scale) / 2;
@@ -314,14 +318,11 @@ void renderQr(const String &url) {
   for (uint8_t y = 0; y < qrcode.size; y++) {
     for (uint8_t x = 0; x < qrcode.size; x++) {
       if (qrcode_getModule(&qrcode, x, y)) {
-        if (scale == 1) {
-          display.drawPixel(xOff + x, yOff + y, SSD1306_WHITE);
-        } else {
-          // 2×2 block per module
-          display.drawPixel(xOff + x*2,   yOff + y*2,   SSD1306_WHITE);
-          display.drawPixel(xOff + x*2+1, yOff + y*2,   SSD1306_WHITE);
-          display.drawPixel(xOff + x*2,   yOff + y*2+1, SSD1306_WHITE);
-          display.drawPixel(xOff + x*2+1, yOff + y*2+1, SSD1306_WHITE);
+        // drawPixel per cell — works for any scale value
+        for (uint8_t dy = 0; dy < scale; dy++) {
+          for (uint8_t dx = 0; dx < scale; dx++) {
+            display.drawPixel(xOff + x*scale + dx, yOff + y*scale + dy, SSD1306_WHITE);
+          }
         }
       }
     }
@@ -362,23 +363,39 @@ String httpGetBody(const String &path) {
     if (line.length() == 0) break;  // blank line = end of headers
   }
 
-  // Read body (first non-empty line after headers)
+  // Read body — accumulate ALL lines after the blank header separator.
+  // Flask debug mode pretty-prints JSON across multiple lines; reading only
+  // the first non-empty line would give just "{" and break parseQrUrl.
   String body = "";
   unsigned long bodyStart = millis();
-  while (client.available() && millis() - bodyStart < 2000) {
-    body = client.readStringUntil('\n');
-    body.trim();
-    if (body.length() > 0) break;
+  while (millis() - bodyStart < 2000) {
+    while (client.available()) {
+      String line = client.readStringUntil('\n');
+      line.trim();
+      body += line;
+    }
+    if (!client.connected()) break;
+    delay(10);
   }
   client.stop();
+  body.trim();
   return body;
 }
 
-// Extracts "url" value from {"token":"...","url":"..."} or returns "" for {"token":null}.
+// Extracts "qr_value" field (token only) for OLED rendering.
+// Falls back to "url" if qr_value absent (older server).
 String parseQrUrl(const String &json) {
-  int idx = json.indexOf("\"url\":\"");
+  // Prefer qr_value (just the 8-char token — renders at V1 scale=3 on OLED)
+  int idx = json.indexOf("\"qr_value\":\"");
+  if (idx >= 0) {
+    int start = idx + 12;
+    int end   = json.indexOf('"', start);
+    if (end > start) return json.substring(start, end);
+  }
+  // Fallback: full url field
+  idx = json.indexOf("\"url\":\"");
   if (idx < 0) return "";
-  int start = idx + 7;  // length of "\"url\":\""
+  int start = idx + 7;
   int end   = json.indexOf('"', start);
   if (end < 0) return "";
   return json.substring(start, end);
@@ -392,28 +409,39 @@ void setup() {
   // 2. Piezo — pinMode required before tone() on UNO R4
   pinMode(PIEZO_PIN, OUTPUT);
 
-  // 3. RC522 SPI init — SPI.begin() MUST precede PCD_Init()
-  SPI.begin();
-  rfid.PCD_Init();
-
-  // 4. Verify RC522 is responding via VersionReg
-  byte ver = rfid.PCD_ReadRegister(MFRC522::VersionReg);
-  if (ver == 0x00 || ver == 0xFF) {
-    Serial.println("ERROR: RC522 not found — check SPI wiring (SS=D10, RST=D8)");
-    while (1) delay(1000);  // halt — cannot continue without RFID reader
-  }
-
-  // 5. Wire.begin() for I2C bus
+  // 3. Wire.begin() for I2C bus — BEFORE RC522 check so OLED can show error messages
   Wire.begin();
 
-  // 5b. OLED init (SSD1306, I2C)
-  if (!display.begin(SSD1306_SWITCHCAPVCC, OLED_ADDR)) {
-    Serial.println("OLED: init failed 0x3C — check I2C wiring (non-fatal)");
+  // 3b. OLED init (SSD1306, I2C) — early so it can display RC522 errors if needed
+  bool oledOk = display.begin(SSD1306_SWITCHCAPVCC, OLED_ADDR);
+  if (!oledOk) {
+    Serial.println("OLED: init failed 0x3C — check I2C wiring and pull-ups (non-fatal)");
     // Continue — RFID payment still works without OLED
   } else {
     display.clearDisplay();
     display.display();
     oledShowReady();
+  }
+
+  // 4. RC522 SPI init — SPI.begin() MUST precede PCD_Init()
+  SPI.begin();
+  rfid.PCD_Init();
+
+  // 5. Verify RC522 is responding via VersionReg
+  byte ver = rfid.PCD_ReadRegister(MFRC522::VersionReg);
+  if (ver == 0x00 || ver == 0xFF) {
+    Serial.println("ERROR: RC522 not found — check SPI wiring (SS=D10, RST=D9)");
+    if (oledOk) {
+      display.clearDisplay();
+      display.setTextSize(1);
+      display.setTextColor(SSD1306_WHITE);
+      display.setCursor(0, 20);
+      display.println("RC522 ERROR");
+      display.println("Check SPI wiring");
+      display.println("SS=D10  RST=D9");
+      display.display();
+    }
+    while (1) delay(1000);  // halt — cannot continue without RFID reader
   }
 
   // 6. WiFi connect
@@ -442,7 +470,13 @@ void loop() {
   if (now - lastQrPollMs >= (unsigned long)QR_POLL_INTERVAL_MS) {
     lastQrPollMs = now;
     String body   = httpGetBody("/api/arduino/qr-pending");
+    Serial.print("QR poll body: [");
+    Serial.print(body);
+    Serial.println("]");
     String qrUrl  = parseQrUrl(body);
+    Serial.print("QR parsed url: [");
+    Serial.print(qrUrl);
+    Serial.println("]");
     if (qrUrl != lastQrUrl) {
       lastQrUrl = qrUrl;
       if (qrUrl.length() == 0) {

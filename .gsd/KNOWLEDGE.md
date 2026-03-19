@@ -25,3 +25,72 @@ The `imageProxy.image` accessor is annotated `@ExperimentalGetImage` in CameraX 
 ## ML Kit barcode scanning: scanning flag prevents double-scan race
 
 When using ML Kit in an `ImageAnalysis.Analyzer`, frames arrive on the camera executor thread while the UI runs on the main thread. Set `scanning = false` **synchronously on the camera thread** before calling `runOnUiThread { fetchCart(token) }` — not inside the `runOnUiThread` block. This prevents two back-to-back frames both seeing the same QR code and triggering two `fetchCart` calls.
+
+---
+
+## RTK command passthrough: use `rtk proxy` for raw commands like Python/pytest
+
+In this repo workflow, `rtk <command>` does not accept every arbitrary executable directly (e.g., `rtk python ...` errors with “unrecognized subcommand”). For non-native RTK wrappers, use:
+
+- `rtk proxy python ...`
+- `rtk proxy python -m pytest ...`
+- `rtk proxy curl ...`
+
+This keeps the “always prefix with RTK” rule while still running passthrough commands successfully.
+
+---
+
+## Browser verification fallback: use `performance.getEntriesByType('resource')` when network log buffer is empty
+
+In this environment, `browser_get_network_logs` may occasionally return no entries even when the page performed fetches. For slice verification that needs request-path evidence, use:
+
+```js
+performance.getEntriesByType('resource').map(e => e.name)
+```
+
+Then assert expected paths (e.g., `/api/products`) and absence of forbidden ports (e.g., `:5003`) via `browser_evaluate`.
+
+---
+
+## POS auth fetch handling: check both HTTP 401 and redirected `/login`
+
+In the standalone cashier app, unauthenticated API requests may be surfaced either as:
+- an explicit `401` response, or
+- a fetch response with `response.redirected === true` and `response.url` ending in `/login`.
+
+When bootstrapping POS data (`/api/products`), treat **both** as unauthenticated and force `window.location.href = '/login'`.
+
+This keeps frontend auth handling stable even if backend auth behavior toggles between direct status codes and redirect-based middleware.
+
+---
+
+## POS cart rendering: use DOM APIs (not `innerHTML`) for Sheets-driven item names
+
+When rendering cart rows from `/api/products`, treat product fields as untrusted because canteen staff can edit the source Google Sheet directly. Build rows with `document.createElement(...)` and assign user-visible content via `textContent`.
+
+This keeps quantity controls safe/explicit (`data-cart-action`, `data-product-key`) and avoids accidental markup/script injection from product names or categories.
+
+---
+
+## Standalone POS UAT without hardware: trigger SocketIO handlers via cached callbacks
+
+When hardware/student flows are unavailable during browser UAT, standalone POS SocketIO handlers can be exercised by invoking callback arrays on `window.cashierSocket._callbacks` directly in `browser_evaluate`.
+
+Examples:
+- RFID path trigger: `(window.cashierSocket._callbacks.$card_read||[]).forEach(fn => fn({success:true, uid:'5F6E7D8C'}))`
+- QR completion trigger: `(window.cashierSocket._callbacks.$qr_payment||[]).forEach(fn => fn({success:true, new_balance:500}))`
+- WiFi status trigger: `(window.cashierSocket._callbacks.$arduino_wifi_status||[]).forEach(fn => fn({online:true, state:'online', last_seen_s:0}))`
+
+This is useful for validating POS state transitions deterministically while still verifying real route wiring and endpoint traffic on port 5010.
+
+---
+
+## QR confirm safety: emit `qr_payment` before clearing `pending_qr_token`
+
+In standalone QR confirmation (`/api/qr/confirm`), keep the ordering:
+1. `socketio.emit('qr_payment', ...)`
+2. then clear `current_app.pending_qr_token`
+
+If token clear happens first, the Arduino poller can read null immediately and drop the QR before cashier UI receives the completion event, producing flaky “QR disappeared but no success state” behavior.
+
+Lock this with route-contract tests by asserting token is still present at emit time.

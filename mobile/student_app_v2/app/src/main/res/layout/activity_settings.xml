@@ -21,6 +21,7 @@
             android:layout_height="?attr/actionBarSize"
             app:title="@string/settings_title"
             app:titleTextAppearance="?attr/textAppearanceTitleLarge"
+            android:id="@+id/toolbar"
             app:navigationIcon="@android:drawable/ic_menu_close_clear_cancel" />
 
     </com.google.android.material.appbar.AppBarLayout>

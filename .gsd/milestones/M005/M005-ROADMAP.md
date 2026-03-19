@@ -60,7 +60,7 @@ This milestone is complete only when all are true:
 - [x] **S04: Android + iOS App QR Pay** `risk:medium` `depends:[S03]`
   > After this: Android student taps "Pay with QR", scans OLED, sees cart, taps Confirm — sale completes. iOS student does the same. Both apps build. End-to-end verified on real devices against real backend.
 
-- [ ] **S05: NFC/HCE Cleanup + Rename** `risk:low` `depends:[S01,S03,S04]`
+- [x] **S05: NFC/HCE Cleanup + Rename** `risk:low` `depends:[S01,S03,S04]`
   > After this: BankoHceService.kt, NfcManager.kt, NfcPayOverlayActivity.kt deleted; nfc_payments.py deleted; /api/nfc/* routes gone; complete_sale_nfc and socket.on('nfc_payment') removed; both apps build clean; python -m py_compile exits 0.
 
 ## Boundary Map

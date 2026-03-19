@@ -109,6 +109,9 @@ if _parse_worker_count("WEB_CONCURRENCY") > 1 or _parse_worker_count("GUNICORN_W
 ARDUINO_API_KEY = os.environ.get("ARDUINO_API_KEY", "")
 ARDUINO_WIFI_OFFLINE_S = int(os.environ.get("ARDUINO_WIFI_OFFLINE_S", "60"))
 
+# Shared secret for local↔cloud cashier webhook calls
+CASHIER_SHARED_SECRET = os.environ.get("CASHIER_SHARED_SECRET", "")
+
 # UID pattern for Arduino card reads
 import re
 import jwt as _pyjwt  # aliased to avoid collision with any local 'jwt' variable
@@ -126,6 +129,7 @@ socketio = SocketIO(app, cors_allowed_origins=_allowed_origins)
 app.socketio = socketio
 app.arduino_last_heartbeat = 0.0
 app.pending_qr_token = None
+app.last_qr_payment = None   # set when student confirms; polled by cashier browser
 
 # Register cashier blueprint
 if CASHIER_AVAILABLE:
@@ -335,8 +339,85 @@ def arduino_qr_pending():
         return jsonify({"error": "Unauthorized"}), 401
     t = app.pending_qr_token
     if t is None or time.time() - t["created_at"] > 300:
-        return jsonify({"token": None}), 200
-    return jsonify({"token": t["token"], "url": t["url"]}), 200
+        return app.response_class('{"token":null}', status=200, mimetype='application/json')
+    return app.response_class(
+        json.dumps({"token": t["token"], "url": t["url"], "qr_value": t.get("qr_value", t["token"])}, separators=(',', ':')),
+        status=200, mimetype='application/json'
+    )
+
+
+# ── Cashier↔Cloud QR handshake endpoints ────────────────────────────────────
+# Local admin_dashboard.py calls these to push/cancel QR tokens so the student
+# phone (which always talks to PythonAnywhere) can find the pending cart.
+
+def _verify_cashier_secret():
+    """Returns True if the request carries a valid CASHIER_SHARED_SECRET."""
+    if not CASHIER_SHARED_SECRET:
+        return False
+    return request.headers.get("X-Cashier-Secret", "") == CASHIER_SHARED_SECRET
+
+
+@app.route("/api/cashier/qr-register", methods=["POST"])
+def cashier_qr_register():
+    """Local server pushes a pending QR token here so the student phone can find it.
+
+    Body: {"token": "...", "cart_snapshot": [...], "total": 0.0,
+           "cashier_username": "...", "created_at": 1234567890.0}
+    Auth: X-Cashier-Secret header must match CASHIER_SHARED_SECRET.
+    """
+    if not _verify_cashier_secret():
+        logger.warning("event=qr_register_rejected reason=invalid_secret remote=%s", request.remote_addr)
+        return jsonify({"error": "Unauthorized"}), 401
+
+    data = request.get_json(silent=True) or {}
+    token = data.get("token", "").strip()
+    if not token:
+        return jsonify({"error": "token required"}), 400
+
+    app.pending_qr_token = {
+        "token": token,
+        "url": f"/api/qr/{token}",           # relative — used for logging only
+        "qr_value": token,
+        "cart_snapshot": data.get("cart_snapshot", []),
+        "total": float(data.get("total", 0)),
+        "cashier_username": data.get("cashier_username", ""),
+        "created_at": float(data.get("created_at", time.time())),
+        "cashier_callback_url": data.get("cashier_callback_url", ""),
+    }
+    logger.info("event=qr_register_ok token=%s total=%.2f", token, app.pending_qr_token["total"])
+    return jsonify({"status": "ok"}), 200
+
+
+@app.route("/api/cashier/qr-cancel", methods=["POST"])
+def cashier_qr_cancel():
+    """Local server cancels a pending QR token (cashier pressed Cancel)."""
+    if not _verify_cashier_secret():
+        return jsonify({"error": "Unauthorized"}), 401
+    data = request.get_json(silent=True) or {}
+    token = data.get("token", "").strip()
+    t = app.pending_qr_token
+    if t and (not token or t["token"] == token):
+        app.pending_qr_token = None
+        logger.info("event=qr_cancel_ok token=%s", token)
+    return jsonify({"status": "ok"}), 200
+
+
+@app.route("/api/cashier/qr-status", methods=["GET"])
+def cashier_qr_status():
+    """Cashier browser polls this to detect when student has paid.
+    Returns {paid, new_balance, total, timestamp} once payment is confirmed,
+    or {paid: false} while still pending.
+    Auth: X-Cashier-Secret header.
+    """
+    if not _verify_cashier_secret():
+        return jsonify({"error": "Unauthorized"}), 401
+    token = request.args.get("token", "").strip()
+    result = getattr(app, "last_qr_payment", None)
+    if result and result.get("token") == token:
+        # Clear it after returning — one-time read
+        app.last_qr_payment = None
+        return jsonify({"paid": True, **result}), 200
+    return jsonify({"paid": False}), 200
 
 
 @app.route("/api/qr/<token>", methods=["GET"])
@@ -470,7 +551,11 @@ def qr_confirm():
         if last_error:
             return jsonify({"error": "Service unavailable, please try again"}), 503
 
-        # 4. Emit BEFORE clearing token (emit then clear)
+        # 4. Store result for cashier poll, emit locally, clear token
+        app.last_qr_payment = {
+            "token": t["token"], "new_balance": new_balance,
+            "timestamp": timestamp, "total": total,
+        }
         socketio.emit("qr_payment", {
             "success": True, "new_balance": new_balance,
             "timestamp": timestamp, "total": total,
