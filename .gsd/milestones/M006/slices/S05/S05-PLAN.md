@@ -49,7 +49,7 @@
   - Verify: `rtk proxy python -m pytest -q tests/test_verify_m006_s05_bundle.py`
   - Done when: Verifier + schema + tests exist, tests pass, and bundle generation fails predictably for missing artifacts or any non-live required flow.
 
-- [ ] **T02: Execute physical hardware UAT run and generate S05 evidence bundle** `est:1h 45m`
+- [x] **T02: Execute physical hardware UAT run and generate S05 evidence bundle** `est:1h 45m`
   - Why: The milestone cannot close until real devices prove heartbeat/card-read/QR confirm behavior with admin dashboard off and request traces on `:5010`.
   - Files: `.gsd/milestones/M006/slices/S05/S05-UAT.md`, `.gsd/milestones/M006/slices/S05/S05-UAT-MANIFEST.json`, `.gsd/milestones/M006/slices/S05/S05-UAT-BUNDLE.json`, `.gsd/milestones/M006/slices/S05/S05-UAT-BUNDLE.md`, `.gsd/milestones/M006/slices/S05/evidence/README.md`
   - Do: Run the operator UAT checklist against the live cashier runtime on port 5010, perform RFID/QR/NFC-compatible flows with real hardware/accounts, capture screenshots/video/request traces with timestamps (including OLED QR-on-screen evidence), then run S04 + S05 verifiers to produce final bundle artifacts. Relevant skills: `agent-browser`, `test`, `debug-like-expert`.

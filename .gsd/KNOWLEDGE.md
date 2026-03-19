@@ -124,3 +124,15 @@ When this happens:
 1. Keep committed `.sh` wrappers as the canonical verifier entrypoints for Linux/CI parity.
 2. Run equivalent Python verification commands directly (`rtk proxy python ...`) so evidence artifacts can still be generated in Windows-only environments.
 3. Document the shell constraint explicitly in task verification evidence so future agents do not misclassify it as a code regression.
+
+---
+
+## Verification ordering: do not run dependent bundle assertions in parallel with bundle generation
+
+For S05 evidence checks, running the JSON assertion command in parallel with `verify-m006-s05-bundle.py` can intermittently fail with `FileNotFoundError` because the bundle file is read before it is written.
+
+Run in this order instead:
+1. Generate bundle (`verify-m006-s05-bundle.py`)
+2. Then run assertion command against `S05-UAT-BUNDLE.json`
+
+This avoids false negatives caused by command ordering rather than actual verification failures.
