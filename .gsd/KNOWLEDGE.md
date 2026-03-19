@@ -147,3 +147,16 @@ Safe pattern when running docs/traceability work:
 1. Run S04 verifier only when required env/runtime inputs are present.
 2. If preflight fails but you need to preserve closure docs, regenerate/restore the intended S04 evidence before rerunning `verify-m006-s05-bundle.py`.
 3. Re-assert `S05-UAT-BUNDLE.json` (`overall.live_ready`, required flow classifications, no `:5003`) after restoration.
+
+---
+
+## Milestone closeout guardrail: placeholder slice summaries are non-authoritative
+
+Auto-mode recovery can leave a slice summary as a `BLOCKER` placeholder even when downstream verifier artifacts are later restored to pass-state.
+
+**Rule:** for closure decisions, treat machine evidence artifacts as source-of-truth before prose placeholders:
+1. Verify gate artifacts first (`S04-LIVE-PROOF.json`, `S05-UAT-BUNDLE.json`).
+2. Confirm required flow classifications (`live_success`) and topology checks (no forbidden ports).
+3. Then publish milestone summary/traceability docs; do not infer failure from placeholder prose alone.
+
+This prevents false milestone regressions caused by artifact-generation order and recovery placeholders rather than real runtime breakage.

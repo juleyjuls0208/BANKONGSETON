@@ -386,7 +386,7 @@ This file is the explicit capability and coverage contract for the project.
 - Source: user
 - Primary owning slice: M006/S01
 - Supporting slices: M006/S02, M006/S03, M006/S04, M006/S05
-- Validation: validated via S05 final gate — `.gsd/milestones/M006/slices/S05/S05-UAT-BUNDLE.json` reports `overall.live_ready=true` with required flows (`products_live_data`, `arduino_heartbeat`, `card_read_sale_completion`, `student_qr_confirm`, `nfc_compatible_completion`) all `live_success` on `http://127.0.0.1:5010` and no `:5003` request-trace hits
+- Validation: validated via S05 final gate — `.gsd/milestones/M006/slices/S05/S05-UAT-BUNDLE.json` reports `overall.live_ready=true` with required flows (`products_live_data`, `arduino_heartbeat`, `card_read_sale_completion`, `student_qr_confirm`, `nfc_compatible_completion`) all `live_success` on `http://127.0.0.1:5010` and no `:5003` request-trace hits; closure narrative recorded in `.gsd/milestones/M006/M006-SUMMARY.md`
 - Notes: S04 verifier artifacts (`.gsd/milestones/M006/slices/S04/S04-LIVE-PROOF.{json,md}`) remain prerequisite evidence, while S05 bundle artifacts (`.gsd/milestones/M006/slices/S05/S05-UAT-BUNDLE.{json,md}`) are the closure gate outputs; evidence remains redacted (no raw JWT/API keys/full UID/unredacted student IDs).
 
 ### R054 — Modern POS UI for Cashier

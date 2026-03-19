@@ -57,7 +57,7 @@ This milestone is complete only when all are true:
 - [x] **S04: Live Google Sheets runtime proof (non-mocked)** `risk:medium` `depends:[S03]`
   > After this: `/api/products` and all checkout completion paths (`/api/complete-sale`, `/api/qr/confirm`, `/api/complete-sale-nfc`) are verified against live Google Sheets with no mocked success handlers.
 
-- [ ] **S05: Physical hardware UAT + evidence bundle** `risk:medium` `depends:[S04]`
+- [x] **S05: Physical hardware UAT + evidence bundle** `risk:medium` `depends:[S04]`
   > After this: Arduino R4 heartbeat/card-read and student QR confirm are executed with real devices while admin dashboard is OFF; evidence bundle (screenshots/video + request traces) confirms real RFID, QR, and NFC-compatible sale completion on port 5010.
 
 ## Boundary Map

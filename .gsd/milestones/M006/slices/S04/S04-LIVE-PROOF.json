@@ -14,30 +14,43 @@
       "JWT_SECRET": true,
       "FINANCE_PASSWORD": true
     },
-    "credential_path": "C:/Users/admin/Desktop/projects/BANKONGSETON/config/credentials.json",
+    "credential_path": "C:\\Users\\admin\\Desktop\\projects\\BANKONGSETON\\config\\credentials.json",
     "credential_checked_paths": [
-      "C:/Users/admin/Desktop/projects/BANKONGSETON/config/credentials.json"
+      "C:\\Users\\admin\\Desktop\\projects\\BANKONGSETON\\config\\credentials.json"
     ]
   },
   "inputs": {
     "cashier_username": "cashier",
-    "card_uid": "ca***id",
-    "virtual_card_token": "vt***en",
+    "card_uid": "12***78",
+    "virtual_card_token": "to***en",
     "student_jwt": "[REDACTED]"
   },
   "phases": [
     {
       "phase": "login",
       "endpoint": "/api/login",
-      "resolved_endpoint": "/api/login",
+      "resolved_endpoint": "/cashier/api/login",
       "status_code": 200,
       "success": true,
       "offline": false,
-      "latency_ms": 78,
+      "latency_ms": 42,
       "classification": "live_success",
       "error": null,
-      "response": {"success": true},
-      "attempts": [{"path": "/api/login", "status": 200, "exception": null}]
+      "response": {
+        "success": true
+      },
+      "attempts": [
+        {
+          "path": "/api/login",
+          "status": 404,
+          "exception": null
+        },
+        {
+          "path": "/cashier/api/login",
+          "status": 200,
+          "exception": null
+        }
+      ]
     },
     {
       "phase": "products",
@@ -46,11 +59,24 @@
       "status_code": 200,
       "success": true,
       "offline": false,
-      "latency_ms": 88,
+      "latency_ms": 78,
       "classification": "live_success",
       "error": null,
-      "response": {"products": []},
-      "attempts": [{"path": "/cashier/api/products", "status": 200, "exception": null}]
+      "response": {
+        "products": []
+      },
+      "attempts": [
+        {
+          "path": "/api/products",
+          "status": 404,
+          "exception": null
+        },
+        {
+          "path": "/cashier/api/products",
+          "status": 200,
+          "exception": null
+        }
+      ]
     },
     {
       "phase": "rfid_process_sale",
@@ -59,11 +85,24 @@
       "status_code": 200,
       "success": true,
       "offline": false,
-      "latency_ms": 67,
+      "latency_ms": 64,
       "classification": "live_success",
       "error": null,
-      "response": {"status": "waiting_for_card"},
-      "attempts": [{"path": "/cashier/api/process-sale", "status": 200, "exception": null}]
+      "response": {
+        "status": "waiting_for_card"
+      },
+      "attempts": [
+        {
+          "path": "/api/process-sale",
+          "status": 404,
+          "exception": null
+        },
+        {
+          "path": "/cashier/api/process-sale",
+          "status": 200,
+          "exception": null
+        }
+      ]
     },
     {
       "phase": "rfid_complete_sale",
@@ -72,11 +111,25 @@
       "status_code": 200,
       "success": true,
       "offline": false,
-      "latency_ms": 82,
+      "latency_ms": 115,
       "classification": "live_success",
       "error": null,
-      "response": {"success": true},
-      "attempts": [{"path": "/cashier/api/complete-sale", "status": 200, "exception": null}]
+      "response": {
+        "success": true,
+        "offline": false
+      },
+      "attempts": [
+        {
+          "path": "/api/complete-sale",
+          "status": 404,
+          "exception": null
+        },
+        {
+          "path": "/cashier/api/complete-sale",
+          "status": 200,
+          "exception": null
+        }
+      ]
     },
     {
       "phase": "qr_process_sale",
@@ -85,11 +138,24 @@
       "status_code": 200,
       "success": true,
       "offline": false,
-      "latency_ms": 65,
+      "latency_ms": 62,
       "classification": "live_success",
       "error": null,
-      "response": {"status": "waiting_for_card"},
-      "attempts": [{"path": "/cashier/api/process-sale", "status": 200, "exception": null}]
+      "response": {
+        "status": "waiting_for_card"
+      },
+      "attempts": [
+        {
+          "path": "/api/process-sale",
+          "status": 404,
+          "exception": null
+        },
+        {
+          "path": "/cashier/api/process-sale",
+          "status": 200,
+          "exception": null
+        }
+      ]
     },
     {
       "phase": "qr_generate",
@@ -98,11 +164,24 @@
       "status_code": 200,
       "success": true,
       "offline": false,
-      "latency_ms": 73,
+      "latency_ms": 74,
       "classification": "live_success",
       "error": null,
-      "response": {"token": "to***en"},
-      "attempts": [{"path": "/cashier/api/qr-generate", "status": 200, "exception": null}]
+      "response": {
+        "token": "[REDACTED]"
+      },
+      "attempts": [
+        {
+          "path": "/api/qr-generate",
+          "status": 404,
+          "exception": null
+        },
+        {
+          "path": "/cashier/api/qr-generate",
+          "status": 200,
+          "exception": null
+        }
+      ]
     },
     {
       "phase": "qr_confirm",
@@ -111,11 +190,20 @@
       "status_code": 200,
       "success": true,
       "offline": false,
-      "latency_ms": 70,
+      "latency_ms": 108,
       "classification": "live_success",
       "error": null,
-      "response": {"success": true},
-      "attempts": [{"path": "/api/qr/confirm", "status": 200, "exception": null}]
+      "response": {
+        "success": true,
+        "offline": false
+      },
+      "attempts": [
+        {
+          "path": "/api/qr/confirm",
+          "status": 200,
+          "exception": null
+        }
+      ]
     },
     {
       "phase": "nfc_process_sale",
@@ -124,11 +212,24 @@
       "status_code": 200,
       "success": true,
       "offline": false,
-      "latency_ms": 69,
+      "latency_ms": 59,
       "classification": "live_success",
       "error": null,
-      "response": {"status": "waiting_for_card"},
-      "attempts": [{"path": "/cashier/api/process-sale", "status": 200, "exception": null}]
+      "response": {
+        "status": "waiting_for_card"
+      },
+      "attempts": [
+        {
+          "path": "/api/process-sale",
+          "status": 404,
+          "exception": null
+        },
+        {
+          "path": "/cashier/api/process-sale",
+          "status": 200,
+          "exception": null
+        }
+      ]
     },
     {
       "phase": "nfc_complete_sale",
@@ -137,11 +238,25 @@
       "status_code": 200,
       "success": true,
       "offline": false,
-      "latency_ms": 86,
+      "latency_ms": 111,
       "classification": "live_success",
       "error": null,
-      "response": {"success": true},
-      "attempts": [{"path": "/cashier/api/complete-sale-nfc", "status": 200, "exception": null}]
+      "response": {
+        "success": true,
+        "offline": false
+      },
+      "attempts": [
+        {
+          "path": "/api/complete-sale-nfc",
+          "status": 404,
+          "exception": null
+        },
+        {
+          "path": "/cashier/api/complete-sale-nfc",
+          "status": 200,
+          "exception": null
+        }
+      ]
     },
     {
       "phase": "queue_status",
@@ -150,11 +265,26 @@
       "status_code": 200,
       "success": true,
       "offline": false,
-      "latency_ms": 64,
+      "latency_ms": 39,
       "classification": "live_success",
       "error": null,
-      "response": {},
-      "attempts": [{"path": "/cashier/api/queue/status", "status": 200, "exception": null}]
+      "response": {
+        "pending": 0,
+        "failed": 0,
+        "synced": 0
+      },
+      "attempts": [
+        {
+          "path": "/api/queue/status",
+          "status": 404,
+          "exception": null
+        },
+        {
+          "path": "/cashier/api/queue/status",
+          "status": 200,
+          "exception": null
+        }
+      ]
     }
   ],
   "overall": {
@@ -181,7 +311,11 @@
     "schema_valid": true
   },
   "diagnostics": {
-    "queue_status": {},
+    "queue_status": {
+      "pending": 0,
+      "failed": 0,
+      "synced": 0
+    },
     "notes": []
   }
 }
