@@ -1,0 +1,68 @@
+{
+  "schema_version": "1.0.0",
+  "generated_at": "2026-03-19T05:40:02Z",
+  "base_url": "http://127.0.0.1:5010",
+  "preflight": {
+    "ok": false,
+    "missing_env": [
+      "GOOGLE_SHEETS_ID",
+      "FLASK_SECRET_KEY",
+      "JWT_SECRET",
+      "FINANCE_PASSWORD"
+    ],
+    "missing_inputs": [
+      "card_uid (--card-uid or VERIFY_S04_CARD_UID)",
+      "virtual_card_token (--virtual-card-token or VERIFY_S04_VIRTUAL_CARD_TOKEN)",
+      "student_jwt (--student-jwt or VERIFY_S04_STUDENT_JWT)"
+    ],
+    "missing_files": [],
+    "errors": [
+      "Missing required environment variables: GOOGLE_SHEETS_ID, FLASK_SECRET_KEY, JWT_SECRET, FINANCE_PASSWORD",
+      "Missing verifier runtime inputs: card_uid (--card-uid or VERIFY_S04_CARD_UID), virtual_card_token (--virtual-card-token or VERIFY_S04_VIRTUAL_CARD_TOKEN), student_jwt (--student-jwt or VERIFY_S04_STUDENT_JWT)"
+    ],
+    "checked_env": {
+      "GOOGLE_SHEETS_ID": false,
+      "FLASK_SECRET_KEY": false,
+      "JWT_SECRET": false,
+      "FINANCE_PASSWORD": false
+    },
+    "credential_path": "C:\\Users\\admin\\Desktop\\projects\\BANKONGSETON\\config\\credentials.json",
+    "credential_checked_paths": [
+      "C:\\Users\\admin\\Desktop\\projects\\BANKONGSETON\\config\\credentials.json"
+    ]
+  },
+  "inputs": {
+    "cashier_username": "cashier",
+    "card_uid": "",
+    "virtual_card_token": "",
+    "student_jwt": "[REDACTED]"
+  },
+  "phases": [],
+  "overall": {
+    "required_phases": [
+      "products",
+      "rfid_complete_sale",
+      "qr_confirm",
+      "nfc_complete_sale"
+    ],
+    "required_phase_results": {
+      "products": "failed",
+      "rfid_complete_sale": "failed",
+      "qr_confirm": "failed",
+      "nfc_complete_sale": "failed"
+    },
+    "required_live_success_count": 4,
+    "live_success_count": 0,
+    "offline_fallback_count": 0,
+    "failed_count": 0,
+    "live_ready": false,
+    "dry_run_preflight": false,
+    "exit_code": 1,
+    "schema_errors": [],
+    "schema_valid": true
+  },
+  "diagnostics": {
+    "queue_status": null,
+    "notes": []
+  }
+}

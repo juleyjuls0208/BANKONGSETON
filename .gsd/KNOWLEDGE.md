@@ -94,3 +94,21 @@ In standalone QR confirmation (`/api/qr/confirm`), keep the ordering:
 If token clear happens first, the Arduino poller can read null immediately and drop the QR before cashier UI receives the completion event, producing flaky “QR disappeared but no success state” behavior.
 
 Lock this with route-contract tests by asserting token is still present at emit time.
+
+---
+
+## Python 3.14 + importlib: register dynamically loaded module in `sys.modules` before executing dataclass code
+
+When loading a script module from a file path in tests via `importlib.util.module_from_spec`, insert it into `sys.modules` before `spec.loader.exec_module(module)`.
+
+Without that registration, Python 3.14 dataclass processing can fail with:
+`AttributeError: 'NoneType' object has no attribute '__dict__'`
+
+Pattern:
+
+```python
+spec = importlib.util.spec_from_file_location("module_name", path)
+module = importlib.util.module_from_spec(spec)
+sys.modules[spec.name] = module
+spec.loader.exec_module(module)
+```

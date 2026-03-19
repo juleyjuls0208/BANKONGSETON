@@ -21,6 +21,7 @@
 - `rtk proxy python -m pytest -q tests/test_verify_m006_s04_live.py`
 - `rtk proxy python -m pytest -q tests/test_cashier_app_pos_route.py tests/test_cashier_app_payment_routes.py tests/test_cashier_app_arduino_routes.py`
 - `rtk proxy python scripts/verify-m006-s04-live.py --base-url http://127.0.0.1:5010 --evidence .gsd/milestones/M006/slices/S04/S04-LIVE-PROOF.json`
+- `rtk proxy python scripts/verify-m006-s04-live.py --base-url http://127.0.0.1:5010 --evidence .gsd/milestones/M006/slices/S04/S04-LIVE-PROOF.json --dry-run-preflight`
 - `rtk proxy bash scripts/verify-m006-s04.sh`
 
 ## Observability / Diagnostics
@@ -38,7 +39,7 @@
 
 ## Tasks
 
-- [ ] **T01: Build live-proof verifier with preflight gates and endpoint-flow evidence** `est:1h 35m`
+- [x] **T01: Build live-proof verifier with preflight gates and endpoint-flow evidence** `est:1h 35m`
   - Why: S03 proved contract wiring, but milestone closure still lacks deterministic proof that required endpoints complete real Sheets-backed sales without mocked handlers.
   - Files: `scripts/verify-m006-s04-live.py`, `tests/test_verify_m006_s04_live.py`, `.gsd/milestones/M006/slices/S04/S04-LIVE-PROOF.schema.json`, `.env.example`
   - Do: Implement a Python verifier that checks env/credential preconditions, logs in with cashier auth, runs required endpoint sequences in one cookie session (products + RFID-compatible + QR confirm + NFC-compatible paths), classifies `offline=true` as degraded, writes structured/redacted evidence JSON, and exits non-zero unless all required flows are live-success; add focused tests for preflight, classification, and artifact schema guarantees. Relevant skills: `fullstack-developer`, `test`.

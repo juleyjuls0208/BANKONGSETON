@@ -1,0 +1,156 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bankongseton.local/gsd/m006/s04/live-proof.schema.json",
+  "title": "M006 S04 Live Proof Evidence",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "generated_at",
+    "base_url",
+    "preflight",
+    "inputs",
+    "phases",
+    "overall",
+    "diagnostics"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "minLength": 1 },
+    "generated_at": { "type": "string", "minLength": 1 },
+    "base_url": { "type": "string", "minLength": 1 },
+    "preflight": {
+      "type": "object",
+      "required": [
+        "ok",
+        "missing_env",
+        "missing_inputs",
+        "missing_files",
+        "errors",
+        "checked_env",
+        "credential_path",
+        "credential_checked_paths"
+      ],
+      "properties": {
+        "ok": { "type": "boolean" },
+        "missing_env": { "type": "array", "items": { "type": "string" } },
+        "missing_inputs": { "type": "array", "items": { "type": "string" } },
+        "missing_files": { "type": "array", "items": { "type": "string" } },
+        "errors": { "type": "array", "items": { "type": "string" } },
+        "checked_env": {
+          "type": "object",
+          "additionalProperties": { "type": "boolean" }
+        },
+        "credential_path": { "type": ["string", "null"] },
+        "credential_checked_paths": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": true
+    },
+    "inputs": {
+      "type": "object",
+      "required": [
+        "cashier_username",
+        "card_uid",
+        "virtual_card_token",
+        "student_jwt"
+      ],
+      "properties": {
+        "cashier_username": { "type": "string" },
+        "card_uid": { "type": "string" },
+        "virtual_card_token": { "type": "string" },
+        "student_jwt": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "phases": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "phase",
+          "endpoint",
+          "resolved_endpoint",
+          "status_code",
+          "success",
+          "offline",
+          "latency_ms",
+          "classification",
+          "error"
+        ],
+        "properties": {
+          "phase": { "type": "string" },
+          "endpoint": { "type": "string" },
+          "resolved_endpoint": { "type": "string" },
+          "status_code": { "type": "integer", "minimum": 0 },
+          "success": { "type": "boolean" },
+          "offline": { "type": "boolean" },
+          "latency_ms": { "type": "integer", "minimum": 0 },
+          "classification": {
+            "type": "string",
+            "enum": ["live_success", "offline_fallback", "failed"]
+          },
+          "error": { "type": ["string", "null"] },
+          "response": { "type": "object" },
+          "attempts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["path", "status", "exception"],
+              "properties": {
+                "path": { "type": "string" },
+                "status": { "type": "integer", "minimum": 0 },
+                "exception": { "type": ["string", "null"] }
+              },
+              "additionalProperties": true
+            }
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "overall": {
+      "type": "object",
+      "required": [
+        "required_phases",
+        "required_phase_results",
+        "required_live_success_count",
+        "live_success_count",
+        "offline_fallback_count",
+        "failed_count",
+        "live_ready",
+        "dry_run_preflight",
+        "exit_code",
+        "schema_errors",
+        "schema_valid"
+      ],
+      "properties": {
+        "required_phases": { "type": "array", "items": { "type": "string" } },
+        "required_phase_results": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "enum": ["live_success", "offline_fallback", "failed"]
+          }
+        },
+        "required_live_success_count": { "type": "integer", "minimum": 0 },
+        "live_success_count": { "type": "integer", "minimum": 0 },
+        "offline_fallback_count": { "type": "integer", "minimum": 0 },
+        "failed_count": { "type": "integer", "minimum": 0 },
+        "live_ready": { "type": "boolean" },
+        "dry_run_preflight": { "type": "boolean" },
+        "exit_code": { "type": "integer", "enum": [0, 1] },
+        "schema_errors": { "type": "array", "items": { "type": "string" } },
+        "schema_valid": { "type": "boolean" }
+      },
+      "additionalProperties": true
+    },
+    "diagnostics": {
+      "type": "object",
+      "required": ["queue_status", "notes"],
+      "properties": {
+        "queue_status": { "type": ["object", "null"] },
+        "notes": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}
