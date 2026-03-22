@@ -56,7 +56,7 @@
   - Do: Refactor login layout/branding/form controls to stitch style using shared primitives, preserve `LoginViewModel` loading/error/disabled semantics and async submit action, and expand tests to assert critical login wiring remains intact.
   - Verify: `rtk proxy python -m pytest -q tests/test_verify_m007_s01_shell_login_contract.py -k "login" && rtk proxy xcodebuild -project mobile/ios/BankongSetonStudent/BankongSetonStudent.xcodeproj -scheme BankongSetonStudent -destination 'platform=iOS Simulator,name=iPhone 15' build`
   - Done when: Login UI is stitch-styled, sign-in CTA is never dead, and test assertions confirm existing auth wiring.
-- [ ] **T04: Prove cross-screen reuse by applying primitives to home + transactions surfaces** `est:1h 20m`
+- [x] **T04: Prove cross-screen reuse by applying primitives to home + transactions surfaces** `est:1h 20m`
   - Why: S01 risk retires only when primitives are reused beyond login/shell, giving S03/S04/S05 a trustworthy visual contract.
   - Files: `mobile/ios/BankongSetonStudent/Views/Home/HomeView.swift`, `mobile/ios/BankongSetonStudent/Views/Transactions/TransactionRowView.swift`, `mobile/ios/BankongSetonStudent/Views/Transactions/TransactionsView.swift`, `tests/test_verify_m007_s01_design_system_contract.py`, `tests/test_verify_m007_s01_shell_login_contract.py`
   - Do: Replace ad hoc card/color/spacing patterns in home + transaction list/rows with shared primitives, ensure transaction row retains debit/credit meaning and navigable/non-navigable behavior, and finalize contract tests to assert multi-screen primitive adoption.

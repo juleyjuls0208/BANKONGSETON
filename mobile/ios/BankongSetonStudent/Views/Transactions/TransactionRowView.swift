@@ -15,7 +15,7 @@ struct TransactionRowView: View {
     }
 
     private var amountColor: Color {
-        isDebit ? Color(hex: "#F44336") : Color(hex: "#4CAF50")
+        isDebit ? AppTheme.Palette.danger : AppTheme.Palette.success
     }
 
     // Always show positive amount — sign is conveyed by color + icon.
@@ -26,41 +26,54 @@ struct TransactionRowView: View {
     private var displayLabel: String {
         let t = transaction.type.lowercased()
         switch t {
-        case "purchase":     return "Canteen Purchase"
-        case "nfc purchase": return "NFC Purchase"
-        case "nfc":          return "NFC Payment"
-        case "load", "top-up", "topup", "credit": return "Top Up"
-        default:             return transaction.type.prefix(1).uppercased() + transaction.type.dropFirst()
+        case "purchase":
+            return "Canteen Purchase"
+        case "nfc purchase":
+            return "NFC Purchase"
+        case "nfc":
+            return "NFC Payment"
+        case "load", "top-up", "topup", "credit":
+            return "Top Up"
+        default:
+            return transaction.type.prefix(1).uppercased() + transaction.type.dropFirst()
         }
     }
 
     var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: isDebit ? "arrow.down.circle.fill" : "arrow.up.circle.fill")
-                .foregroundColor(amountColor)
-                .font(.title2)
+        StitchCard(padding: AppTheme.Spacing.md) {
+            HStack(spacing: AppTheme.Spacing.md) {
+                ZStack {
+                    Circle()
+                        .fill(amountColor.opacity(0.14))
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text(displayLabel)
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                Text(transaction.timestamp)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
+                    Image(systemName: isDebit ? "arrow.down.circle.fill" : "arrow.up.circle.fill")
+                        .font(AppTheme.Typography.headline)
+                        .foregroundStyle(amountColor)
+                }
+                .frame(width: 40, height: 40)
 
-            Spacer()
+                VStack(alignment: .leading, spacing: AppTheme.Spacing.xxs) {
+                    Text(displayLabel)
+                        .font(AppTheme.Typography.bodyStrong)
+                        .foregroundStyle(AppTheme.Palette.textPrimary)
 
-            VStack(alignment: .trailing, spacing: 2) {
-                Text(isDebit ? "−\(displayAmount)" : "+\(displayAmount)")
-                    .foregroundColor(amountColor)
-                    .fontWeight(.semibold)
-                Text("₱\(String(format: "%.2f", transaction.balance))")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                    Text(transaction.timestamp)
+                        .font(AppTheme.Typography.caption)
+                        .foregroundStyle(AppTheme.Palette.textSecondary)
+                }
+
+                Spacer(minLength: AppTheme.Spacing.sm)
+
+                VStack(alignment: .trailing, spacing: AppTheme.Spacing.xxs) {
+                    Text(isDebit ? "−\(displayAmount)" : "+\(displayAmount)")
+                        .font(AppTheme.Typography.bodyStrong)
+                        .foregroundStyle(amountColor)
+
+                    Text("Balance \(String(format: "₱%.2f", transaction.balance))")
+                        .font(AppTheme.Typography.caption)
+                        .foregroundStyle(AppTheme.Palette.textSecondary)
+                }
             }
         }
-        .padding(.vertical, 4)
     }
 }
-

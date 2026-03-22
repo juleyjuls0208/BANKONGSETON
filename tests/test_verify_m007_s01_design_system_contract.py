@@ -5,6 +5,11 @@ IOS_ROOT = Path("mobile/ios/BankongSetonStudent")
 THEME_ROOT = IOS_ROOT / "UI" / "Theme"
 COMPONENTS_ROOT = IOS_ROOT / "UI" / "Components"
 PBXPROJ_PATH = IOS_ROOT / "BankongSetonStudent.xcodeproj" / "project.pbxproj"
+LOGIN_VIEW_PATH = IOS_ROOT / "Views" / "Auth" / "LoginView.swift"
+SHELL_VIEW_PATH = IOS_ROOT / "UI" / "Shell" / "StitchTabShell.swift"
+HOME_VIEW_PATH = IOS_ROOT / "Views" / "Home" / "HomeView.swift"
+TRANSACTION_ROW_PATH = IOS_ROOT / "Views" / "Transactions" / "TransactionRowView.swift"
+TRANSACTIONS_VIEW_PATH = IOS_ROOT / "Views" / "Transactions" / "TransactionsView.swift"
 
 
 def read_text(path: Path) -> str:
@@ -62,6 +67,68 @@ def test_color_hex_is_shared_theme_utility_not_localized_to_transaction_row():
 
     assert "extension Color" not in transaction_row
     assert "init(hex: String)" not in transaction_row
+
+
+def test_design_primitives_are_referenced_by_login_and_shell_surfaces():
+    login_contents = read_text(LOGIN_VIEW_PATH)
+    shell_contents = read_text(SHELL_VIEW_PATH)
+
+    login_expected = [
+        "StitchCard",
+        ".stitchFieldStyle()",
+        ".buttonStyle(StitchPrimaryButtonStyle())",
+        "AppTheme.Palette",
+        "AppTheme.Spacing",
+        "AppTheme.Typography",
+    ]
+    shell_expected = [
+        "AppTheme.Palette",
+        "AppTheme.Spacing",
+        "AppTheme.Radius",
+        "AppTheme.Typography",
+    ]
+
+    for entry in login_expected:
+        assert entry in login_contents, f"Login primitive usage missing: {entry}"
+
+    for entry in shell_expected:
+        assert entry in shell_contents, f"Shell primitive usage missing: {entry}"
+
+
+def test_design_primitives_are_referenced_by_home_and_transactions_destinations():
+    home_contents = read_text(HOME_VIEW_PATH)
+    transaction_row_contents = read_text(TRANSACTION_ROW_PATH)
+    transactions_view_contents = read_text(TRANSACTIONS_VIEW_PATH)
+
+    home_expected = [
+        "StitchCard",
+        ".buttonStyle(StitchPrimaryButtonStyle())",
+        "AppTheme.Palette",
+        "AppTheme.Spacing",
+        "AppTheme.Typography",
+    ]
+    transaction_row_expected = [
+        "StitchCard",
+        "AppTheme.Palette.danger",
+        "AppTheme.Palette.success",
+        "AppTheme.Typography",
+    ]
+    transactions_view_expected = [
+        "StitchCard",
+        ".buttonStyle(StitchPrimaryButtonStyle())",
+        "AppTheme.Palette.background",
+        "AppTheme.Spacing",
+        "AppTheme.Typography",
+    ]
+
+    for entry in home_expected:
+        assert entry in home_contents, f"Home primitive usage missing: {entry}"
+
+    for entry in transaction_row_expected:
+        assert entry in transaction_row_contents, f"Transaction row primitive usage missing: {entry}"
+
+    for entry in transactions_view_expected:
+        assert entry in transactions_view_contents, f"Transactions view primitive usage missing: {entry}"
 
 
 def test_xcode_project_registers_design_system_sources():

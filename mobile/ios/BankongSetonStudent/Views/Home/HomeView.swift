@@ -12,101 +12,55 @@ struct HomeView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 24) {
+            ZStack {
+                AppTheme.Palette.background
+                    .ignoresSafeArea()
 
-                    // MARK: Balance Card
-                    VStack(spacing: 8) {
-                        Text(authManager.studentName)
-                            .font(.subheadline)
-                            .foregroundColor(.white.opacity(0.85))
-                        Text("₱\(String(format: "%.2f", viewModel.balance))")
-                            .font(.system(size: 44, weight: .bold, design: .rounded))
-                            .foregroundColor(.white)
-                        Text("Current Balance")
-                            .font(.caption)
-                            .foregroundColor(.white.opacity(0.75))
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 32)
-                    .background(
-                        LinearGradient(
-                            colors: [Color(hex: "#1565C0"), Color(hex: "#1E88E5")],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .cornerRadius(20)
-                    .padding(.horizontal)
+                ScrollView {
+                    VStack(alignment: .leading, spacing: AppTheme.Spacing.xl) {
+                        balanceCard
 
-                    // MARK: Pay with QR Button
-                    Button(action: { showQrPay = true }) {
-                        Label("Pay with QR", systemImage: "qrcode.viewfinder")
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
-                            .background(Color.accentColor)
-                            .foregroundColor(.white)
-                            .cornerRadius(14)
-                            .padding(.horizontal)
-                    }
-                    .sheet(isPresented: $showQrPay) {
-                        QRPayView {
-                            // On success, refresh balance
-                            Task { await viewModel.load(apiClient: apiClient, authManager: authManager) }
+                        Button {
+                            showQrPay = true
+                        } label: {
+                            Label("Pay with QR", systemImage: "qrcode.viewfinder")
                         }
-                        .environmentObject(apiClient)
-                    }
+                        .buttonStyle(StitchPrimaryButtonStyle())
+                        .accessibilityIdentifier("home-qr-pay-button")
 
-                    // MARK: Error message
-                    if let error = viewModel.errorMessage {
-                        Text(error)
-                            .foregroundColor(.red)
-                            .font(.subheadline)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal)
-                    }
+                        if let error = viewModel.errorMessage {
+                            StitchCard {
+                                HStack(alignment: .top, spacing: AppTheme.Spacing.xs) {
+                                    Image(systemName: "exclamationmark.circle.fill")
+                                        .foregroundStyle(AppTheme.Palette.danger)
+                                        .padding(.top, 1)
 
-                    // MARK: Recent Transactions
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Recent Transactions")
-                            .font(.headline)
-                            .padding(.horizontal)
-
-                        if viewModel.isLoading {
-                            HStack {
-                                Spacer()
-                                ProgressView()
-                                Spacer()
-                            }
-                            .padding()
-                        } else if viewModel.recentTransactions.isEmpty && viewModel.errorMessage == nil {
-                            Text("No recent transactions.")
-                                .foregroundColor(.secondary)
-                                .font(.subheadline)
-                                .padding(.horizontal)
-                        } else {
-                            ForEach(viewModel.recentTransactions) { transaction in
-                                if transaction.isNavigable {
-                                    NavigationLink(value: transaction) {
-                                        TransactionRowView(transaction: transaction)
-                                            .padding(.horizontal)
-                                    }
-                                    .buttonStyle(.plain)
-                                } else {
-                                    TransactionRowView(transaction: transaction)
-                                        .padding(.horizontal)
+                                    Text(error)
+                                        .font(AppTheme.Typography.caption)
+                                        .foregroundStyle(AppTheme.Palette.danger)
+                                        .multilineTextAlignment(.leading)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
                                 }
-                                Divider()
-                                    .padding(.leading)
                             }
                         }
-                    }
 
-                    Spacer(minLength: 20)
+                        recentTransactionsSection
+
+                        Spacer(minLength: AppTheme.Spacing.sm)
+                    }
+                    .padding(.horizontal, AppTheme.Spacing.lg)
+                    .padding(.vertical, AppTheme.Spacing.lg)
                 }
-                .padding(.top)
             }
             .navigationTitle("Home")
+            .sheet(isPresented: $showQrPay) {
+                QRPayView {
+                    Task {
+                        await viewModel.load(apiClient: apiClient, authManager: authManager)
+                    }
+                }
+                .environmentObject(apiClient)
+            }
             .refreshable {
                 await viewModel.load(apiClient: apiClient, authManager: authManager)
             }
@@ -115,6 +69,72 @@ struct HomeView: View {
             }
             .navigationDestination(for: Transaction.self) { transaction in
                 ReceiptView(transaction: transaction)
+            }
+        }
+    }
+
+    private var balanceCard: some View {
+        StitchCard(padding: 0) {
+            VStack(spacing: AppTheme.Spacing.xs) {
+                Text(authManager.studentName)
+                    .font(AppTheme.Typography.body)
+                    .foregroundStyle(AppTheme.Palette.textInverse.opacity(0.9))
+
+                Text("₱\(String(format: "%.2f", viewModel.balance))")
+                    .font(AppTheme.Typography.display)
+                    .foregroundStyle(AppTheme.Palette.textInverse)
+
+                Text("Current Balance")
+                    .font(AppTheme.Typography.caption)
+                    .foregroundStyle(AppTheme.Palette.textInverse.opacity(0.82))
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, AppTheme.Spacing.xxl)
+            .padding(.horizontal, AppTheme.Spacing.lg)
+            .background(
+                LinearGradient(
+                    colors: [AppTheme.Palette.brandPrimary, AppTheme.Palette.brandSecondary],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+        }
+    }
+
+    private var recentTransactionsSection: some View {
+        VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
+            Text("Recent Transactions")
+                .font(AppTheme.Typography.headline)
+                .foregroundStyle(AppTheme.Palette.textPrimary)
+
+            if viewModel.isLoading {
+                StitchCard {
+                    HStack(spacing: AppTheme.Spacing.sm) {
+                        ProgressView()
+                        Text("Loading recent transactions…")
+                            .font(AppTheme.Typography.body)
+                            .foregroundStyle(AppTheme.Palette.textSecondary)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .center)
+                }
+            } else if viewModel.recentTransactions.isEmpty && viewModel.errorMessage == nil {
+                StitchCard {
+                    Text("No recent transactions.")
+                        .font(AppTheme.Typography.body)
+                        .foregroundStyle(AppTheme.Palette.textSecondary)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                }
+            } else {
+                ForEach(viewModel.recentTransactions) { transaction in
+                    if transaction.isNavigable {
+                        NavigationLink(value: transaction) {
+                            TransactionRowView(transaction: transaction)
+                        }
+                        .buttonStyle(.plain)
+                    } else {
+                        TransactionRowView(transaction: transaction)
+                    }
+                }
             }
         }
     }
