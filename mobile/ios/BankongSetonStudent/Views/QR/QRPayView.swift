@@ -1,9 +1,11 @@
 import SwiftUI
+import UIKit
 
 struct QRPayView: View {
     @EnvironmentObject var apiClient: APIClient
     @StateObject private var viewModel = QRPayViewModel()
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
     private var onSuccess: (() -> Void)?
 
     init(onSuccess: (() -> Void)? = nil) {
@@ -49,9 +51,14 @@ struct QRPayView: View {
 
     private var scanningView: some View {
         ZStack(alignment: .bottom) {
-            QRScannerView { scannedURL in
-                viewModel.handleScannedURL(scannedURL, apiClient: apiClient)
-            }
+            QRScannerView(
+                onCodeScanned: { scannedURL in
+                    viewModel.handleScannedURL(scannedURL, apiClient: apiClient)
+                },
+                onScannerFailure: { failureMessage in
+                    viewModel.handleScannerFailure(failureMessage)
+                }
+            )
             .ignoresSafeArea()
 
             Text("Point camera at QR code on terminal")
@@ -166,8 +173,22 @@ struct QRPayView: View {
             Text(message)
                 .multilineTextAlignment(.center)
                 .foregroundColor(.secondary)
-            Button("Close") { dismiss() }
-                .buttonStyle(.borderedProminent)
+
+            VStack(spacing: 12) {
+                if message.localizedCaseInsensitiveContains("Camera access") {
+                    Button("Open Settings") {
+                        guard let settingsURL = URL(string: UIApplication.openSettingsURLString) else { return }
+                        openURL(settingsURL)
+                    }
+                    .buttonStyle(.bordered)
+                }
+
+                Button("Retry Scan") { viewModel.reset() }
+                    .buttonStyle(.borderedProminent)
+
+                Button("Close") { dismiss() }
+                    .buttonStyle(.bordered)
+            }
         }
         .padding()
         .frame(maxWidth: .infinity, maxHeight: .infinity)

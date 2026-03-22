@@ -23,6 +23,7 @@
 - `rtk proxy python -m pytest -q tests/test_verify_m007_s02_qr_design_contract.py tests/test_verify_m007_s02_home_qr_design_contract.py`
 - `rtk proxy bash scripts/verify-m007-s02.sh`
 - `rtk proxy xcodebuild -project mobile/ios/BankongSetonStudent/BankongSetonStudent.xcodeproj -scheme BankongSetonStudent -destination 'platform=iOS Simulator,name=iPhone 15' build`
+- `rtk proxy bash -lc "rtk grep -n \"permission denied|Camera access|scanner|expired QR|Retry|Cancel\" mobile/ios/BankongSetonStudent/Views/QR/QRPayView.swift mobile/ios/BankongSetonStudent/Views/QR/QRScannerView.swift mobile/ios/BankongSetonStudent/ViewModels/QRPayViewModel.swift"` (inspectable failure-path messaging/state surface check)
 - Manual device/UAT checklist in `.gsd/milestones/M007/slices/S02/S02-UAT.md` passes: Home QR CTA → scan valid token-only payload → confirm → success dismiss refresh; invalid/expired payload path; camera-denied path.
 
 ## Observability / Diagnostics
@@ -40,7 +41,7 @@
 
 ## Tasks
 
-- [ ] **T01: Harden QR scan ingestion and permission/error behavior contract** `est:1h 25m`
+- [x] **T01: Harden QR scan ingestion and permission/error behavior contract** `est:1h 25m`
   - Why: R056 risk is currently highest in scan ingestion (URL-only parsing) and permission failure paths that can make the QR CTA appear dead during demo.
   - Files: `mobile/ios/BankongSetonStudent/ViewModels/QRPayViewModel.swift`, `mobile/ios/BankongSetonStudent/Views/QR/QRScannerView.swift`, `mobile/ios/BankongSetonStudent/Views/QR/QRPayView.swift`, `tests/test_verify_m007_s02_qr_behavior_contract.py`
   - Do: Update QR payload extraction to accept both full QR URLs and bare token payloads, ignore duplicate scans when not in `.scanning`, propagate scanner permission/setup failures as actionable state transitions, and add pytest assertions for parser, scan-gating, and state-contract coverage.
