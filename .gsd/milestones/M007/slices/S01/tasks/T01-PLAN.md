@@ -57,3 +57,10 @@ Create the reusable stitch-style foundation (theme tokens + UI primitives) so lo
 - `mobile/ios/BankongSetonStudent/UI/Components/StitchPrimaryButtonStyle.swift` — reusable primary CTA style primitive.
 - `mobile/ios/BankongSetonStudent/BankongSetonStudent.xcodeproj/project.pbxproj` — app target includes new UI files.
 - `tests/test_verify_m007_s01_design_system_contract.py` — executable design-system contract assertions.
+
+## Observability Impact
+
+- **Signals changed:** shared theme-token usage (`AppTheme`), shared primitive adoption (`StitchCard`, `StitchFieldStyle`, `StitchPrimaryButtonStyle`), and global `Color(hex:)` utility availability from theme scope.
+- **How to inspect:** run `tests/test_verify_m007_s01_design_system_contract.py` to validate file/symbol contracts and run `xcodebuild` to validate project registration/compile linkage for all new Swift files.
+- **Failure visibility:** missing token/primitives now fails deterministic pytest assertions; missing `.xcodeproj` wiring or symbol mismatches now fail at compile-time with explicit file/symbol diagnostics.
+- **Redaction guardrail:** tests and logs must avoid PIN/student credential literals; assertions should stay source-structure focused.

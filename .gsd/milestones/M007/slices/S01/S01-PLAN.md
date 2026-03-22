@@ -38,7 +38,7 @@
 
 ## Tasks
 
-- [ ] **T01: Establish shared SwiftUI design tokens + primitives contract** `est:1h 20m`
+- [x] **T01: Establish shared SwiftUI design tokens + primitives contract** `est:1h 20m`
   - Why: R055 cannot be met screen-by-screen; S01 needs one reusable foundation before shell/login refactors.
   - Files: `mobile/ios/BankongSetonStudent/UI/Theme/AppTheme.swift`, `mobile/ios/BankongSetonStudent/UI/Theme/Color+Hex.swift`, `mobile/ios/BankongSetonStudent/UI/Components/StitchCard.swift`, `mobile/ios/BankongSetonStudent/UI/Components/StitchFieldStyle.swift`, `mobile/ios/BankongSetonStudent/UI/Components/StitchPrimaryButtonStyle.swift`, `mobile/ios/BankongSetonStudent/BankongSetonStudent.xcodeproj/project.pbxproj`, `tests/test_verify_m007_s01_design_system_contract.py`
   - Do: Create semantic color/spacing/type/shadow tokens and reusable card/field/button styles, migrate `Color(hex:)` out of feature views into shared theme utilities, register new Swift files in `.xcodeproj`, and add initial pytest assertions that fail when token primitives are missing.
