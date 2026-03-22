@@ -190,3 +190,11 @@ Running multiple `rtk proxy python -m pytest ...` commands in parallel in the sa
 - `table coverage_schema already exists`
 
 **Rule:** when pytest-cov is enabled, run verification test commands serially (especially source-contract suites) unless each process writes to an isolated coverage data file.
+
+---
+
+## Static source-contract shell checks: prefer `python` literal checks over `rtk grep -F` in cross-shell verifier scripts
+
+In this Windows + Git Bash execution path, `rtk proxy grep -F` can behave inconsistently for quoted Swift literals inside verifier scripts even when plain `rtk grep` works. This caused false negatives for existing markers like `Button("Cancel")`.
+
+**Rule:** for deterministic contains/absent assertions in cross-platform verifier scripts, run a tiny `rtk proxy python -c` substring check against file contents instead of relying on `grep -F` quoting behavior.

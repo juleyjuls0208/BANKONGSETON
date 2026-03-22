@@ -59,7 +59,7 @@
   - Do: Polish Home QR entry hierarchy with stitch tokens/components, keep `home-qr-pay-button` stable and discoverable, preserve `QRPayView(onSuccess:)` refresh callback behavior for balance/recent transactions reload, and add assertions for QR-only Home entry contract.
   - Verify: `rtk proxy python -m pytest -q tests/test_verify_m007_s02_home_qr_design_contract.py && rtk proxy xcodebuild -project mobile/ios/BankongSetonStudent/BankongSetonStudent.xcodeproj -scheme BankongSetonStudent -destination 'platform=iOS Simulator,name=iPhone 15' build`
   - Done when: Home clearly exposes a single QR payment path, post-success dismissal still triggers Home refresh load, and Home contract tests pass.
-- [ ] **T04: Add slice closure harness and device-ready QR manual checklist** `est:55m`
+- [x] **T04: Add slice closure harness and device-ready QR manual checklist** `est:55m`
   - Why: S02 must leave executable proof for future slices (S06/S07) and manual camera/device validation that cannot be fully automated in CI.
   - Files: `scripts/verify-m007-s02.sh`, `.gsd/milestones/M007/slices/S02/S02-UAT.md`, `tests/test_verify_m007_s02_qr_behavior_contract.py`, `tests/test_verify_m007_s02_qr_design_contract.py`, `tests/test_verify_m007_s02_home_qr_design_contract.py`, `mobile/ios/BankongSetonStudent/BankongSetonStudent.xcodeproj/project.pbxproj`
   - Do: Create one-command verifier that runs S02 pytest files plus static QR-only/state coverage checks and camera usage key presence, write a concise physical-device checklist for valid/invalid/permission-denied flows, and ensure verification references the existing iOS scheme/project paths.
