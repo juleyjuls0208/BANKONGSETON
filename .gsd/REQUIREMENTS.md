@@ -343,7 +343,145 @@ This file is the explicit capability and coverage contract for the project.
 - Supporting slices: none
 - Validation: unmapped
 
+### R055 — Stitch-Faithful iOS Redesign Across In-Scope Screens
+- Class: primary-user-loop
+- Status: active
+- Description: The iOS app is reworked to closely copy the Stitch reference pack (`C:\Users\admin\Downloads\stitch_redesigned_login`) across in-scope screens: login, home, QR flow states, transactions states, budget, receipt, lost-card, and settings
+- Why it matters: The school demo needs a premium, cohesive iOS UX instead of mixed legacy layouts
+- Source: user
+- Primary owning slice: M007/S01
+- Supporting slices: M007/S02, M007/S03, M007/S04, M007/S05
+- Validation: mapped
+- Notes: "copy" intent preserved; visual fidelity plus behavior continuity required
+
+### R056 — No Dead Controls in Visible In-Scope UI
+- Class: quality-attribute
+- Status: active
+- Description: Every visible in-scope button, toggle, row, and tab in the redesigned iOS app performs meaningful behavior; dead controls are not allowed in demo scope
+- Why it matters: Demo credibility collapses when polished UI contains non-functional controls
+- Source: user
+- Primary owning slice: M007/S02
+- Supporting slices: M007/S03, M007/S04, M007/S05, M007/S07
+- Validation: mapped
+- Notes: Non-mapped decorative/secondary actions are removed, not stubbed
+
+### R057 — QR-Only Payment UX
+- Class: primary-user-loop
+- Status: active
+- Description: Payment-method selection UI is removed from iOS; QR Pay is the default and only payment path surfaced in redesigned flows
+- Why it matters: Product direction is fixed to QR Pay; payment-method UI introduces unnecessary scope and confusion
+- Source: user
+- Primary owning slice: M007/S02
+- Supporting slices: M007/S05
+- Validation: mapped
+- Notes: Includes removal of payment-method rows/CTAs in settings/transactions/QR confirm surfaces
+
+### R058 — Transactions Search + Filter in iOS
+- Class: primary-user-loop
+- Status: active
+- Description: Redesigned transactions screen provides working search and filter behavior on top of existing paginated history/load-more flow
+- Why it matters: Existing iOS transactions flow lacks search/filter and is less usable for demo and daily review
+- Source: user
+- Primary owning slice: M007/S03
+- Supporting slices: M007/S07
+- Validation: mapped
+
+### R059 — State-Fidelity Screens for Redesign
+- Class: failure-visibility
+- Status: active
+- Description: Redesign includes realistic loading, empty, error, and success states for transaction and QR flows (not only happy-path static screens)
+- Why it matters: Demo quality depends on resilient behavior under non-happy-path runtime conditions
+- Source: user
+- Primary owning slice: M007/S03
+- Supporting slices: M007/S02, M007/S07
+- Validation: mapped
+
+### R060 — Local Persistence for Accent Color and Personal Info Edit
+- Class: continuity
+- Status: active
+- Description: Accent color preference and personal info edit experience persist locally on-device without backend writes
+- Why it matters: These settings are needed for interaction depth in demo but do not need server complexity
+- Source: user
+- Primary owning slice: M007/S05
+- Supporting slices: M007/S07
+- Validation: mapped
+- Notes: User explicitly rejected database persistence for personal info in this milestone
+
+### R061 — Remove Non-Scope Settings/Receipt/Secondary Actions
+- Class: constraint
+- Status: active
+- Description: Out-of-scope stitch extras are removed from app flows (not shown as placeholders), including receipt PDF/report actions and non-scope settings categories
+- Why it matters: Prevents accidental expansion and avoids fake behavior during all-audience demo
+- Source: user
+- Primary owning slice: M007/S05
+- Supporting slices: M007/S04, M007/S07
+- Validation: mapped
+
+### R062 — iOS 17+ Motion Quality Constraint
+- Class: quality-attribute
+- Status: active
+- Description: Motion and transitions feel premium but restrained; interactions must avoid "too fancy/slow" behavior on iOS 17+ devices
+- Why it matters: User called out speed/feel as a top acceptance condition for school demo quality
+- Source: user
+- Primary owning slice: M007/S06
+- Supporting slices: M007/S07
+- Validation: mapped
+
+### R063 — On-Device Demo Readiness Gate
+- Class: launchability
+- Status: active
+- Description: The final redesigned iOS build is ready for manual install and pass/fail acceptance by the user on a physical iOS 17+ phone across full app journey
+- Why it matters: Final acceptance is human on-device, not simulator-only
+- Source: user
+- Primary owning slice: M007/S07
+- Supporting slices: M007/S02, M007/S03, M007/S04, M007/S05, M007/S06
+- Validation: mapped
+
+## Deferred
+
+### R064 — Server-Backed Persistence for Personal Info Edit
+- Class: admin/support
+- Status: deferred
+- Description: Personal info edit updates server-side student profile records
+- Why it matters: Useful for long-term account consistency, but unnecessary for current school demo scope
+- Source: inferred
+- Primary owning slice: none
+- Supporting slices: none
+- Validation: unmapped
+- Notes: Deferred per explicit user instruction to keep personal info edit local-only
+
 ## Out of Scope
+
+### R065 — Payment Methods Management UI (iOS)
+- Class: anti-feature
+- Status: out-of-scope
+- Description: Any iOS UI for selecting/changing payment methods
+- Why it matters: Product direction is QR-only payment for this app and demo; keeping method-switch UI conflicts with the intended flow
+- Source: user
+- Primary owning slice: none
+- Supporting slices: none
+- Validation: n/a
+- Notes: "default payment will always be QR pay"
+
+### R066 — Receipt Utility Actions (PDF Export / Report Issue)
+- Class: constraint
+- Status: out-of-scope
+- Description: Receipt actions for downloading PDF or reporting an issue
+- Why it matters: User explicitly asked to remove these actions from redesigned receipt flow
+- Source: user
+- Primary owning slice: none
+- Supporting slices: none
+- Validation: n/a
+
+### R067 — Stitch-Only Settings Extras Outside App Scope
+- Class: constraint
+- Status: out-of-scope
+- Description: Privacy & Security, Tuition Auto-Pay, and Campus Discounts settings groups from stitch references
+- Why it matters: These are not part of current product scope and would add misleading surface area in demo
+- Source: user
+- Primary owning slice: none
+- Supporting slices: none
+- Validation: n/a
 
 ### R050 — GCash / Maya Online Top-Up
 - Class: integration
@@ -439,13 +577,26 @@ This file is the explicit capability and coverage contract for the project.
 | R031 | operability | active | M005/S01 | none | contract verified; firmware already clean |
 | R032 | operability | active | M005/S05 | none | unmapped |
 | R033 | primary-user-loop | active | M005/S04 | none | unmapped |
+| R055 | primary-user-loop | active | M007/S01 | M007/S02, M007/S03, M007/S04, M007/S05 | mapped |
+| R056 | quality-attribute | active | M007/S02 | M007/S03, M007/S04, M007/S05, M007/S07 | mapped |
+| R057 | primary-user-loop | active | M007/S02 | M007/S05 | mapped |
+| R058 | primary-user-loop | active | M007/S03 | M007/S07 | mapped |
+| R059 | failure-visibility | active | M007/S03 | M007/S02, M007/S07 | mapped |
+| R060 | continuity | active | M007/S05 | M007/S07 | mapped |
+| R061 | constraint | active | M007/S05 | M007/S04, M007/S07 | mapped |
+| R062 | quality-attribute | active | M007/S06 | M007/S07 | mapped |
+| R063 | launchability | active | M007/S07 | M007/S02, M007/S03, M007/S04, M007/S05, M007/S06 | mapped |
+| R064 | admin/support | deferred | none | none | unmapped |
+| R065 | anti-feature | out-of-scope | none | none | n/a |
+| R066 | constraint | out-of-scope | none | none | n/a |
+| R067 | constraint | out-of-scope | none | none | n/a |
 | R050 | integration | out-of-scope | none | none | n/a |
 | R051 | core-capability | out-of-scope | none | none | n/a |
 | R052 | primary-user-loop | out-of-scope | none | none | n/a |
 
 ## Coverage Summary
 
-- Active requirements: 8
-- Mapped to slices: 9
+- Active requirements: 17
+- Mapped to slices: 17
 - Validated: 27
 - Unmapped active requirements: 0
