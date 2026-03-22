@@ -223,3 +223,11 @@ In Bash verifier scripts with `set -euo pipefail`, Swift source literals like `t
 Example:
 - ✅ `assert_contains_literal file 'text: $viewModel.searchQuery' label`
 - ❌ `assert_contains_literal file "text: $viewModel.searchQuery" label`
+
+---
+
+## S04 SwiftUI source-contract tests: preserve literal button-title markers when tests assert them
+
+The S04 behavior contract (`tests/test_verify_m007_s04_budget_lostcard_behavior_contract.py`) checks literal source markers like `Button("Report Lost Card")` and `Button("Retry Report")`, not just runtime-equivalent button labels.
+
+**Rule:** when refactoring LostCardView button layout, keep those literal `Button("...")` forms (or update the contract tests in the same task) so source-contract verification does not fail on stylistic-only rewrites.
