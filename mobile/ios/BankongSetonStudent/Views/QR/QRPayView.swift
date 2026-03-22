@@ -14,28 +14,11 @@ struct QRPayView: View {
 
     var body: some View {
         NavigationStack {
-            Group {
-                switch viewModel.state {
-                case .scanning:
-                    scanningView
+            ZStack {
+                AppTheme.Palette.background
+                    .ignoresSafeArea()
 
-                case .loading:
-                    VStack(spacing: 16) {
-                        ProgressView()
-                        Text("Loading cart…")
-                            .foregroundColor(.secondary)
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-                case .confirming(let cart, let token):
-                    confirmView(cart: cart, token: token)
-
-                case .success(let newBalance):
-                    successView(newBalance: newBalance)
-
-                case .error(let message):
-                    errorView(message: message)
-                }
+                stateContent
             }
             .navigationTitle("Pay with QR")
             .navigationBarTitleDisplayMode(.inline)
@@ -47,13 +30,33 @@ struct QRPayView: View {
         }
     }
 
+    @ViewBuilder
+    private var stateContent: some View {
+        switch viewModel.state {
+        case .scanning:
+            scanningView
+
+        case .loading:
+            loadingView
+
+        case .confirming(let cart, let token):
+            confirmView(cart: cart, token: token)
+
+        case .success(let newBalance):
+            successView(newBalance: newBalance)
+
+        case .error(let message):
+            errorView(message: message)
+        }
+    }
+
     // MARK: Scanning
 
     private var scanningView: some View {
         ZStack(alignment: .bottom) {
             QRScannerView(
-                onCodeScanned: { scannedURL in
-                    viewModel.handleScannedURL(scannedURL, apiClient: apiClient)
+                onCodeScanned: { scannedPayload in
+                    viewModel.handleScannedURL(scannedPayload, apiClient: apiClient)
                 },
                 onScannerFailure: { failureMessage in
                     viewModel.handleScannerFailure(failureMessage)
@@ -61,99 +64,192 @@ struct QRPayView: View {
             )
             .ignoresSafeArea()
 
-            Text("Point camera at QR code on terminal")
-                .foregroundColor(.white)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
-                .background(Color.black.opacity(0.6))
-                .cornerRadius(8)
-                .padding(.bottom, 48)
+            LinearGradient(
+                colors: [Color.clear, Color.black.opacity(0.55)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
+
+            VStack(spacing: AppTheme.Spacing.sm) {
+                StitchCard {
+                    VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
+                        HStack(alignment: .top, spacing: AppTheme.Spacing.sm) {
+                            Image(systemName: "qrcode.viewfinder")
+                                .font(.system(size: 22, weight: .semibold))
+                                .foregroundStyle(AppTheme.Palette.brandPrimary)
+
+                            VStack(alignment: .leading, spacing: AppTheme.Spacing.xxs) {
+                                Text("Scan cashier QR")
+                                    .font(AppTheme.Typography.headline)
+                                    .foregroundStyle(AppTheme.Palette.textPrimary)
+
+                                Text("Point the camera at the cashier QR code to load your cart details.")
+                                    .font(AppTheme.Typography.body)
+                                    .foregroundStyle(AppTheme.Palette.textSecondary)
+                            }
+                        }
+
+                        Text("If camera permission was denied, retry from the error screen to open Settings.")
+                            .font(AppTheme.Typography.caption)
+                            .foregroundStyle(AppTheme.Palette.textSecondary)
+                    }
+                }
+            }
+            .padding(.horizontal, AppTheme.Spacing.lg)
+            .padding(.bottom, AppTheme.Spacing.xl)
         }
+    }
+
+    // MARK: Loading
+
+    private var loadingView: some View {
+        VStack(spacing: AppTheme.Spacing.lg) {
+            StitchCard {
+                VStack(spacing: AppTheme.Spacing.md) {
+                    ProgressView()
+                        .tint(AppTheme.Palette.brandPrimary)
+                        .scaleEffect(1.1)
+
+                    Text("Loading QR payment details…")
+                        .font(AppTheme.Typography.headline)
+                        .foregroundStyle(AppTheme.Palette.textPrimary)
+
+                    Text("Please wait while we fetch your cart from the cashier terminal.")
+                        .font(AppTheme.Typography.body)
+                        .foregroundStyle(AppTheme.Palette.textSecondary)
+                        .multilineTextAlignment(.center)
+                }
+                .frame(maxWidth: .infinity)
+            }
+
+            Button("Cancel") { dismiss() }
+                .buttonStyle(.bordered)
+                .tint(AppTheme.Palette.brandPrimary)
+        }
+        .padding(.horizontal, AppTheme.Spacing.lg)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     // MARK: Confirmation
 
     private func confirmView(cart: QrCartResponse, token: String) -> some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Confirm Payment")
-                        .font(.title2).bold()
-                    Text("Cashier: \(cart.cashier)")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                }
-                .padding(.top, 8)
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
+                StitchCard {
+                    VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
+                        Text("Confirm QR Payment")
+                            .font(AppTheme.Typography.title)
+                            .foregroundStyle(AppTheme.Palette.textPrimary)
 
-                Divider()
+                        Text("Cashier: \(cart.cashier)")
+                            .font(AppTheme.Typography.bodyStrong)
+                            .foregroundStyle(AppTheme.Palette.textPrimary)
 
-                ForEach(cart.items, id: \.name) { item in
-                    HStack {
-                        Text(item.name)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                        Text("×\(item.qty)")
-                            .foregroundColor(.secondary)
-                            .frame(width: 40)
-                        Text("₱\(String(format: "%.2f", item.price * Double(item.qty)))")
-                            .frame(width: 80, alignment: .trailing)
-                    }
-                    .font(.subheadline)
-                }
-
-                Divider()
-
-                HStack {
-                    Text("Total").font(.headline)
-                    Spacer()
-                    Text("₱\(String(format: "%.2f", cart.total))")
-                        .font(.headline)
-                        .foregroundColor(.accentColor)
-                }
-
-                VStack(spacing: 12) {
-                    Button(action: { viewModel.confirm(token: token, apiClient: apiClient) }) {
-                        Text("Pay Now")
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.accentColor)
-                            .foregroundColor(.white)
-                            .cornerRadius(12)
-                    }
-                    Button(action: { dismiss() }) {
-                        Text("Cancel")
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.accentColor))
+                        Text("Review your cart before confirming payment.")
+                            .font(AppTheme.Typography.caption)
+                            .foregroundStyle(AppTheme.Palette.textSecondary)
                     }
                 }
-                .padding(.top, 8)
+
+                StitchCard {
+                    VStack(spacing: AppTheme.Spacing.sm) {
+                        ForEach(Array(cart.items.enumerated()), id: \.offset) { index, item in
+                            HStack(alignment: .firstTextBaseline, spacing: AppTheme.Spacing.sm) {
+                                Text(item.name)
+                                    .font(AppTheme.Typography.body)
+                                    .foregroundStyle(AppTheme.Palette.textPrimary)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                                Text("×\(item.qty)")
+                                    .font(AppTheme.Typography.caption)
+                                    .foregroundStyle(AppTheme.Palette.textSecondary)
+
+                                Text("₱\(String(format: "%.2f", item.price * Double(item.qty)))")
+                                    .font(AppTheme.Typography.bodyStrong)
+                                    .foregroundStyle(AppTheme.Palette.textPrimary)
+                            }
+
+                            if index < cart.items.count - 1 {
+                                Divider()
+                                    .overlay(AppTheme.Palette.border)
+                            }
+                        }
+
+                        Divider()
+                            .overlay(AppTheme.Palette.border)
+
+                        HStack {
+                            Text("Total")
+                                .font(AppTheme.Typography.headline)
+                                .foregroundStyle(AppTheme.Palette.textPrimary)
+
+                            Spacer()
+
+                            Text("₱\(String(format: "%.2f", cart.total))")
+                                .font(AppTheme.Typography.headline)
+                                .foregroundStyle(AppTheme.Palette.brandPrimary)
+                        }
+                    }
+                }
+
+                StitchCard {
+                    VStack(spacing: AppTheme.Spacing.sm) {
+                        Button("Confirm QR Payment") {
+                            viewModel.confirm(token: token, apiClient: apiClient)
+                        }
+                        .buttonStyle(StitchPrimaryButtonStyle())
+
+                        Button("Cancel") { dismiss() }
+                            .buttonStyle(.bordered)
+                            .tint(AppTheme.Palette.brandPrimary)
+                    }
+                }
             }
-            .padding()
+            .padding(.horizontal, AppTheme.Spacing.lg)
+            .padding(.vertical, AppTheme.Spacing.lg)
         }
     }
 
     // MARK: Success
 
     private func successView(newBalance: Double?) -> some View {
-        VStack(spacing: 20) {
-            Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 64))
-                .foregroundColor(.green)
-            Text("Payment Successful!")
-                .font(.title2).bold()
-            if let balance = newBalance {
-                Text("New balance: ₱\(String(format: "%.2f", balance))")
-                    .foregroundColor(.secondary)
+        VStack(spacing: AppTheme.Spacing.lg) {
+            StitchCard {
+                VStack(spacing: AppTheme.Spacing.md) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 66, weight: .semibold))
+                        .foregroundStyle(AppTheme.Palette.success)
+
+                    Text("Payment successful")
+                        .font(AppTheme.Typography.title)
+                        .foregroundStyle(AppTheme.Palette.textPrimary)
+
+                    Text("Your QR payment has been recorded.")
+                        .font(AppTheme.Typography.body)
+                        .foregroundStyle(AppTheme.Palette.textSecondary)
+                        .multilineTextAlignment(.center)
+
+                    if let balance = newBalance {
+                        Text("New balance: ₱\(String(format: "%.2f", balance))")
+                            .font(AppTheme.Typography.bodyStrong)
+                            .foregroundStyle(AppTheme.Palette.textPrimary)
+                    }
+
+                    Button("Done") {
+                        onSuccess?()
+                        dismiss()
+                    }
+                    .buttonStyle(StitchPrimaryButtonStyle())
+                }
+                .frame(maxWidth: .infinity)
             }
-            Button("Done") {
-                onSuccess?()
-                dismiss()
-            }
-            .buttonStyle(.borderedProminent)
+            .frame(maxWidth: 520)
         }
+        .padding(.horizontal, AppTheme.Spacing.lg)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear {
-            // Auto-dismiss success after 3 seconds
+            // Auto-dismiss success after 3 seconds.
             DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
                 onSuccess?()
                 dismiss()
@@ -164,33 +260,45 @@ struct QRPayView: View {
     // MARK: Error
 
     private func errorView(message: String) -> some View {
-        VStack(spacing: 20) {
-            Image(systemName: "exclamationmark.circle.fill")
-                .font(.system(size: 64))
-                .foregroundColor(.red)
-            Text("Payment Error")
-                .font(.title2).bold()
-            Text(message)
-                .multilineTextAlignment(.center)
-                .foregroundColor(.secondary)
+        VStack(spacing: AppTheme.Spacing.lg) {
+            StitchCard {
+                VStack(spacing: AppTheme.Spacing.md) {
+                    Image(systemName: "exclamationmark.circle.fill")
+                        .font(.system(size: 66, weight: .semibold))
+                        .foregroundStyle(AppTheme.Palette.danger)
 
-            VStack(spacing: 12) {
-                if message.localizedCaseInsensitiveContains("Camera access") {
-                    Button("Open Settings") {
-                        guard let settingsURL = URL(string: UIApplication.openSettingsURLString) else { return }
-                        openURL(settingsURL)
+                    Text("Payment Error")
+                        .font(AppTheme.Typography.title)
+                        .foregroundStyle(AppTheme.Palette.textPrimary)
+
+                    Text(message)
+                        .font(AppTheme.Typography.body)
+                        .foregroundStyle(AppTheme.Palette.textSecondary)
+                        .multilineTextAlignment(.center)
+
+                    VStack(spacing: AppTheme.Spacing.sm) {
+                        if message.localizedCaseInsensitiveContains("Camera access") {
+                            Button("Open Settings") {
+                                guard let settingsURL = URL(string: UIApplication.openSettingsURLString) else { return }
+                                openURL(settingsURL)
+                            }
+                            .buttonStyle(.bordered)
+                            .tint(AppTheme.Palette.brandPrimary)
+                        }
+
+                        Button("Retry Scan") { viewModel.reset() }
+                            .buttonStyle(StitchPrimaryButtonStyle())
+
+                        Button("Close") { dismiss() }
+                            .buttonStyle(.bordered)
+                            .tint(AppTheme.Palette.brandPrimary)
                     }
-                    .buttonStyle(.bordered)
                 }
-
-                Button("Retry Scan") { viewModel.reset() }
-                    .buttonStyle(.borderedProminent)
-
-                Button("Close") { dismiss() }
-                    .buttonStyle(.bordered)
+                .frame(maxWidth: .infinity)
             }
+            .frame(maxWidth: 520)
         }
-        .padding()
+        .padding(.horizontal, AppTheme.Spacing.lg)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }

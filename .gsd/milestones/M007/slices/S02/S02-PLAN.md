@@ -47,7 +47,7 @@
   - Do: Update QR payload extraction to accept both full QR URLs and bare token payloads, ignore duplicate scans when not in `.scanning`, propagate scanner permission/setup failures as actionable state transitions, and add pytest assertions for parser, scan-gating, and state-contract coverage.
   - Verify: `rtk proxy python -m pytest -q tests/test_verify_m007_s02_qr_behavior_contract.py && rtk proxy xcodebuild -project mobile/ios/BankongSetonStudent/BankongSetonStudent.xcodeproj -scheme BankongSetonStudent -destination 'platform=iOS Simulator,name=iPhone 15' build`
   - Done when: Token-only scans can progress into loading/confirming, scanner-denied setup produces explicit actionable state (not silent fail), and behavior-contract tests pass.
-- [ ] **T02: Restyle all QR states with stitch primitives while preserving QR-only actions** `est:1h 20m`
+- [x] **T02: Restyle all QR states with stitch primitives while preserving QR-only actions** `est:1h 20m`
   - Why: R055/R059 require full-state stitch fidelity, and R057 requires explicit absence of payment-method UI in QR flow surfaces.
   - Files: `mobile/ios/BankongSetonStudent/Views/QR/QRPayView.swift`, `mobile/ios/BankongSetonStudent/ViewModels/QRPayViewModel.swift`, `mobile/ios/BankongSetonStudent/UI/Theme/AppTheme.swift`, `tests/test_verify_m007_s02_qr_design_contract.py`
   - Do: Refactor `scanning/loading/confirming/success/error` layouts to use `AppTheme`, `StitchCard`, and `StitchPrimaryButtonStyle`, ensure every visible state has meaningful primary/secondary action, preserve existing API-driven confirm behavior, and add assertions that QR state coverage and QR-only copy/controls remain intact.
