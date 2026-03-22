@@ -36,4 +36,13 @@ final class HomeViewModel: ObservableObject {
             errorMessage = "Failed to load data. Pull to refresh."
         }
     }
+
+    func refreshAfterQRSuccess(apiClient: APIClient, authManager: AuthManager) async {
+        log("Refreshing Home data after QR payment success dismiss")
+        await load(apiClient: apiClient, authManager: authManager)
+    }
+
+    private func log(_ message: String) {
+        print("[HomeViewModel] \(message)")
+    }
 }

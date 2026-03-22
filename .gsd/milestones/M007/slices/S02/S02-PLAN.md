@@ -53,7 +53,7 @@
   - Do: Refactor `scanning/loading/confirming/success/error` layouts to use `AppTheme`, `StitchCard`, and `StitchPrimaryButtonStyle`, ensure every visible state has meaningful primary/secondary action, preserve existing API-driven confirm behavior, and add assertions that QR state coverage and QR-only copy/controls remain intact.
   - Verify: `rtk proxy python -m pytest -q tests/test_verify_m007_s02_qr_design_contract.py && rtk proxy xcodebuild -project mobile/ios/BankongSetonStudent/BankongSetonStudent.xcodeproj -scheme BankongSetonStudent -destination 'platform=iOS Simulator,name=iPhone 15' build`
   - Done when: QR flow visually aligns with stitch primitives across all states, no payment-method chooser text/actions are present, and state-design tests pass.
-- [ ] **T03: Redesign Home QR entry surface and preserve post-payment refresh continuity** `est:1h 05m`
+- [x] **T03: Redesign Home QR entry surface and preserve post-payment refresh continuity** `est:1h 05m`
   - Why: S02 demo starts on Home, so QR CTA prominence, accessibility, and callback wiring must stay reliable to satisfy R056 and support R055.
   - Files: `mobile/ios/BankongSetonStudent/Views/Home/HomeView.swift`, `mobile/ios/BankongSetonStudent/ViewModels/HomeViewModel.swift`, `mobile/ios/BankongSetonStudent/Views/QR/QRPayView.swift`, `tests/test_verify_m007_s02_home_qr_design_contract.py`
   - Do: Polish Home QR entry hierarchy with stitch tokens/components, keep `home-qr-pay-button` stable and discoverable, preserve `QRPayView(onSuccess:)` refresh callback behavior for balance/recent transactions reload, and add assertions for QR-only Home entry contract.

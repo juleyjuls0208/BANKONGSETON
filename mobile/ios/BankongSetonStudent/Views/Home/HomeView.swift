@@ -19,14 +19,7 @@ struct HomeView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: AppTheme.Spacing.xl) {
                         balanceCard
-
-                        Button {
-                            showQrPay = true
-                        } label: {
-                            Label("Pay with QR", systemImage: "qrcode.viewfinder")
-                        }
-                        .buttonStyle(StitchPrimaryButtonStyle())
-                        .accessibilityIdentifier("home-qr-pay-button")
+                        qrEntryCard
 
                         if let error = viewModel.errorMessage {
                             StitchCard {
@@ -56,7 +49,7 @@ struct HomeView: View {
             .sheet(isPresented: $showQrPay) {
                 QRPayView {
                     Task {
-                        await viewModel.load(apiClient: apiClient, authManager: authManager)
+                        await viewModel.refreshAfterQRSuccess(apiClient: apiClient, authManager: authManager)
                     }
                 }
                 .environmentObject(apiClient)
@@ -83,6 +76,8 @@ struct HomeView: View {
                 Text("₱\(String(format: "%.2f", viewModel.balance))")
                     .font(AppTheme.Typography.display)
                     .foregroundStyle(AppTheme.Palette.textInverse)
+                    .fontWeight(.bold)
+                    .accessibilityLabel("Current balance \(String(format: "%.2f", viewModel.balance)) pesos")
 
                 Text("Current Balance")
                     .font(AppTheme.Typography.caption)
@@ -98,6 +93,31 @@ struct HomeView: View {
                     endPoint: .bottomTrailing
                 )
             )
+        }
+    }
+
+    private var qrEntryCard: some View {
+        StitchCard {
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
+                Text("Pay with QR")
+                    .font(AppTheme.Typography.headline)
+                    .foregroundStyle(AppTheme.Palette.textPrimary)
+
+                Text("QR Pay is the only payment method available on iOS. Scan the cashier QR to continue.")
+                    .font(AppTheme.Typography.body)
+                    .foregroundStyle(AppTheme.Palette.textSecondary)
+                    .multilineTextAlignment(.leading)
+
+                Button {
+                    showQrPay = true
+                } label: {
+                    Label("Pay with QR", systemImage: "qrcode.viewfinder")
+                }
+                .buttonStyle(StitchPrimaryButtonStyle())
+                .accessibilityIdentifier("home-qr-pay-button")
+                .accessibilityHint("Opens the QR payment scanner")
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
