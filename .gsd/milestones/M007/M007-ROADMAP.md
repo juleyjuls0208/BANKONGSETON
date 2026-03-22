@@ -56,7 +56,7 @@ This milestone is complete only when all are true:
 - [x] **S02: Home + QR Flow Redesign (QR-Only)** `risk:high` `depends:[S01]`
   > After this: redesigned home and QR scan/loading/confirm/success/error flows are interactive, payment-method selection surfaces are removed, and QR remains the only payment UX.
 
-- [ ] **S03: Transactions Redesign + Search/Filter + State Fidelity** `risk:high` `depends:[S01]`
+- [x] **S03: Transactions Redesign + Search/Filter + State Fidelity** `risk:high` `depends:[S01]`
   > After this: transactions screen matches stitch states (loading/empty/error/populated) with working search/filter plus existing pagination continuity.
 
 - [ ] **S04: Budget + Receipt + Lost-Card Redesign** `risk:medium` `depends:[S01]`
