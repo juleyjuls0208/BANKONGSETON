@@ -3,74 +3,96 @@ import SwiftUI
 struct LostCardView: View {
     @EnvironmentObject var apiClient: APIClient
     @EnvironmentObject var authManager: AuthManager
+    @Environment(\.dismiss) private var dismiss
 
-    @State private var isLoading = false
-    @State private var isSuccess = false
-    @State private var errorMessage: String?
+    @StateObject private var viewModel = LostCardViewModel()
 
     var body: some View {
         VStack(spacing: 24) {
             Spacer()
 
-            // Warning icon
             Image(systemName: "exclamationmark.triangle.fill")
                 .font(.system(size: 64))
                 .foregroundColor(.orange)
 
-            // Warning text
             Text("Report your card as lost. This will block your card from being used.")
                 .font(.body)
                 .multilineTextAlignment(.center)
                 .foregroundColor(.secondary)
-                .padding(.horizontal, 32)
+                .padding(.horizontal, 8)
 
-            if isSuccess {
-                // Success confirmation
-                Text("Your card has been reported as lost. Please contact administration.")
+            stateSurface
+                .frame(maxWidth: .infinity)
+
+            Spacer()
+        }
+        .padding(.horizontal, 24)
+        .navigationTitle("Report Lost Card")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    @ViewBuilder
+    private var stateSurface: some View {
+        switch viewModel.phase {
+        case .idle:
+            Button("Report Lost Card") {
+                Task {
+                    await viewModel.reportLostCard(apiClient: apiClient, authManager: authManager)
+                }
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(.red)
+            .disabled(!viewModel.canReportLostCard)
+            .accessibilityIdentifier("lost-card-report-button")
+
+        case .loading:
+            VStack(spacing: 12) {
+                ProgressView()
+                Text("Reporting your card loss…")
+                    .font(.callout)
+                    .foregroundColor(.secondary)
+            }
+            .accessibilityIdentifier("lost-card-state-loading")
+
+        case .success:
+            VStack(spacing: 16) {
+                Text(viewModel.successMessage ?? "Your card has been reported as lost. Please contact administration.")
                     .font(.callout)
                     .multilineTextAlignment(.center)
                     .foregroundColor(.green)
-                    .padding(.horizontal, 32)
-            } else {
-                // Report button
-                Button("Report Lost Card") {
+
+                Button("Back to Settings") {
+                    dismiss()
+                }
+                .buttonStyle(.borderedProminent)
+                .accessibilityIdentifier("lost-card-success-done-button")
+            }
+            .accessibilityIdentifier("lost-card-state-success")
+
+        case .error:
+            VStack(spacing: 16) {
+                Text(viewModel.errorMessage ?? "Failed to report card. Please try again.")
+                    .font(.callout)
+                    .multilineTextAlignment(.center)
+                    .foregroundColor(.red)
+
+                Button("Retry Report") {
                     Task {
-                        isLoading = true
-                        errorMessage = nil
-                        do {
-                            let resp = try await apiClient.reportLostCard()
-                            if resp.success {
-                                KeychainHelper.save("true", forKey: "isCardLost")
-                                isSuccess = true
-                            }
-                        } catch APIError.cardLost {
-                            authManager.handleCardLost()
-                        } catch {
-                            errorMessage = "Failed to report card. Please try again."
-                        }
-                        isLoading = false
+                        await viewModel.retryReport(apiClient: apiClient, authManager: authManager)
                     }
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(.red)
-                .disabled(isLoading || isSuccess)
+                .disabled(!viewModel.canRetry)
+                .accessibilityIdentifier("lost-card-retry-button")
 
-                if isLoading {
-                    ProgressView()
+                Button("Back to Settings") {
+                    dismiss()
                 }
-
-                if let msg = errorMessage {
-                    Text(msg)
-                        .font(.callout)
-                        .foregroundColor(.red)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 32)
-                }
+                .buttonStyle(.bordered)
+                .accessibilityIdentifier("lost-card-error-dismiss-button")
             }
-
-            Spacer()
+            .accessibilityIdentifier("lost-card-state-error")
         }
-        .navigationTitle("Report Lost Card")
-        .navigationBarTitleDisplayMode(.inline)
     }
 }

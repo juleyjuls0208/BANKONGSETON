@@ -40,7 +40,7 @@
 
 ## Tasks
 
-- [ ] **T01: Harden Budget and Lost-Card behavior contracts with explicit recoverable state channels** `est:1h 35m`
+- [x] **T01: Harden Budget and Lost-Card behavior contracts with explicit recoverable state channels** `est:1h 35m`
   - Why: S04’s biggest functional risk is silent/ambiguous state handling; this must be fixed before polish so redesigned screens are not dead-ended under failures.
   - Files: `mobile/ios/BankongSetonStudent/ViewModels/BudgetViewModel.swift`, `mobile/ios/BankongSetonStudent/ViewModels/LostCardViewModel.swift`, `mobile/ios/BankongSetonStudent/Views/LostCard/LostCardView.swift`, `tests/test_verify_m007_s04_budget_lostcard_behavior_contract.py`
   - Do: Remove silent Budget load failure behavior in favor of explicit load/save status + retryable error channels, introduce a dedicated Lost-Card state model that handles unauthorized/card-lost paths coherently with auth/session boundaries, and lock these contracts with behavior-oriented source assertions.
