@@ -211,3 +211,15 @@ For `/api/student/transactions`, backend variants may omit `has_more` (and somet
 3. Else fallback to page-size heuristic (`fetchedCount == pageSize`).
 
 This keeps load-more behavior resilient across backend variants without introducing server-side search/filter assumptions.
+
+---
+
+## Shell verifier gotcha: single-quote Swift literals containing `$` when `set -u` is enabled
+
+In Bash verifier scripts with `set -euo pipefail`, Swift source literals like `text: $viewModel.searchQuery` will be treated as shell variable expansion if they are double-quoted, causing failures such as `unbound variable: viewModel`.
+
+**Rule:** when asserting source markers that contain `$` in shell scripts, wrap literals in single quotes (or escape `$`) before passing to helper functions.
+
+Example:
+- ✅ `assert_contains_literal file 'text: $viewModel.searchQuery' label`
+- ❌ `assert_contains_literal file "text: $viewModel.searchQuery" label`
