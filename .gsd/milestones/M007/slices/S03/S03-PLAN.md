@@ -52,7 +52,7 @@
   - Do: Add native search + explicit type-filter control surface, wire clear/reset/retry behaviors, render dedicated cards for initial loading/error/base empty/filtered empty/pagination error/populated states, and keep navigable receipt rows + load-more action continuity.
   - Verify: `rtk proxy python -m pytest -q tests/test_verify_m007_s03_transactions_design_contract.py && rtk proxy xcodebuild -project mobile/ios/BankongSetonStudent/BankongSetonStudent.xcodeproj -scheme BankongSetonStudent -destination 'platform=iOS Simulator,name=iPhone 15' build`
   - Done when: Search/filter controls visibly mutate results, every visible CTA is functional, and design-contract tests confirm stitch primitive usage plus no-dead-control invariants.
-- [ ] **T03: Add S03 verifier harness and manual Transactions acceptance checklist** `est:55m`
+- [x] **T03: Add S03 verifier harness and manual Transactions acceptance checklist** `est:55m`
   - Why: Slice closure needs reusable proof artifacts for S07; without a one-command verifier + manual script, regressions can slip between slices.
   - Files: `scripts/verify-m007-s03.sh`, `tests/test_verify_m007_s03_transactions_behavior_contract.py`, `tests/test_verify_m007_s03_transactions_design_contract.py`, `.gsd/milestones/M007/slices/S03/S03-UAT.md`
   - Do: Build an S03 verifier script that runs both pytest contracts plus static assertions for search/filter/load-more/error-state markers, and write a concise manual checklist for populated/empty/error/no-match/load-more flows.
