@@ -50,7 +50,7 @@ This milestone is complete only when all are true:
 
 ## Slices
 
-- [ ] **S01: Design System + Navigation Shell Rework** `risk:high` `depends:[]`
+- [x] **S01: Design System + Navigation Shell Rework** `risk:high` `depends:[]`
   > After this: login and tab shell render with stitch visual language (palette, spacing, typography, card depth, nav treatment) and become the reusable base for all downstream screens.
 
 - [ ] **S02: Home + QR Flow Redesign (QR-Only)** `risk:high` `depends:[S01]`
