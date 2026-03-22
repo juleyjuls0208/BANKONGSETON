@@ -40,7 +40,7 @@
 
 ## Tasks
 
-- [ ] **T01: Harden Transactions view-model state contract for local search/filter + pagination fidelity** `est:1h 35m`
+- [x] **T01: Harden Transactions view-model state contract for local search/filter + pagination fidelity** `est:1h 35m`
   - Why: R058/R059 risk sits in state modeling first; without explicit source-vs-derived data and split error channels, UI polish can still produce dead-end behavior.
   - Files: `mobile/ios/BankongSetonStudent/ViewModels/TransactionsViewModel.swift`, `mobile/ios/BankongSetonStudent/Models/TransactionModels.swift`, `tests/test_verify_m007_s03_transactions_behavior_contract.py`
   - Do: Introduce a clear source list (`allTransactions`) plus derived display list from query/filter state, add normalized transaction-type filter semantics, split initial-load error from pagination error, and preserve load-more continuity with a defensive `hasMore` fallback when backend omits `has_more`.

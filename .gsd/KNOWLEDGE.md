@@ -198,3 +198,16 @@ Running multiple `rtk proxy python -m pytest ...` commands in parallel in the sa
 In this Windows + Git Bash execution path, `rtk proxy grep -F` can behave inconsistently for quoted Swift literals inside verifier scripts even when plain `rtk grep` works. This caused false negatives for existing markers like `Button("Cancel")`.
 
 **Rule:** for deterministic contains/absent assertions in cross-platform verifier scripts, run a tiny `rtk proxy python -c` substring check against file contents instead of relying on `grep -F` quoting behavior.
+
+---
+
+## iOS transactions pagination fallback: derive `hasMore` from response shape when `has_more` is missing
+
+For `/api/student/transactions`, backend variants may omit `has_more` (and sometimes even `total`). Setting `hasMore` directly from `resp.hasMore ?? false` can prematurely kill load-more even when additional pages exist.
+
+**Rule:** in `TransactionsViewModel`, resolve pagination continuity in order:
+1. Use explicit `has_more` when present.
+2. Else use `total` comparison (`offset < total`) when present.
+3. Else fallback to page-size heuristic (`fetchedCount == pageSize`).
+
+This keeps load-more behavior resilient across backend variants without introducing server-side search/filter assumptions.
