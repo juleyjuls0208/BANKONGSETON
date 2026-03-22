@@ -46,7 +46,7 @@
   - Do: Introduce a clear source list (`allTransactions`) plus derived display list from query/filter state, add normalized transaction-type filter semantics, split initial-load error from pagination error, and preserve load-more continuity with a defensive `hasMore` fallback when backend omits `has_more`.
   - Verify: `rtk proxy python -m pytest -q tests/test_verify_m007_s03_transactions_behavior_contract.py && rtk proxy xcodebuild -project mobile/ios/BankongSetonStudent/BankongSetonStudent.xcodeproj -scheme BankongSetonStudent -destination 'platform=iOS Simulator,name=iPhone 15' build`
   - Done when: View-model state can distinguish base empty vs filtered empty, pagination errors no longer mask already-loaded rows, and behavior-contract tests pass.
-- [ ] **T02: Redesign Transactions UI with stitch search/filter controls and actionable state surfaces** `est:1h 30m`
+- [x] **T02: Redesign Transactions UI with stitch search/filter controls and actionable state surfaces** `est:1h 30m`
   - Why: R055/R056 depend on visible UI wiring; controls must be both stitch-cohesive and behaviorally live across all transaction states.
   - Files: `mobile/ios/BankongSetonStudent/Views/Transactions/TransactionsView.swift`, `mobile/ios/BankongSetonStudent/Views/Transactions/TransactionRowView.swift`, `mobile/ios/BankongSetonStudent/UI/Theme/AppTheme.swift`, `tests/test_verify_m007_s03_transactions_design_contract.py`
   - Do: Add native search + explicit type-filter control surface, wire clear/reset/retry behaviors, render dedicated cards for initial loading/error/base empty/filtered empty/pagination error/populated states, and keep navigable receipt rows + load-more action continuity.

@@ -53,7 +53,7 @@ enum TransactionDirection: String, Codable {
 
 extension Transaction {
     private static let debitTypeSignals: [String] = [
-        "purchase", "payment", "debit", "expense", "nfc"
+        "purchase", "payment", "debit", "expense"
     ]
 
     private static let creditTypeSignals: [String] = [
@@ -98,7 +98,7 @@ extension Transaction {
 
     var isNavigable: Bool {
         let normalizedType = normalizedTypeValue
-        let isPurchaseFamily = normalizedType.contains("purchase") || normalizedType == "nfc" || normalizedType.contains("payment")
+        let isPurchaseFamily = normalizedType.contains("purchase") || normalizedType.contains("payment")
         let hasItems = !(items ?? []).isEmpty
 
         return isPurchaseFamily || hasItems

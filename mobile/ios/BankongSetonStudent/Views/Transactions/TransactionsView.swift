@@ -1,9 +1,8 @@
 import SwiftUI
 
 // MARK: - TransactionsView
-// Paginated transaction list.
-// Purchase / NFC / Payment rows → NavigationLink to ReceiptView.
-// Top-Up / Load rows → non-tappable (no NavigationLink).
+// Stitch-faithful transactions surface with local search/filter derivation,
+// explicit state cards, and non-blocking pagination recovery controls.
 
 struct TransactionsView: View {
     @EnvironmentObject var apiClient: APIClient
@@ -13,69 +12,23 @@ struct TransactionsView: View {
     var body: some View {
         NavigationStack {
             List {
-                ForEach(viewModel.transactions) { transaction in
-                    Group {
-                        if transaction.isNavigable {
-                            NavigationLink(value: transaction) {
-                                TransactionRowView(transaction: transaction)
-                            }
-                            .buttonStyle(.plain)
-                        } else {
-                            TransactionRowView(transaction: transaction)
-                        }
-                    }
-                    .listRowInsets(
-                        EdgeInsets(
-                            top: AppTheme.Spacing.xs,
-                            leading: AppTheme.Spacing.lg,
-                            bottom: AppTheme.Spacing.xs,
-                            trailing: AppTheme.Spacing.lg
-                        )
-                    )
-                    .listRowSeparator(.hidden)
-                    .listRowBackground(AppTheme.Palette.background)
+                styledListRow(top: AppTheme.Spacing.sm, bottom: AppTheme.Spacing.xs) {
+                    filterControlsCard
                 }
 
-                if viewModel.hasMore {
-                    StitchCard(padding: AppTheme.Spacing.sm) {
-                        if viewModel.isLoadingMore {
-                            HStack(spacing: AppTheme.Spacing.sm) {
-                                ProgressView()
-                                Text("Loading more transactions…")
-                                    .font(AppTheme.Typography.body)
-                                    .foregroundStyle(AppTheme.Palette.textSecondary)
-                            }
-                            .frame(maxWidth: .infinity)
-                        } else {
-                            Button {
-                                Task {
-                                    await viewModel.loadMore(apiClient: apiClient, authManager: authManager)
-                                }
-                            } label: {
-                                Label("Load More", systemImage: "arrow.down.circle")
-                            }
-                            .buttonStyle(StitchPrimaryButtonStyle())
-                        }
-                    }
-                    .listRowInsets(
-                        EdgeInsets(
-                            top: AppTheme.Spacing.sm,
-                            leading: AppTheme.Spacing.lg,
-                            bottom: AppTheme.Spacing.xs,
-                            trailing: AppTheme.Spacing.lg
-                        )
-                    )
-                    .listRowSeparator(.hidden)
-                    .listRowBackground(AppTheme.Palette.background)
-                }
+                transactionStateRows
             }
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
             .background(AppTheme.Palette.background)
             .navigationTitle("Transactions")
-            .overlay {
-                stateOverlay
-            }
+            .searchable(
+                text: $viewModel.searchQuery,
+                placement: .navigationBarDrawer(displayMode: .always),
+                prompt: "Search by type, date, or amount"
+            )
+            .textInputAutocapitalization(.never)
+            .autocorrectionDisabled()
             .refreshable {
                 await viewModel.loadInitial(apiClient: apiClient, authManager: authManager)
             }
@@ -88,49 +41,262 @@ struct TransactionsView: View {
         }
     }
 
+    private var hasActiveSearchOrFilter: Bool {
+        !viewModel.searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || viewModel.selectedFilter != .all
+    }
+
+    private var filterControlsCard: some View {
+        StitchCard(padding: AppTheme.Spacing.md) {
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
+                Text("Filter Transactions")
+                    .font(AppTheme.Typography.caption)
+                    .foregroundStyle(AppTheme.Palette.textSecondary)
+
+                Picker("Transaction Type", selection: $viewModel.selectedFilter) {
+                    ForEach(TransactionFilter.allCases, id: \.self) { filter in
+                        Text(filterTitle(for: filter))
+                            .tag(filter)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .accessibilityIdentifier("transactions-filter-picker")
+                .accessibilityLabel("Transaction type filter")
+
+                if hasActiveSearchOrFilter {
+                    Button {
+                        viewModel.clearSearchAndFilter()
+                    } label: {
+                        Label("Clear Search & Filter", systemImage: "xmark.circle")
+                    }
+                    .buttonStyle(StitchPrimaryButtonStyle())
+                    .accessibilityIdentifier("transactions-clear-search-filter-button")
+                    .accessibilityHint("Resets search text and type filter")
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
     @ViewBuilder
-    private var stateOverlay: some View {
-        if viewModel.isLoading {
-            StitchCard {
+    private var transactionStateRows: some View {
+        if viewModel.isLoading && viewModel.allTransactions.isEmpty {
+            styledListRow {
+                loadingStateCard
+            }
+        } else if let initialLoadError = viewModel.initialLoadErrorMessage, viewModel.allTransactions.isEmpty {
+            styledListRow {
+                initialLoadErrorStateCard(message: initialLoadError)
+            }
+        } else if viewModel.isBaseEmptyState {
+            styledListRow {
+                baseEmptyStateCard
+            }
+        } else if viewModel.isFilteredEmptyState {
+            styledListRow {
+                filteredEmptyStateCard
+            }
+        } else {
+            ForEach(viewModel.transactions) { transaction in
+                styledListRow {
+                    Group {
+                        if transaction.isNavigable {
+                            NavigationLink(value: transaction) {
+                                TransactionRowView(transaction: transaction)
+                            }
+                            .buttonStyle(.plain)
+                        } else {
+                            TransactionRowView(transaction: transaction)
+                        }
+                    }
+                }
+            }
+
+            if viewModel.hasPaginationFailureState, let paginationError = viewModel.paginationErrorMessage {
+                styledListRow(top: AppTheme.Spacing.sm, bottom: AppTheme.Spacing.xs) {
+                    paginationErrorStateCard(message: paginationError)
+                }
+            }
+
+            if viewModel.hasMore {
+                styledListRow(top: AppTheme.Spacing.sm, bottom: AppTheme.Spacing.xs) {
+                    loadMoreCard
+                }
+            }
+        }
+    }
+
+    private var loadingStateCard: some View {
+        StitchCard {
+            HStack(spacing: AppTheme.Spacing.sm) {
+                ProgressView()
+                Text("Loading transactions…")
+                    .font(AppTheme.Typography.body)
+                    .foregroundStyle(AppTheme.Palette.textSecondary)
+            }
+            .frame(maxWidth: .infinity, alignment: .center)
+        }
+        .accessibilityIdentifier("transactions-state-loading")
+    }
+
+    private func initialLoadErrorStateCard(message: String) -> some View {
+        StitchCard {
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
+                Text("Couldn’t Load Transactions")
+                    .font(AppTheme.Typography.headline)
+                    .foregroundStyle(AppTheme.Palette.danger)
+
+                Text(message)
+                    .font(AppTheme.Typography.body)
+                    .foregroundStyle(AppTheme.Palette.textSecondary)
+                    .multilineTextAlignment(.leading)
+
+                Button {
+                    Task {
+                        await viewModel.loadInitial(apiClient: apiClient, authManager: authManager)
+                    }
+                } label: {
+                    Label("Retry", systemImage: "arrow.clockwise")
+                }
+                .buttonStyle(StitchPrimaryButtonStyle())
+                .accessibilityIdentifier("transactions-retry-initial-button")
+                .accessibilityHint("Retries loading transactions from the start")
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .accessibilityIdentifier("transactions-state-initial-error")
+    }
+
+    private var baseEmptyStateCard: some View {
+        StitchCard {
+            VStack(spacing: AppTheme.Spacing.sm) {
+                Text("No transactions yet")
+                    .font(AppTheme.Typography.headline)
+                    .foregroundStyle(AppTheme.Palette.textPrimary)
+
+                Text("Your transaction history will appear here once activity is recorded.")
+                    .font(AppTheme.Typography.body)
+                    .foregroundStyle(AppTheme.Palette.textSecondary)
+                    .multilineTextAlignment(.center)
+
+                Button {
+                    Task {
+                        await viewModel.loadInitial(apiClient: apiClient, authManager: authManager)
+                    }
+                } label: {
+                    Label("Refresh Transactions", systemImage: "arrow.clockwise")
+                }
+                .buttonStyle(StitchPrimaryButtonStyle())
+                .accessibilityIdentifier("transactions-refresh-empty-button")
+            }
+            .frame(maxWidth: .infinity)
+        }
+        .accessibilityIdentifier("transactions-state-base-empty")
+    }
+
+    private var filteredEmptyStateCard: some View {
+        StitchCard {
+            VStack(spacing: AppTheme.Spacing.sm) {
+                Text("No matching transactions")
+                    .font(AppTheme.Typography.headline)
+                    .foregroundStyle(AppTheme.Palette.textPrimary)
+
+                Text("Try a different search term or reset your filter to see all transactions.")
+                    .font(AppTheme.Typography.body)
+                    .foregroundStyle(AppTheme.Palette.textSecondary)
+                    .multilineTextAlignment(.center)
+
+                Button {
+                    viewModel.clearSearchAndFilter()
+                } label: {
+                    Label("Clear Search & Filter", systemImage: "xmark.circle")
+                }
+                .buttonStyle(StitchPrimaryButtonStyle())
+                .accessibilityIdentifier("transactions-clear-no-match-button")
+            }
+            .frame(maxWidth: .infinity)
+        }
+        .accessibilityIdentifier("transactions-state-filtered-empty")
+    }
+
+    private func paginationErrorStateCard(message: String) -> some View {
+        StitchCard {
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
+                Text("Couldn’t load more transactions.")
+                    .font(AppTheme.Typography.bodyStrong)
+                    .foregroundStyle(AppTheme.Palette.danger)
+
+                Text(message)
+                    .font(AppTheme.Typography.caption)
+                    .foregroundStyle(AppTheme.Palette.textSecondary)
+                    .multilineTextAlignment(.leading)
+
+                Button {
+                    Task {
+                        await viewModel.loadMore(apiClient: apiClient, authManager: authManager)
+                    }
+                } label: {
+                    Label("Retry Load More", systemImage: "arrow.clockwise")
+                }
+                .buttonStyle(StitchPrimaryButtonStyle())
+                .accessibilityIdentifier("transactions-retry-pagination-button")
+                .accessibilityHint("Retries loading the next page without losing loaded transactions")
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .accessibilityIdentifier("transactions-state-pagination-error")
+    }
+
+    private var loadMoreCard: some View {
+        StitchCard(padding: AppTheme.Spacing.sm) {
+            if viewModel.isLoadingMore {
                 HStack(spacing: AppTheme.Spacing.sm) {
                     ProgressView()
-                    Text("Loading transactions…")
+                    Text("Loading more transactions…")
                         .font(AppTheme.Typography.body)
                         .foregroundStyle(AppTheme.Palette.textSecondary)
                 }
                 .frame(maxWidth: .infinity, alignment: .center)
-            }
-            .padding(.horizontal, AppTheme.Spacing.lg)
-        } else if let error = viewModel.errorMessage {
-            StitchCard {
-                VStack(spacing: AppTheme.Spacing.xs) {
-                    Text("Couldn’t Load Transactions")
-                        .font(AppTheme.Typography.headline)
-                        .foregroundStyle(AppTheme.Palette.danger)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-
-                    Text(error)
-                        .font(AppTheme.Typography.body)
-                        .foregroundStyle(AppTheme.Palette.textSecondary)
-                        .multilineTextAlignment(.leading)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                Button {
+                    Task {
+                        await viewModel.loadMore(apiClient: apiClient, authManager: authManager)
+                    }
+                } label: {
+                    Label("Load More", systemImage: "arrow.down.circle")
                 }
+                .buttonStyle(StitchPrimaryButtonStyle())
+                .accessibilityIdentifier("transactions-load-more-button")
+                .accessibilityHint("Loads older transaction history")
             }
-            .padding(.horizontal, AppTheme.Spacing.lg)
-        } else if viewModel.transactions.isEmpty {
-            StitchCard {
-                VStack(spacing: AppTheme.Spacing.xs) {
-                    Text("No transactions yet")
-                        .font(AppTheme.Typography.headline)
-                        .foregroundStyle(AppTheme.Palette.textPrimary)
-                    Text("Your transaction history will appear here.")
-                        .font(AppTheme.Typography.body)
-                        .foregroundStyle(AppTheme.Palette.textSecondary)
-                        .multilineTextAlignment(.center)
-                }
-                .frame(maxWidth: .infinity)
-            }
-            .padding(.horizontal, AppTheme.Spacing.lg)
         }
+    }
+
+    private func filterTitle(for filter: TransactionFilter) -> String {
+        switch filter {
+        case .all:
+            return "All"
+        case .debit:
+            return "Debit"
+        case .credit:
+            return "Credit"
+        }
+    }
+
+    private func styledListRow<Content: View>(
+        top: CGFloat = AppTheme.Spacing.xs,
+        bottom: CGFloat = AppTheme.Spacing.xs,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        content()
+            .listRowInsets(
+                EdgeInsets(
+                    top: top,
+                    leading: AppTheme.Spacing.lg,
+                    bottom: bottom,
+                    trailing: AppTheme.Spacing.lg
+                )
+            )
+            .listRowSeparator(.hidden)
+            .listRowBackground(AppTheme.Palette.background)
     }
 }

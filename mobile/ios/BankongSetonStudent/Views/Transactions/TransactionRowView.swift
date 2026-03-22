@@ -2,16 +2,13 @@ import SwiftUI
 
 // MARK: - TransactionRowView
 // Color-coded row for a single transaction.
-// Debit types (purchases, nfc, payment) are red; credits (top-up, load) are green.
+// Debit rows are red, credit rows are green.
 
 struct TransactionRowView: View {
     let transaction: Transaction
 
-    // A "debit" if the type sounds like money leaving, OR amount is negative.
     private var isDebit: Bool {
-        let t = transaction.type.lowercased()
-        let debitType = t.contains("purchase") || t == "nfc" || t == "payment" || t == "debit"
-        return debitType || transaction.amount < 0
+        transaction.isDebitLike
     }
 
     private var amountColor: Color {
@@ -24,19 +21,26 @@ struct TransactionRowView: View {
     }
 
     private var displayLabel: String {
-        let t = transaction.type.lowercased()
-        switch t {
+        let normalizedType = transaction.normalizedTypeValue
+
+        switch normalizedType {
         case "purchase":
             return "Canteen Purchase"
-        case "nfc purchase":
-            return "NFC Purchase"
-        case "nfc":
-            return "NFC Payment"
-        case "load", "top-up", "topup", "credit":
+        case "payment":
+            return "Payment"
+        case "load", "top up", "topup", "credit":
             return "Top Up"
         default:
             return transaction.type.prefix(1).uppercased() + transaction.type.dropFirst()
         }
+    }
+
+    private var signedAmountText: String {
+        isDebit ? "−\(displayAmount)" : "+\(displayAmount)"
+    }
+
+    private var accessibilityAmountText: String {
+        isDebit ? "Debit \(displayAmount)" : "Credit \(displayAmount)"
     }
 
     var body: some View {
@@ -65,7 +69,7 @@ struct TransactionRowView: View {
                 Spacer(minLength: AppTheme.Spacing.sm)
 
                 VStack(alignment: .trailing, spacing: AppTheme.Spacing.xxs) {
-                    Text(isDebit ? "−\(displayAmount)" : "+\(displayAmount)")
+                    Text(signedAmountText)
                         .font(AppTheme.Typography.bodyStrong)
                         .foregroundStyle(amountColor)
 
@@ -74,6 +78,9 @@ struct TransactionRowView: View {
                         .foregroundStyle(AppTheme.Palette.textSecondary)
                 }
             }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("\(displayLabel). \(accessibilityAmountText). Balance \(String(format: "₱%.2f", transaction.balance)).")
+            .accessibilityHint(transaction.isNavigable ? "Opens the transaction receipt" : "Transaction is not navigable")
         }
     }
 }
