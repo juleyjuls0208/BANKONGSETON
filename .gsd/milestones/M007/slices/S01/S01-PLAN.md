@@ -44,7 +44,7 @@
   - Do: Create semantic color/spacing/type/shadow tokens and reusable card/field/button styles, migrate `Color(hex:)` out of feature views into shared theme utilities, register new Swift files in `.xcodeproj`, and add initial pytest assertions that fail when token primitives are missing.
   - Verify: `rtk proxy python -m pytest -q tests/test_verify_m007_s01_design_system_contract.py && rtk proxy xcodebuild -project mobile/ios/BankongSetonStudent/BankongSetonStudent.xcodeproj -scheme BankongSetonStudent -destination 'platform=iOS Simulator,name=iPhone 15' build`
   - Done when: Theme/component primitives compile, are project-registered, and design-system contract tests pass.
-- [ ] **T02: Recompose MainTabView into a stitch tab shell without breaking routing** `est:1h 10m`
+- [x] **T02: Recompose MainTabView into a stitch tab shell without breaking routing** `est:1h 10m`
   - Why: S02–S05 depend on a stable, reusable shell contract; default `TabView` styling blocks stitch parity.
   - Files: `mobile/ios/BankongSetonStudent/UI/Shell/StitchTabShell.swift`, `mobile/ios/BankongSetonStudent/Views/MainTabView.swift`, `mobile/ios/BankongSetonStudent/App/ContentView.swift`, `mobile/ios/BankongSetonStudent/BankongSetonStudent.xcodeproj/project.pbxproj`, `tests/test_verify_m007_s01_shell_login_contract.py`
   - Do: Implement custom shell/tab treatment backed by semantic tokens, keep existing tab destinations and labels, preserve session-expired alert behavior (`authManager.clearAll()`), and add contract assertions for tab structure/session alert wiring.

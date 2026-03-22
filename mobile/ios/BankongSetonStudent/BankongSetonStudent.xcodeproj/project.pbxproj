@@ -41,6 +41,7 @@
 		AA000032 /* StitchCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000032 /* StitchCard.swift */; };
 		AA000033 /* StitchFieldStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000033 /* StitchFieldStyle.swift */; };
 		AA000034 /* StitchPrimaryButtonStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000034 /* StitchPrimaryButtonStyle.swift */; };
+		AA000035 /* StitchTabShell.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000035 /* StitchTabShell.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -79,6 +80,7 @@
 		BB000032 /* StitchCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StitchCard.swift; sourceTree = "<group>"; };
 		BB000033 /* StitchFieldStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StitchFieldStyle.swift; sourceTree = "<group>"; };
 		BB000034 /* StitchPrimaryButtonStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StitchPrimaryButtonStyle.swift; sourceTree = "<group>"; };
+		BB000035 /* StitchTabShell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StitchTabShell.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -278,6 +280,7 @@
 			children = (
 				EE000019 /* Theme */,
 				EE000020 /* Components */,
+				EE000021 /* Shell */,
 			);
 			path = UI;
 			sourceTree = "<group>";
@@ -299,6 +302,14 @@
 				BB000034 /* StitchPrimaryButtonStyle.swift */,
 			);
 			path = Components;
+			sourceTree = "<group>";
+		};
+		EE000021 /* Shell */ = {
+			isa = PBXGroup;
+			children = (
+				BB000035 /* StitchTabShell.swift */,
+			);
+			path = Shell;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -403,6 +414,7 @@
 				AA000032 /* StitchCard.swift in Sources */,
 				AA000033 /* StitchFieldStyle.swift in Sources */,
 				AA000034 /* StitchPrimaryButtonStyle.swift in Sources */,
+				AA000035 /* StitchTabShell.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
