@@ -5,6 +5,8 @@ IOS_ROOT = Path("mobile/ios/BankongSetonStudent")
 SHELL_ROOT = IOS_ROOT / "UI" / "Shell"
 VIEWS_ROOT = IOS_ROOT / "Views"
 APP_ROOT = IOS_ROOT / "App"
+LOGIN_VIEW_PATH = VIEWS_ROOT / "Auth" / "LoginView.swift"
+LOGIN_VM_PATH = IOS_ROOT / "ViewModels" / "LoginViewModel.swift"
 PBXPROJ_PATH = IOS_ROOT / "BankongSetonStudent.xcodeproj" / "project.pbxproj"
 
 
@@ -95,3 +97,64 @@ def test_auth_gate_still_routes_between_login_and_main_shell():
 
     for entry in required_entries:
         assert entry in content_view_contents, f"ContentView auth-gate entry missing: {entry}"
+
+
+def test_login_view_uses_shared_theme_tokens_and_primitives():
+    login_contents = read_text(LOGIN_VIEW_PATH)
+
+    required_entries = [
+        "StitchCard",
+        ".stitchFieldStyle()",
+        ".buttonStyle(StitchPrimaryButtonStyle())",
+        "AppTheme.Palette",
+        "AppTheme.Spacing",
+        "AppTheme.Typography",
+    ]
+
+    for entry in required_entries:
+        assert entry in login_contents, f"LoginView design-system contract missing: {entry}"
+
+
+def test_login_submit_wiring_and_field_semantics_are_preserved():
+    login_contents = read_text(LOGIN_VIEW_PATH)
+
+    required_entries = [
+        'TextField("Student ID", text: $viewModel.studentId)',
+        ".textInputAutocapitalization(.never)",
+        ".autocorrectionDisabled()",
+        ".textContentType(.username)",
+        'SecureField("PIN", text: $viewModel.pin)',
+        ".textContentType(.oneTimeCode)",
+        "Task {",
+        "await viewModel.login(apiClient: apiClient, authManager: authManager)",
+        ".disabled(!viewModel.canSubmit)",
+        'Text(viewModel.isLoading ? "Signing In..." : "Sign In")',
+    ]
+
+    for entry in required_entries:
+        assert entry in login_contents, f"Login submit/field contract missing: {entry}"
+
+
+def test_login_loading_and_error_visibility_contract_is_explicit():
+    login_contents = read_text(LOGIN_VIEW_PATH)
+    view_model_contents = read_text(LOGIN_VM_PATH)
+
+    login_required_entries = [
+        "if viewModel.isLoading",
+        "ProgressView()",
+        "if let error = viewModel.errorMessage",
+        "Text(error)",
+    ]
+
+    for entry in login_required_entries:
+        assert entry in login_contents, f"Login state visibility contract missing: {entry}"
+
+    view_model_required_entries = [
+        "var canSubmit: Bool",
+        "!studentId.trimmingCharacters(in: .whitespaces).isEmpty",
+        "pin.count >= 4",
+        "!isLoading",
+    ]
+
+    for entry in view_model_required_entries:
+        assert entry in view_model_contents, f"LoginViewModel submit-state contract missing: {entry}"

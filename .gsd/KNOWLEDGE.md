@@ -180,3 +180,13 @@ Older deployments may not define `CASHIER_SHARED_SECRET`, which silently disable
 2. else `JWT_SECRET` (legacy fallback)
 
 Apply the same fallback on both sender (cashier routes) and receiver (cloud verify path) so auth expectations match.
+
+---
+
+## Pytest + coverage on Windows: avoid parallel runs that share `.coverage`
+
+Running multiple `rtk proxy python -m pytest ...` commands in parallel in the same worktree can race on the shared `.coverage` SQLite file and fail with errors like:
+- `no such table: coverage_schema`
+- `table coverage_schema already exists`
+
+**Rule:** when pytest-cov is enabled, run verification test commands serially (especially source-contract suites) unless each process writes to an isolated coverage data file.

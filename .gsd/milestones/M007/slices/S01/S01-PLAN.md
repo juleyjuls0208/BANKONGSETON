@@ -50,7 +50,7 @@
   - Do: Implement custom shell/tab treatment backed by semantic tokens, keep existing tab destinations and labels, preserve session-expired alert behavior (`authManager.clearAll()`), and add contract assertions for tab structure/session alert wiring.
   - Verify: `rtk proxy python -m pytest -q tests/test_verify_m007_s01_shell_login_contract.py -k "tab_shell or session_alert" && rtk proxy xcodebuild -project mobile/ios/BankongSetonStudent/BankongSetonStudent.xcodeproj -scheme BankongSetonStudent -destination 'platform=iOS Simulator,name=iPhone 15' build`
   - Done when: Styled shell is active, all four tabs remain interactive, and session-expired recovery path still functions.
-- [ ] **T03: Restyle LoginView on shared primitives while preserving auth behavior** `est:1h 05m`
+- [x] **T03: Restyle LoginView on shared primitives while preserving auth behavior** `est:1h 05m`
   - Why: Login is the first user touchpoint for R055 and must demonstrate tokenized UI without auth regressions.
   - Files: `mobile/ios/BankongSetonStudent/Views/Auth/LoginView.swift`, `mobile/ios/BankongSetonStudent/UI/Components/StitchFieldStyle.swift`, `mobile/ios/BankongSetonStudent/UI/Components/StitchPrimaryButtonStyle.swift`, `tests/test_verify_m007_s01_shell_login_contract.py`
   - Do: Refactor login layout/branding/form controls to stitch style using shared primitives, preserve `LoginViewModel` loading/error/disabled semantics and async submit action, and expand tests to assert critical login wiring remains intact.
