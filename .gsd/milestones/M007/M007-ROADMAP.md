@@ -53,7 +53,7 @@ This milestone is complete only when all are true:
 - [x] **S01: Design System + Navigation Shell Rework** `risk:high` `depends:[]`
   > After this: login and tab shell render with stitch visual language (palette, spacing, typography, card depth, nav treatment) and become the reusable base for all downstream screens.
 
-- [ ] **S02: Home + QR Flow Redesign (QR-Only)** `risk:high` `depends:[S01]`
+- [x] **S02: Home + QR Flow Redesign (QR-Only)** `risk:high` `depends:[S01]`
   > After this: redesigned home and QR scan/loading/confirm/success/error flows are interactive, payment-method selection surfaces are removed, and QR remains the only payment UX.
 
 - [ ] **S03: Transactions Redesign + Search/Filter + State Fidelity** `risk:high` `depends:[S01]`
