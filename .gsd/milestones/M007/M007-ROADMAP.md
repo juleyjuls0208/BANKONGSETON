@@ -59,7 +59,7 @@ This milestone is complete only when all are true:
 - [x] **S03: Transactions Redesign + Search/Filter + State Fidelity** `risk:high` `depends:[S01]`
   > After this: transactions screen matches stitch states (loading/empty/error/populated) with working search/filter plus existing pagination continuity.
 
-- [ ] **S04: Budget + Receipt + Lost-Card Redesign** `risk:medium` `depends:[S01]`
+- [x] **S04: Budget + Receipt + Lost-Card Redesign** `risk:medium` `depends:[S01]`
   > After this: budget, receipt, and lost-card flows are redesigned and interactive with in-scope behavior; receipt utility actions removed per scope.
 
 - [ ] **S05: Settings Rework + Local Persistence + Scope Cleanup** `risk:medium` `depends:[S01]`
