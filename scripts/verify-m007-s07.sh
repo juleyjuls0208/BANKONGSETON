@@ -10,6 +10,7 @@ SCRIPT_NAME="verify-m007-s07"
 INTEGRATION_TEST="tests/test_verify_m007_s07_integration_behavior_contract.py"
 SCOPE_TEST="tests/test_verify_m007_s07_scope_guard_contract.py"
 S07_UAT=".gsd/milestones/M007/slices/S07/S07-UAT.md"
+S07_READINESS=".gsd/milestones/M007/slices/S07/S07-DEMO-READINESS.md"
 
 QR_VIEW="mobile/ios/BankongSetonStudent/Views/QR/QRPayView.swift"
 QR_VM="mobile/ios/BankongSetonStudent/ViewModels/QRPayViewModel.swift"
@@ -70,6 +71,7 @@ assert_contains_literal() {
   local file="$1"
   local literal="$2"
   local label="$3"
+  local phase="${4:-integration}"
 
   set +e
   rtk proxy python -c "from pathlib import Path; import sys; sys.exit(0 if sys.argv[2] in Path(sys.argv[1]).read_text(encoding='utf-8') else 1)" "${file}" "${literal}"
@@ -77,10 +79,10 @@ assert_contains_literal() {
   set -e
 
   if [[ ${code} -ne 0 ]]; then
-    fail_with_guidance "integration" 2 \
+    fail_with_guidance "${phase}" 2 \
       "Missing required marker (${label}) in ${file}" \
       "Expected literal: ${literal}" \
-      "Restore the S07 integration marker, then re-run this verifier."
+      "Restore the required marker/document structure, then re-run this verifier."
   fi
 }
 
@@ -102,12 +104,33 @@ assert_absent_literal() {
   fi
 }
 
+assert_non_empty_doc() {
+  local file="$1"
+  local label="$2"
+
+  if [[ ! -f "${file}" ]]; then
+    fail_with_guidance "diagnostic-surface" 2 \
+      "Missing required readiness artifact (${label}): ${file}" \
+      "Create the required S07 readiness document and add PASS/FAIL evidence checkpoints."
+  fi
+
+  set +e
+  rtk proxy python -c "from pathlib import Path; import sys; txt=Path(sys.argv[1]).read_text(encoding='utf-8'); sys.exit(0 if txt.strip() else 1)" "${file}"
+  local code=$?
+  set -e
+
+  if [[ ${code} -ne 0 ]]; then
+    fail_with_guidance "diagnostic-surface" 2 \
+      "Readiness artifact is empty (${label}): ${file}" \
+      "Populate the document with concrete PASS/FAIL checkpoints and evidence notes, then re-run this verifier."
+  fi
+}
+
 run_preflight() {
   log "phase=preflight status=running"
 
   require_file "${INTEGRATION_TEST}"
   require_file "${SCOPE_TEST}"
-  require_file "${S07_UAT}"
 
   require_file "${QR_VIEW}"
   require_file "${QR_VM}"
@@ -170,10 +193,17 @@ run_integration_phase() {
 run_diagnostic_surface_phase() {
   log "phase=diagnostic-surface status=running"
 
-  assert_contains_literal "${S07_UAT}" '# S07 UAT Checklist' "uat_heading_root"
-  assert_contains_literal "${S07_UAT}" '## Device & Build Context' "uat_heading_device_context"
-  assert_contains_literal "${S07_UAT}" '## Journey Checkpoints' "uat_heading_journey"
-  assert_contains_literal "${S07_UAT}" '## PASS / FAIL Summary' "uat_heading_pass_fail"
+  assert_non_empty_doc "${S07_UAT}" "s07_uat"
+  assert_non_empty_doc "${S07_READINESS}" "s07_demo_readiness"
+
+  assert_contains_literal "${S07_UAT}" '# S07 UAT Checklist' "uat_heading_root" "diagnostic-surface"
+  assert_contains_literal "${S07_UAT}" '## Device & Build Context' "uat_heading_device_context" "diagnostic-surface"
+  assert_contains_literal "${S07_UAT}" '## Journey Checkpoints' "uat_heading_journey" "diagnostic-surface"
+  assert_contains_literal "${S07_UAT}" '## PASS / FAIL Summary' "uat_heading_pass_fail" "diagnostic-surface"
+
+  assert_contains_literal "${S07_READINESS}" '# S07 Demo Readiness' "readiness_heading_root" "diagnostic-surface"
+  assert_contains_literal "${S07_READINESS}" '## Requirement-to-Proof Traceability' "readiness_heading_traceability" "diagnostic-surface"
+  assert_contains_literal "${S07_READINESS}" 'R063' "readiness_requirement_r063" "diagnostic-surface"
 
   log "phase=diagnostic-surface status=passed"
 }

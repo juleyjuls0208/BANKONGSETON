@@ -52,7 +52,7 @@
   - Do: Harden QR success completion semantics (single completion path, no duplicate side-effects), propagate refresh continuity to Home/Transactions, and preserve existing transactions search/filter/load-more plus failure-state visibility while keeping all in-scope controls actionable.
   - Verify: `rtk proxy python -m pytest -q tests/test_verify_m007_s07_integration_behavior_contract.py tests/test_verify_m007_s07_scope_guard_contract.py && rtk proxy sh scripts/verify-m007-s07.sh && rtk proxy xcodebuild -project mobile/ios/BankongSetonStudent/BankongSetonStudent.xcodeproj -scheme BankongSetonStudent -destination 'platform=iOS Simulator,name=iPhone 15' build`
   - Done when: QR success reliably lands in coherent refreshed app state, S07 contracts/verifier pass, and iOS build succeeds.
-- [ ] **T03: Publish device-demo readiness evidence and close S07 acceptance gate** `est:1h`
+- [x] **T03: Publish device-demo readiness evidence and close S07 acceptance gate** `est:1h`
   - Why: Milestone closure requires explicit manual iOS 17+ pass/fail protocol and traceable evidence, not only source-level checks.
   - Files: `.gsd/milestones/M007/slices/S07/S07-UAT.md`, `.gsd/milestones/M007/slices/S07/S07-DEMO-READINESS.md`, `scripts/verify-m007-s07.sh`
   - Do: Finalize on-device UAT checklist for full journey (default + Reduce Motion + failure/retry paths), document requirement-to-proof traceability, and ensure verifier artifact checks enforce presence of readiness evidence files.
