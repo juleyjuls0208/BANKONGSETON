@@ -2,239 +2,263 @@
 
 ## Device & Build Context
 
-- Milestone: M007
-- Slice: S07 — Final Integration + Device Demo Readiness Gate
-- Platform target: iOS 17+
-- Build target: `mobile/ios/BankongSetonStudent/BankongSetonStudent.xcodeproj` (`BankongSetonStudent`)
-- Tester name: _TBD_
-- Date/time: _TBD_
-- Device/simulator: _TBD_
-- OS version: _TBD_
-- Reduce Motion default at start: OFF
+- Milestone/Slice: **M007 / S07**
+- App target: `BankongSetonStudent` (`mobile/ios/BankongSetonStudent/BankongSetonStudent.xcodeproj`)
+- Required runtime: **physical iOS 17+ device**
+- Test environment: school demo backend + cashier QR flow available
+- Tester: ____________________
+- Date: ____________________
+- Device model: ____________________
+- iOS version: ____________________
+- Build identifier (commit/build no.): ____________________
 
-## Evidence Capture Rules (Redaction + Scope)
+### Preconditions
 
-1. Do not record credentials, auth tokens, or personal data in notes/screenshots.
-2. Evidence should be structural/state-based (screen names, state labels, control actionability, verifier output).
-3. Keep scope aligned to S07: QR-only payment path, integrated refresh continuity, transactions/budget/settings/lost-card actionability.
+1. Student test account exists and can sign in.
+2. Account has enough balance for one successful QR payment and at least one insufficiency/expired scenario can be triggered.
+3. Cashier can generate a valid QR and (when needed) an expired/invalid QR for failure-path checks.
+4. Transaction history has enough data to exercise search, filter, and load-more.
+5. Settings screen can edit display name + accent locally.
+6. Lost-card API path is reachable for report/retry/dismiss checks.
 
-## Automated Preflight (Run Before Manual Flow)
+### Automated Preflight (run before manual walk)
 
 - [ ] `rtk proxy python -m pytest -q tests/test_verify_m007_s07_integration_behavior_contract.py tests/test_verify_m007_s07_scope_guard_contract.py`
 - [ ] `rtk proxy sh scripts/verify-m007-s07.sh`
 - [ ] `rtk proxy python -c "from pathlib import Path; txt=Path('scripts/verify-m007-s07.sh').read_text(encoding='utf-8'); required=['fail_with_guidance','guidance=','phase=preflight','phase=diagnostic-surface']; missing=[x for x in required if x not in txt]; assert not missing, missing"`
 - [ ] `rtk proxy xcodebuild -project mobile/ios/BankongSetonStudent/BankongSetonStudent.xcodeproj -scheme BankongSetonStudent -destination 'platform=iOS Simulator,name=iPhone 15' build`
 
-If `xcodebuild` is unavailable in this environment, mark as constrained and capture the exact stderr message.
+If `xcodebuild` is unavailable in the current harness, record exact stderr and continue manual device checks.
 
 ## Journey Checkpoints
 
-Record exactly one result per checkpoint (`PASS` or `FAIL`) and add short evidence notes.
+| ID | Checkpoint | Result (PASS/FAIL) | Evidence (short note + screenshot/log ref) |
+|---|---|---|---|
+| S07-01 | Login → Home bootstrap continuity | ____ | ____ |
+| S07-02 | Home control actionability + QR entry | ____ | ____ |
+| S07-03 | QR happy path + one-shot success completion | ____ | ____ |
+| S07-04 | QR failure + retry recovery | ____ | ____ |
+| S07-05 | Post-QR continuity (Home refresh + receipt access from Home/Transactions) | ____ | ____ |
+| S07-06 | Transactions search/filter/load-more + pagination retry | ____ | ____ |
+| S07-07 | Budget loading/saving + failure-retry behavior | ____ | ____ |
+| S07-08 | Settings local persistence + lost-card actionability | ____ | ____ |
+| S07-09 | Logout/login continuity with persisted local settings | ____ | ____ |
+| S07-10 | Reduce Motion parity across full journey | ____ | ____ |
+| S07-11 | Reduce Motion failure/retry parity | ____ | ____ |
 
-| ID | Flow checkpoint | PASS criteria | FAIL criteria | Result | Evidence notes |
-|---|---|---|---|---|---|
-| S07-01 | Login → Home bootstrap continuity | Login succeeds, Home renders primary controls, no dead controls | App stalls, wrong route, or any control is non-actionable | _TBD_ | _TBD_ |
-| S07-02 | Home controls + QR entry actionability | `Pay with QR` and other visible in-scope controls respond on first tap | Dead tap, delayed activation, or route mismatch | _TBD_ | _TBD_ |
-| S07-03 | QR happy path (scan/confirm/success/done) | QR states transition correctly; Done exits once and continuity hook runs | Duplicate completion, stuck state, or missing success dismissal | _TBD_ | _TBD_ |
-| S07-04 | QR failure + retry path | Error state visible; retry recovers to scan/confirm path with controls still live | Retry dead, error hidden, or unrecoverable loop | _TBD_ | _TBD_ |
-| S07-05 | Post-QR refresh + receipt access | Home data refreshes; receipt accessible from Home and Transactions | Stale data, missing refreshed entry, or broken receipt route | _TBD_ | _TBD_ |
-| S07-06 | Transactions search/filter/load-more | Search/filter/pagination all work; retry buttons recover from failures | Search/filter desync, load-more dead, or pagination failure unrecoverable | _TBD_ | _TBD_ |
-| S07-07 | Budget load/save + retry behavior | Budget screen surfaces loading/success/error; retry/save controls remain actionable | Save/retry does nothing or state feedback is missing | _TBD_ | _TBD_ |
-| S07-08 | Settings persistence + lost-card actions | Display/accent settings persist locally; lost-card report/retry/dismiss actions work | Persistence lost, missing action, or dead lost-card control | _TBD_ | _TBD_ |
-| S07-09 | Logout/login continuity | Logout completes cleanly; relogin works; persisted local settings still present | Logout stuck, relogin broken, or persistence reset unexpectedly | _TBD_ | _TBD_ |
-| S07-10 | Reduce Motion parity (full journey replay) | With Reduce Motion ON, transitions simplify without losing clarity/actionability | Missing feedback, hidden state transitions, or dead controls in reduced mode | _TBD_ | _TBD_ |
-| S07-11 | Reduce Motion failure/retry parity | QR + Transactions + Budget retry/failure flows remain understandable/actionable | Failure paths become ambiguous or non-recoverable in reduced mode | _TBD_ | _TBD_ |
+---
 
-## Manual Scenario Steps (Detailed)
+## Detailed Test Cases
 
-### S07-01: Login → Home bootstrap continuity (Default Motion)
-
-**Steps**
-1. Launch app signed out on iOS 17+.
-2. Log in with test account.
-3. Confirm Home appears with expected in-scope controls.
-
-**Expected PASS behavior**
-- Home appears without spinner lock.
-- Primary controls are immediately actionable.
-
-**Result**
-- [ ] PASS
-- [ ] FAIL
-- Notes: _TBD_
-
-### S07-02: Home controls + QR entry actionability (Default Motion)
+### S07-01 — Login → Home bootstrap continuity
 
 **Steps**
-1. Tap `Pay with QR` from Home.
-2. Return and re-enter QR once to verify repeated actionability.
+1. Launch app in signed-out state.
+2. Sign in with the test student account.
+3. Wait until Home is fully rendered.
 
-**Expected PASS behavior**
-- QR sheet/screen opens consistently.
-- No dead taps or delayed control activation.
+**Expected outcomes**
+- App lands on Home without spinner lock or navigation dead-end.
+- Balance card, QR card, and recent transactions section are visible.
+- No visible in-scope control appears disabled without reason.
 
-**Result**
-- [ ] PASS
-- [ ] FAIL
-- Notes: _TBD_
+**Edge checks**
+- Pull-to-refresh on Home completes and does not break layout or controls.
 
-### S07-03: QR happy path continuity (Default Motion)
+---
 
-**Steps**
-1. Complete scan/confirm flow with a valid QR payload.
-2. Wait for success state and use `Done`.
-
-**Expected PASS behavior**
-- State path: scanning → loading → confirming → success.
-- Success completion occurs once; app returns to coherent post-payment state.
-
-**Result**
-- [ ] PASS
-- [ ] FAIL
-- Notes: _TBD_
-
-### S07-04: QR failure + retry path (Default Motion)
+### S07-02 — Home controls + QR entry actionability
 
 **Steps**
-1. Trigger QR failure (invalid/expired payload or simulated failure).
-2. Use retry action.
-3. Complete a successful payment after retry.
+1. Tap `Pay with QR` once.
+2. Close QR view using `Cancel`.
+3. Tap `Pay with QR` again.
 
-**Expected PASS behavior**
-- Error message is visible and actionable.
-- Retry returns to active scan path and supports eventual success.
+**Expected outcomes**
+- QR flow opens on each tap (no dead tap).
+- Second open behaves the same as first open.
+- Home remains responsive after returning.
 
-**Result**
-- [ ] PASS
-- [ ] FAIL
-- Notes: _TBD_
+**Edge checks**
+- If scanner permission is denied, error state appears with actionable guidance (not silent failure).
 
-### S07-05: Post-QR refresh + receipt access (Default Motion)
+---
+
+### S07-03 — QR happy path + one-shot completion semantics
 
 **Steps**
-1. After successful QR payment dismissal, inspect Home balance/recent list.
-2. Open receipt from Home recent transaction.
-3. Navigate to Transactions and open receipt from list.
+1. Scan a valid cashier QR.
+2. Confirm cart details and tap `Confirm QR Payment`.
+3. On success screen, tap `Done` once.
+4. Repeat once without tapping `Done` and allow auto-dismiss timer.
 
-**Expected PASS behavior**
-- Home refresh is visible after QR completion.
+**Expected outcomes**
+- State progression is coherent: scanning → loading → confirming → success.
+- Success completion executes once (no duplicate dismiss/refresh side effects).
+- App returns to coherent post-payment state after either manual or auto completion.
+
+**Edge checks**
+- No duplicate transaction insertion due to double completion trigger.
+
+---
+
+### S07-04 — QR failure + retry recovery
+
+**Steps**
+1. Trigger QR failure using invalid/expired token (or simulated backend failure).
+2. Confirm error message is visible and actionable.
+3. Tap retry (`Retry Scan`) and scan a valid QR.
+4. Complete payment successfully.
+
+**Expected outcomes**
+- Error state shows clear failure reason.
+- Retry returns to active scan flow.
+- User can recover to success without relaunching app.
+
+**Edge checks**
+- Camera-access failure path surfaces `Open Settings` action when applicable.
+
+---
+
+### S07-05 — Post-QR refresh + receipt access continuity
+
+**Steps**
+1. Immediately after successful QR completion, verify Home balance/recent list refresh.
+2. Open receipt from Home recent transaction entry.
+3. Navigate to Transactions tab and open receipt from transaction list.
+
+**Expected outcomes**
+- Home data reflects post-payment refresh (no stale pre-payment snapshot).
 - Receipt route works from both Home and Transactions.
+- Navigation back-stack remains stable.
 
-**Result**
-- [ ] PASS
-- [ ] FAIL
-- Notes: _TBD_
+**Edge checks**
+- No out-of-scope receipt utility actions (Download PDF / Report Issue) appear.
 
-### S07-06: Transactions search/filter/load-more + retry (Default Motion)
+---
 
-**Steps**
-1. Enter search text; verify list narrows.
-2. Apply transaction type filter; verify list updates.
-3. Clear search/filter; verify list restores.
-4. Trigger load-more; confirm pagination appends items.
-5. If pagination error appears, use retry and confirm recovery.
-
-**Expected PASS behavior**
-- Search/filter are deterministic and reversible.
-- Load-more/pagination error retry controls remain actionable.
-
-**Result**
-- [ ] PASS
-- [ ] FAIL
-- Notes: _TBD_
-
-### S07-07: Budget load/save + failure/retry behavior (Default Motion)
+### S07-06 — Transactions search/filter/load-more + retry continuity
 
 **Steps**
-1. Open Budget screen and wait for load state to resolve.
-2. Edit budget value and save.
-3. Trigger/save failure scenario if available and retry.
+1. Open Transactions tab.
+2. Enter search term matching one known transaction.
+3. Change segmented filter (`All`, `Debit`, `Credit`) and verify list recomputation.
+4. Tap `Clear Search & Filter`.
+5. Tap `Load More` until additional page is fetched.
+6. If pagination error appears, tap `Retry Load More`.
 
-**Expected PASS behavior**
-- State feedback is clear for loading/success/error.
-- Save/retry controls always respond.
+**Expected outcomes**
+- Search and filter recompute deterministically from loaded data.
+- Clear button resets query+filter and restores full derived list.
+- Load-more appends additional records and keeps existing list visible.
+- Pagination failure is surfaced separately and can recover without wiping existing rows.
 
-**Result**
-- [ ] PASS
-- [ ] FAIL
-- Notes: _TBD_
+**Edge checks**
+- Initial-load error and pagination error remain distinct (no incorrect empty-state swap).
 
-### S07-08: Settings persistence + lost-card actionability (Default Motion)
+---
 
-**Steps**
-1. Open Settings and change display name/accent.
-2. Navigate away and back to confirm persisted values.
-3. Open Lost Card from Settings.
-4. Trigger report action; if error appears, retry/dismiss accordingly.
-
-**Expected PASS behavior**
-- Local settings persist across navigation boundaries.
-- Lost-card report/retry/dismiss controls are actionable.
-
-**Result**
-- [ ] PASS
-- [ ] FAIL
-- Notes: _TBD_
-
-### S07-09: Logout/login continuity with persisted local settings (Default Motion)
+### S07-07 — Budget load/save + retry behavior
 
 **Steps**
-1. Logout from Settings.
-2. Login again.
-3. Confirm settings persistence and end-to-end flow remains coherent.
+1. Open Budget screen and wait for initial load.
+2. Modify budget and save.
+3. Trigger a save failure scenario (if available) and retry.
 
-**Expected PASS behavior**
-- Logout/login cycle is stable.
-- Local display/accent persistence survives auth boundary.
+**Expected outcomes**
+- Loading/success/error feedback is visible and understandable.
+- Save action is always actionable when input is valid.
+- Retry path recovers without forcing app restart.
 
-**Result**
-- [ ] PASS
-- [ ] FAIL
-- Notes: _TBD_
+**Edge checks**
+- Budget value shown after save matches the last successful submission.
 
-### S07-10: Reduce Motion parity (Full Journey)
+---
 
-**Steps**
-1. Enable iOS Reduce Motion.
-2. Replay S07-01 through S07-09 quickly.
-
-**Expected PASS behavior**
-- Motion is reduced/simplified while state transitions remain understandable.
-- No feature/actionability regressions in reduced-motion mode.
-
-**Result**
-- [ ] PASS
-- [ ] FAIL
-- Notes: _TBD_
-
-### S07-11: Reduce Motion failure/retry parity
+### S07-08 — Settings persistence + lost-card actionability
 
 **Steps**
-1. Keep Reduce Motion enabled.
-2. Trigger failure/retry flows in QR, Transactions, and Budget.
+1. Open Settings.
+2. Change display name and accent, then apply/save.
+3. Navigate away and back to Settings.
+4. Confirm changes persisted locally.
+5. Open `Report Lost Card`.
+6. Exercise report action; if error appears, test retry and dismiss controls.
 
-**Expected PASS behavior**
-- Error and retry states remain explicit and usable.
-- No hidden state jumps or dead retry controls.
+**Expected outcomes**
+- Display name/accent persist across navigation boundaries without backend write dependency.
+- Lost-card flow exposes actionable report/retry/dismiss/done controls.
+- Logout button remains actionable.
 
-**Result**
-- [ ] PASS
-- [ ] FAIL
-- Notes: _TBD_
+**Edge checks**
+- Out-of-scope settings categories do not reappear (`Payment Method`, `Tuition Auto-Pay`, `Campus Discounts`, `Privacy & Security`).
 
-## Failure / Retry Notes
+---
 
-- QR retry behavior evidence: _TBD_
-- Transactions pagination retry evidence: _TBD_
-- Budget save retry evidence: _TBD_
-- Reduce Motion retry behavior evidence: _TBD_
+### S07-09 — Logout/login continuity with persisted local settings
+
+**Steps**
+1. From Settings, tap logout.
+2. Sign in again with same account.
+3. Re-open Home/Settings.
+
+**Expected outcomes**
+- Logout/login cycle works without stuck auth state.
+- Locally persisted display name/accent remain applied after re-login.
+- Core demo flows remain actionable after auth boundary crossing.
+
+**Edge checks**
+- QR flow still opens normally after re-login.
+
+---
+
+### S07-10 — Reduce Motion parity (full replay)
+
+**Steps**
+1. Enable iOS **Reduce Motion**.
+2. Replay S07-01 through S07-09 in abbreviated form.
+
+**Expected outcomes**
+- Animations are simplified/restrained.
+- State changes remain understandable.
+- No actionability regressions introduced by reduced-motion mode.
+
+**Edge checks**
+- No screen transition causes perceptible sluggishness or visual confusion.
+
+---
+
+### S07-11 — Reduce Motion failure/retry parity
+
+**Steps**
+1. Keep Reduce Motion ON.
+2. Re-run failure/retry checks for:
+   - QR error + retry
+   - Transactions pagination retry
+   - Budget save/retry
+
+**Expected outcomes**
+- Failure states remain explicit.
+- Retry controls remain discoverable and functional.
+- Recovery behavior matches default-motion behavior.
+
+**Edge checks**
+- No hidden transition suppresses critical error feedback.
 
 ## PASS / FAIL Summary
 
-- Automated preflight status: _TBD_
-- Manual checkpoint status: _TBD_
-- Overall S07 UAT verdict: _TBD_ (PASS / FAIL)
-- Blocking issues (if FAIL): _TBD_
-- Environment constraints (if any): _TBD_
-- Evidence links / artifact paths: _TBD_
-- Sign-off (name/date): _TBD_
+- Automated preflight overall: ____________________
+- Manual checkpoints overall: ____________________
+- Blocking defects found: ____________________
+- Environment constraints (if any): ____________________
+- Final S07 UAT verdict: **PASS / FAIL**
+- Sign-off (tester + date): ____________________
+
+## Evidence & Redaction Notes
+
+- Do not capture credentials, auth tokens, or personal data values.
+- Prefer structural evidence: screen names, state transitions, visible control actionability, verifier phase output.
+- Attach artifacts/links:
+  - Screenshots/video references: ____________________
+  - Verifier output reference: ____________________
+  - Additional notes: ____________________
