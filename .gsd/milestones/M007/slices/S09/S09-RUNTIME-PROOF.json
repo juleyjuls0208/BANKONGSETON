@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0.0",
-  "generated_at": "2026-03-23T10:21:26Z",
-  "updated_at": "2026-03-23T11:23:47Z",
+  "generated_at": "2026-03-23T11:40:44Z",
+  "updated_at": "2026-03-23T11:42:22Z",
   "host": {
     "hostname": "DESKTOP-KKMDPBP",
     "platform": "Windows",
@@ -20,7 +20,7 @@
   ],
   "phase_counts": {
     "pass": 1,
-    "fail": 2
+    "fail": 1
   },
   "phases": [
     {
@@ -28,9 +28,9 @@
       "status": "pass",
       "command": "rtk proxy sh scripts/verify-m007-s07.sh",
       "exit_code": 0,
-      "started_at": "2026-03-23T11:23:43Z",
-      "finished_at": "2026-03-23T11:23:46Z",
-      "updated_at": "2026-03-23T11:23:47Z",
+      "started_at": "2026-03-23T11:42:18Z",
+      "finished_at": "2026-03-23T11:42:22Z",
+      "updated_at": "2026-03-23T11:42:22Z",
       "guidance": [
         "phase s07_baseline completed successfully"
       ]
@@ -40,25 +40,12 @@
       "status": "fail",
       "command": "xcodebuild -version && xcrun --version",
       "exit_code": 1,
-      "started_at": "2026-03-23T11:23:47Z",
-      "finished_at": "2026-03-23T11:23:47Z",
-      "updated_at": "2026-03-23T11:23:47Z",
+      "started_at": "2026-03-23T11:42:22Z",
+      "finished_at": "2026-03-23T11:42:22Z",
+      "updated_at": "2026-03-23T11:42:22Z",
       "guidance": [
         "Apple tooling is unavailable in PATH (xcodebuild/xcrun check failed).",
         "Run on an Apple-capable host with Xcode CLI tools installed (xcode-select --install)."
-      ]
-    },
-    {
-      "id": "preflight",
-      "status": "fail",
-      "command": "test -f mobile/ios/BankongSetonStudent/BankongSetonStudent.xcodeproj",
-      "exit_code": 2,
-      "started_at": "2026-03-23T10:21:26Z",
-      "finished_at": "2026-03-23T10:21:26Z",
-      "updated_at": "2026-03-23T10:21:26Z",
-      "guidance": [
-        "Required file is missing: mobile/ios/BankongSetonStudent/BankongSetonStudent.xcodeproj",
-        "Restore/create the missing artifact, then re-run: rtk proxy sh scripts/verify-m007-s09.sh"
       ]
     }
   ]

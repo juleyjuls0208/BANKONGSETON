@@ -1,66 +1,62 @@
 ---
 verdict: needs-remediation
-remediation_round: 0
+remediation_round: 1
 ---
 
 # Milestone Validation: M007
 
 ## Success Criteria Checklist
 - [ ] Criterion 1 — User can complete sign-in, navigate redesigned tabs, run QR pay flow, and view resulting transaction/receipt in a cohesive stitch-faithful experience.
-  - **Gap:** Artifact evidence is strong (S01 summary contracts, S02 PASS UAT, S04 PASS UAT, S07 integration wiring), but required simulator/physical iOS 17+ runtime proof is still missing (`xcodebuild` unavailable; `S07-UAT.md` manual PASS/FAIL rows unsigned).
+  - **Update (post-override):** Override source contracts are now aligned (dark-mode default marker, login PIN removal, transactions taxonomy update), but runtime/device acceptance is still open because S09 runtime gate fails at Apple tooling and physical UAT scenarios are not yet executed on iOS 17+ hardware.
 - [x] Criterion 2 — Transactions screen supports working search/filter/load-more and loading/empty/error/populated states.
-  - **Evidence:** `S03-UAT-RESULT.md` is PASS with behavior/design/static verifier coverage for search/filter/no-match recovery/load-more/non-blocking pagination failure/initial-load retry.
+  - **Evidence:** `S03-UAT-RESULT.md` PASS + S09 override contracts confirming `QR Pay` / `Card Pay` / `Load` taxonomy replacement.
 - [x] Criterion 3 — Settings supports local persistence for accent color + personal info edit, and removes out-of-scope settings/payment-method surfaces.
-  - **Evidence:** `S05-UAT-RESULT.md` is PASS for persistence/relaunch continuity markers, accent propagation, scope-clean checks, and lost-card/logout continuity.
+  - **Evidence:** `S05-UAT-RESULT.md` PASS with persistence/scope checks.
 - [ ] Criterion 4 — Interactions/animations feel polished but not too fancy/slow on physical iOS 17+ device.
-  - **Gap:** `S06-UAT-RESULT.md` passes artifact contracts, but physical profiling/runtime evidence is pending (`xcrun`/`xcodebuild` unavailable in this executor; no device hitch trace/sign-off).
+  - **Gap:** Artifact-level motion checks are complete (`S06-UAT-RESULT.md`), but physical runtime/perf acceptance is still pending.
 - [ ] Criterion 5 — No visible in-scope control is dead during demo flow.
-  - **Gap:** Source/verifier contracts indicate actionability, but full manual end-to-end demo actionability proof (S07-01..S07-11 on device) is not yet executed/signed.
+  - **Gap:** Source/verifier gates pass, but end-to-end on-device actionability (`S07-01..S07-11`) remains unsigned.
 
 ## Slice Delivery Audit
+
 | Slice | Claimed | Delivered | Status |
 |-------|---------|-----------|--------|
-| S01 | Shared stitch visual system + navigation/login base reused across destinations | Substantiated in `S01-SUMMARY.md` with passing source contracts and cross-screen primitive reuse; runtime build/simulator still environment-blocked | pass |
-| S02 | Home + QR redesign (QR-only), interactive stateful flow | Functional delivery substantiated by `S02-UAT-RESULT.md` PASS and S02 task summaries; slice summary is still doctor placeholder | needs-attention |
-| S03 | Transactions redesign with search/filter/state fidelity + pagination continuity | Functional delivery substantiated by `S03-UAT-RESULT.md` PASS and S03 task summaries; slice summary is still doctor placeholder | needs-attention |
-| S04 | Budget + Receipt + Lost-card redesign with in-scope behavior and receipt scope cleanup | Functional delivery substantiated by `S04-UAT-RESULT.md` PASS and S04 task summaries; slice summary is still doctor placeholder | needs-attention |
-| S05 | Settings persistence + scope cleanup with no decorative dead actions | Functional delivery substantiated by `S05-UAT-RESULT.md` PASS and S05 task summaries; slice summary is still doctor placeholder | needs-attention |
-| S06 | Motion/performance tuning (premium but restrained, Reduce Motion parity) | Artifact-level delivery substantiated by `S06-UAT-RESULT.md` PASS and S06 task summaries; physical runtime/perf proof still pending and slice summary is placeholder | needs-attention |
-| S07 | Final integration + demo readiness gate | Substantiated in `S07-SUMMARY.md` for integration contracts/verifier/readiness artifacts; final on-device acceptance closure remains pending (`S07-UAT.md` unsigned, `xcodebuild` unavailable) | gap |
+| S01 | Shared stitch visual system + navigation/login base reused across destinations | Substantiated via S01 summary contracts and shared primitive adoption | pass |
+| S02 | Home + QR redesign (QR-only), interactive stateful flow | Substantiated by `S02-UAT-RESULT.md` PASS and slice/task evidence | pass |
+| S03 | Transactions redesign with search/filter/state fidelity + pagination continuity | Substantiated by `S03-UAT-RESULT.md` PASS and integration evidence | pass |
+| S04 | Budget + Receipt + Lost-card redesign with in-scope behavior and receipt scope cleanup | Substantiated by `S04-UAT-RESULT.md` PASS and task evidence | pass |
+| S05 | Settings persistence + scope cleanup with no decorative dead actions | Substantiated by `S05-UAT-RESULT.md` PASS and task evidence | pass |
+| S06 | Motion/performance tuning (premium but restrained, Reduce Motion parity) | Artifact-level delivery substantiated (`S06-UAT-RESULT.md` PASS); physical runtime proof pending | needs-attention |
+| S07 | Final integration + demo readiness gate | Verifier/contracts/readiness artifacts complete; physical sign-off remained pending | needs-attention |
+| S08 | Summary backfill + evidence consolidation | Slice summaries and evidence matrix consolidated | pass |
+| S09 | Override remediation + final runtime/device closure | Override remediation is complete; runtime gate + physical-device acceptance are still blocked by missing Apple tooling/device execution in this executor | needs-attention |
+
+## Post-Override Evidence (S09)
+
+- Runtime proof artifact: `.gsd/milestones/M007/slices/S09/S09-RUNTIME-PROOF.json`
+- Human-readable runtime proof: `.gsd/milestones/M007/slices/S09/S09-RUNTIME-PROOF.md`
+- Physical UAT artifact: `.gsd/milestones/M007/slices/S09/S09-UAT-RESULT.md`
+- Current post-override runtime verdict: **fail** (`apple_tooling` phase cannot run because `xcodebuild`/`xcrun` are unavailable in this host)
+- Current post-override UAT verdict: **FAIL** (scenario rows recorded; physical iOS 17+ execution/sign-off pending)
 
 ## Cross-Slice Integration
-- **Aligned boundaries (implemented):**
-  - S01 primitives/tokens are consumed downstream (S02/S03/S04/S05 task summaries explicitly reference `AppTheme`, `StitchCard`, and shared styles).
-  - S02→S07 continuity seam is concretely implemented (`qr_payment_success_continuity_tick` producer/consumer + dedupe guards in S07 summary).
-  - S03/S04/S05 behavioral seams are included in S07 contract/verifier phases and readiness traceability (`S07-DEMO-READINESS.md`).
-- **Boundary mismatches / weak points:**
-  - S02–S06 slice summary artifacts are placeholders, so produce/consume traceability is not adequately represented at slice-summary level (must be backfilled from task evidence).
-  - S06→S07 runtime-quality handoff is incomplete until macOS/device execution captures actual iOS 17+ performance/actionability evidence.
+
+- S01 design primitives remain the shared base across S02–S07 surfaces.
+- S07 QR-success continuity seam (`qr_payment_success_continuity_tick`) remains in place and covered by integration contracts.
+- S09 override deltas are now enforced by explicit contract diagnostics (`dark_mode_default`, `login_pin_present`, `legacy_filter_label`, `tx_filter_taxonomy`) before artifact closure checks.
 
 ## Requirement Coverage
-- **Coverage check (active M007 requirements):**
-  - R055 → addressed by S01 (+ downstream adoption in S02–S05)
-  - R056 → addressed by S02/S03/S04/S05, integrated in S07
-  - R057 → addressed by S02 (QR-only contract/UAT)
-  - R058 → addressed by S03, integrated in S07
-  - R059 → addressed by S02/S03, integrated in S07
-  - R060 → addressed by S05, integrated in S07
-  - R061 → addressed by S04/S05, integrated in S07
-  - R062 → addressed by S06, integrated in S07
-  - R063 → addressed by S07 artifacts, but **not yet validated on macOS/device runtime**
-- **Unaddressed active requirements:** none (coverage exists), but R063 closure evidence is incomplete.
+
+- R055/R058 override-surface requirements: source-level remediation complete and enforced by S09 override contracts.
+- R056/R059/R060/R061/R062: contract-level evidence remains in place across S03–S07.
+- R063 (final on-device demo readiness): **not yet closed** due missing Apple-runtime + physical-device acceptance sign-off.
 
 ## Verdict Rationale
-Milestone M007 cannot be sealed yet. Functional implementation appears substantially delivered at artifact-contract level, but milestone-definition blocking evidence is still missing for on-device runtime acceptance (R063 and related success criteria 1/4/5). In addition, five slice summaries (S02–S06) remain doctor placeholders and do not independently substantiate their claimed outputs, weakening reconciliation traceability.
+
+M007 remains **needs-remediation** after the post-override execution pass. The override code changes are in place and verifiable at source-contract level, but milestone closure requires an Apple-capable run of S09 runtime phases plus signed physical iOS 17+ scenario execution.
 
 ## Remediation Plan
-Added remediation slices to `.gsd/milestones/M007/M007-ROADMAP.md`:
 
-1. **S08: Summary Backfill + Evidence Consolidation** (`depends:[S07]`)
-   - Replace placeholder summaries for S02–S06 with authoritative compressed summaries sourced from task deliverables + verifier/UAT evidence.
-   - Ensure each summary explicitly substantiates its roadmap claim and boundary outputs.
-
-2. **S09: macOS Runtime + Physical Device Acceptance Closure** (`depends:[S07]`)
-   - Run `xcodebuild`/simulator checks in Apple-capable environment.
-   - Execute and sign off S07 manual device checklist (S07-01..S07-11), including Reduce Motion and failure/retry paths.
-   - Capture final PASS/FAIL evidence required to close R063 and remaining success criteria.
+1. Run `rtk proxy sh scripts/verify-m007-s09.sh` on an Apple-capable host with Xcode CLI tools installed.
+2. Execute S07 scenario checklist (`S07-01..S07-11`) on physical iOS 17+ hardware and update `S09-UAT-RESULT.md` from FAIL to PASS where applicable.
+3. Re-run S09 slice verification commands and update this document with final post-override closure verdict when runtime + physical UAT both pass.

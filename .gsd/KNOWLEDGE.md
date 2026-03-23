@@ -287,3 +287,15 @@ When adding shell preflight checks for iOS builds, testing a project path like `
 Legacy `Debit`/`Credit` UI labels are superseded by override acceptance criteria. Source-contract tests now treat those legacy labels as regressions on the transactions surface.
 
 **Rule:** if transaction filtering is refactored, preserve the `QR Pay` / `Card Pay` / `Load` taxonomy and update model mapping + view labels together.
+
+---
+
+## S09 runtime-proof refresh: clear stale artifacts before rerunning phased verifier
+
+`verify-m007-s09-runtime.py` performs phase upserts by phase ID; it does not purge unrelated historical rows unless the proof files are reset first.
+
+**Rule:** before publishing final S09 runtime evidence, delete/clear:
+- `.gsd/milestones/M007/slices/S09/S09-RUNTIME-PROOF.json`
+- `.gsd/milestones/M007/slices/S09/S09-RUNTIME-PROOF.md`
+
+Then rerun `rtk proxy sh scripts/verify-m007-s09.sh` so timestamps/phase rows represent the current execution window only.
