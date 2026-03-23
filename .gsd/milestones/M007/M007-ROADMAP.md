@@ -65,7 +65,7 @@ This milestone is complete only when all are true:
 - [x] **S05: Settings Rework + Local Persistence + Scope Cleanup** `risk:medium` `depends:[S01]`
   > After this: accent color and personal info edit persist locally, non-scope settings groups are removed, and no decorative secondary dead actions remain.
 
-- [ ] **S06: Motion and Performance Tuning (iOS 17+)** `risk:medium` `depends:[S02,S03,S04,S05]`
+- [x] **S06: Motion and Performance Tuning (iOS 17+)** `risk:medium` `depends:[S02,S03,S04,S05]`
   > After this: transitions/micro-interactions feel premium but restrained (not too fancy/slow) on iOS 17+ runtime.
 
 - [ ] **S07: Final Integration + Device Demo Readiness Gate** `risk:low` `depends:[S02,S03,S04,S05,S06]`
