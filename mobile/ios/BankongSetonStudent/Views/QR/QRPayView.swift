@@ -6,6 +6,7 @@ struct QRPayView: View {
     @StateObject private var viewModel = QRPayViewModel()
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
+    @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
     private var onSuccess: (() -> Void)?
 
     init(onSuccess: (() -> Void)? = nil) {
@@ -19,7 +20,10 @@ struct QRPayView: View {
                     .ignoresSafeArea()
 
                 stateContent
+                    .id(stateTransitionKey)
+                    .transition(stateTransition)
             }
+            .animation(stateTransitionAnimation, value: stateTransitionKey)
             .navigationTitle("Pay with QR")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -28,6 +32,39 @@ struct QRPayView: View {
                 }
             }
         }
+    }
+
+    private var stateTransitionAnimation: Animation {
+        AppTheme.Motion.animation(
+            for: .cardSurface,
+            accessibilityReduceMotion: accessibilityReduceMotion
+        )
+    }
+
+    private var stateTransitionKey: String {
+        switch viewModel.state {
+        case .scanning:
+            return "scanning"
+        case .loading:
+            return "loading"
+        case .confirming:
+            return "confirming"
+        case .success:
+            return "success"
+        case .error:
+            return "error"
+        }
+    }
+
+    private var stateTransition: AnyTransition {
+        if accessibilityReduceMotion {
+            return .opacity
+        }
+
+        return .asymmetric(
+            insertion: .opacity.combined(with: .move(edge: .bottom)),
+            removal: .opacity.combined(with: .scale(scale: 0.98))
+        )
     }
 
     @ViewBuilder

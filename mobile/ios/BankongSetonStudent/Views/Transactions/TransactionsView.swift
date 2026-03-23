@@ -7,6 +7,7 @@ import SwiftUI
 struct TransactionsView: View {
     @EnvironmentObject var apiClient: APIClient
     @EnvironmentObject var authManager: AuthManager
+    @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
     @StateObject private var viewModel = TransactionsViewModel()
 
     var body: some View {
@@ -21,6 +22,8 @@ struct TransactionsView: View {
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
             .background(AppTheme.Palette.background)
+            .animation(screenTransitionAnimation, value: transactionStateKey)
+            .animation(screenTransitionAnimation, value: viewModel.transactions.count)
             .navigationTitle("Transactions")
             .searchable(
                 text: $viewModel.searchQuery,
@@ -43,6 +46,56 @@ struct TransactionsView: View {
 
     private var hasActiveSearchOrFilter: Bool {
         !viewModel.searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || viewModel.selectedFilter != .all
+    }
+
+    private var screenTransitionAnimation: Animation {
+        AppTheme.Motion.animation(
+            for: .cardSurface,
+            accessibilityReduceMotion: accessibilityReduceMotion
+        )
+    }
+
+    private var stateCardTransition: AnyTransition {
+        if accessibilityReduceMotion {
+            return .opacity
+        }
+
+        return .asymmetric(
+            insertion: .opacity.combined(with: .move(edge: .bottom)),
+            removal: .opacity
+        )
+    }
+
+    private var transactionStateKey: String {
+        if viewModel.isLoading && viewModel.allTransactions.isEmpty {
+            return "loading"
+        }
+
+        if viewModel.initialLoadErrorMessage != nil && viewModel.allTransactions.isEmpty {
+            return "initial_error"
+        }
+
+        if viewModel.isBaseEmptyState {
+            return "base_empty"
+        }
+
+        if viewModel.isFilteredEmptyState {
+            return "filtered_empty"
+        }
+
+        var key = "list_count_\(viewModel.transactions.count)"
+
+        if viewModel.hasPaginationFailureState {
+            key += "_pagination_error"
+        }
+
+        if viewModel.hasMore {
+            key += viewModel.isLoadingMore ? "_loading_more" : "_has_more"
+        } else {
+            key += "_end"
+        }
+
+        return key
     }
 
     private var filterControlsCard: some View {
@@ -82,18 +135,22 @@ struct TransactionsView: View {
         if viewModel.isLoading && viewModel.allTransactions.isEmpty {
             styledListRow {
                 loadingStateCard
+                    .transition(stateCardTransition)
             }
         } else if let initialLoadError = viewModel.initialLoadErrorMessage, viewModel.allTransactions.isEmpty {
             styledListRow {
                 initialLoadErrorStateCard(message: initialLoadError)
+                    .transition(stateCardTransition)
             }
         } else if viewModel.isBaseEmptyState {
             styledListRow {
                 baseEmptyStateCard
+                    .transition(stateCardTransition)
             }
         } else if viewModel.isFilteredEmptyState {
             styledListRow {
                 filteredEmptyStateCard
+                    .transition(stateCardTransition)
             }
         } else {
             ForEach(viewModel.transactions) { transaction in
@@ -114,12 +171,14 @@ struct TransactionsView: View {
             if viewModel.hasPaginationFailureState, let paginationError = viewModel.paginationErrorMessage {
                 styledListRow(top: AppTheme.Spacing.sm, bottom: AppTheme.Spacing.xs) {
                     paginationErrorStateCard(message: paginationError)
+                        .transition(stateCardTransition)
                 }
             }
 
             if viewModel.hasMore {
                 styledListRow(top: AppTheme.Spacing.sm, bottom: AppTheme.Spacing.xs) {
                     loadMoreCard
+                        .transition(stateCardTransition)
                 }
             }
         }

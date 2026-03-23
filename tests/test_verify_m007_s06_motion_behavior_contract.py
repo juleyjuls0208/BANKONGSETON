@@ -28,13 +28,29 @@ def test_reduce_motion_wiring_exists_for_primitives_and_stateful_views() -> None
     primitive_text = "\n".join(path.read_text(encoding="utf-8") for path in PRIMITIVE_FILES)
     assert "accessibilityReduceMotion" in primitive_text
 
+    stateful_contents = {
+        path: path.read_text(encoding="utf-8")
+        for path in STATEFUL_FILES
+    }
+
     missing_stateful_files = [
         str(path)
-        for path in STATEFUL_FILES
-        if "accessibilityReduceMotion" not in path.read_text(encoding="utf-8")
+        for path, contents in stateful_contents.items()
+        if "accessibilityReduceMotion" not in contents
     ]
 
     assert not missing_stateful_files, (
         "Stateful view Reduce Motion wiring is incomplete: "
         + ", ".join(missing_stateful_files)
+    )
+
+    missing_motion_policy_files = [
+        str(path)
+        for path, contents in stateful_contents.items()
+        if "AppTheme.Motion" not in contents
+    ]
+
+    assert not missing_motion_policy_files, (
+        "Stateful view motion-policy wiring is incomplete: "
+        + ", ".join(missing_motion_policy_files)
     )

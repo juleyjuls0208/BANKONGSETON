@@ -7,8 +7,43 @@ import SwiftUI
 struct HomeView: View {
     @EnvironmentObject var apiClient: APIClient
     @EnvironmentObject var authManager: AuthManager
+    @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
     @StateObject private var viewModel = HomeViewModel()
     @State private var showQrPay = false
+
+    private var screenTransitionAnimation: Animation {
+        AppTheme.Motion.animation(
+            for: .cardSurface,
+            accessibilityReduceMotion: accessibilityReduceMotion
+        )
+    }
+
+    private var stateTransition: AnyTransition {
+        if accessibilityReduceMotion {
+            return .opacity
+        }
+
+        return .asymmetric(
+            insertion: .opacity.combined(with: .move(edge: .bottom)),
+            removal: .opacity
+        )
+    }
+
+    private var errorBannerStateKey: String {
+        viewModel.errorMessage == nil ? "error_hidden" : "error_visible"
+    }
+
+    private var recentTransactionStateKey: String {
+        if viewModel.isLoading {
+            return "recent_loading"
+        }
+
+        if viewModel.recentTransactions.isEmpty && viewModel.errorMessage == nil {
+            return "recent_empty"
+        }
+
+        return "recent_list_\(viewModel.recentTransactions.count)"
+    }
 
     var body: some View {
         NavigationStack {
@@ -35,12 +70,17 @@ struct HomeView: View {
                                         .frame(maxWidth: .infinity, alignment: .leading)
                                 }
                             }
+                            .transition(stateTransition)
                         }
 
                         recentTransactionsSection
+                            .id(recentTransactionStateKey)
+                            .transition(stateTransition)
 
                         Spacer(minLength: AppTheme.Spacing.sm)
                     }
+                    .animation(screenTransitionAnimation, value: errorBannerStateKey)
+                    .animation(screenTransitionAnimation, value: recentTransactionStateKey)
                     .padding(.horizontal, AppTheme.Spacing.lg)
                     .padding(.vertical, AppTheme.Spacing.lg)
                 }
@@ -146,6 +186,7 @@ struct HomeView: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .center)
                 }
+                .transition(stateTransition)
             } else if viewModel.recentTransactions.isEmpty && viewModel.errorMessage == nil {
                 StitchCard {
                     Text("No recent transactions.")
@@ -153,6 +194,7 @@ struct HomeView: View {
                         .foregroundStyle(AppTheme.Palette.textSecondary)
                         .frame(maxWidth: .infinity, alignment: .center)
                 }
+                .transition(stateTransition)
             } else {
                 ForEach(viewModel.recentTransactions) { transaction in
                     if transaction.isNavigable {

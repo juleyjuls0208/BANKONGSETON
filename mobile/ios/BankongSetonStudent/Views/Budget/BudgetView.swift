@@ -4,6 +4,7 @@ struct BudgetView: View {
     @EnvironmentObject var apiClient: APIClient
     @EnvironmentObject var authManager: AuthManager
     @StateObject private var viewModel = BudgetViewModel()
+    @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
 
     @State private var limitInput: String = ""
     @State private var hasEditedLimit = false
@@ -24,6 +25,48 @@ struct BudgetView: View {
         return parsedLimitInput > 0 && !viewModel.isLoading
     }
 
+    private var stateTransitionAnimation: Animation {
+        AppTheme.Motion.animation(
+            for: .cardSurface,
+            accessibilityReduceMotion: accessibilityReduceMotion
+        )
+    }
+
+    private var stateTransition: AnyTransition {
+        if accessibilityReduceMotion {
+            return .opacity
+        }
+
+        return .asymmetric(
+            insertion: .opacity.combined(with: .move(edge: .bottom)),
+            removal: .opacity
+        )
+    }
+
+    private var loadStateKey: String {
+        if viewModel.isLoading {
+            return "loading"
+        }
+
+        if viewModel.loadErrorMessage != nil {
+            return "load_error"
+        }
+
+        return "ready"
+    }
+
+    private var saveStateKey: String {
+        if viewModel.hasSaveFailureState, viewModel.saveErrorMessage != nil {
+            return "save_error"
+        }
+
+        if saveSuccessMessage != nil {
+            return "save_success"
+        }
+
+        return "save_none"
+    }
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -34,15 +77,17 @@ struct BudgetView: View {
                     VStack(spacing: AppTheme.Spacing.lg) {
                         progressCard
                         loadStateCard
+                            .id(loadStateKey)
+                            .transition(stateTransition)
 
-                        if viewModel.hasSaveFailureState, let saveErrorMessage = viewModel.saveErrorMessage {
-                            saveFailureCard(message: saveErrorMessage)
-                        } else if let saveSuccessMessage {
-                            saveSuccessCard(message: saveSuccessMessage)
-                        }
+                        saveFeedbackCard
+                            .id(saveStateKey)
+                            .transition(stateTransition)
 
                         limitEditorCard
                     }
+                    .animation(stateTransitionAnimation, value: loadStateKey)
+                    .animation(stateTransitionAnimation, value: saveStateKey)
                     .padding(.horizontal, AppTheme.Spacing.lg)
                     .padding(.vertical, AppTheme.Spacing.lg)
                     .accessibilityIdentifier("budget-screen-root")
@@ -79,7 +124,10 @@ struct BudgetView: View {
                         )
                         .frame(width: 196, height: 196)
                         .rotationEffect(.degrees(-90))
-                        .animation(.easeOut(duration: 0.5), value: viewModel.percent)
+                        .animation(
+                            stateTransitionAnimation,
+                            value: viewModel.percent
+                        )
 
                     VStack(spacing: AppTheme.Spacing.xxs) {
                         Text("\(Int(viewModel.percent))%")
@@ -180,6 +228,15 @@ struct BudgetView: View {
             }
             .accessibilityIdentifier("budget-state-ready-card")
             .accessibilityLabel("Budget ready")
+        }
+    }
+
+    @ViewBuilder
+    private var saveFeedbackCard: some View {
+        if viewModel.hasSaveFailureState, let saveErrorMessage = viewModel.saveErrorMessage {
+            saveFailureCard(message: saveErrorMessage)
+        } else if let saveSuccessMessage {
+            saveSuccessCard(message: saveSuccessMessage)
         }
     }
 

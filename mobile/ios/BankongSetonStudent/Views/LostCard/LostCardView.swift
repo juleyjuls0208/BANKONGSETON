@@ -4,6 +4,7 @@ struct LostCardView: View {
     @EnvironmentObject var apiClient: APIClient
     @EnvironmentObject var authManager: AuthManager
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
 
     @StateObject private var viewModel = LostCardViewModel()
 
@@ -16,7 +17,10 @@ struct LostCardView: View {
                 VStack(spacing: AppTheme.Spacing.lg) {
                     introCard
                     stateCard
+                        .id(viewModel.phase.rawValue)
+                        .transition(stateTransition)
                 }
+                .animation(stateTransitionAnimation, value: viewModel.phase.rawValue)
                 .padding(.horizontal, AppTheme.Spacing.lg)
                 .padding(.vertical, AppTheme.Spacing.lg)
                 .accessibilityIdentifier("lost-card-screen-root")
@@ -24,6 +28,24 @@ struct LostCardView: View {
         }
         .navigationTitle("Report Lost Card")
         .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private var stateTransitionAnimation: Animation {
+        AppTheme.Motion.animation(
+            for: .cardSurface,
+            accessibilityReduceMotion: accessibilityReduceMotion
+        )
+    }
+
+    private var stateTransition: AnyTransition {
+        if accessibilityReduceMotion {
+            return .opacity
+        }
+
+        return .asymmetric(
+            insertion: .opacity.combined(with: .move(edge: .bottom)),
+            removal: .opacity
+        )
     }
 
     private var introCard: some View {
@@ -155,16 +177,7 @@ struct LostCardView: View {
                 Button("Back to Settings") {
                     dismiss()
                 }
-                .font(AppTheme.Typography.bodyStrong)
-                .frame(maxWidth: .infinity)
-                .frame(minHeight: 44)
-                .foregroundStyle(AppTheme.Palette.textPrimary)
-                .background(AppTheme.Palette.surfaceSubtle)
-                .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous)
-                        .stroke(AppTheme.Palette.border, lineWidth: 1)
-                )
+                .buttonStyle(LostCardSecondaryButtonStyle())
                 .accessibilityIdentifier("lost-card-error-dismiss-button")
                 .accessibilityHint("Returns to Settings without retrying")
             }
@@ -172,5 +185,36 @@ struct LostCardView: View {
         }
         .accessibilityIdentifier("lost-card-state-error")
         .accessibilityLabel("Lost-card report failed")
+    }
+}
+
+private struct LostCardSecondaryButtonStyle: ButtonStyle {
+    @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(AppTheme.Typography.bodyStrong)
+            .frame(maxWidth: .infinity)
+            .frame(minHeight: 44)
+            .foregroundStyle(AppTheme.Palette.textPrimary)
+            .background(AppTheme.Palette.surfaceSubtle)
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous)
+                    .stroke(AppTheme.Palette.border, lineWidth: 1)
+            )
+            .scaleEffect(
+                AppTheme.Motion.pressedScale(
+                    isPressed: configuration.isPressed,
+                    accessibilityReduceMotion: accessibilityReduceMotion
+                )
+            )
+            .animation(
+                AppTheme.Motion.animation(
+                    for: .primaryButtonPress,
+                    accessibilityReduceMotion: accessibilityReduceMotion
+                ),
+                value: configuration.isPressed
+            )
     }
 }
