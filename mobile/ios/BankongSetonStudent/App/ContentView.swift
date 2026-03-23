@@ -6,6 +6,18 @@ import SwiftUI
 struct ContentView: View {
     @EnvironmentObject var authManager: AuthManager
     @State private var selectedAccentHex: String = AppTheme.defaultAccentHex
+    @State private var selectedThemeMode: String = "system"
+
+    private var resolvedColorScheme: ColorScheme? {
+        switch selectedThemeMode {
+        case "light":
+            return .light
+        case "dark":
+            return .dark
+        default:
+            return nil
+        }
+    }
 
     var body: some View {
         Group {
@@ -16,7 +28,11 @@ struct ContentView: View {
             }
         }
         .appThemeAccentHex(selectedAccentHex)
-        .onAppear(perform: reloadPersistedAccent)
+        .preferredColorScheme(resolvedColorScheme)
+        .onAppear {
+            reloadPersistedAccent()
+            reloadPersistedThemeMode()
+        }
         .onReceive(NotificationCenter.default.publisher(for: .settingsAccentDidChange)) { notification in
             if let accentHex = notification.object as? String {
                 selectedAccentHex = AppTheme.normalizedAccentHex(accentHex)
@@ -25,11 +41,36 @@ struct ContentView: View {
 
             reloadPersistedAccent()
         }
+        .onReceive(NotificationCenter.default.publisher(for: .settingsThemeDidChange)) { notification in
+            if let themeMode = notification.object as? String {
+                selectedThemeMode = normalizeThemeMode(themeMode)
+                return
+            }
+
+            reloadPersistedThemeMode()
+        }
     }
 
     private func reloadPersistedAccent() {
         selectedAccentHex = AppTheme.normalizedAccentHex(
             KeychainHelper.read(forKey: "settings_accent_hex")
         )
+    }
+
+    private func reloadPersistedThemeMode() {
+        selectedThemeMode = normalizeThemeMode(
+            KeychainHelper.read(forKey: "theme_mode", default: "system")
+        )
+    }
+
+    private func normalizeThemeMode(_ candidate: String?) -> String {
+        switch candidate?.lowercased() {
+        case "light":
+            return "light"
+        case "dark":
+            return "dark"
+        default:
+            return "system"
+        }
     }
 }

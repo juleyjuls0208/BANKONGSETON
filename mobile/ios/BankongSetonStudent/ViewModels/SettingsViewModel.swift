@@ -11,7 +11,14 @@ final class SettingsViewModel: ObservableObject {
 
     @Published var selectedTheme: String {
         didSet {
-            KeychainHelper.save(selectedTheme, forKey: themeModeKey)
+            let normalizedTheme = Self.normalizedThemeMode(selectedTheme)
+            if normalizedTheme != selectedTheme {
+                selectedTheme = normalizedTheme
+                return
+            }
+
+            KeychainHelper.save(normalizedTheme, forKey: themeModeKey)
+            NotificationCenter.default.post(name: .settingsThemeDidChange, object: normalizedTheme)
         }
     }
 
@@ -46,7 +53,9 @@ final class SettingsViewModel: ObservableObject {
     }
 
     init() {
-        selectedTheme = KeychainHelper.read(forKey: themeModeKey, default: "system")
+        selectedTheme = Self.normalizedThemeMode(
+            KeychainHelper.read(forKey: themeModeKey, default: "system")
+        )
 
         let persistedAccentHex = KeychainHelper.read(forKey: settingsAccentHexKey, default: defaultAccentHex)
         selectedAccentHex = AppTheme.normalizedAccentHex(persistedAccentHex)
@@ -92,6 +101,17 @@ final class SettingsViewModel: ObservableObject {
         isLoggingOut = false
     }
 
+    private static func normalizedThemeMode(_ candidate: String?) -> String {
+        switch candidate?.lowercased() {
+        case "light":
+            return "light"
+        case "dark":
+            return "dark"
+        default:
+            return "system"
+        }
+    }
+
     private static func loadPersistedDisplayName(
         settingsDisplayNameKey: String,
         studentNameKey: String
@@ -105,6 +125,7 @@ final class SettingsViewModel: ObservableObject {
 }
 
 extension Notification.Name {
+    static let settingsThemeDidChange = Notification.Name("settings.theme.didChange")
     static let settingsAccentDidChange = Notification.Name("settings.accent.didChange")
     static let settingsDisplayNameDidChange = Notification.Name("settings.display-name.didChange")
 }

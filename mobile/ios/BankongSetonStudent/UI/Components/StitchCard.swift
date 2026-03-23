@@ -18,14 +18,27 @@ struct StitchCard<Content: View>: View {
     }
 
     var body: some View {
+        let shape = RoundedRectangle(cornerRadius: AppTheme.Radius.lg, style: .continuous)
+
         content
             .padding(padding)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(AppTheme.Palette.surface)
-            .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.lg, style: .continuous))
+            .background(
+                shape
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                AppTheme.Palette.surface,
+                                AppTheme.Palette.surfaceElevated
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+            )
             .overlay(
-                RoundedRectangle(cornerRadius: AppTheme.Radius.lg, style: .continuous)
-                    .stroke(AppTheme.Palette.border, lineWidth: 1)
+                shape
+                    .stroke(AppTheme.Palette.border.opacity(0.45), lineWidth: 1)
             )
             .appThemeShadow(AppTheme.Shadows.card)
             .scaleEffect(

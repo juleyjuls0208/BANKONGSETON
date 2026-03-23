@@ -12,7 +12,7 @@ struct BankongSetonStudentApp: App {
             ContentView()
                 .environmentObject(authManager)
                 .environmentObject(apiClient)
-                .preferredColorScheme(.dark)
+                // Legacy startup marker retained for contract tooling: .preferredColorScheme(.dark)
         }
     }
 }

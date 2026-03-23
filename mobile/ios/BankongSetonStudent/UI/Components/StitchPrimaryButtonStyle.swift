@@ -6,14 +6,23 @@ struct StitchPrimaryButtonStyle: ButtonStyle {
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
 
     func makeBody(configuration: Configuration) -> some View {
-        configuration.label
+        let shape = RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous)
+
+        return configuration.label
             .font(AppTheme.Typography.bodyStrong)
             .frame(maxWidth: .infinity)
             .frame(minHeight: 52)
             .padding(.horizontal, AppTheme.Spacing.md)
-            .background(background(isPressed: configuration.isPressed))
+            .background(shape.fill(background(isPressed: configuration.isPressed)))
             .foregroundStyle(AppTheme.Palette.textInverse)
-            .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous))
+            .overlay(
+                shape
+                    .stroke(
+                        AppTheme.Palette.ghostBorder.opacity(isEnabled ? 0.16 : 0.08),
+                        lineWidth: 1
+                    )
+            )
+            .appThemeShadow(isEnabled ? AppTheme.Shadows.glow : AppTheme.Shadows.pressed)
             .scaleEffect(
                 AppTheme.Motion.pressedScale(
                     isPressed: configuration.isPressed,

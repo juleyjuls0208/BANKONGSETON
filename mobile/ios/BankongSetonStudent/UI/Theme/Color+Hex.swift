@@ -1,48 +1,76 @@
 import SwiftUI
+import UIKit
 
 extension Color {
     init(hex: String) {
-        let sanitized = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
+        let rgba = HexColorParser.rgbaComponents(from: hex)
+        self.init(
+            .sRGB,
+            red: rgba.red,
+            green: rgba.green,
+            blue: rgba.blue,
+            opacity: rgba.alpha
+        )
+    }
+
+    static func adaptive(light lightHex: String, dark darkHex: String) -> Color {
+        Color(
+            uiColor: UIColor { traits in
+                if traits.userInterfaceStyle == .dark {
+                    return UIColor(hex: darkHex)
+                }
+                return UIColor(hex: lightHex)
+            }
+        )
+    }
+}
+
+extension UIColor {
+    convenience init(hex: String) {
+        let rgba = HexColorParser.rgbaComponents(from: hex)
+        self.init(red: rgba.red, green: rgba.green, blue: rgba.blue, alpha: rgba.alpha)
+    }
+}
+
+private enum HexColorParser {
+    static func rgbaComponents(from rawHex: String) -> (red: CGFloat, green: CGFloat, blue: CGFloat, alpha: CGFloat) {
+        let sanitized = rawHex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
         var value: UInt64 = 0
         Scanner(string: sanitized).scanHexInt64(&value)
 
-        let a: UInt64
-        let r: UInt64
-        let g: UInt64
-        let b: UInt64
+        let (alpha, red, green, blue): (UInt64, UInt64, UInt64, UInt64)
 
         switch sanitized.count {
         case 3:
-            (a, r, g, b) = (
+            (alpha, red, green, blue) = (
                 255,
                 (value >> 8) * 17,
                 (value >> 4 & 0xF) * 17,
                 (value & 0xF) * 17
             )
         case 6:
-            (a, r, g, b) = (
+            (alpha, red, green, blue) = (
                 255,
                 value >> 16,
                 value >> 8 & 0xFF,
                 value & 0xFF
             )
         case 8:
-            (a, r, g, b) = (
+            (alpha, red, green, blue) = (
                 value >> 24,
                 value >> 16 & 0xFF,
                 value >> 8 & 0xFF,
                 value & 0xFF
             )
         default:
-            (a, r, g, b) = (255, 0, 0, 0)
+            (alpha, red, green, blue) = (255, 0, 0, 0)
         }
 
-        self.init(
-            .sRGB,
-            red: Double(r) / 255,
-            green: Double(g) / 255,
-            blue: Double(b) / 255,
-            opacity: Double(a) / 255
+        return (
+            red: CGFloat(red) / 255,
+            green: CGFloat(green) / 255,
+            blue: CGFloat(blue) / 255,
+            alpha: CGFloat(alpha) / 255
         )
     }
 }
