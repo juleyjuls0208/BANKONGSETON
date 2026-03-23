@@ -97,3 +97,11 @@
 {"ts":"2026-03-23T09:12:20.609Z","flowId":"335d23fe-9023-4ddd-90d3-fba7a111459c","seq":2,"eventType":"dispatch-match","rule":"run-uat (post-completion)","data":{"unitType":"run-uat","unitId":"M007/S08"}}
 {"ts":"2026-03-23T09:12:20.633Z","flowId":"335d23fe-9023-4ddd-90d3-fba7a111459c","seq":3,"eventType":"unit-start","data":{"unitType":"run-uat","unitId":"M007/S08"}}
 {"ts":"2026-03-23T09:14:48.442Z","flowId":"335d23fe-9023-4ddd-90d3-fba7a111459c","seq":4,"eventType":"unit-end","data":{"unitType":"run-uat","unitId":"M007/S08","status":"completed","artifactVerified":true},"causedBy":{"flowId":"335d23fe-9023-4ddd-90d3-fba7a111459c","seq":3}}
+{"ts":"2026-03-23T09:14:49.776Z","flowId":"335d23fe-9023-4ddd-90d3-fba7a111459c","seq":5,"eventType":"iteration-end","data":{"iteration":6}}
+{"ts":"2026-03-23T09:14:49.776Z","flowId":"945b8dcf-1cf4-4d42-9484-92098b7853fb","seq":1,"eventType":"iteration-start","data":{"iteration":7}}
+{"ts":"2026-03-23T09:14:49.906Z","flowId":"945b8dcf-1cf4-4d42-9484-92098b7853fb","seq":2,"eventType":"dispatch-match","rule":"planning (no research, not S01) → research-slice","data":{"unitType":"research-slice","unitId":"M007/S09"}}
+{"ts":"2026-03-23T09:14:49.930Z","flowId":"945b8dcf-1cf4-4d42-9484-92098b7853fb","seq":3,"eventType":"unit-start","data":{"unitType":"research-slice","unitId":"M007/S09"}}
+{"ts":"2026-03-23T09:39:17.662Z","flowId":"f227074b-ab33-4749-9930-b0f6b368f1fa","seq":1,"eventType":"iteration-start","data":{"iteration":1}}
+{"ts":"2026-03-23T09:39:17.806Z","flowId":"f227074b-ab33-4749-9930-b0f6b368f1fa","seq":2,"eventType":"dispatch-match","rule":"planning (no research, not S01) → research-slice","data":{"unitType":"research-slice","unitId":"M007/S09"}}
+{"ts":"2026-03-23T09:39:17.830Z","flowId":"f227074b-ab33-4749-9930-b0f6b368f1fa","seq":3,"eventType":"unit-start","data":{"unitType":"research-slice","unitId":"M007/S09"}}
+{"ts":"2026-03-23T09:59:03.345Z","flowId":"f227074b-ab33-4749-9930-b0f6b368f1fa","seq":4,"eventType":"unit-end","data":{"unitType":"research-slice","unitId":"M007/S09","status":"completed","artifactVerified":true},"causedBy":{"flowId":"f227074b-ab33-4749-9930-b0f6b368f1fa","seq":3}}
