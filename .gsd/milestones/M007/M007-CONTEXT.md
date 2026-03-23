@@ -1,11 +1,11 @@
-# M007: iOS UI/UX Rework (Stitch-Parity, QR-Only)
+# M007: iOS UI-UX Rework (Stitch-Parity, QR-Only)
 
 **Gathered:** 2026-03-22
 **Status:** Ready for planning
 
 ## Project Description
 
-Complete rework of the iOS app UI/UX using `C:\Users\admin\Downloads\stitch_redesigned_login` as the design source. The direction is to **copy** the reference design language across the app, including missing in-scope interactions, while keeping the product payment model QR-only.
+Complete rework of the iOS app UI-UX using `C:\Users\admin\Downloads\stitch_redesigned_login` as the design source. The direction is to **copy** the reference design language across the app, including missing in-scope interactions, while keeping the product payment model QR-only.
 
 ## Why This Milestone
 

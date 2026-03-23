@@ -1,4 +1,4 @@
-# M007: iOS UI/UX Rework (Stitch-Parity, QR-Only)
+# M007: iOS UI-UX Rework (Stitch-Parity, QR-Only)
 
 **Vision:** Complete rework of the existing iOS app to closely copy the Stitch redesign package with fully interactive in-scope behavior, QR-only payment UX, and physical iOS 17+ demo readiness.
 
