@@ -19,6 +19,7 @@
 
 - `rtk proxy sh scripts/verify-m007-s02.sh && rtk proxy sh scripts/verify-m007-s03.sh && rtk proxy sh scripts/verify-m007-s04.sh && rtk proxy sh scripts/verify-m007-s05.sh && rtk proxy sh scripts/verify-m007-s06.sh`
 - `rtk proxy python scripts/verify-m007-s08-summaries.py`
+- `rtk proxy python -c "from pathlib import Path; txt=Path('scripts/verify-m007-s08-summaries.py').read_text(encoding='utf-8').lower(); required=['missing frontmatter','missing decision','missing uat','placeholder']; missing=[x for x in required if x not in txt]; assert not missing, f'missing diagnostic markers: {missing}'"`
 - `rtk proxy python -c "from pathlib import Path; p=Path('.gsd/milestones/M007/slices/S08/S08-CONSOLIDATION-AUDIT.md'); assert p.exists() and p.read_text(encoding='utf-8').strip(), 'missing or empty consolidation audit'"`
 
 ## Observability / Diagnostics
@@ -36,7 +37,7 @@
 
 ## Tasks
 
-- [ ] **T01: Build the S02–S06 evidence matrix from source-of-truth artifacts** `est:1h 10m`
+- [x] **T01: Build the S02–S06 evidence matrix from source-of-truth artifacts** `est:1h 10m`
   - Why: Summary backfill is high correctness risk; executors need one normalized evidence source before rewriting narrative artifacts.
   - Files: `.gsd/milestones/M007/slices/S08/S08-RESEARCH.md`, `.gsd/DECISIONS.md`, `.gsd/milestones/M007/slices/S02/S02-UAT-RESULT.md`, `.gsd/milestones/M007/slices/S03/S03-UAT-RESULT.md`, `.gsd/milestones/M007/slices/S04/S04-UAT-RESULT.md`, `.gsd/milestones/M007/slices/S05/S05-UAT-RESULT.md`, `.gsd/milestones/M007/slices/S06/S06-UAT-RESULT.md`, `.gsd/milestones/M007/slices/S08/tasks/T01-EVIDENCE-MATRIX.md`
   - Do: Run S02–S06 verifiers serially, extract per-slice requirement/decision/proof cards from existing artifacts, and write a normalized matrix that downstream rewrite tasks use as the only evidence input.
