@@ -68,7 +68,7 @@ This milestone is complete only when all are true:
 - [x] **S06: Motion and Performance Tuning (iOS 17+)** `risk:medium` `depends:[S02,S03,S04,S05]`
   > After this: transitions/micro-interactions feel premium but restrained (not too fancy/slow) on iOS 17+ runtime.
 
-- [ ] **S07: Final Integration + Device Demo Readiness Gate** `risk:low` `depends:[S02,S03,S04,S05,S06]`
+- [x] **S07: Final Integration + Device Demo Readiness Gate** `risk:low` `depends:[S02,S03,S04,S05,S06]`
   > After this: complete end-to-end app journey is coherent and demo-ready for manual on-device pass/fail acceptance.
 
 ## Boundary Map
