@@ -56,7 +56,7 @@
   - Do: Replace abrupt state cuts with subtle tokenized transitions, gate non-essential animation with Reduce Motion, keep existing in-scope control affordances/identifiers, and remove any decorative long-running loops from demo-critical paths.
   - Verify: `rtk proxy python -c "from pathlib import Path; files=['mobile/ios/BankongSetonStudent/Views/QR/QRPayView.swift','mobile/ios/BankongSetonStudent/Views/Transactions/TransactionsView.swift','mobile/ios/BankongSetonStudent/Views/Budget/BudgetView.swift','mobile/ios/BankongSetonStudent/Views/LostCard/LostCardView.swift','mobile/ios/BankongSetonStudent/Views/Home/HomeView.swift']; txt='\n'.join(Path(f).read_text() for f in files); assert 'accessibilityReduceMotion' in txt; assert 'repeatForever' not in txt"`
   - Done when: Key stateful screens use restrained motion tied to shared policy and remain fully actionable in default + Reduce Motion paths.
-- [ ] **T03: Add S06 contract tests, phased verifier, and iOS 17+ UAT/perf checklist** `est:1h`
+- [x] **T03: Add S06 contract tests, phased verifier, and iOS 17+ UAT/perf checklist** `est:1h`
   - Why: S06 closure must be deterministic; without test/verifier/UAT artifacts, motion acceptance is subjective and fragile.
   - Files: `tests/test_verify_m007_s06_motion_behavior_contract.py`, `tests/test_verify_m007_s06_motion_design_contract.py`, `scripts/verify-m007-s06.sh`, `.gsd/milestones/M007/slices/S06/S06-UAT.md`
   - Do: Add behavior/design source-contract tests, implement a fail-fast S06 verifier (`preflight`, `behavior-contract`, `design-contract`, `static-contract`), and document manual iOS 17+ runtime checks including Reduce Motion path and Animation Hitches profiling commands.
