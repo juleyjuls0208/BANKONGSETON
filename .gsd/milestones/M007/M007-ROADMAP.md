@@ -70,7 +70,7 @@ This milestone is complete only when all are true:
 
 - [x] **S07: Final Integration + Device Demo Readiness Gate** `risk:low` `depends:[S02,S03,S04,S05,S06]`
   > After this: complete end-to-end app journey is coherent and demo-ready for manual on-device pass/fail acceptance.
-- [ ] **S08: Summary Backfill + Evidence Consolidation** `risk:low` `depends:[S07]`
+- [x] **S08: Summary Backfill + Evidence Consolidation** `risk:low` `depends:[S07]`
   > After this: placeholder summaries for S02–S06 are replaced with authoritative slice summaries that reconcile task deliverables, verifier outputs, and UAT verdicts for audit-grade traceability.
 - [ ] **S09: macOS Runtime + Physical Device Acceptance Closure** `risk:high` `depends:[S07]`
   > After this: xcodebuild/simulator checks and full physical iOS 17+ UAT scenarios (S07-01..S07-11) are executed with recorded PASS/FAIL evidence, resolving the on-device readiness gate.
