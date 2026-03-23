@@ -352,7 +352,7 @@ This file is the explicit capability and coverage contract for the project.
 - Primary owning slice: M007/S01
 - Supporting slices: M007/S02, M007/S03, M007/S04, M007/S05
 - Validation: mapped
-- Notes: "copy" intent preserved; visual fidelity plus behavior continuity required; override checkpoint enforces dark-mode-first launch and no-PIN login surface
+- Notes: "copy" intent preserved; visual fidelity plus behavior continuity required; override checkpoint enforces dark-mode-first launch and no-PIN login surface. S09 override contracts pass at source level; physical runtime parity remains pending Apple-host/device execution.
 
 ### R056 — No Dead Controls in Visible In-Scope UI
 - Class: quality-attribute
@@ -385,7 +385,7 @@ This file is the explicit capability and coverage contract for the project.
 - Primary owning slice: M007/S03
 - Supporting slices: M007/S07
 - Validation: mapped
-- Notes: Supersedes prior iOS filter taxonomy for M007 acceptance; `Debit`/`Credit Card` labels are treated as regression markers.
+- Notes: Supersedes prior iOS filter taxonomy for M007 acceptance; `Debit`/`Credit Card` labels are treated as regression markers. S09 override contracts verify the new taxonomy in source/runtime-contract checks; full device UAT sign-off remains pending.
 
 ### R059 — State-Fidelity Screens for Redesign
 - Class: failure-visibility
@@ -437,6 +437,7 @@ This file is the explicit capability and coverage contract for the project.
 - Primary owning slice: M007/S07
 - Supporting slices: M007/S02, M007/S03, M007/S04, M007/S05, M007/S06
 - Validation: mapped
+- Notes: S09 published explicit post-override closure evidence (`S09-RUNTIME-PROOF.*`, `S09-UAT-RESULT.md`) with current FAIL attribution to missing Apple tooling/physical execution in this executor; final sign-off remains pending on Apple-capable runner.
 
 ## Deferred
 

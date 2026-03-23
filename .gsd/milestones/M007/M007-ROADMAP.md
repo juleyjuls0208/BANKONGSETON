@@ -72,7 +72,7 @@ This milestone is complete only when all are true:
   > After this: complete end-to-end app journey is coherent and demo-ready for manual on-device pass/fail acceptance.
 - [x] **S08: Summary Backfill + Evidence Consolidation** `risk:low` `depends:[S07]`
   > After this: placeholder summaries for S02–S06 are replaced with authoritative slice summaries that reconcile task deliverables, verifier outputs, and UAT verdicts for audit-grade traceability.
-- [ ] **S09: macOS Runtime + Physical Device Acceptance Closure** `risk:high` `depends:[S07]`
+- [x] **S09: macOS Runtime + Physical Device Acceptance Closure** `risk:high` `depends:[S07]`
   > After this: override-remediated build (dark-mode default, no-PIN login, corrected transactions filter taxonomy) plus xcodebuild/simulator checks and full physical iOS 17+ UAT scenarios (S07-01..S07-11) are executed with recorded PASS/FAIL evidence, resolving the on-device readiness gate.
 
 ## Boundary Map

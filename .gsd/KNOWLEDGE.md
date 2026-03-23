@@ -299,3 +299,11 @@ Legacy `Debit`/`Credit` UI labels are superseded by override acceptance criteria
 - `.gsd/milestones/M007/slices/S09/S09-RUNTIME-PROOF.md`
 
 Then rerun `rtk proxy sh scripts/verify-m007-s09.sh` so timestamps/phase rows represent the current execution window only.
+
+---
+
+## S09 closure on non-Apple hosts: record explicit FAIL evidence, never synthetic PASS
+
+S09 requires Apple tooling (`xcodebuild`, `xcrun`) and physical iOS 17+ execution. In Windows/non-Apple executors, those checks are not runnable even when source contracts pass.
+
+**Rule:** keep `S09-UAT-RESULT.md` and `M007-VALIDATION.md` explicitly marked FAIL/blocked when Apple runtime phases cannot execute. Do not convert closure artifacts to PASS until runtime proof phases and physical-device sign-off are genuinely completed on an Apple-capable runner.
