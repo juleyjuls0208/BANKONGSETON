@@ -55,12 +55,13 @@ final class AuthManager: ObservableObject {
     // MARK: - Internal
 
     func clearAll() {
+        // Keep settings-owned local preferences (`theme_mode`, `settings_accent_hex`,
+        // `settings_display_name`) across auth/session resets.
         let keysToDelete = [
             "auth_token",
             "student_id",
             "student_name",
             "last_balance",
-            "theme_mode",
             "budget_alert_month",
             "budgetAlerted80",
             "budgetAlerted100",

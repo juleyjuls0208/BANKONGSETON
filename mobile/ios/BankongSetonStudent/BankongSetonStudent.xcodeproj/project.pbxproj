@@ -36,6 +36,13 @@
 		AA000027 /* QRPayViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000027 /* QRPayViewModel.swift */; };
 		AA000028 /* QRScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000028 /* QRScannerView.swift */; };
 		AA000029 /* QRPayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000029 /* QRPayView.swift */; };
+		AA000030 /* AppTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000030 /* AppTheme.swift */; };
+		AA000031 /* Color+Hex.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000031 /* Color+Hex.swift */; };
+		AA000032 /* StitchCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000032 /* StitchCard.swift */; };
+		AA000033 /* StitchFieldStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000033 /* StitchFieldStyle.swift */; };
+		AA000034 /* StitchPrimaryButtonStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000034 /* StitchPrimaryButtonStyle.swift */; };
+		AA000035 /* StitchTabShell.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000035 /* StitchTabShell.swift */; };
+		AA000036 /* LostCardViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000036 /* LostCardViewModel.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -69,6 +76,13 @@
 		BB000027 /* QRPayViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRPayViewModel.swift; sourceTree = "<group>"; };
 		BB000028 /* QRScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRScannerView.swift; sourceTree = "<group>"; };
 		BB000029 /* QRPayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRPayView.swift; sourceTree = "<group>"; };
+		BB000030 /* AppTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppTheme.swift; sourceTree = "<group>"; };
+		BB000031 /* Color+Hex.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Color+Hex.swift"; sourceTree = "<group>"; };
+		BB000032 /* StitchCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StitchCard.swift; sourceTree = "<group>"; };
+		BB000033 /* StitchFieldStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StitchFieldStyle.swift; sourceTree = "<group>"; };
+		BB000034 /* StitchPrimaryButtonStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StitchPrimaryButtonStyle.swift; sourceTree = "<group>"; };
+		BB000035 /* StitchTabShell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StitchTabShell.swift; sourceTree = "<group>"; };
+		BB000036 /* LostCardViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LostCardViewModel.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -105,6 +119,7 @@
 				EE000003 /* Core */,
 				EE000007 /* Models */,
 				EE000008 /* ViewModels */,
+				EE000018 /* UI */,
 				EE000009 /* Views */,
 				BB000025 /* Assets.xcassets */,
 			);
@@ -176,6 +191,7 @@
 				BB000020 /* BudgetViewModel.swift */,
 				BB000022 /* SettingsViewModel.swift */,
 				BB000027 /* QRPayViewModel.swift */,
+				BB000036 /* LostCardViewModel.swift */,
 			);
 			path = ViewModels;
 			sourceTree = "<group>";
@@ -260,6 +276,43 @@
 				BB000029 /* QRPayView.swift */,
 			);
 			path = QR;
+			sourceTree = "<group>";
+		};
+		EE000018 /* UI */ = {
+			isa = PBXGroup;
+			children = (
+				EE000019 /* Theme */,
+				EE000020 /* Components */,
+				EE000021 /* Shell */,
+			);
+			path = UI;
+			sourceTree = "<group>";
+		};
+		EE000019 /* Theme */ = {
+			isa = PBXGroup;
+			children = (
+				BB000030 /* AppTheme.swift */,
+				BB000031 /* Color+Hex.swift */,
+			);
+			path = Theme;
+			sourceTree = "<group>";
+		};
+		EE000020 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				BB000032 /* StitchCard.swift */,
+				BB000033 /* StitchFieldStyle.swift */,
+				BB000034 /* StitchPrimaryButtonStyle.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		EE000021 /* Shell */ = {
+			isa = PBXGroup;
+			children = (
+				BB000035 /* StitchTabShell.swift */,
+			);
+			path = Shell;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -357,8 +410,15 @@
 				AA000024 /* LostCardView.swift in Sources */,
 				AA000026 /* QRModels.swift in Sources */,
 				AA000027 /* QRPayViewModel.swift in Sources */,
+				AA000036 /* LostCardViewModel.swift in Sources */,
 				AA000028 /* QRScannerView.swift in Sources */,
 				AA000029 /* QRPayView.swift in Sources */,
+				AA000030 /* AppTheme.swift in Sources */,
+				AA000031 /* Color+Hex.swift in Sources */,
+				AA000032 /* StitchCard.swift in Sources */,
+				AA000033 /* StitchFieldStyle.swift in Sources */,
+				AA000034 /* StitchPrimaryButtonStyle.swift in Sources */,
+				AA000035 /* StitchTabShell.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

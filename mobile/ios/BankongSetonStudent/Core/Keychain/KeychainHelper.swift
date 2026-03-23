@@ -30,6 +30,10 @@ struct KeychainHelper {
         return String(data: data, encoding: .utf8)
     }
 
+    static func read(forKey key: String, default defaultValue: String) -> String {
+        read(forKey: key) ?? defaultValue
+    }
+
     static func delete(forKey key: String) {
         let query: [String: Any] = [
             kSecClass as String:       kSecClassGenericPassword,

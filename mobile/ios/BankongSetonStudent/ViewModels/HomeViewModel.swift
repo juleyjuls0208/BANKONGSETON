@@ -1,155 +1,96 @@
 import Foundation
-import os
 
 // MARK: - HomeViewModel
 // Loads balance and 3 most recent transactions for the Home screen.
 
 @MainActor
 final class HomeViewModel: ObservableObject {
+    private static let settingsDisplayNameKey = "settings_display_name"
+    private static let studentNameKey = "student_name"
+
     @Published var balance: Double = 0
     @Published var recentTransactions: [Transaction] = []
     @Published var isLoading = false
     @Published var errorMessage: String?
-
-    private let logger = Logger(
-        subsystem: Bundle.main.bundleIdentifier ?? "com.bankongseton.student",
-        category: "HomeViewModel"
-    )
-    private var activeLoadToken = UUID()
+    @Published private(set) var resolvedDisplayName: String = "Student"
 
     init() {
         if let cached = KeychainHelper.read(forKey: "last_balance"),
            let value = Double(cached) {
             balance = value
         }
+
+        resolvedDisplayName = Self.resolveDisplayName(
+            persistedDisplayName: KeychainHelper.read(forKey: Self.settingsDisplayNameKey),
+            backendDisplayName: KeychainHelper.read(forKey: Self.studentNameKey)
+        )
     }
 
     func load(apiClient: APIClient, authManager: AuthManager) async {
-        let loadToken = UUID()
-        activeLoadToken = loadToken
+        refreshResolvedDisplayName(backendDisplayName: authManager.studentName)
 
         isLoading = true
         errorMessage = nil
-        defer {
-            if activeLoadToken == loadToken {
-                isLoading = false
-            }
-        }
+        defer { isLoading = false }
 
-        async let balanceResult: Result<BalanceResponse, Error> = {
-            do {
-                return .success(try await apiClient.getBalance())
-            } catch {
-                return .failure(error)
-            }
-        }()
+        do {
+            async let balanceResp = apiClient.getBalance()
+            async let txResp = apiClient.getTransactions(limit: 3, offset: 0)
+            let (bal, txs) = try await (balanceResp, txResp)
 
-        async let transactionsResult: Result<TransactionsResponse, Error> = {
-            do {
-                return .success(try await apiClient.getTransactions(limit: 3, offset: 0))
-            } catch {
-                return .failure(error)
-            }
-        }()
-
-        let (balanceResponse, txResponse) = await (balanceResult, transactionsResult)
-        guard activeLoadToken == loadToken else { return }
-
-        var messages: [String] = []
-
-        switch balanceResponse {
-        case .success(let bal):
             balance = bal.balance
             KeychainHelper.save(String(format: "%.2f", bal.balance), forKey: "last_balance")
-        case .failure(let error):
-            if isCancellationError(error) {
-                logger.debug("Balance load cancelled")
-                break
-            }
-            if handleAuthErrorIfNeeded(error, authManager: authManager) { return }
-            logger.error("Balance load failed: \(String(describing: error), privacy: .public)")
-            messages.append(userMessage(for: error, source: "balance"))
-        }
-
-        switch txResponse {
-        case .success(let txs):
             recentTransactions = txs.transactions
-        case .failure(let error):
-            if isCancellationError(error) {
-                logger.debug("Transactions load cancelled")
-                break
-            }
-            if handleAuthErrorIfNeeded(error, authManager: authManager) { return }
-            logger.error("Transactions load failed: \(String(describing: error), privacy: .public)")
-            messages.append(userMessage(for: error, source: "transactions"))
-        }
-
-        if !messages.isEmpty {
-            errorMessage = messages.joined(separator: "\n")
-        }
-    }
-
-    private func isCancellationError(_ error: Error) -> Bool {
-        if error is CancellationError {
-            return true
-        }
-
-        if let urlError = error as? URLError, urlError.code == .cancelled {
-            return true
-        }
-
-        guard let apiError = error as? APIError,
-              case .networkError(let underlyingError) = apiError else {
-            return false
-        }
-
-        if underlyingError is CancellationError {
-            return true
-        }
-
-        if let urlError = underlyingError as? URLError, urlError.code == .cancelled {
-            return true
-        }
-
-        let nsError = underlyingError as NSError
-        return nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled
-    }
-
-    private func handleAuthErrorIfNeeded(_ error: Error, authManager: AuthManager) -> Bool {
-        guard let apiError = error as? APIError else { return false }
-        switch apiError {
-        case .unauthorized:
+        } catch APIError.unauthorized {
             authManager.handleUnauthorized()
-            return true
-        case .cardLost:
+        } catch APIError.cardLost {
             authManager.handleCardLost()
-            return true
-        default:
-            return false
+        } catch {
+            errorMessage = "Failed to load data. Pull to refresh."
         }
     }
 
-    private func userMessage(for error: Error, source: String) -> String {
-        guard let apiError = error as? APIError else {
-            return "Failed to load \(source). Pull to refresh."
+    func refreshAfterQRSuccess(apiClient: APIClient, authManager: AuthManager) async {
+        log("Refreshing Home data after QR payment success dismiss")
+        await load(apiClient: apiClient, authManager: authManager)
+        log("Completed Home refresh after QR payment success dismiss")
+    }
+
+    func refreshResolvedDisplayName(backendDisplayName: String) {
+        resolvedDisplayName = Self.resolveDisplayName(
+            persistedDisplayName: KeychainHelper.read(forKey: Self.settingsDisplayNameKey),
+            backendDisplayName: backendDisplayName
+        )
+    }
+
+    private static func resolveDisplayName(
+        persistedDisplayName: String?,
+        backendDisplayName: String?
+    ) -> String {
+        if let persistedDisplayName = normalizedNonEmpty(persistedDisplayName) {
+            return persistedDisplayName
         }
 
-        switch apiError {
-        case .networkError:
-            return "Couldn’t load \(source) due to a network issue. Check connection and pull to refresh."
-        case .decodingError:
-            return "Couldn’t read \(source) from the server response. Pull to refresh."
-        case .httpError(let code):
-            if code >= 500 {
-                return "Server is temporarily unavailable while loading \(source). Pull to refresh shortly."
-            }
-            return "Failed to load \(source) (\(code)). Pull to refresh."
-        case .invalidURL:
-            return "App configuration error while loading \(source). Please contact support."
-        case .loginRejected(let message):
-            return message
-        case .unauthorized, .cardLost:
-            return ""
+        if let backendDisplayName = normalizedNonEmpty(backendDisplayName) {
+            return backendDisplayName
         }
+
+        if let cachedStudentName = normalizedNonEmpty(KeychainHelper.read(forKey: studentNameKey)) {
+            return cachedStudentName
+        }
+
+        return "Student"
+    }
+
+    private static func normalizedNonEmpty(_ value: String?) -> String? {
+        guard let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines), !trimmed.isEmpty else {
+            return nil
+        }
+
+        return trimmed
+    }
+
+    private func log(_ message: String) {
+        print("[HomeViewModel] \(message)")
     }
 }

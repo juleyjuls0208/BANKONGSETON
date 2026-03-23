@@ -7,7 +7,7 @@ final class LoginViewModel: ObservableObject {
     @Published var errorMessage: String? = nil
 
     var canSubmit: Bool {
-        !studentId.trimmingCharacters(in: .whitespaces).isEmpty &&
+        !studentId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
         !isLoading
     }
 
@@ -15,17 +15,16 @@ final class LoginViewModel: ObservableObject {
         errorMessage = nil
         isLoading = true
         defer { isLoading = false }
+
+        let normalizedStudentId = studentId.trimmingCharacters(in: .whitespacesAndNewlines)
+
         do {
-            let response = try await apiClient.login(
-                studentId: studentId.trimmingCharacters(in: .whitespaces)
-            )
+            let response = try await apiClient.login(studentId: normalizedStudentId)
             authManager.login(token: response.token, student: response.student, jwtToken: response.jwtToken)
         } catch APIError.cardLost {
             errorMessage = "Your card has been reported lost. Please contact the canteen admin."
         } catch APIError.unauthorized {
             errorMessage = "Invalid student ID. Please try again."
-        } catch APIError.loginRejected(let message) {
-            errorMessage = message
         } catch APIError.httpError(let code) {
             errorMessage = "Server error (\(code)). Please try again later."
         } catch APIError.networkError {

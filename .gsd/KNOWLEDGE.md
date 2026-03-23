@@ -180,3 +180,130 @@ Older deployments may not define `CASHIER_SHARED_SECRET`, which silently disable
 2. else `JWT_SECRET` (legacy fallback)
 
 Apply the same fallback on both sender (cashier routes) and receiver (cloud verify path) so auth expectations match.
+
+---
+
+## Pytest + coverage on Windows: avoid parallel runs that share `.coverage`
+
+Running multiple `rtk proxy python -m pytest ...` commands in parallel in the same worktree can race on the shared `.coverage` SQLite file and fail with errors like:
+- `no such table: coverage_schema`
+- `table coverage_schema already exists`
+
+**Rule:** when pytest-cov is enabled, run verification test commands serially (especially source-contract suites) unless each process writes to an isolated coverage data file.
+
+---
+
+## Static source-contract shell checks: prefer `python` literal checks over `rtk grep -F` in cross-shell verifier scripts
+
+In this Windows + Git Bash execution path, `rtk proxy grep -F` can behave inconsistently for quoted Swift literals inside verifier scripts even when plain `rtk grep` works. This caused false negatives for existing markers like `Button("Cancel")`.
+
+**Rule:** for deterministic contains/absent assertions in cross-platform verifier scripts, run a tiny `rtk proxy python -c` substring check against file contents instead of relying on `grep -F` quoting behavior.
+
+---
+
+## iOS transactions pagination fallback: derive `hasMore` from response shape when `has_more` is missing
+
+For `/api/student/transactions`, backend variants may omit `has_more` (and sometimes even `total`). Setting `hasMore` directly from `resp.hasMore ?? false` can prematurely kill load-more even when additional pages exist.
+
+**Rule:** in `TransactionsViewModel`, resolve pagination continuity in order:
+1. Use explicit `has_more` when present.
+2. Else use `total` comparison (`offset < total`) when present.
+3. Else fallback to page-size heuristic (`fetchedCount == pageSize`).
+
+This keeps load-more behavior resilient across backend variants without introducing server-side search/filter assumptions.
+
+---
+
+## Shell verifier gotcha: single-quote Swift literals containing `$` when `set -u` is enabled
+
+In Bash verifier scripts with `set -euo pipefail`, Swift source literals like `text: $viewModel.searchQuery` will be treated as shell variable expansion if they are double-quoted, causing failures such as `unbound variable: viewModel`.
+
+**Rule:** when asserting source markers that contain `$` in shell scripts, wrap literals in single quotes (or escape `$`) before passing to helper functions.
+
+Example:
+- ✅ `assert_contains_literal file 'text: $viewModel.searchQuery' label`
+- ❌ `assert_contains_literal file "text: $viewModel.searchQuery" label`
+
+---
+
+## S04 SwiftUI source-contract tests: preserve literal button-title markers when tests assert them
+
+The S04 behavior contract (`tests/test_verify_m007_s04_budget_lostcard_behavior_contract.py`) checks literal source markers like `Button("Report Lost Card")` and `Button("Retry Report")`, not just runtime-equivalent button labels.
+
+**Rule:** when refactoring LostCardView button layout, keep those literal `Button("...")` forms (or update the contract tests in the same task) so source-contract verification does not fail on stylistic-only rewrites.
+
+---
+
+## iOS auth/session clear boundary: do not delete settings-owned keys in `AuthManager.clearAll()`
+
+When adding local Settings persistence channels (theme/accent/display name), reusing `AuthManager.clearAll()` as-is will erase preferences during logout/session-expiry paths and break deterministic rehydrate behavior.
+
+**Rule:** keep authentication/session keys and settings-preference keys separate. `clearAll()` may delete auth/session caches (`auth_token`, `student_id`, `student_name`, `jwt_token`, etc.) but must not delete settings-owned keys (for this slice: `theme_mode`, `settings_accent_hex`, `settings_display_name`) unless an explicit settings-reset action requests it.
+
+---
+
+## iOS accent settings wiring: keep Settings accent options aligned with `AppTheme` resolver map
+
+`AppTheme.normalizedAccentHex(_:)` now validates persisted accent values against a finite `accentPairsByHex` map and falls back to `AppTheme.defaultAccentHex` for unknown values.
+
+**Rule:** when adding/updating selectable accent values in `SettingsView`, use hex values that exist in `AppTheme.accentPairsByHex` (or update that map in the same change). Otherwise selected accents will silently normalize back to default on save/load.
+
+---
+
+## iOS settings save/apply UX: reset persistence state to `.idle` when editable values change
+
+In Settings, leaving `personalInfoSaveState`/`accentApplyState` at `.saved` after the user edits name or selects a different accent makes status text misleading (“saved/applied”) before the next explicit action.
+
+**Rule:** for explicit save/apply flows, reset state to `.idle` whenever the bound editable value changes (`editableDisplayName`, `selectedAccentHex`) and only set `.saved` inside the explicit action handlers (`savePersonalInfo()`, `applyAccent(_)`).
+
+---
+
+## iOS cross-tab post-payment refresh: use a persisted continuity tick, not transient-only callbacks
+
+For Home → QRPay → History continuity, a direct callback refreshes Home but does not reliably refresh Transactions after tab switches or view recreation.
+
+**Rule:** publish post-payment continuity with a shared persisted scalar (e.g., `@AppStorage("qr_payment_success_continuity_tick")`) and consume it with `task(id:)` in dependent screens. Add a local one-shot guard at the callback source and a last-seen dedupe guard in the consumer view model to prevent duplicate side effects from multi-trigger UI paths (manual + auto dismiss).
+
+---
+
+## Xcode project path checks: `.xcodeproj` is a directory, not a file
+
+When adding shell preflight checks for iOS builds, testing a project path like `mobile/ios/.../BankongSetonStudent.xcodeproj` with `[[ -f ... ]]` will fail even though the project exists, because `.xcodeproj` is a package directory.
+
+**Rule:** use `[[ -e ... ]]` (or `[[ -d ... ]]`) for `.xcodeproj` existence checks in verifier scripts.
+
+---
+
+## iOS student login contract in M007/S09: backend expects only `student_id` (no PIN)
+
+`backend/api/api_server.py` login handler reads only `student_id` and does not validate a PIN. Keeping PIN UI/state in iOS creates stale UX and contract drift.
+
+**Rule:** in `BankongSetonStudent` auth flow, keep login request/state student-ID only unless backend contract changes and acceptance tests are updated together.
+
+---
+
+## iOS transactions override taxonomy (M007/S09): user-facing filters are `QR Pay` / `Card Pay` / `Load`
+
+Legacy `Debit`/`Credit` UI labels are superseded by override acceptance criteria. Source-contract tests now treat those legacy labels as regressions on the transactions surface.
+
+**Rule:** if transaction filtering is refactored, preserve the `QR Pay` / `Card Pay` / `Load` taxonomy and update model mapping + view labels together.
+
+---
+
+## S09 runtime-proof refresh: clear stale artifacts before rerunning phased verifier
+
+`verify-m007-s09-runtime.py` performs phase upserts by phase ID; it does not purge unrelated historical rows unless the proof files are reset first.
+
+**Rule:** before publishing final S09 runtime evidence, delete/clear:
+- `.gsd/milestones/M007/slices/S09/S09-RUNTIME-PROOF.json`
+- `.gsd/milestones/M007/slices/S09/S09-RUNTIME-PROOF.md`
+
+Then rerun `rtk proxy sh scripts/verify-m007-s09.sh` so timestamps/phase rows represent the current execution window only.
+
+---
+
+## S09 closure on non-Apple hosts: record explicit FAIL evidence, never synthetic PASS
+
+S09 requires Apple tooling (`xcodebuild`, `xcrun`) and physical iOS 17+ execution. In Windows/non-Apple executors, those checks are not runnable even when source contracts pass.
+
+**Rule:** keep `S09-UAT-RESULT.md` and `M007-VALIDATION.md` explicitly marked FAIL/blocked when Apple runtime phases cannot execute. Do not convert closure artifacts to PASS until runtime proof phases and physical-device sign-off are genuinely completed on an Apple-capable runner.

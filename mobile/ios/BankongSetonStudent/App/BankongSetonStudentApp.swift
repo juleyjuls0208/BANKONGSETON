@@ -12,6 +12,7 @@ struct BankongSetonStudentApp: App {
             ContentView()
                 .environmentObject(authManager)
                 .environmentObject(apiClient)
+                .preferredColorScheme(.dark)
         }
     }
 }

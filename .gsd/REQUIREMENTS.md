@@ -346,13 +346,13 @@ This file is the explicit capability and coverage contract for the project.
 ### R055 — Stitch-Faithful iOS Redesign Across In-Scope Screens
 - Class: primary-user-loop
 - Status: active
-- Description: The iOS app is reworked to closely copy the Stitch reference pack (`C:\Users\admin\Downloads\stitch_redesigned_login`) across in-scope screens: login, home, QR flow states, transactions states, budget, receipt, lost-card, and settings
+- Description: The iOS app is reworked to closely copy the Stitch reference pack (`C:\Users\admin\Downloads\stitch_redesigned_login`) across in-scope screens: login, home, QR flow states, transactions states, budget, receipt, lost-card, and settings; legacy pre-redesign UI on these surfaces is removed, app launches in dark mode, and login no longer exposes a PIN field
 - Why it matters: The school demo needs a premium, cohesive iOS UX instead of mixed legacy layouts
 - Source: user
 - Primary owning slice: M007/S01
 - Supporting slices: M007/S02, M007/S03, M007/S04, M007/S05
 - Validation: mapped
-- Notes: "copy" intent preserved; visual fidelity plus behavior continuity required
+- Notes: "copy" intent preserved; visual fidelity plus behavior continuity required; override checkpoint enforces dark-mode-first launch and no-PIN login surface. S09 override contracts pass at source level; physical runtime parity remains pending Apple-host/device execution.
 
 ### R056 — No Dead Controls in Visible In-Scope UI
 - Class: quality-attribute
@@ -379,12 +379,13 @@ This file is the explicit capability and coverage contract for the project.
 ### R058 — Transactions Search + Filter in iOS
 - Class: primary-user-loop
 - Status: active
-- Description: Redesigned transactions screen provides working search and filter behavior on top of existing paginated history/load-more flow
-- Why it matters: Existing iOS transactions flow lacks search/filter and is less usable for demo and daily review
+- Description: Redesigned transactions screen provides working search and filter behavior on top of existing paginated history/load-more flow, and the only user-visible filter chips are `QR Pay`, `Card Pay`, and `Load` (legacy `Debit`/`Credit Card` labels removed)
+- Why it matters: Existing iOS transactions flow lacks search/filter and currently exposes wrong payment taxonomy (`Debit`/`Credit Card`) versus the required `QR Pay`/`Card Pay`/`Load` demo language
 - Source: user
 - Primary owning slice: M007/S03
 - Supporting slices: M007/S07
 - Validation: mapped
+- Notes: Supersedes prior iOS filter taxonomy for M007 acceptance; `Debit`/`Credit Card` labels are treated as regression markers. S09 override contracts verify the new taxonomy in source/runtime-contract checks; full device UAT sign-off remains pending.
 
 ### R059 — State-Fidelity Screens for Redesign
 - Class: failure-visibility
@@ -430,12 +431,13 @@ This file is the explicit capability and coverage contract for the project.
 ### R063 — On-Device Demo Readiness Gate
 - Class: launchability
 - Status: active
-- Description: The final redesigned iOS build is ready for manual install and pass/fail acceptance by the user on a physical iOS 17+ phone across full app journey
+- Description: The final redesigned iOS build is ready for manual install and pass/fail acceptance by the user on a physical iOS 17+ phone across full app journey, including override checkpoints (dark-mode default launch, no-PIN login, and transactions filters `QR Pay`/`Card Pay`/`Load`)
 - Why it matters: Final acceptance is human on-device, not simulator-only
 - Source: user
 - Primary owning slice: M007/S07
 - Supporting slices: M007/S02, M007/S03, M007/S04, M007/S05, M007/S06
 - Validation: mapped
+- Notes: S09 published explicit post-override closure evidence (`S09-RUNTIME-PROOF.*`, `S09-UAT-RESULT.md`) with current FAIL attribution to missing Apple tooling/physical execution in this executor; final sign-off remains pending on Apple-capable runner.
 
 ## Deferred
 

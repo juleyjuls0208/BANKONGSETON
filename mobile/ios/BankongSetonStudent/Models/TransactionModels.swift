@@ -6,59 +6,6 @@ struct TransactionItem: Codable {
     let name: String
     let price: Double
     let qty: Int
-
-    enum CodingKeys: String, CodingKey {
-        case name
-        case price
-        case qty
-        case quantity
-        case itemName = "item_name"
-        case unitPrice = "unit_price"
-    }
-
-    init(name: String, price: Double, qty: Int) {
-        self.name = name
-        self.price = price
-        self.qty = qty
-    }
-
-    init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-
-        name =
-            (try? container.decode(String.self, forKey: .name)) ??
-            (try? container.decode(String.self, forKey: .itemName)) ??
-            "Unknown item"
-
-        price =
-            Self.decodeDouble(from: container, key: .price) ??
-            Self.decodeDouble(from: container, key: .unitPrice) ??
-            0
-
-        qty =
-            Self.decodeInt(from: container, key: .qty) ??
-            Self.decodeInt(from: container, key: .quantity) ??
-            1
-    }
-
-    private static func decodeDouble(from container: KeyedDecodingContainer<CodingKeys>, key: CodingKeys) -> Double? {
-        if let value = try? container.decode(Double.self, forKey: key) { return value }
-        if let value = try? container.decode(Int.self, forKey: key) { return Double(value) }
-        if let value = try? container.decode(String.self, forKey: key) {
-            return Double(value.trimmingCharacters(in: .whitespacesAndNewlines))
-        }
-        return nil
-    }
-
-    private static func decodeInt(from container: KeyedDecodingContainer<CodingKeys>, key: CodingKeys) -> Int? {
-        if let value = try? container.decode(Int.self, forKey: key) { return value }
-        if let value = try? container.decode(Double.self, forKey: key) { return Int(value) }
-        if let value = try? container.decode(String.self, forKey: key),
-           let intValue = Int(value.trimmingCharacters(in: .whitespacesAndNewlines)) {
-            return intValue
-        }
-        return nil
-    }
 }
 
 // MARK: - Transaction
@@ -79,18 +26,6 @@ struct Transaction: Codable, Identifiable, Hashable {
         case balanceBefore = "balance_before"
     }
 
-    init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        id = UUID()
-        timestamp = (try? container.decode(String.self, forKey: .timestamp)) ?? ""
-        type = (try? container.decode(String.self, forKey: .type)) ?? ""
-        amount = Self.decodeDouble(from: container, key: .amount) ?? 0
-        balanceBefore = Self.decodeDouble(from: container, key: .balanceBefore)
-        balance = Self.decodeDouble(from: container, key: .balance) ?? 0
-        description = try? container.decodeIfPresent(String.self, forKey: .description)
-        items = try? container.decodeIfPresent([TransactionItem].self, forKey: .items)
-    }
-
     // Hashable conformance — id is sufficient since it's unique per instance
     func hash(into hasher: inout Hasher) {
         hasher.combine(id)
@@ -99,28 +34,138 @@ struct Transaction: Codable, Identifiable, Hashable {
     static func == (lhs: Transaction, rhs: Transaction) -> Bool {
         lhs.id == rhs.id
     }
+}
 
-    private static func decodeDouble(from container: KeyedDecodingContainer<CodingKeys>, key: CodingKeys) -> Double? {
-        if let value = try? container.decode(Double.self, forKey: key) { return value }
-        if let value = try? container.decode(Int.self, forKey: key) { return Double(value) }
-        if let value = try? container.decode(String.self, forKey: key) {
-            return Double(value.trimmingCharacters(in: .whitespacesAndNewlines))
-        }
-        return nil
-    }
+// MARK: - Transaction filter semantics
+
+enum TransactionFilter: String, CaseIterable, Codable {
+    case all
+    case qrPay = "qr_pay"
+    case cardPay = "card_pay"
+    case load
+}
+
+enum TransactionDirection: String, Codable {
+    case debit
+    case credit
 }
 
 // MARK: - Transaction convenience helpers
 
 extension Transaction {
-    /// Navigable = any purchase-family type OR has item detail to show.
-    /// Type strings vary by server version ("purchase", "nfc purchase", "nfc"),
-    /// so check broadly with contains *and* fall back to items presence.
+    private static let debitTypeSignals: [String] = [
+        "purchase", "payment", "debit", "expense"
+    ]
+
+    private static let creditTypeSignals: [String] = [
+        "load", "top up", "topup", "credit", "refund", "deposit"
+    ]
+
+    private static let qrPayTypeSignals: [String] = [
+        "qr", "scan to pay"
+    ]
+
+    private static let cardPayTypeSignals: [String] = [
+        "purchase", "payment", "debit", "expense", "card"
+    ]
+
+    var normalizedTypeValue: String {
+        let lowercased = type.lowercased()
+            .replacingOccurrences(of: "_", with: " ")
+            .replacingOccurrences(of: "-", with: " ")
+
+        return lowercased
+            .split(whereSeparator: { $0.isWhitespace })
+            .joined(separator: " ")
+    }
+
+    var normalizedDirection: TransactionDirection {
+        let normalizedType = normalizedTypeValue
+
+        if Self.debitTypeSignals.contains(where: { normalizedType.contains($0) }) {
+            return .debit
+        }
+
+        if Self.creditTypeSignals.contains(where: { normalizedType.contains($0) }) {
+            return .credit
+        }
+
+        if amount < 0 {
+            return .debit
+        }
+
+        return .credit
+    }
+
+    var isDebitLike: Bool {
+        normalizedDirection == .debit
+    }
+
+    var isCreditLike: Bool {
+        normalizedDirection == .credit
+    }
+
+    var normalizedFilterCategory: TransactionFilter {
+        let normalizedType = normalizedTypeValue
+
+        if Self.creditTypeSignals.contains(where: { normalizedType.contains($0) }) {
+            return .load
+        }
+
+        if Self.qrPayTypeSignals.contains(where: { normalizedType.contains($0) }) {
+            return .qrPay
+        }
+
+        if Self.cardPayTypeSignals.contains(where: { normalizedType.contains($0) }) {
+            return .cardPay
+        }
+
+        if isCreditLike {
+            return .load
+        }
+
+        return .cardPay
+    }
+
     var isNavigable: Bool {
-        let t = type.lowercased()
-        let isPurchase = t.contains("purchase") || t == "nfc" || t == "payment" || t == "debit"
+        let normalizedType = normalizedTypeValue
+        let isPurchaseFamily = normalizedType.contains("purchase") || normalizedType.contains("payment")
         let hasItems = !(items ?? []).isEmpty
-        return isPurchase || hasItems
+
+        return isPurchaseFamily || hasItems
+    }
+
+    func matchesFilter(_ filter: TransactionFilter) -> Bool {
+        switch filter {
+        case .all:
+            return true
+        case .qrPay, .cardPay, .load:
+            return normalizedFilterCategory == filter
+        }
+    }
+
+    func matchesSearchQuery(_ query: String) -> Bool {
+        let normalizedQuery = query
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+
+        if normalizedQuery.isEmpty {
+            return true
+        }
+
+        return searchableText.contains(normalizedQuery)
+    }
+
+    private var searchableText: String {
+        [
+            timestamp,
+            type,
+            description ?? "",
+            String(format: "%.2f", abs(amount)),
+            String(format: "%.2f", balance),
+        ]
+        .joined(separator: " ")
+        .lowercased()
     }
 }
 
