@@ -105,3 +105,8 @@
 {"ts":"2026-03-23T09:39:17.806Z","flowId":"f227074b-ab33-4749-9930-b0f6b368f1fa","seq":2,"eventType":"dispatch-match","rule":"planning (no research, not S01) → research-slice","data":{"unitType":"research-slice","unitId":"M007/S09"}}
 {"ts":"2026-03-23T09:39:17.830Z","flowId":"f227074b-ab33-4749-9930-b0f6b368f1fa","seq":3,"eventType":"unit-start","data":{"unitType":"research-slice","unitId":"M007/S09"}}
 {"ts":"2026-03-23T09:59:03.345Z","flowId":"f227074b-ab33-4749-9930-b0f6b368f1fa","seq":4,"eventType":"unit-end","data":{"unitType":"research-slice","unitId":"M007/S09","status":"completed","artifactVerified":true},"causedBy":{"flowId":"f227074b-ab33-4749-9930-b0f6b368f1fa","seq":3}}
+{"ts":"2026-03-23T09:59:04.542Z","flowId":"f227074b-ab33-4749-9930-b0f6b368f1fa","seq":5,"eventType":"iteration-end","data":{"iteration":1}}
+{"ts":"2026-03-23T09:59:04.543Z","flowId":"85491654-e89d-470a-bb2c-57252b1731a8","seq":1,"eventType":"iteration-start","data":{"iteration":2}}
+{"ts":"2026-03-23T09:59:04.686Z","flowId":"85491654-e89d-470a-bb2c-57252b1731a8","seq":2,"eventType":"dispatch-match","rule":"planning → plan-slice","data":{"unitType":"plan-slice","unitId":"M007/S09"}}
+{"ts":"2026-03-23T09:59:04.710Z","flowId":"85491654-e89d-470a-bb2c-57252b1731a8","seq":3,"eventType":"unit-start","data":{"unitType":"plan-slice","unitId":"M007/S09"}}
+{"ts":"2026-03-23T10:06:10.659Z","flowId":"85491654-e89d-470a-bb2c-57252b1731a8","seq":4,"eventType":"unit-end","data":{"unitType":"plan-slice","unitId":"M007/S09","status":"completed","artifactVerified":true},"causedBy":{"flowId":"85491654-e89d-470a-bb2c-57252b1731a8","seq":3}}
