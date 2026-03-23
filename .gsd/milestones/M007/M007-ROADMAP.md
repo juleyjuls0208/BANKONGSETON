@@ -4,8 +4,8 @@
 
 ## Success Criteria
 
-- User can complete sign-in, navigate redesigned tabs, run QR pay flow, and view resulting transaction/receipt in a visually cohesive stitch-faithful experience.
-- Transactions screen supports working search/filter/load-more and clearly handles loading, empty, error, and populated states.
+- User can complete sign-in (dark-mode default, no PIN field), navigate redesigned tabs, run QR pay flow, and view resulting transaction/receipt in a visually cohesive stitch-faithful experience.
+- Transactions screen supports working search/filter/load-more with user-visible filter chips fixed to `QR Pay` / `Card Pay` / `Load`, and clearly handles loading, empty, error, and populated states.
 - Settings supports local persistence for accent color and personal info edit interaction while removing out-of-scope settings groups and payment-method UX.
 - App interactions and animations feel polished but not "too fancy/slow" on iOS 17+ physical device.
 - No visible in-scope control is dead during demo flow.
@@ -73,7 +73,7 @@ This milestone is complete only when all are true:
 - [x] **S08: Summary Backfill + Evidence Consolidation** `risk:low` `depends:[S07]`
   > After this: placeholder summaries for S02–S06 are replaced with authoritative slice summaries that reconcile task deliverables, verifier outputs, and UAT verdicts for audit-grade traceability.
 - [ ] **S09: macOS Runtime + Physical Device Acceptance Closure** `risk:high` `depends:[S07]`
-  > After this: xcodebuild/simulator checks and full physical iOS 17+ UAT scenarios (S07-01..S07-11) are executed with recorded PASS/FAIL evidence, resolving the on-device readiness gate.
+  > After this: override-remediated build (dark-mode default, no-PIN login, corrected transactions filter taxonomy) plus xcodebuild/simulator checks and full physical iOS 17+ UAT scenarios (S07-01..S07-11) are executed with recorded PASS/FAIL evidence, resolving the on-device readiness gate.
 
 ## Boundary Map
 

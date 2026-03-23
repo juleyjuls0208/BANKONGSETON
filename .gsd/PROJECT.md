@@ -17,9 +17,9 @@ Physical RFID card tapped at the cashier counter completes a sale — balance de
 - Arduino UNO R3: uses RC522 RFID — card registration and lost-card replacement only; README updated (M005/S01)
 - **Backend QR payment flow** (M005/S03 done): `POST /cashier/api/qr-generate` → `GET /api/arduino/qr-pending` → student scans → `GET /api/qr/<token>` → `POST /api/qr/confirm` → balance debited → `qr_payment` SocketIO → cashier success modal; `app.pending_qr_token` in-memory state; `jwt_token` in student login response; 14/14 contract checks pass
 - Android app (student_app_v2): balance, transactions, FCM push, NFC HCE pay (being removed in M005/S05)
-- iOS app (mobile/ios/BankongSetonStudent): balance, transactions, FCM push — QR payment coming in M005/S04
+- iOS app (mobile/ios/BankongSetonStudent): balance, transactions, FCM push, and QR pay flow are implemented; M007/S09 focuses on override remediation (stitch-parity refresh, dark-mode default startup, PIN-free login, and `QR Pay` / `Card Pay` / `Load` transactions filters) before final device closure
 - Standalone cashier app (M006/S01-S05): login + JWT cookie auth + `/api/products` + modern POS screen + standalone payment/Arduino/QR APIs on port 5010 (`/api/process-sale`, `/api/complete-sale`, `/api/complete-sale-nfc`, `/api/qr-generate`, `/api/cancel-sale`, `/api/queue/status`, `/api/queue/sync`, `/api/arduino/*`); closure is now anchored by `.gsd/milestones/M006/slices/S05/S05-UAT-BUNDLE.{json,md}` (`overall.live_ready=true`, required flows `live_success`, no `:5003` request-trace hits) and summarized in `.gsd/milestones/M006/M006-SUMMARY.md`
-- M007 planning is now scoped: complete iOS UI-UX rework against `C:\Users\admin\Downloads\stitch_redesigned_login`, QR-only payment UX, and iOS 17+ demo acceptance on real device
+- M007 planning is now scoped: complete iOS UI-UX rework against `C:\Users\admin\Downloads\stitch_redesigned_login`, QR-only payment UX, mandatory dark-mode-first startup, PIN-free login, and `QR Pay` / `Card Pay` / `Load` transactions filters, with iOS 17+ demo acceptance on real device
 
 ## Architecture / Key Patterns
 
