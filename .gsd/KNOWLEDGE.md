@@ -255,3 +255,11 @@ When adding local Settings persistence channels (theme/accent/display name), reu
 In Settings, leaving `personalInfoSaveState`/`accentApplyState` at `.saved` after the user edits name or selects a different accent makes status text misleading (“saved/applied”) before the next explicit action.
 
 **Rule:** for explicit save/apply flows, reset state to `.idle` whenever the bound editable value changes (`editableDisplayName`, `selectedAccentHex`) and only set `.saved` inside the explicit action handlers (`savePersonalInfo()`, `applyAccent(_)`).
+
+---
+
+## iOS cross-tab post-payment refresh: use a persisted continuity tick, not transient-only callbacks
+
+For Home → QRPay → History continuity, a direct callback refreshes Home but does not reliably refresh Transactions after tab switches or view recreation.
+
+**Rule:** publish post-payment continuity with a shared persisted scalar (e.g., `@AppStorage("qr_payment_success_continuity_tick")`) and consume it with `task(id:)` in dependent screens. Add a local one-shot guard at the callback source and a last-seen dedupe guard in the consumer view model to prevent duplicate side effects from multi-trigger UI paths (manual + auto dismiss).

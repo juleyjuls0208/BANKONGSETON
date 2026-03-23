@@ -53,6 +53,7 @@ final class HomeViewModel: ObservableObject {
     func refreshAfterQRSuccess(apiClient: APIClient, authManager: AuthManager) async {
         log("Refreshing Home data after QR payment success dismiss")
         await load(apiClient: apiClient, authManager: authManager)
+        log("Completed Home refresh after QR payment success dismiss")
     }
 
     func refreshResolvedDisplayName(backendDisplayName: String) {

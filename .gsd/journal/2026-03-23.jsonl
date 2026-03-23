@@ -25,3 +25,11 @@
 {"ts":"2026-03-23T04:57:49.800Z","flowId":"e7b25759-5ab8-4445-b4c0-0c0bb09fdcda","seq":2,"eventType":"dispatch-match","rule":"executing → execute-task","data":{"unitType":"execute-task","unitId":"M007/S07/T01"}}
 {"ts":"2026-03-23T04:57:49.825Z","flowId":"e7b25759-5ab8-4445-b4c0-0c0bb09fdcda","seq":3,"eventType":"unit-start","data":{"unitType":"execute-task","unitId":"M007/S07/T01"}}
 {"ts":"2026-03-23T05:04:00.918Z","flowId":"e7b25759-5ab8-4445-b4c0-0c0bb09fdcda","seq":4,"eventType":"unit-end","data":{"unitType":"execute-task","unitId":"M007/S07/T01","status":"completed","artifactVerified":true},"causedBy":{"flowId":"e7b25759-5ab8-4445-b4c0-0c0bb09fdcda","seq":3}}
+{"ts":"2026-03-23T05:04:02.056Z","flowId":"e7b25759-5ab8-4445-b4c0-0c0bb09fdcda","seq":5,"eventType":"iteration-end","data":{"iteration":2}}
+{"ts":"2026-03-23T05:04:02.056Z","flowId":"0de3f46d-3f75-4540-9cb8-f71dccc9291d","seq":1,"eventType":"iteration-start","data":{"iteration":3}}
+{"ts":"2026-03-23T05:04:02.168Z","flowId":"0de3f46d-3f75-4540-9cb8-f71dccc9291d","seq":2,"eventType":"dispatch-match","rule":"executing → execute-task","data":{"unitType":"execute-task","unitId":"M007/S07/T02"}}
+{"ts":"2026-03-23T05:04:02.193Z","flowId":"0de3f46d-3f75-4540-9cb8-f71dccc9291d","seq":3,"eventType":"unit-start","data":{"unitType":"execute-task","unitId":"M007/S07/T02"}}
+{"ts":"2026-03-23T05:36:54.044Z","flowId":"9e560d25-8e5e-4b7d-8a67-200d65cd1145","seq":1,"eventType":"iteration-start","data":{"iteration":1}}
+{"ts":"2026-03-23T05:36:54.191Z","flowId":"9e560d25-8e5e-4b7d-8a67-200d65cd1145","seq":2,"eventType":"dispatch-match","rule":"executing → execute-task","data":{"unitType":"execute-task","unitId":"M007/S07/T02"}}
+{"ts":"2026-03-23T05:36:54.216Z","flowId":"9e560d25-8e5e-4b7d-8a67-200d65cd1145","seq":3,"eventType":"unit-start","data":{"unitType":"execute-task","unitId":"M007/S07/T02"}}
+{"ts":"2026-03-23T05:46:54.837Z","flowId":"9e560d25-8e5e-4b7d-8a67-200d65cd1145","seq":4,"eventType":"unit-end","data":{"unitType":"execute-task","unitId":"M007/S07/T02","status":"completed","artifactVerified":true},"causedBy":{"flowId":"9e560d25-8e5e-4b7d-8a67-200d65cd1145","seq":3}}

@@ -10,6 +10,8 @@ struct HomeView: View {
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
     @StateObject private var viewModel = HomeViewModel()
     @State private var showQrPay = false
+    @State private var didConsumePresentedQRSuccess = false
+    @AppStorage("qr_payment_success_continuity_tick") private var qrPaymentSuccessContinuityTick = 0
 
     private var screenTransitionAnimation: Animation {
         AppTheme.Motion.animation(
@@ -88,11 +90,14 @@ struct HomeView: View {
             .navigationTitle("Home")
             .sheet(isPresented: $showQrPay) {
                 QRPayView {
-                    Task {
-                        await viewModel.refreshAfterQRSuccess(apiClient: apiClient, authManager: authManager)
-                    }
+                    handleQRPaySuccessCompletion()
                 }
                 .environmentObject(apiClient)
+            }
+            .onChange(of: showQrPay) { _, isPresented in
+                if isPresented {
+                    didConsumePresentedQRSuccess = false
+                }
             }
             .refreshable {
                 await viewModel.load(apiClient: apiClient, authManager: authManager)
@@ -112,6 +117,21 @@ struct HomeView: View {
             .navigationDestination(for: Transaction.self) { transaction in
                 ReceiptView(transaction: transaction)
             }
+        }
+    }
+
+    private func handleQRPaySuccessCompletion() {
+        guard !didConsumePresentedQRSuccess else {
+            print("[HomeView] Ignoring duplicate QR success callback for current presentation")
+            return
+        }
+
+        didConsumePresentedQRSuccess = true
+        qrPaymentSuccessContinuityTick += 1
+        print("[HomeView] QR success continuity tick advanced to \(qrPaymentSuccessContinuityTick)")
+
+        Task {
+            await viewModel.refreshAfterQRSuccess(apiClient: apiClient, authManager: authManager)
         }
     }
 
@@ -158,6 +178,7 @@ struct HomeView: View {
                     .multilineTextAlignment(.leading)
 
                 Button {
+                    didConsumePresentedQRSuccess = false
                     showQrPay = true
                 } label: {
                     Label("Pay with QR", systemImage: "qrcode.viewfinder")

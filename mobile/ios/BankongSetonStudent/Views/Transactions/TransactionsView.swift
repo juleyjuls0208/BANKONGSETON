@@ -9,6 +9,7 @@ struct TransactionsView: View {
     @EnvironmentObject var authManager: AuthManager
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
     @StateObject private var viewModel = TransactionsViewModel()
+    @AppStorage("qr_payment_success_continuity_tick") private var qrPaymentSuccessContinuityTick = 0
 
     var body: some View {
         NavigationStack {
@@ -37,6 +38,13 @@ struct TransactionsView: View {
             }
             .task {
                 await viewModel.loadInitial(apiClient: apiClient, authManager: authManager)
+            }
+            .task(id: qrPaymentSuccessContinuityTick) {
+                await viewModel.refreshAfterQRSuccessContinuity(
+                    continuityTick: qrPaymentSuccessContinuityTick,
+                    apiClient: apiClient,
+                    authManager: authManager
+                )
             }
             .navigationDestination(for: Transaction.self) { transaction in
                 ReceiptView(transaction: transaction)

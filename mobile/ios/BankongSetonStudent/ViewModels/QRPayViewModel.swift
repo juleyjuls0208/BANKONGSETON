@@ -78,6 +78,16 @@ final class QRPayViewModel: ObservableObject {
     }
 
     func confirm(token: String, apiClient: APIClient) {
+        guard case let .confirming(_, activeToken) = state else {
+            log("Ignoring confirm action while state is \(state.debugLabel)")
+            return
+        }
+
+        guard activeToken == token else {
+            log("Ignoring confirm action due to mismatched token")
+            return
+        }
+
         transition(to: .loading, reason: "confirm_started")
 
         Task {

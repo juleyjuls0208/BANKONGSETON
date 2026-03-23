@@ -47,6 +47,7 @@ final class TransactionsViewModel: ObservableObject {
 
     private let pageSize = 20
     private var offset = 0
+    private var lastHandledQRSuccessContinuityTick = 0
 
     private enum FetchContext {
         case initial
@@ -77,6 +78,24 @@ final class TransactionsViewModel: ObservableObject {
         defer { isLoadingMore = false }
 
         await fetchPage(apiClient: apiClient, authManager: authManager, context: .pagination)
+    }
+
+    func refreshAfterQRSuccessContinuity(
+        continuityTick: Int,
+        apiClient: APIClient,
+        authManager: AuthManager
+    ) async {
+        guard continuityTick > 0 else { return }
+
+        guard continuityTick > lastHandledQRSuccessContinuityTick else {
+            log("Ignoring duplicate QR-success continuity tick=\(continuityTick)")
+            return
+        }
+
+        lastHandledQRSuccessContinuityTick = continuityTick
+        log("Refreshing Transactions data after QR payment success continuity tick=\(continuityTick)")
+
+        await loadInitial(apiClient: apiClient, authManager: authManager)
     }
 
     func clearSearchAndFilter() {
@@ -135,5 +154,9 @@ final class TransactionsViewModel: ObservableObject {
         transactions = allTransactions.filter { transaction in
             transaction.matchesFilter(selectedFilter) && transaction.matchesSearchQuery(searchQuery)
         }
+    }
+
+    private func log(_ message: String) {
+        print("[TransactionsViewModel] \(message)")
     }
 }

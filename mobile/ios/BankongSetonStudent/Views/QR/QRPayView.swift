@@ -4,6 +4,7 @@ import UIKit
 struct QRPayView: View {
     @EnvironmentObject var apiClient: APIClient
     @StateObject private var viewModel = QRPayViewModel()
+    @State private var hasTriggeredSuccessCompletion = false
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
@@ -274,8 +275,7 @@ struct QRPayView: View {
                     }
 
                     Button("Done") {
-                        onSuccess?()
-                        dismiss()
+                        completeSuccessFlow(trigger: "manual_done")
                     }
                     .buttonStyle(StitchPrimaryButtonStyle())
                 }
@@ -288,10 +288,21 @@ struct QRPayView: View {
         .onAppear {
             // Auto-dismiss success after 3 seconds.
             DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                onSuccess?()
-                dismiss()
+                completeSuccessFlow(trigger: "auto_dismiss")
             }
         }
+    }
+
+    private func completeSuccessFlow(trigger: String) {
+        guard !hasTriggeredSuccessCompletion else {
+            print("[QRPayView] Ignoring duplicate success completion trigger=\(trigger)")
+            return
+        }
+
+        hasTriggeredSuccessCompletion = true
+        print("[QRPayView] Completing success flow trigger=\(trigger)")
+        onSuccess?()
+        dismiss()
     }
 
     // MARK: Error

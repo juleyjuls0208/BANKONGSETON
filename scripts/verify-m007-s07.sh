@@ -128,9 +128,13 @@ run_integration_phase() {
   # QR success handoff + observability seams.
   assert_contains_literal "${HOME_VIEW}" 'QRPayView {' "home_qr_sheet_handoff"
   assert_contains_literal "${HOME_VIEW}" 'await viewModel.refreshAfterQRSuccess(apiClient: apiClient, authManager: authManager)' "home_qr_refresh_handoff"
+  assert_contains_literal "${HOME_VIEW}" 'guard !didConsumePresentedQRSuccess else {' "home_qr_success_one_shot_guard"
+  assert_contains_literal "${HOME_VIEW}" 'qrPaymentSuccessContinuityTick += 1' "home_qr_success_continuity_tick"
   assert_contains_literal "${HOME_VM}" 'log("Refreshing Home data after QR payment success dismiss")' "home_refresh_log_marker"
 
   assert_contains_literal "${QR_VIEW}" 'Button("Done") {' "qr_done_action"
+  assert_contains_literal "${QR_VIEW}" 'private func completeSuccessFlow(trigger: String)' "qr_success_completion_function"
+  assert_contains_literal "${QR_VIEW}" 'guard !hasTriggeredSuccessCompletion else {' "qr_success_one_shot_guard"
   assert_contains_literal "${QR_VIEW}" 'onSuccess?()' "qr_success_callback"
   assert_contains_literal "${QR_VM}" 'private func transition(to newState: QRPayState, reason: String)' "qr_transition_function"
   assert_contains_literal "${QR_VM}" 'log("QRPayState transition' "qr_transition_observability"
@@ -139,10 +143,14 @@ run_integration_phase() {
   assert_contains_literal "${TRANSACTIONS_VIEW}" '.searchable(' "transactions_searchable"
   assert_contains_literal "${TRANSACTIONS_VIEW}" 'text: $viewModel.searchQuery' "transactions_search_binding"
   assert_contains_literal "${TRANSACTIONS_VIEW}" 'Picker("Transaction Type", selection: $viewModel.selectedFilter)' "transactions_filter_binding"
+  assert_contains_literal "${TRANSACTIONS_VIEW}" '.task(id: qrPaymentSuccessContinuityTick)' "transactions_qr_continuity_task"
+  assert_contains_literal "${TRANSACTIONS_VIEW}" 'await viewModel.refreshAfterQRSuccessContinuity(' "transactions_qr_continuity_call"
   assert_contains_literal "${TRANSACTIONS_VIEW}" '"transactions-load-more-button"' "transactions_load_more_button"
 
   assert_contains_literal "${TRANSACTIONS_VM}" '@Published private(set) var allTransactions: [Transaction] = []' "transactions_vm_canonical_list"
   assert_contains_literal "${TRANSACTIONS_VM}" '@Published private(set) var paginationErrorMessage: String?' "transactions_vm_pagination_channel"
+  assert_contains_literal "${TRANSACTIONS_VM}" 'func refreshAfterQRSuccessContinuity(' "transactions_vm_qr_refresh_function"
+  assert_contains_literal "${TRANSACTIONS_VM}" 'guard continuityTick > lastHandledQRSuccessContinuityTick else {' "transactions_vm_qr_dedup_guard"
   assert_contains_literal "${TRANSACTIONS_VM}" 'guard hasMore && !isLoading && !isLoadingMore else { return }' "transactions_vm_load_more_guard"
 
   # Settings + lost-card actionability seams.
