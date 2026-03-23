@@ -38,6 +38,12 @@ Finalize summary backfill by rewriting S05 and S06, then publish deterministic c
 - `rtk proxy sh scripts/verify-m007-s02.sh && rtk proxy sh scripts/verify-m007-s03.sh && rtk proxy sh scripts/verify-m007-s04.sh && rtk proxy sh scripts/verify-m007-s05.sh && rtk proxy sh scripts/verify-m007-s06.sh`
 - `rtk proxy python -c "from pathlib import Path; p=Path('.gsd/milestones/M007/slices/S08/S08-CONSOLIDATION-AUDIT.md'); txt=p.read_text(encoding='utf-8'); required=['S02','S03','S04','S05','S06','PASS']; missing=[x for x in required if x not in txt]; assert p.exists() and p.read_text(encoding='utf-8').strip() and not missing, missing"`
 
+## Observability Impact
+
+- **Signals added/updated:** S08 emits deterministic static audit output for S02–S06 summary integrity (frontmatter completeness, decision references, UAT-result links, placeholder residue checks).
+- **Inspection path for future agents:** start at `.gsd/milestones/M007/slices/S08/tasks/T01-EVIDENCE-MATRIX.md`, run `scripts/verify-m007-s08-summaries.py`, then inspect `.gsd/milestones/M007/slices/S08/S08-CONSOLIDATION-AUDIT.md` for per-slice PASS/FAIL and environment constraints.
+- **Failure visibility:** static audit and consolidation report explicitly surface missing frontmatter keys, missing expected decision IDs, missing `S0x-UAT-RESULT.md` references, and placeholder residue per slice without mutating historical verifier outputs.
+
 ## Inputs
 
 - `.gsd/milestones/M007/slices/S08/tasks/T01-EVIDENCE-MATRIX.md` — authoritative evidence cards.
