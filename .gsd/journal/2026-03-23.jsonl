@@ -43,3 +43,12 @@
 {"ts":"2026-03-23T05:54:07.221Z","flowId":"bbe45076-6f03-42ef-b89d-7bbf7cc748b8","seq":2,"eventType":"dispatch-match","rule":"summarizing → complete-slice","data":{"unitType":"complete-slice","unitId":"M007/S07"}}
 {"ts":"2026-03-23T05:54:07.249Z","flowId":"bbe45076-6f03-42ef-b89d-7bbf7cc748b8","seq":3,"eventType":"unit-start","data":{"unitType":"complete-slice","unitId":"M007/S07"}}
 {"ts":"2026-03-23T06:04:07.342Z","flowId":"bbe45076-6f03-42ef-b89d-7bbf7cc748b8","seq":4,"eventType":"unit-end","data":{"unitType":"complete-slice","unitId":"M007/S07","status":"completed","artifactVerified":false},"causedBy":{"flowId":"bbe45076-6f03-42ef-b89d-7bbf7cc748b8","seq":3}}
+{"ts":"2026-03-23T06:04:08.652Z","flowId":"bbe45076-6f03-42ef-b89d-7bbf7cc748b8","seq":5,"eventType":"iteration-end","data":{"iteration":3}}
+{"ts":"2026-03-23T06:04:08.653Z","flowId":"726f591a-0c86-4cd1-9cd7-7b4af47cf730","seq":1,"eventType":"iteration-start","data":{"iteration":4}}
+{"ts":"2026-03-23T06:04:08.783Z","flowId":"726f591a-0c86-4cd1-9cd7-7b4af47cf730","seq":2,"eventType":"dispatch-stop","rule":"validating-milestone → validate-milestone","data":{"reason":"Cannot validate milestone M007: slices S01 are missing SUMMARY files. These slices may have been skipped."}}
+{"ts":"2026-03-23T06:06:14.161Z","flowId":"bc9ef208-e63a-440b-a8fc-796a795e389c","seq":1,"eventType":"iteration-start","data":{"iteration":1}}
+{"ts":"2026-03-23T06:06:14.268Z","flowId":"bc9ef208-e63a-440b-a8fc-796a795e389c","seq":2,"eventType":"dispatch-stop","rule":"validating-milestone → validate-milestone","data":{"reason":"Cannot validate milestone M007: slices S01 are missing SUMMARY files. These slices may have been skipped."}}
+{"ts":"2026-03-23T07:27:16.955Z","flowId":"9801447d-54fa-4e1e-8489-ea40968f7107","seq":1,"eventType":"iteration-start","data":{"iteration":1}}
+{"ts":"2026-03-23T07:27:17.078Z","flowId":"9801447d-54fa-4e1e-8489-ea40968f7107","seq":2,"eventType":"dispatch-match","rule":"validating-milestone → validate-milestone","data":{"unitType":"validate-milestone","unitId":"M007"}}
+{"ts":"2026-03-23T07:27:17.101Z","flowId":"9801447d-54fa-4e1e-8489-ea40968f7107","seq":3,"eventType":"unit-start","data":{"unitType":"validate-milestone","unitId":"M007"}}
+{"ts":"2026-03-23T07:31:20.361Z","flowId":"9801447d-54fa-4e1e-8489-ea40968f7107","seq":4,"eventType":"unit-end","data":{"unitType":"validate-milestone","unitId":"M007","status":"completed","artifactVerified":true},"causedBy":{"flowId":"9801447d-54fa-4e1e-8489-ea40968f7107","seq":3}}
