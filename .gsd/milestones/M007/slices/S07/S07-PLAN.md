@@ -40,7 +40,7 @@
 
 ## Tasks
 
-- [ ] **T01: Build S07 integration contracts and phased closure verifier** `est:1h 30m`
+- [x] **T01: Build S07 integration contracts and phased closure verifier** `est:1h 30m`
   - Why: Final assembly needs one deterministic gate that proves integration + scope correctness and exposes actionable failure diagnostics.
   - Files: `tests/test_verify_m007_s07_integration_behavior_contract.py`, `tests/test_verify_m007_s07_scope_guard_contract.py`, `scripts/verify-m007-s07.sh`, `.gsd/milestones/M007/slices/S07/S07-UAT.md`
   - Do: Add source-contract tests for required end-to-end markers and forbidden scope regressions; implement phased verifier with structured `phase=`/`guidance=` output; when asserting literals containing `$` (for example `text: $viewModel.searchQuery`) keep shell literals single-quoted under `set -euo pipefail`.
