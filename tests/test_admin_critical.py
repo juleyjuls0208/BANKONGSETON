@@ -420,3 +420,78 @@ class TestVoidTransaction:
         appended_row = txn_ws.append_row.call_args[0][0]
         # Default reason 'Voided by admin' must appear somewhere in the row
         assert any('Voided by admin' in str(cell) for cell in appended_row)
+
+
+# ---------------------------------------------------------------------------
+# TestDashboardStats — regression for ghost dashboard transaction counts
+# ---------------------------------------------------------------------------
+
+class TestDashboardStats:
+    """GET /api/stats should count only real, completed, non-void transactions."""
+
+    def test_stats_excludes_void_failed_and_malformed_rows(self, flask_app, db, admin_client):
+        import backend.dashboard.admin_dashboard as adm_module
+
+        today = adm_module.get_philippines_time().strftime('%Y-%m-%d')
+
+        users_ws = MagicMock()
+        users_ws.get_all_records.return_value = [
+            {'StudentID': 'S-001', 'Status': 'Active'},
+            {'StudentID': 'S-002', 'Status': 'Inactive'},
+        ]
+
+        txn_ws = _make_txn_ws([
+            {
+                'TransactionID': 'TXN-REAL-1',
+                'Timestamp': f'{today} 08:10:00',
+                'StudentID': 'S-001',
+                'TransactionType': 'Purchase',
+                'Status': 'Completed',
+                'Amount': -55.0,
+            },
+            {
+                'TransactionID': 'VOID-TXN-REAL-1',
+                'Timestamp': f'{today} 08:20:00',
+                'StudentID': 'S-001',
+                'TransactionType': 'Void',
+                'Status': 'Completed',
+                'Amount': 55.0,
+            },
+            {
+                'TransactionID': 'TXN-FAILED-1',
+                'Timestamp': f'{today} 08:25:00',
+                'StudentID': 'S-001',
+                'TransactionType': 'Purchase',
+                'Status': 'Failed',
+                'Amount': -20.0,
+            },
+            {
+                'TransactionID': '',
+                'Timestamp': f'{today} 08:30:00',
+                'StudentID': '',
+                'TransactionType': '',
+                'Status': 'Completed',
+                'Amount': 0,
+            },
+            {
+                'TransactionID': 'TXN-OLD-1',
+                'Timestamp': '2000-01-01 10:00:00',
+                'StudentID': 'S-001',
+                'TransactionType': 'Purchase',
+                'Status': 'Completed',
+                'Amount': -20.0,
+            },
+        ])
+
+        db.worksheet.side_effect = _ws_factory(**{
+            'Users': users_ws,
+            'Transactions Log': txn_ws,
+        })
+
+        resp = admin_client.get('/api/stats')
+
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data['total_students'] == 2
+        assert data['active_students'] == 1
+        assert data['today_transactions'] == 1

@@ -160,3 +160,23 @@ Auto-mode recovery can leave a slice summary as a `BLOCKER` placeholder even whe
 3. Then publish milestone summary/traceability docs; do not infer failure from placeholder prose alone.
 
 This prevents false milestone regressions caused by artifact-generation order and recovery placeholders rather than real runtime breakage.
+
+---
+
+## Cloud QR TTL: never trust cashier-provided `created_at` for expiry
+
+In the local→cloud QR handshake (`POST /api/cashier/qr-register`), using the cashier payload's `created_at` as the cloud expiry timestamp can cause false "QR expired" responses when the cashier device clock is skewed behind cloud time.
+
+**Rule:** set pending QR `created_at` from cloud receive time (`time.time()` on the cloud server). If you keep payload `created_at`, treat it as telemetry only, not expiry source-of-truth.
+
+---
+
+## QR sync auth fallback: use `JWT_SECRET` when `CASHIER_SHARED_SECRET` is unset
+
+Older deployments may not define `CASHIER_SHARED_SECRET`, which silently disables local→cloud QR sync (`/api/cashier/qr-register`) and causes student scans to fail as `QR expired or not found`.
+
+**Rule:** for QR sync webhook auth, resolve secret as:
+1. `CASHIER_SHARED_SECRET` (preferred)
+2. else `JWT_SECRET` (legacy fallback)
+
+Apply the same fallback on both sender (cashier routes) and receiver (cloud verify path) so auth expectations match.

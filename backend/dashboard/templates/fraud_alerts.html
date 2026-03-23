@@ -2,141 +2,230 @@
 
 {% block title %}Fraud Alerts — Bangko ng Seton{% endblock %}
 
+{% block sidebar_primary_cta %}
+<a href="/transactions" class="sidebar-cta" style="text-decoration:none;display:flex;align-items:center;justify-content:center"><i class="bi bi-plus-circle me-1"></i>New Transaction</a>
+{% endblock %}
+
 {% block content %}
-<div class="page-header d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h2 class="mb-1"><i class="bi bi-shield-exclamation me-2 text-danger"></i>Fraud Alerts</h2>
-        <p class="text-muted mb-0">Monitor suspicious activity and manage card suspensions</p>
-    </div>
-    <div class="d-flex gap-2">
-        <button class="btn btn-outline-secondary btn-sm" onclick="loadAlerts()">
-            <i class="bi bi-arrow-clockwise me-1"></i>Refresh
-        </button>
-    </div>
-</div>
+<style>
+    .fraud-head {
+        margin-bottom: 1.2rem;
+    }
 
-<!-- Stats Row -->
-<div class="row g-3 mb-4" id="statsRow">
-    <div class="col-6 col-md-3">
-        <div class="card text-center border-0 shadow-sm">
-            <div class="card-body py-3">
-                <div class="fs-3 fw-bold text-danger" id="statUnresolved">—</div>
-                <div class="text-muted small">Unresolved</div>
-            </div>
-        </div>
-    </div>
-    <div class="col-6 col-md-3">
-        <div class="card text-center border-0 shadow-sm">
-            <div class="card-body py-3">
-                <div class="fs-3 fw-bold text-warning" id="statToday">—</div>
-                <div class="text-muted small">Today</div>
-            </div>
-        </div>
-    </div>
-    <div class="col-6 col-md-3">
-        <div class="card text-center border-0 shadow-sm">
-            <div class="card-body py-3">
-                <div class="fs-3 fw-bold text-primary" id="statTotal">—</div>
-                <div class="text-muted small">Total Alerts</div>
-            </div>
-        </div>
-    </div>
-    <div class="col-6 col-md-3">
-        <div class="card text-center border-0 shadow-sm">
-            <div class="card-body py-3">
-                <div class="fs-3 fw-bold text-dark" id="statSuspended">—</div>
-                <div class="text-muted small">Suspended Cards</div>
-            </div>
-        </div>
-    </div>
-</div>
+    .fraud-kpis {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 0.85rem;
+        margin-bottom: 1rem;
+    }
 
-<!-- Filter bar -->
-<div class="card border-0 shadow-sm mb-3">
-    <div class="card-body py-2">
-        <div class="d-flex flex-wrap gap-2 align-items-center">
-            <label class="text-muted small mb-0">Filter:</label>
-            <div class="form-check form-check-inline mb-0">
-                <input class="form-check-input" type="checkbox" id="chkUnresolved" checked onchange="loadAlerts()">
-                <label class="form-check-label small" for="chkUnresolved">Unresolved only</label>
-            </div>
-            <select class="form-select form-select-sm w-auto" id="selRisk" onchange="loadAlerts()">
-                <option value="">All risks</option>
-                <option value="critical">Critical</option>
-                <option value="high">High</option>
-                <option value="medium">Medium</option>
-                <option value="low">Low</option>
-            </select>
-        </div>
-    </div>
-</div>
+    .fraud-kpi {
+        background: #fff;
+        border: 1px solid #ded9eb;
+        border-radius: 13px;
+        padding: 1rem 1.1rem;
+    }
 
-<!-- Alerts Table -->
-<div class="card border-0 shadow-sm mb-4">
-    <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center">
-        <h5 class="mb-0"><i class="bi bi-bell me-2"></i>Alerts</h5>
-        <span class="badge bg-secondary" id="alertCountBadge">0</span>
+    .fraud-kpi .tag {
+        display: inline-block;
+        font-size: 0.62rem;
+        font-weight: 800;
+        padding: 0.2rem 0.52rem;
+        border-radius: 999px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+    }
+
+    .fraud-kpi .label { margin-top: 0.45rem; color: #5f5b75; font-weight: 600; }
+    .fraud-kpi .value { margin-top: 0.35rem; font-size: 2.35rem; line-height: 1; font-weight: 800; }
+
+    .fraud-filters {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.8rem;
+        background: #ece8f6;
+        border: 1px solid #ddd7eb;
+        border-radius: 12px;
+        padding: 0.8rem;
+        margin-bottom: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .fraud-filters .left,
+    .fraud-filters .right {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        flex-wrap: wrap;
+    }
+
+    .fraud-filters select {
+        height: 38px;
+        border-radius: 8px;
+        border: 1px solid #d7d1e7;
+        background: #fff;
+        padding: 0 0.65rem;
+        min-width: 138px;
+    }
+
+    .fraud-grid {
+        margin-top: 1rem;
+        display: grid;
+        grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+        gap: 1rem;
+    }
+
+    .quick-actions {
+        background: #ece8f6;
+        border: 1px solid #ddd7eb;
+        border-radius: 12px;
+        padding: 1rem;
+    }
+
+    .quick-actions button {
+        width: 100%;
+        border: 1px solid #ddd7eb;
+        border-radius: 10px;
+        background: #fff;
+        text-align: left;
+        padding: 0.75rem 0.8rem;
+        margin-bottom: 0.6rem;
+    }
+
+    .risk-pill {
+        border-radius: 999px;
+        padding: 0.22rem 0.5rem;
+        font-size: 0.62rem;
+        letter-spacing: 0.04em;
+        font-weight: 800;
+    }
+
+    .risk-critical { background: #ffd8d8; color: #a01d1d; }
+    .risk-high { background: #e6ddff; color: #4f2eb2; }
+    .risk-medium { background: #e4e7ff; color: #4152b4; }
+    .risk-low { background: #eceaf4; color: #6d6881; }
+
+    .status-open { color: #8f2f09; font-weight: 700; }
+    .status-resolved { color: #6d6881; font-weight: 700; }
+
+    @media (max-width: 1200px) {
+        .fraud-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .fraud-grid { grid-template-columns: 1fr; }
+    }
+</style>
+
+<section class="fraud-head">
+    <h1 class="page-title">Fraud <span class="accent">Alerts</span> Module</h1>
+    <p class="page-subtitle">Real-time financial intelligence and risk mitigation center.</p>
+</section>
+
+<section class="fraud-kpis" id="statsRow">
+    <article class="fraud-kpi">
+        <span class="tag" style="background:#ffd8d8;color:#a01d1d;">Critical</span>
+        <div class="label">Unresolved Alerts</div>
+        <div id="statUnresolved" class="value" style="color:#ba1a1a;">—</div>
+    </article>
+    <article class="fraud-kpi">
+        <span class="tag" style="background:#ffe2cc;color:#8f2f09;">New Today</span>
+        <div class="label">Alerts Generated</div>
+        <div id="statToday" class="value" style="color:#8f2f09;">—</div>
+    </article>
+    <article class="fraud-kpi">
+        <span class="tag" style="background:#e8e5ff;color:#3525cd;">30 Day Window</span>
+        <div class="label">Total Alerts</div>
+        <div id="statTotal" class="value" style="color:#3525cd;">—</div>
+    </article>
+    <article class="fraud-kpi">
+        <span class="tag" style="background:#eceaf4;color:#66627d;">Security Lock</span>
+        <div class="label">Suspended Cards</div>
+        <div id="statSuspended" class="value">—</div>
+    </article>
+</section>
+
+<section class="fraud-filters">
+    <div class="left">
+        <label class="form-check d-inline-flex align-items-center gap-2 mb-0">
+            <input class="form-check-input" type="checkbox" id="chkUnresolved" checked onchange="loadAlerts()">
+            <span class="fw-semibold">Unresolved only</span>
+        </label>
+        <span class="text-muted">Risk Level:</span>
+        <select id="selRisk" onchange="loadAlerts()">
+            <option value="">All Levels</option>
+            <option value="critical">Critical</option>
+            <option value="high">High</option>
+            <option value="medium">Medium</option>
+            <option value="low">Low</option>
+        </select>
     </div>
-    <div class="card-body p-0">
+    <div class="right">
+        <button class="action-btn secondary" onclick="loadAlerts()"><i class="bi bi-funnel me-1"></i>Advanced Filters</button>
+        <button class="action-btn secondary" onclick="exportFraudLog()"><i class="bi bi-download me-1"></i>Export Log</button>
+    </div>
+</section>
+
+<section class="table-shell mb-3">
+    <div class="d-flex justify-content-between align-items-center px-3 py-3 border-bottom">
+        <h2 class="tx-title" style="font-size:1.8rem;">Pending <span class="accent">Resolutions</span></h2>
+        <small id="alertCountBadge">0</small>
+    </div>
+    <div class="table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th>Card UID</th>
+                    <th>Fraud Type</th>
+                    <th>Risk Level</th>
+                    <th>Description</th>
+                    <th>Created</th>
+                    <th>Status</th>
+                    <th class="text-end">Action</th>
+                </tr>
+            </thead>
+            <tbody id="alertsBody">
+                <tr><td colspan="7" class="text-center text-muted py-4"><div class="spinner-border spinner-border-sm me-2"></div>Loading…</td></tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section class="fraud-grid">
+    <div class="table-shell">
+        <div class="d-flex justify-content-between align-items-center px-3 py-3 border-bottom">
+            <h2 class="tx-title" style="font-size:1.8rem;">Suspended <span class="accent">Cards</span></h2>
+            <button class="action-btn secondary" data-bs-toggle="modal" data-bs-target="#suspendModal"><i class="bi bi-plus me-1"></i>Suspend Card</button>
+        </div>
         <div class="table-responsive">
-            <table class="table table-hover mb-0">
-                <thead class="table-light">
-                    <tr>
-                        <th style="width:140px">Card UID</th>
-                        <th>Type</th>
-                        <th style="width:100px">Risk</th>
-                        <th>Description</th>
-                        <th style="width:150px">Created</th>
-                        <th style="width:100px">Status</th>
-                        <th style="width:90px">Action</th>
-                    </tr>
-                </thead>
-                <tbody id="alertsBody">
-                    <tr><td colspan="7" class="text-center text-muted py-4">
-                        <div class="spinner-border spinner-border-sm me-2"></div>Loading…
-                    </td></tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
-
-<!-- Suspended Cards Section -->
-<div class="card border-0 shadow-sm mb-4">
-    <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center">
-        <h5 class="mb-0"><i class="bi bi-lock me-2 text-danger"></i>Suspended Cards</h5>
-        <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#suspendModal">
-            <i class="bi bi-plus me-1"></i>Suspend Card
-        </button>
-    </div>
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-hover mb-0">
-                <thead class="table-light">
+            <table>
+                <thead>
                     <tr>
                         <th>Card UID</th>
                         <th>Reason</th>
-                        <th>Suspended At</th>
+                        <th>Date</th>
                         <th>Auto?</th>
-                        <th style="width:110px">Action</th>
+                        <th class="text-end">Action</th>
                     </tr>
                 </thead>
                 <tbody id="suspendedBody">
-                    <tr><td colspan="5" class="text-center text-muted py-3">
-                        <div class="spinner-border spinner-border-sm me-2"></div>Loading…
-                    </td></tr>
+                    <tr><td colspan="5" class="text-center text-muted py-3"><div class="spinner-border spinner-border-sm me-2"></div>Loading…</td></tr>
                 </tbody>
             </table>
         </div>
     </div>
-</div>
 
-<!-- Resolve Modal -->
+    <aside class="quick-actions">
+        <h6 class="fw-bold mb-3"><i class="bi bi-lightning-charge-fill text-primary me-1"></i>Quick Security Actions</h6>
+        <button type="button" data-bs-toggle="modal" data-bs-target="#suspendModal"><strong>Suspend New Card</strong><br><small class="text-muted">Instantly block any credential</small></button>
+        <button type="button" onclick="window.location.href='/transactions?type=void'"><strong>Risk Audit Log</strong><br><small class="text-muted">Review last 48 hours of activity</small></button>
+        <button type="button" onclick="runFraudPulse()"><strong>Seton Intelligence Beta</strong><br><small class="text-muted">ML-driven threat detection</small></button>
+    </aside>
+</section>
+
 <div class="modal fade" id="resolveModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title"><i class="bi bi-check-circle me-2 text-success"></i>Resolve Alert</h5>
+                <h5 class="modal-title">Resolve Alert</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
@@ -145,20 +234,17 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-success" onclick="confirmResolve()">
-                    <i class="bi bi-check2 me-1"></i>Resolve
-                </button>
+                <button type="button" class="btn btn-success" onclick="confirmResolve()">Resolve</button>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Suspend Card Modal -->
 <div class="modal fade" id="suspendModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title"><i class="bi bi-lock me-2 text-danger"></i>Manually Suspend Card</h5>
+                <h5 class="modal-title text-danger">Manually Suspend Card</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
@@ -173,9 +259,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-danger" onclick="confirmSuspend()">
-                    <i class="bi bi-lock me-1"></i>Suspend
-                </button>
+                <button type="button" class="btn btn-danger" onclick="confirmSuspend()">Suspend</button>
             </div>
         </div>
     </div>
@@ -184,169 +268,242 @@
 
 {% block extra_js %}
 <script>
-    let pendingResolveId = null;
+let pendingResolveId = null;
+let latestAlerts = [];
+let latestSuspendedCards = [];
 
-    const RISK_BADGES = {
-        critical: '<span class="badge bg-danger">CRITICAL</span>',
-        high:     '<span class="badge" style="background:#fd7e14">HIGH</span>',
-        medium:   '<span class="badge bg-warning text-dark">MEDIUM</span>',
-        low:      '<span class="badge bg-secondary">LOW</span>',
-    };
+const RISK_BADGES = {
+    critical: '<span class="risk-pill risk-critical">CRITICAL</span>',
+    high: '<span class="risk-pill risk-high">HIGH</span>',
+    medium: '<span class="risk-pill risk-medium">MEDIUM</span>',
+    low: '<span class="risk-pill risk-low">LOW</span>',
+};
 
-    const FRAUD_TYPE_LABELS = {
-        velocity:            'Velocity',
-        unusual_amount:      'Unusual Amount',
-        unusual_time:        'Unusual Time',
-        location_mismatch:   'Location Mismatch',
-        rapid_spending:      'Rapid Spending',
-        card_cloning:        'Card Cloning',
-        dormant_activation:  'Dormant Activation',
-    };
+const FRAUD_TYPE_LABELS = {
+    velocity: 'Velocity Trigger',
+    unusual_amount: 'Unusual Amount',
+    unusual_time: 'Unusual Time',
+    location_mismatch: 'Location Mismatch',
+    rapid_spending: 'Rapid Spending',
+    card_cloning: 'Card Cloning',
+    dormant_activation: 'Dormant Activation',
+};
 
-    function fmtDate(isoStr) {
-        if (!isoStr) return '—';
-        try { return new Date(isoStr).toLocaleString('en-PH', {dateStyle:'short', timeStyle:'short'}); }
-        catch { return isoStr; }
-    }
+function esc(v) {
+    return String(v ?? '').replace(/[&<>'"]/g, m => ({ '&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;' }[m]));
+}
 
-    async function loadStats() {
-        try {
-            const res = await fetch('/api/fraud/stats');
-            if (!res.ok) return;
-            const d = await res.json();
-            document.getElementById('statUnresolved').textContent = d.unresolved_alerts ?? 0;
-            document.getElementById('statToday').textContent      = d.today_alerts ?? 0;
-            document.getElementById('statTotal').textContent      = d.total_alerts ?? 0;
-            document.getElementById('statSuspended').textContent  = d.suspended_cards ?? 0;
-        } catch {}
-    }
+function fmtDate(isoStr) {
+    if (!isoStr) return '—';
+    try { return new Date(isoStr).toLocaleString('en-PH', { dateStyle:'medium', timeStyle:'short' }); }
+    catch { return isoStr; }
+}
 
-    async function loadAlerts() {
-        const unresolved = document.getElementById('chkUnresolved').checked;
-        const risk = document.getElementById('selRisk').value;
-        const params = new URLSearchParams({ limit: 200 });
-        if (unresolved) params.set('unresolved_only', 'true');
-        if (risk) params.set('risk_level', risk);
+async function loadStats() {
+    try {
+        const res = await fetch('/api/fraud/stats');
+        if (!res.ok) return;
+        const d = await res.json();
+        document.getElementById('statUnresolved').textContent = d.unresolved_alerts ?? 0;
+        document.getElementById('statToday').textContent = d.today_alerts ?? 0;
+        document.getElementById('statTotal').textContent = d.total_alerts ?? 0;
+        document.getElementById('statSuspended').textContent = d.suspended_cards ?? 0;
+    } catch {}
+}
 
-        const tbody = document.getElementById('alertsBody');
-        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-3"><div class="spinner-border spinner-border-sm me-2"></div>Loading…</td></tr>';
+async function loadAlerts() {
+    const unresolved = document.getElementById('chkUnresolved').checked;
+    const risk = document.getElementById('selRisk').value;
+    const params = new URLSearchParams({ limit: 200 });
+    if (unresolved) params.set('unresolved_only', 'true');
+    if (risk) params.set('risk_level', risk);
 
-        try {
-            const res = await fetch('/api/fraud/alerts?' + params.toString());
-            const data = await res.json();
-            const alerts = data.alerts || [];
-            document.getElementById('alertCountBadge').textContent = alerts.length;
+    const tbody = document.getElementById('alertsBody');
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-3"><div class="spinner-border spinner-border-sm me-2"></div>Loading…</td></tr>';
 
-            if (!alerts.length) {
-                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4"><i class="bi bi-shield-check text-success fs-4 d-block mb-1"></i>No alerts found</td></tr>';
-                return;
-            }
+    try {
+        const res = await fetch('/api/fraud/alerts?' + params.toString());
+        const data = await res.json();
+        const alerts = data.alerts || [];
+        latestAlerts = alerts;
+        document.getElementById('alertCountBadge').textContent = `Showing 1-${Math.min(alerts.length, 12)} of ${alerts.length} alerts`;
 
-            tbody.innerHTML = alerts.map(a => `
-                <tr>
-                    <td><code class="small">${a.money_card || '—'}</code></td>
-                    <td><span class="small">${FRAUD_TYPE_LABELS[a.fraud_type] || a.fraud_type}</span></td>
-                    <td>${RISK_BADGES[a.risk_level] || a.risk_level}</td>
-                    <td class="small text-muted" style="max-width:300px">${a.description || ''}</td>
-                    <td class="small text-muted">${fmtDate(a.created_at)}</td>
-                    <td>${a.resolved
-                        ? '<span class="badge bg-success">Resolved</span>'
-                        : '<span class="badge bg-warning text-dark">Open</span>'}</td>
-                    <td>${!a.resolved ? `<button class="btn btn-sm btn-outline-success" onclick="openResolveModal('${a.id}')"><i class="bi bi-check2"></i> Resolve</button>` : ''}</td>
-                </tr>
-            `).join('');
-        } catch (e) {
-            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger py-3">Failed to load alerts</td></tr>';
+        if (!alerts.length) {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">No alerts found</td></tr>';
+            return;
         }
+
+        tbody.innerHTML = alerts.slice(0, 12).map(a => `
+            <tr>
+                <td><code>${esc(a.money_card || '—')}</code></td>
+                <td><strong>${esc(FRAUD_TYPE_LABELS[a.fraud_type] || a.fraud_type || 'Unknown')}</strong></td>
+                <td>${RISK_BADGES[a.risk_level] || '<span class="risk-pill risk-low">N/A</span>'}</td>
+                <td class="text-muted small">${esc(a.description || '')}</td>
+                <td class="small">${esc(fmtDate(a.created_at))}</td>
+                <td>${a.resolved
+                    ? '<span class="status-resolved"><i class="bi bi-dot"></i> Resolved</span>'
+                    : '<span class="status-open"><i class="bi bi-dot"></i> Open</span>'}</td>
+                <td class="text-end">${!a.resolved ? `<button class="action-btn primary" style="height:36px;" onclick="openResolveModal('${esc(a.id)}')">Resolve</button>` : '<button class="action-btn secondary" style="height:36px;" disabled>Resolved</button>'}</td>
+            </tr>
+        `).join('');
+    } catch (e) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger py-3">Failed to load alerts</td></tr>';
     }
+}
 
-    async function loadSuspended() {
-        const tbody = document.getElementById('suspendedBody');
-        try {
-            const res = await fetch('/api/fraud/suspended');
-            const data = await res.json();
-            const cards = data.suspended || [];
+async function loadSuspended() {
+    const tbody = document.getElementById('suspendedBody');
+    try {
+        const res = await fetch('/api/fraud/suspended');
+        const data = await res.json();
+        const cards = data.suspended || [];
+        latestSuspendedCards = cards;
 
-            if (!cards.length) {
-                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3"><i class="bi bi-unlock text-success me-1"></i>No suspended cards</td></tr>';
-                return;
-            }
-            tbody.innerHTML = cards.map(c => `
-                <tr>
-                    <td><code>${c.card}</code></td>
-                    <td class="small text-muted">${c.reason || '—'}</td>
-                    <td class="small text-muted">${fmtDate(c.suspended_at)}</td>
-                    <td>${c.auto_suspended ? '<span class="badge bg-warning text-dark">Auto</span>' : '<span class="badge bg-secondary">Manual</span>'}</td>
-                    <td><button class="btn btn-sm btn-outline-primary" onclick="unsuspendCard('${c.card}')"><i class="bi bi-unlock me-1"></i>Unsuspend</button></td>
-                </tr>
-            `).join('');
-        } catch {
-            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger py-3">Failed to load</td></tr>';
+        if (!cards.length) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3">No suspended cards</td></tr>';
+            return;
         }
+
+        tbody.innerHTML = cards.map(c => `
+            <tr>
+                <td><code>${esc(c.card)}</code></td>
+                <td class="small text-muted">${esc(c.reason || '—')}</td>
+                <td class="small">${esc(fmtDate(c.suspended_at))}</td>
+                <td>${c.auto_suspended ? '<span class="pill warn">AUTO</span>' : '<span class="pill gray">MANUAL</span>'}</td>
+                <td class="text-end"><button class="action-btn secondary" style="height:34px;" onclick="unsuspendCard('${esc(c.card)}')">Unsuspend</button></td>
+            </tr>
+        `).join('');
+    } catch {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger py-3">Failed to load</td></tr>';
+    }
+}
+
+function openResolveModal(alertId) {
+    pendingResolveId = alertId;
+    document.getElementById('resolveNotes').value = '';
+    new bootstrap.Modal(document.getElementById('resolveModal')).show();
+}
+
+async function confirmResolve() {
+    if (!pendingResolveId) return;
+    const notes = document.getElementById('resolveNotes').value.trim();
+    try {
+        const res = await fetch(`/api/fraud/alerts/${pendingResolveId}/resolve`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({notes})
+        });
+        const data = await res.json();
+        if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('resolveModal')).hide();
+            pendingResolveId = null;
+            await Promise.all([loadAlerts(), loadSuspended(), loadStats()]);
+        } else {
+            alert(data.error || 'Failed to resolve alert');
+        }
+    } catch { alert('Network error'); }
+}
+
+async function unsuspendCard(uid) {
+    if (!confirm(`Unsuspend card ${uid}?`)) return;
+    try {
+        const res = await fetch(`/api/fraud/cards/${uid}/unsuspend`, { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+            await Promise.all([loadSuspended(), loadStats()]);
+        } else {
+            alert(data.error || 'Failed to unsuspend card');
+        }
+    } catch { alert('Network error'); }
+}
+
+async function confirmSuspend() {
+    const uid = document.getElementById('suspendCardUid').value.trim();
+    const reason = document.getElementById('suspendReason').value.trim();
+    if (!uid) { alert('Please enter a card UID'); return; }
+
+    try {
+        const res = await fetch(`/api/fraud/cards/${uid}/suspend`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ reason: reason || 'Manually suspended by admin' })
+        });
+        const data = await res.json();
+        if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('suspendModal')).hide();
+            document.getElementById('suspendCardUid').value = '';
+            document.getElementById('suspendReason').value = '';
+            await Promise.all([loadSuspended(), loadStats()]);
+        } else {
+            alert(data.error || 'Failed to suspend card');
+        }
+    } catch { alert('Network error'); }
+}
+
+async function exportFraudLog() {
+    if (!latestAlerts.length && !latestSuspendedCards.length) {
+        await Promise.all([loadAlerts(), loadSuspended()]);
     }
 
-    function openResolveModal(alertId) {
-        pendingResolveId = alertId;
-        document.getElementById('resolveNotes').value = '';
-        new bootstrap.Modal(document.getElementById('resolveModal')).show();
-    }
+    const lines = ['section,card_uid,fraud_type,risk_level,description,created,status,notes'];
 
-    async function confirmResolve() {
-        if (!pendingResolveId) return;
-        const notes = document.getElementById('resolveNotes').value.trim();
-        try {
-            const res = await fetch(`/api/fraud/alerts/${pendingResolveId}/resolve`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({notes})
-            });
-            const data = await res.json();
-            if (data.success) {
-                bootstrap.Modal.getInstance(document.getElementById('resolveModal')).hide();
-                pendingResolveId = null;
-                await Promise.all([loadAlerts(), loadSuspended(), loadStats()]);
-            } else {
-                alert(data.error || 'Failed to resolve alert');
-            }
-        } catch { alert('Network error'); }
-    }
+    latestAlerts.forEach(a => {
+        lines.push([
+            'alert',
+            `"${String(a.money_card || '').replace(/"/g, '""')}"`,
+            `"${String(a.fraud_type || '').replace(/"/g, '""')}"`,
+            `"${String(a.risk_level || '').replace(/"/g, '""')}"`,
+            `"${String(a.description || '').replace(/"/g, '""')}"`,
+            `"${String(a.created_at || '').replace(/"/g, '""')}"`,
+            a.resolved ? 'resolved' : 'open',
+            `"${String(a.resolution_notes || '').replace(/"/g, '""')}"`
+        ].join(','));
+    });
 
-    async function unsuspendCard(uid) {
-        if (!confirm(`Unsuspend card ${uid}?`)) return;
-        try {
-            const res = await fetch(`/api/fraud/cards/${uid}/unsuspend`, {method: 'POST'});
-            const data = await res.json();
-            if (data.success) {
-                await Promise.all([loadSuspended(), loadStats()]);
-            } else {
-                alert(data.error || 'Failed to unsuspend card');
-            }
-        } catch { alert('Network error'); }
-    }
+    latestSuspendedCards.forEach(c => {
+        lines.push([
+            'suspended_card',
+            `"${String(c.card || '').replace(/"/g, '""')}"`,
+            '',
+            '',
+            `"${String(c.reason || '').replace(/"/g, '""')}"`,
+            `"${String(c.suspended_at || '').replace(/"/g, '""')}"`,
+            c.auto_suspended ? 'auto' : 'manual',
+            ''
+        ].join(','));
+    });
 
-    async function confirmSuspend() {
-        const uid = document.getElementById('suspendCardUid').value.trim();
-        const reason = document.getElementById('suspendReason').value.trim();
-        if (!uid) { alert('Please enter a card UID'); return; }
-        try {
-            const res = await fetch(`/api/fraud/cards/${uid}/suspend`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({reason: reason || 'Manually suspended by admin'})
-            });
-            const data = await res.json();
-            if (data.success) {
-                bootstrap.Modal.getInstance(document.getElementById('suspendModal')).hide();
-                document.getElementById('suspendCardUid').value = '';
-                document.getElementById('suspendReason').value = '';
-                await Promise.all([loadSuspended(), loadStats()]);
-            } else {
-                alert(data.error || 'Failed to suspend card');
-            }
-        } catch { alert('Network error'); }
-    }
+    const csv = lines.join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `fraud_log_${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+}
 
-    // Initial load
-    Promise.all([loadStats(), loadAlerts(), loadSuspended()]);
+async function runFraudPulse() {
+    try {
+        const res = await fetch('/api/fraud/stats');
+        const data = await res.json();
+        if (!res.ok) {
+            alert(data.error || 'Unable to run fraud pulse check');
+            return;
+        }
+        alert(
+            `Risk Pulse\n` +
+            `Unresolved: ${data.unresolved_alerts ?? 0}\n` +
+            `Today: ${data.today_alerts ?? 0}\n` +
+            `Suspended cards: ${data.suspended_cards ?? 0}`
+        );
+    } catch {
+        alert('Network error while running fraud pulse');
+    }
+}
+
+Promise.all([loadStats(), loadAlerts(), loadSuspended()]);
 </script>
 {% endblock %}

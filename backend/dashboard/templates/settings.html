@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block title %}Settings — Bangko ng Seton{% endblock %}
+
+{% block content %}
+<style>
+    .settings-head { margin-bottom: 1.1rem; }
+    .settings-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+    }
+    .settings-card {
+        background: #fff;
+        border: 1px solid #ddd7eb;
+        border-radius: 12px;
+        padding: 1rem;
+    }
+    .settings-card h3 {
+        margin: 0 0 0.35rem;
+        font-size: 1.05rem;
+        font-weight: 800;
+    }
+    .settings-card p { color: #6d6881; margin-bottom: 0.8rem; }
+    .kv { display: grid; grid-template-columns: 120px 1fr; row-gap: 0.45rem; }
+    .kv .k { color: #6d6881; font-size: 0.86rem; }
+    .kv .v { font-weight: 700; }
+    .status-note {
+        margin-top: 0.7rem;
+        font-size: 0.9rem;
+        color: #3525cd;
+        display: none;
+    }
+    .status-note.show { display: block; }
+    @media (max-width: 1200px) {
+        .settings-grid { grid-template-columns: 1fr; }
+    }
+</style>
+
+<section class="settings-head">
+    <h1 class="page-title">System <span class="accent">Settings</span></h1>
+    <p class="page-subtitle">Maintenance actions and account context for this session.</p>
+</section>
+
+<section class="settings-grid">
+    <article class="settings-card">
+        <h3>Session Context</h3>
+        <p>Current dashboard identity and access scope.</p>
+        <div class="kv">
+            <div class="k">Username</div><div class="v">{{ username or 'Unknown' }}</div>
+            <div class="k">Role</div><div class="v">{{ (role or 'finance') | capitalize }}</div>
+            <div class="k">Environment</div><div class="v">Dashboard Web</div>
+        </div>
+    </article>
+
+    <article class="settings-card">
+        <h3>Data Maintenance</h3>
+        <p>Refresh dashboard caches after sheet updates.</p>
+        <button type="button" class="action-btn primary" onclick="refreshCache()">Refresh Cached Data</button>
+        <div id="cacheStatus" class="status-note"></div>
+    </article>
+
+    <article class="settings-card" style="grid-column: 1 / -1;">
+        <h3>Reporting Shortcuts</h3>
+        <p>Open export endpoints from one place.</p>
+        <div class="d-flex gap-2 flex-wrap">
+            <a class="action-btn secondary" href="/reports">Open Reports Center</a>
+            <a class="action-btn secondary" href="/api/export/transactions?format=csv">Transactions CSV</a>
+            <a class="action-btn secondary" href="/api/export/students?format=csv">Students CSV</a>
+        </div>
+    </article>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+async function refreshCache() {
+    const note = document.getElementById('cacheStatus');
+    note.classList.remove('show');
+
+    try {
+        const res = await fetch('/api/settings/cache/refresh', { method: 'POST' });
+        const data = await res.json();
+
+        if (!res.ok || !data.success) {
+            note.textContent = data.error || 'Failed to refresh cache';
+            note.style.color = '#ba1a1a';
+            note.classList.add('show');
+            return;
+        }
+
+        note.textContent = data.message || 'Cache refreshed';
+        note.style.color = '#179a58';
+        note.classList.add('show');
+    } catch {
+        note.textContent = 'Network error while refreshing cache';
+        note.style.color = '#ba1a1a';
+        note.classList.add('show');
+    }
+}
+</script>
+{% endblock %}

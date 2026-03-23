@@ -675,9 +675,14 @@ class FraudDetector:
             for idx, row in enumerate(records, start=2):
                 if row.get('AlertID') == alert.id:
                     # Columns: Resolved=7, ResolvedAt=8, ResolutionNotes=9
-                    fraud_ws.update_cell(idx, 7, str(alert.resolved))
-                    fraud_ws.update_cell(idx, 8, alert.resolved_at.isoformat() if alert.resolved_at else '')
-                    fraud_ws.update_cell(idx, 9, alert.resolution_notes or '')
+                    fraud_ws.update(
+                        f'G{idx}:I{idx}',
+                        [[
+                            str(alert.resolved),
+                            alert.resolved_at.isoformat() if alert.resolved_at else '',
+                            alert.resolution_notes or '',
+                        ]],
+                    )
                     return True
             return False
         except Exception as e:

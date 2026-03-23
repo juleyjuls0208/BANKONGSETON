@@ -8,6 +8,7 @@ from flask import render_template, jsonify, request, session, redirect, url_for
 from werkzeug.security import generate_password_hash, check_password_hash
 import time
 import gspread
+from gspread.utils import rowcol_to_a1
 from google.oauth2.service_account import Credentials
 import os
 from dotenv import load_dotenv
@@ -17,6 +18,7 @@ from functools import wraps
 import threading
 import re
 import logging
+from urllib.parse import urlparse
 
 import sys
 
@@ -112,20 +114,52 @@ def get_philippines_time():
 
 def get_cors_origins():
     """Parse CORS_ORIGINS env var into a list of allowed origins."""
+
+    def _normalize_origin(raw: str) -> str:
+        parsed = urlparse((raw or "").strip())
+        if parsed.scheme in {"http", "https"} and parsed.netloc:
+            return f"{parsed.scheme}://{parsed.netloc}"
+        return ""
+
     flask_env = os.getenv("FLASK_ENV", "production")
     origins_str = os.getenv("CORS_ORIGINS", "")
-    origins = [o.strip() for o in origins_str.split(",") if o.strip()]
+
+    placeholder_values = {
+        "YOUR_PRODUCTION_DOMAIN",
+        "https://your-username.pythonanywhere.com",
+        "https://YOUR_USERNAME.pythonanywhere.com",
+    }
+
+    origins = []
+    for raw in origins_str.split(","):
+        value = raw.strip()
+        if not value or value in placeholder_values:
+            continue
+        normalized = _normalize_origin(value)
+        if normalized:
+            origins.append(normalized)
+
+    # Keep SERVER_URL in sync with CORS origins so Socket.IO works out of the box
+    # on PythonAnywhere even when CORS_ORIGINS is left as a placeholder.
+    server_origin = _normalize_origin(os.getenv("SERVER_URL", ""))
+    if server_origin:
+        origins.append(server_origin)
+
     if flask_env == "development" or not origins:
-        origins = origins + [
-            "http://localhost",
-            "http://localhost:3000",
-            "http://localhost:5001",
-            "http://localhost:5003",
-            "http://127.0.0.1",
-            "http://127.0.0.1:5001",
-            "http://127.0.0.1:5003",
-        ]
-    return origins
+        origins.extend(
+            [
+                "http://localhost",
+                "http://localhost:3000",
+                "http://localhost:5001",
+                "http://localhost:5003",
+                "http://127.0.0.1",
+                "http://127.0.0.1:5001",
+                "http://127.0.0.1:5003",
+            ]
+        )
+
+    # De-duplicate while preserving order.
+    return list(dict.fromkeys(origins))
 
 
 def get_sheets_client():
@@ -193,6 +227,67 @@ def _invalidate_cache(sheet_name=None):
         _sheets_cache.pop(cache_key, None)
     else:
         _sheets_cache.clear()
+
+
+def get_cached_column_index(worksheet, header_name: str, ttl: int = 300) -> int:
+    """Resolve a worksheet header column index with short-lived caching."""
+    cache_key = f"worksheet_col_{worksheet.id}_{header_name}"
+    cached = _sheets_cache.get(cache_key)
+    now = time.time()
+    if cached and now - cached["timestamp"] < ttl:
+        return cached["data"]
+
+    col_index = worksheet.find(header_name).col
+    _sheets_cache[cache_key] = {"data": col_index, "timestamp": now}
+    return col_index
+
+
+def get_sheet_records_safe(sheet):
+    """Read records defensively when sheet headers contain duplicates/blanks."""
+    try:
+        return sheet.get_all_records()
+    except Exception as e:
+        err = str(e).lower()
+        if "duplicate" in err and "header" in err:
+            rows = sheet.get_all_values()
+            if not rows:
+                return []
+
+            raw_headers = rows[0]
+            headers = []
+            seen = {}
+            for i, h in enumerate(raw_headers):
+                base = str(h).strip() or f"Column{i + 1}"
+                seen[base] = seen.get(base, 0) + 1
+                headers.append(base if seen[base] == 1 else f"{base}__{seen[base]}")
+
+            records = []
+            for row in rows[1:]:
+                if not any(str(cell).strip() for cell in row):
+                    continue
+                padded = row + [""] * (len(headers) - len(row))
+                records.append(dict(zip(headers, padded[: len(headers)])))
+            return records
+        raise
+
+
+def is_dashboard_countable_transaction(record, today: str) -> bool:
+    """Return True when row should count in dashboard's today KPI."""
+    timestamp = str(record.get("Timestamp", "")).strip()
+    if not timestamp or not timestamp.startswith(today):
+        return False
+
+    txn_type = str(record.get("TransactionType", "")).strip().lower()
+    if not txn_type or txn_type == "void":
+        return False
+
+    status = str(record.get("Status", "")).strip().lower()
+    if status and status not in {"completed", "success", "succeeded"}:
+        return False
+
+    txn_id = str(record.get("TransactionID", "")).strip()
+    student_id = str(record.get("StudentID", "")).strip()
+    return bool(txn_id or student_id)
 
 
 def _ensure_categories_sheet():
@@ -1158,22 +1253,37 @@ def register_routes(app, socketio):
     def load_balance():
         """Load balance onto student money card"""
         try:
-            data = request.get_json()
-            student_id = data.get("student_id")
+            data = request.get_json(silent=True) or {}
+            student_id = str(data.get("student_id", "")).strip()
+            legacy_money_card = normalize_card_uid(str(data.get("money_card", "")).strip())
             amount = float(data.get("amount", 0))
             payment_method = data.get("payment_method", "cash")
 
             if amount <= 0:
                 return jsonify({"error": "Amount must be positive"}), 400
 
+            if not student_id and not legacy_money_card:
+                return jsonify({"error": "student_id is required"}), 400
+
             users_sheet = get_worksheet_with_retry("Users")
             users_records = users_sheet.get_all_records()
 
             student = None
-            for record in users_records:
-                if str(record.get("StudentID", "")).strip() == str(student_id).strip():
-                    student = record
-                    break
+            if student_id:
+                for record in users_records:
+                    if str(record.get("StudentID", "")).strip() == student_id:
+                        student = record
+                        break
+
+            # Backward-compatibility for older dashboard clients that still send
+            # money_card instead of student_id.
+            if not student and legacy_money_card:
+                for record in users_records:
+                    user_money_card = normalize_card_uid(str(record.get("MoneyCardNumber", "")))
+                    if user_money_card == legacy_money_card:
+                        student = record
+                        student_id = str(record.get("StudentID", "")).strip()
+                        break
 
             if not student:
                 return jsonify({"error": "Student not found"}), 404
@@ -1207,29 +1317,73 @@ def register_routes(app, socketio):
             new_total = total_loaded + amount
             timestamp = get_philippines_time().strftime("%Y-%m-%d %H:%M:%S")
 
-            balance_col = money_sheet.find("Balance").col
-            total_col = money_sheet.find("TotalLoaded").col
-            updated_col = money_sheet.find("LastUpdated").col
+            balance_col = get_cached_column_index(money_sheet, "Balance")
+            total_col = get_cached_column_index(money_sheet, "TotalLoaded")
+            updated_col = get_cached_column_index(money_sheet, "LastUpdated")
 
-            money_sheet.update_cell(money_row_index, balance_col, new_balance)
-            money_sheet.update_cell(money_row_index, total_col, new_total)
-            money_sheet.update_cell(money_row_index, updated_col, timestamp)
-
-            # Log transaction
-            try:
-                transactions_sheet = get_worksheet_with_retry("Transactions")
-                tx_row = [
-                    timestamp,
-                    student_id,
-                    student.get("Name", ""),
-                    money_card,
-                    "LOAD",
-                    amount,
-                    new_balance,
-                    payment_method,
-                    session.get("admin_username", "admin"),
+            money_sheet.batch_update(
+                [
+                    {
+                        "range": rowcol_to_a1(money_row_index, balance_col),
+                        "values": [[new_balance]],
+                    },
+                    {
+                        "range": rowcol_to_a1(money_row_index, total_col),
+                        "values": [[new_total]],
+                    },
+                    {
+                        "range": rowcol_to_a1(money_row_index, updated_col),
+                        "values": [[timestamp]],
+                    },
                 ]
-                transactions_sheet.append_row(tx_row)
+            )
+
+            # Log transaction to Transactions Log (schema-aligned)
+            try:
+                transactions_sheet = get_worksheet_with_retry("Transactions Log")
+                transaction_id = f"TXN-{get_philippines_time().strftime('%Y%m%d%H%M%S')}"
+
+                row_map = {
+                    "TransactionID": transaction_id,
+                    "Timestamp": timestamp,
+                    "StudentID": student_id,
+                    "MoneyCardNumber": normalized_money,
+                    "TransactionType": "Load",
+                    "Amount": float(amount),
+                    "BalanceBefore": float(current_balance),
+                    "BalanceAfter": float(new_balance),
+                    "Status": "Completed",
+                    "ErrorMessage": "",
+                    # Optional/extended schemas
+                    "ProcessedBy": session.get("admin_username", "admin"),
+                    "PaymentMethod": payment_method,
+                    "StationID": "finance-dashboard",
+                }
+
+                headers = [
+                    str(h).strip()
+                    for h in transactions_sheet.row_values(1)
+                    if str(h).strip()
+                ]
+                if headers:
+                    tx_row = [row_map.get(h, "") for h in headers]
+                else:
+                    tx_row = [
+                        row_map["TransactionID"],
+                        row_map["Timestamp"],
+                        row_map["StudentID"],
+                        row_map["MoneyCardNumber"],
+                        row_map["TransactionType"],
+                        row_map["Amount"],
+                        row_map["BalanceBefore"],
+                        row_map["BalanceAfter"],
+                        row_map["Status"],
+                        row_map["ErrorMessage"],
+                    ]
+
+                transactions_sheet.append_row(tx_row, table_range="A1")
+                invalidate_pattern("transactions")
+                invalidate_pattern("sheet_records:Transactions Log")
             except Exception as tx_err:
                 logger.warning("event=transaction_log_failed error=%s", tx_err)
 
@@ -1262,6 +1416,8 @@ def register_routes(app, socketio):
             return jsonify(
                 {
                     "success": True,
+                    "message": "Balance loaded successfully",
+                    "student_name": student.get("Name", ""),
                     "new_balance": new_balance,
                     "amount_loaded": amount,
                 }
@@ -1284,8 +1440,8 @@ def register_routes(app, socketio):
     def get_transactions():
         """Get transaction history"""
         try:
-            transactions_sheet = get_worksheet_with_retry("Transactions")
-            transactions = transactions_sheet.get_all_records()
+            transactions_sheet = get_worksheet_with_retry("Transactions Log")
+            transactions = get_sheet_records_safe(transactions_sheet)
             limit = request.args.get("limit", 100, type=int)
             transactions = transactions[-limit:]
             return jsonify({"transactions": transactions})
@@ -2695,7 +2851,9 @@ def register_routes(app, socketio):
                 transactions_sheet = get_worksheet_with_retry("Transactions Log")
                 transactions = transactions_sheet.get_all_records()
                 today_transactions = [
-                    t for t in transactions if t.get("Timestamp", "").startswith(today)
+                    t
+                    for t in transactions
+                    if is_dashboard_countable_transaction(t, today)
                 ]
             except Exception:
                 pass
@@ -2841,7 +2999,7 @@ def register_routes(app, socketio):
             student_id = str(student_id).strip()
 
             transactions_sheet = get_worksheet_with_retry("Transactions Log")
-            all_transactions = transactions_sheet.get_all_records()
+            all_transactions = get_sheet_records_safe(transactions_sheet)
 
             student_txns = [
                 t
@@ -2891,7 +3049,7 @@ def register_routes(app, socketio):
         try:
             limit = int(request.args.get("limit", 50))
             transactions_sheet = get_worksheet_with_retry("Transactions Log")
-            transactions = transactions_sheet.get_all_records()
+            transactions = get_sheet_records_safe(transactions_sheet)
 
             users_sheet = get_worksheet_with_retry("Users")
             users = users_sheet.get_all_records()
@@ -2961,7 +3119,7 @@ def register_routes(app, socketio):
             limit = int(request.args.get("limit", 200))
 
             transactions_sheet = get_worksheet_with_retry("Transactions Log")
-            raw = transactions_sheet.get_all_records()
+            raw = get_sheet_records_safe(transactions_sheet)
 
             users_sheet = get_worksheet_with_retry("Users")
             users = users_sheet.get_all_records()

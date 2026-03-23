@@ -1,0 +1,52 @@
+{
+  "schema_version": "1.0.0",
+  "generated_at": "2026-03-23T11:40:44Z",
+  "updated_at": "2026-03-23T12:13:16Z",
+  "host": {
+    "hostname": "DESKTOP-KKMDPBP",
+    "platform": "Windows",
+    "platform_release": "11",
+    "platform_version": "10.0.26200",
+    "machine": "AMD64",
+    "python": "3.14.3"
+  },
+  "overall_verdict": "fail",
+  "required_phases": [
+    "s07_baseline",
+    "apple_tooling",
+    "simulator_build",
+    "xctrace_templates",
+    "artifact_completeness"
+  ],
+  "phase_counts": {
+    "pass": 1,
+    "fail": 1
+  },
+  "phases": [
+    {
+      "id": "s07_baseline",
+      "status": "pass",
+      "command": "rtk proxy sh scripts/verify-m007-s07.sh",
+      "exit_code": 0,
+      "started_at": "2026-03-23T12:13:12Z",
+      "finished_at": "2026-03-23T12:13:16Z",
+      "updated_at": "2026-03-23T12:13:16Z",
+      "guidance": [
+        "phase s07_baseline completed successfully"
+      ]
+    },
+    {
+      "id": "apple_tooling",
+      "status": "fail",
+      "command": "xcodebuild -version && xcrun --version",
+      "exit_code": 1,
+      "started_at": "2026-03-23T12:13:16Z",
+      "finished_at": "2026-03-23T12:13:16Z",
+      "updated_at": "2026-03-23T12:13:16Z",
+      "guidance": [
+        "Apple tooling is unavailable in PATH (xcodebuild/xcrun check failed).",
+        "Run on an Apple-capable host with Xcode CLI tools installed (xcode-select --install)."
+      ]
+    }
+  ]
+}

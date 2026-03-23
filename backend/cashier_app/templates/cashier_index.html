@@ -1,0 +1,1717 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Canteen Ledger - Cashier Terminal</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        :root {
+            --bg: #f3f0fb;
+            --surface: #ffffff;
+            --surface-soft: #ece8f6;
+            --line: #d9d3e8;
+            --ink: #1b1b24;
+            --muted: #67637d;
+            --primary: #3525cd;
+            --primary-strong: #2716af;
+            --error: #c81e1e;
+            --success: #169957;
+            --warning: #ad6f14;
+        }
+
+        * { box-sizing: border-box; }
+        html, body { margin: 0; padding: 0; height: 100%; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            color: var(--ink);
+            background: var(--bg);
+            overflow: hidden;
+        }
+
+        button, input, select {
+            font: inherit;
+        }
+
+        .topbar {
+            height: 70px;
+            background: rgba(255, 255, 255, 0.92);
+            border-bottom: 1px solid var(--line);
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 1rem;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .brand h1 {
+            margin: 0;
+            font-family: 'Instrument Serif', serif;
+            font-size: 2rem;
+            font-style: italic;
+            color: #23203a;
+            line-height: 1;
+        }
+
+        .brand .cashier-id {
+            font-size: 1.35rem;
+            color: #505066;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .status-strip {
+            display: flex;
+            align-items: center;
+            gap: 0.9rem;
+            color: #55526c;
+            font-size: 0.82rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .status-strip .ok { color: var(--success); }
+
+        .status-strip .sync { color: #5f5b75; }
+
+        .status-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
+        .icon-circle {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            background: #ece8f6;
+            border: 1px solid #d8d2e7;
+            color: #3525cd;
+            display: grid;
+            place-items: center;
+        }
+
+        .terminal {
+            height: calc(100vh - 70px);
+            display: grid;
+            grid-template-columns: 260px minmax(0, 1fr) 360px;
+        }
+
+        .sidebar {
+            border-right: 1px solid var(--line);
+            background: #f2effa;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .sidebar-top {
+            padding: 1.1rem 0.9rem;
+        }
+
+        .terminal-meta {
+            padding: 0 0.55rem 0.8rem;
+        }
+
+        .terminal-meta p {
+            margin: 0;
+            color: var(--muted);
+            font-size: 0.73rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            font-weight: 800;
+        }
+
+        .terminal-meta h3 {
+            margin: 0.2rem 0 0;
+            color: #26223a;
+            font-size: 1.4rem;
+        }
+
+        .nav-link {
+            width: 100%;
+            height: 52px;
+            display: flex;
+            align-items: center;
+            gap: 0.7rem;
+            border-radius: 11px;
+            padding: 0 0.85rem;
+            color: #3f3b55;
+            text-decoration: none;
+            font-size: 1.05rem;
+            font-weight: 600;
+            border: 1px solid transparent;
+            margin-bottom: 0.28rem;
+        }
+
+        .nav-link.active {
+            background: #fff;
+            color: #3525cd;
+            border-color: #d8d2e7;
+            box-shadow: 0 6px 18px rgba(46, 33, 165, 0.08);
+        }
+
+        .sidebar-bottom {
+            padding: 1rem;
+            border-top: 1px solid var(--line);
+        }
+
+        .close-shift-btn {
+            width: 100%;
+            min-height: 50px;
+            border: 0;
+            border-radius: 12px;
+            background: #101a39;
+            color: #fff;
+            font-weight: 800;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+
+        .products-pane {
+            padding: 1.25rem;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        #offlineBanner {
+            display: none;
+            background: #ffe9d3;
+            border: 1px solid #ffd2a6;
+            color: #8f5204;
+            border-radius: 10px;
+            padding: 0.55rem 0.8rem;
+            font-size: 0.84rem;
+            font-weight: 600;
+        }
+
+        .search-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 0.75rem;
+            align-items: start;
+        }
+
+        .search-box {
+            position: relative;
+        }
+
+        .search-box i {
+            position: absolute;
+            left: 0.82rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #5f5b75;
+            font-size: 1.05rem;
+        }
+
+        .search-box input {
+            width: 100%;
+            height: 52px;
+            border-radius: 12px;
+            border: 1px solid #d8d2e7;
+            background: #ece8f6;
+            padding: 0 4rem 0 2.5rem;
+            font-size: 1.45rem;
+            color: #28253d;
+        }
+
+        .search-box .esc {
+            position: absolute;
+            right: 0.72rem;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.73rem;
+            font-weight: 800;
+            color: #4f4b65;
+            background: #fff;
+            border: 1px solid #d8d2e7;
+            border-radius: 8px;
+            padding: 0.2rem 0.45rem;
+        }
+
+        .scanner-wrap {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 0.3rem;
+            min-width: 220px;
+        }
+
+        #scannerPill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            border-radius: 999px;
+            border: 1px solid #a6e0be;
+            background: #dff6e9;
+            color: #1a8951;
+            font-size: 0.73rem;
+            letter-spacing: 0.06em;
+            font-weight: 800;
+            padding: 0.32rem 0.72rem;
+            text-transform: uppercase;
+        }
+
+        #scannerMeta {
+            color: #67637d;
+            font-size: 0.82rem;
+            font-weight: 600;
+        }
+
+        .categories {
+            display: flex;
+            gap: 0.5rem;
+            overflow-x: auto;
+            padding-bottom: 0.2rem;
+        }
+
+        .category-btn {
+            border: 0;
+            min-height: 44px;
+            border-radius: 12px;
+            padding: 0 1.15rem;
+            background: #ddd9e8;
+            color: #2e2a42;
+            font-weight: 700;
+            font-size: 1.05rem;
+            white-space: nowrap;
+            cursor: pointer;
+        }
+
+        .category-btn.active {
+            background: linear-gradient(160deg, #4f46e5, #3525cd);
+            color: #fff;
+            box-shadow: 0 8px 20px rgba(53, 37, 205, 0.26);
+        }
+
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 0.8rem;
+            overflow: auto;
+            padding-right: 0.2rem;
+        }
+
+        .product-card {
+            border: 1px solid #ddd7eb;
+            background: #fff;
+            border-radius: 12px;
+            padding: 0.65rem;
+            cursor: pointer;
+            transition: transform 140ms ease, box-shadow 140ms ease;
+        }
+
+        .product-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(46, 33, 165, 0.12);
+        }
+
+        .product-image {
+            aspect-ratio: 16/9;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #ece8f6;
+            margin-bottom: 0.55rem;
+            position: relative;
+        }
+
+        .product-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .qty-chip {
+            position: absolute;
+            top: 0.4rem;
+            right: 0.4rem;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.95);
+            border: 1px solid #d8d2e7;
+            font-size: 0.71rem;
+            font-weight: 800;
+            padding: 0.22rem 0.45rem;
+        }
+
+        .product-name {
+            font-size: 1.05rem;
+            font-weight: 800;
+            margin-bottom: 0.3rem;
+        }
+
+        .product-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            gap: 0.4rem;
+        }
+
+        .product-meta small { color: #67637d; font-weight: 600; }
+
+        .product-price {
+            color: #3525cd;
+            font-size: 1.05rem;
+            font-weight: 900;
+        }
+
+        .cart-pane {
+            border-left: 1px solid var(--line);
+            background: #efebf8;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+
+        .student-card {
+            background: #fff;
+            border-bottom: 1px solid #ddd7eb;
+            padding: 1rem;
+        }
+
+        .student-row {
+            display: flex;
+            align-items: center;
+            gap: 0.7rem;
+        }
+
+        .student-avatar {
+            width: 52px;
+            height: 52px;
+            border-radius: 14px;
+            background: #d9d5ff;
+            color: #3525cd;
+            display: grid;
+            place-items: center;
+            font-size: 1.25rem;
+        }
+
+        .student-title {
+            margin: 0;
+            font-size: 1.05rem;
+            font-weight: 800;
+        }
+
+        .student-id {
+            margin: 0.2rem 0 0;
+            color: #67637d;
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+
+        .student-balance {
+            margin-top: 0.7rem;
+            border-radius: 12px;
+            background: #ece8f6;
+            border: 1px solid #ddd7eb;
+            padding: 0.7rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 700;
+        }
+
+        .student-balance strong {
+            color: #251f65;
+            font-size: 1.2rem;
+            letter-spacing: 0.02em;
+        }
+
+        .cart-items {
+            flex: 1;
+            min-height: 0;
+            padding: 0.8rem 1rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+        }
+
+        .cart-item {
+            border: 1px solid #ddd7eb;
+            background: #fff;
+            border-radius: 11px;
+            padding: 0.5rem;
+            display: grid;
+            grid-template-columns: 46px minmax(0, 1fr) auto auto;
+            align-items: center;
+            gap: 0.55rem;
+        }
+
+        .cart-thumb {
+            width: 46px;
+            height: 46px;
+            border-radius: 9px;
+            overflow: hidden;
+            background: #ece8f6;
+            display: grid;
+            place-items: center;
+            color: #6d6881;
+        }
+
+        .cart-thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .cart-info h4 {
+            margin: 0;
+            font-size: 0.9rem;
+            font-weight: 800;
+            line-height: 1.15;
+        }
+
+        .cart-info small {
+            display: block;
+            margin-top: 0.25rem;
+            color: #595570;
+            font-size: 0.79rem;
+            font-weight: 600;
+        }
+
+        .qty-control {
+            display: flex;
+            align-items: center;
+            width: 122px;
+            border: 1px solid #ddd7eb;
+            border-radius: 9px;
+            background: #ece8f6;
+            overflow: hidden;
+        }
+
+        .qty-control button {
+            border: 0;
+            width: 40px;
+            min-height: 44px;
+            background: transparent;
+            color: #242038;
+            font-size: 1.15rem;
+            cursor: pointer;
+        }
+
+        .qty-control span {
+            flex: 1;
+            text-align: center;
+            font-weight: 800;
+            font-size: 0.95rem;
+        }
+
+        .remove-btn {
+            border: 0;
+            min-width: 44px;
+            min-height: 44px;
+            border-radius: 9px;
+            background: transparent;
+            color: #d09090;
+            cursor: pointer;
+            font-size: 1.05rem;
+            font-weight: 800;
+            padding: 0 0.45rem;
+        }
+
+        .remove-btn.armed {
+            background: #c81e1e;
+            color: #fff;
+            font-size: 0.66rem;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        .snackbar {
+            border-radius: 11px;
+            background: #2e2e89;
+            color: #fff;
+            border: 1px solid #2a2472;
+            padding: 0.68rem 0.75rem;
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.6rem;
+            font-size: 0.82rem;
+            font-weight: 600;
+        }
+
+        .snackbar.show { display: flex; }
+
+        .snackbar button {
+            border: 0;
+            min-height: 40px;
+            padding: 0 0.5rem;
+            border-radius: 8px;
+            background: transparent;
+            color: #c5c3ff;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-size: 0.7rem;
+            font-weight: 800;
+            cursor: pointer;
+        }
+
+        .summary-pane {
+            background: #fff;
+            border-top: 1px solid #ddd7eb;
+            padding: 0.9rem 1rem;
+        }
+
+        .cart-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.6rem;
+            margin-bottom: 0.8rem;
+        }
+
+        .cart-actions button {
+            min-height: 44px;
+            border-radius: 10px;
+            font-weight: 800;
+            cursor: pointer;
+            border: 1px solid #d8d2e7;
+            background: #fff;
+            color: #252238;
+        }
+
+        #voidBtn {
+            border-color: #e79f9f;
+            color: var(--error);
+        }
+
+        #voidBtn.armed {
+            background: var(--error);
+            color: #fff;
+            border-color: var(--error);
+        }
+
+        .totals {
+            border-top: 1px dashed #d8d2e7;
+            border-bottom: 1px dashed #d8d2e7;
+            padding: 0.8rem 0;
+            display: grid;
+            gap: 0.4rem;
+            margin-bottom: 0.8rem;
+        }
+
+        .totals-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 700;
+        }
+
+        .total-ledger {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-top: 0.25rem;
+        }
+
+        .total-ledger .label {
+            font-family: 'Instrument Serif', serif;
+            font-style: italic;
+            font-size: 2rem;
+            color: #27225e;
+        }
+
+        .total-ledger .value {
+            color: #3525cd;
+            font-size: 2.25rem;
+            font-weight: 900;
+            letter-spacing: 0.01em;
+        }
+
+        .payment-state {
+            margin-bottom: 0.8rem;
+        }
+
+        #paymentStateChip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            border-radius: 999px;
+            font-size: 0.79rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            font-weight: 900;
+            padding: 0.35rem 0.78rem;
+            border: 1px solid;
+        }
+
+        #paymentStateChip.ready {
+            background: #dff6e9;
+            border-color: #a6e0be;
+            color: #1a8951;
+        }
+
+        #paymentStateChip.degraded {
+            background: #ffe9d3;
+            border-color: #ffd2a6;
+            color: #9b5c0b;
+        }
+
+        #paymentStateChip.blocked {
+            background: #ffd9d9;
+            border-color: #ecb2b2;
+            color: #a01d1d;
+        }
+
+        #paymentStateHint {
+            margin: 0.35rem 0 0;
+            color: #55526c;
+            font-size: 0.82rem;
+            font-weight: 600;
+            font-style: italic;
+        }
+
+        .checkout-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.6rem;
+        }
+
+        .checkout-btn {
+            min-height: 82px;
+            border-radius: 12px;
+            border: 1px solid #d8d2e7;
+            background: #ece8f6;
+            color: #26223a;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0.35rem;
+            font-size: 0.9rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            cursor: pointer;
+        }
+
+        .checkout-btn.primary {
+            background: linear-gradient(160deg, #4f46e5, #3525cd);
+            border-color: #3525cd;
+            color: #fff;
+            box-shadow: 0 10px 22px rgba(53, 37, 205, 0.28);
+        }
+
+        .checkout-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .inline-reason {
+            margin-top: 0.35rem;
+            color: #7a748f;
+            font-size: 0.73rem;
+            min-height: 1em;
+            text-align: center;
+            font-weight: 700;
+        }
+
+        .keyboard-hint {
+            text-align: center;
+            margin-top: 0.6rem;
+            color: #5f5b75;
+            font-size: 0.72rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            font-weight: 800;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(18, 17, 28, 0.56);
+            align-items: center;
+            justify-content: center;
+            z-index: 120;
+        }
+
+        .modal-content {
+            width: min(420px, calc(100% - 2rem));
+            background: #fff;
+            border-radius: 16px;
+            border: 1px solid #ddd7eb;
+            box-shadow: 0 28px 40px rgba(18, 17, 28, 0.38);
+            padding: 1.2rem;
+        }
+
+        .modal-content h2 {
+            margin: 0;
+            font-size: 1.4rem;
+        }
+
+        .modal-content p {
+            margin: 0.6rem 0 0;
+            color: #5f5b75;
+            white-space: pre-line;
+            font-weight: 600;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 0.6rem;
+            margin-top: 1rem;
+        }
+
+        .modal-actions button {
+            flex: 1;
+            min-height: 44px;
+            border-radius: 10px;
+            border: 1px solid #d8d2e7;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .modal-actions .danger {
+            background: #c81e1e;
+            border-color: #c81e1e;
+            color: #fff;
+        }
+
+        .modal-actions .secondary {
+            background: #ece8f6;
+            color: #26223a;
+        }
+
+        @media (max-width: 1440px) {
+            .terminal {
+                grid-template-columns: 220px minmax(0, 1fr) 340px;
+            }
+
+            .products-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+    </style>
+</head>
+<body>
+<header class="topbar">
+    <div class="brand">
+        <h1>Canteen Ledger</h1>
+        <div class="cashier-id"><i class="bi bi-person-circle"></i> Cashier #042</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:0.9rem;">
+        <div class="status-strip">
+            <span class="status-chip ok"><i class="bi bi-usb-symbol"></i>SERIAL</span>
+            <span class="status-chip ok"><i class="bi bi-wifi"></i>WIFI</span>
+            <span class="status-chip sync"><i class="bi bi-arrow-repeat"></i>SYNC (<span id="syncCount">0</span>)</span>
+        </div>
+        <select id="portSelector" style="height:36px;border-radius:8px;border:1px solid #d8d2e7;background:#fff;padding:0 0.6rem;min-width:120px;">
+            <option value="">COM Port</option>
+        </select>
+        <button id="connectBtn" style="height:36px;border-radius:8px;border:1px solid #d8d2e7;background:#ece8f6;font-weight:700;padding:0 0.75rem;">Connect</button>
+        <span id="wifiBadge" style="font-size:0.75rem;font-weight:800;color:#9b5c0b;">OFFLINE</span>
+        <button class="icon-circle" onclick="logout()"><i class="bi bi-box-arrow-right"></i></button>
+    </div>
+</header>
+
+<div class="terminal">
+    <aside class="sidebar">
+        <div class="sidebar-top">
+            <div class="terminal-meta">
+                <p>Terminal</p>
+                <h3>Station 04</h3>
+            </div>
+            <a href="#" class="nav-link active"><i class="bi bi-shop"></i>Register</a>
+            <a href="#" class="nav-link"><i class="bi bi-clock-history"></i>History</a>
+            <a href="#" class="nav-link"><i class="bi bi-box-seam"></i>Inventory</a>
+            <a href="#" class="nav-link"><i class="bi bi-people"></i>Students</a>
+            <a href="#" class="nav-link"><i class="bi bi-gear"></i>Settings</a>
+        </div>
+        <div class="sidebar-bottom">
+            <button class="close-shift-btn" onclick="openCloseShiftModal()">Close Shift</button>
+        </div>
+    </aside>
+
+    <main class="products-pane">
+        <div id="offlineBanner"></div>
+
+        <div class="search-row">
+            <div class="search-box">
+                <i class="bi bi-search"></i>
+                <input id="searchBar" type="text" placeholder="Search products or scan barcode...">
+                <span class="esc">ESC</span>
+            </div>
+            <div class="scanner-wrap">
+                <div id="scannerPill"><span style="width:8px;height:8px;border-radius:999px;background:#1a8951;"></span>SCANNER: READY</div>
+                <div id="scannerMeta">Last scanned: —</div>
+                <button class="icon-circle" title="View mode" onclick="document.querySelector('.products-grid').classList.toggle('list-view')"><i class="bi bi-grid-3x3-gap-fill"></i></button>
+            </div>
+        </div>
+
+        <div class="categories" id="categories"></div>
+
+        <div class="products-grid" id="productsGrid">
+            <div class="product-card">Loading products...</div>
+        </div>
+    </main>
+
+    <aside class="cart-pane">
+        <div class="student-card">
+            <div class="student-row">
+                <div class="student-avatar"><i class="bi bi-person-fill"></i></div>
+                <div style="flex:1;min-width:0;">
+                    <h4 class="student-title">Gabriel Santos</h4>
+                    <p class="student-id">ID #2024-0012</p>
+                </div>
+                <span class="pill success">ACTIVE</span>
+            </div>
+            <div class="student-balance">
+                <span>WALLET BALANCE</span>
+                <strong id="walletBalance">₱1,245.00</strong>
+            </div>
+        </div>
+
+        <div class="cart-items" id="cartItems">
+            <p style="text-align:center;color:#6d6881;font-weight:600;">Cart is empty</p>
+        </div>
+
+        <div class="snackbar" id="undoSnackbar">
+            <div><i class="bi bi-arrow-counterclockwise"></i> <span id="undoMessage">Item removed. Undo?</span></div>
+            <button id="undoBtn" type="button">UNDO</button>
+        </div>
+
+        <div class="summary-pane">
+            <div class="cart-actions">
+                <button type="button" onclick="holdCart()"><i class="bi bi-pause-circle me-1"></i>Hold Cart</button>
+                <button id="voidBtn" type="button" onclick="handleVoidClick()"><i class="bi bi-slash-circle me-1"></i>Void Item</button>
+            </div>
+
+            <div class="totals">
+                <div class="totals-row"><span>Subtotal</span><span id="subtotalAmount">₱0.00</span></div>
+                <div class="totals-row"><span>Tax (VAT 12%)</span><span id="taxAmount">₱0.00</span></div>
+                <div class="total-ledger">
+                    <span class="label">Total Ledger</span>
+                    <span class="value" id="cartTotal">₱0.00</span>
+                </div>
+            </div>
+
+            <div class="payment-state">
+                <div id="paymentStateChip" class="ready"><span class="bi bi-dot"></span>READY • READER ONLINE</div>
+                <p id="paymentStateHint">Reader active. Waiting for input...</p>
+            </div>
+
+            <div class="checkout-grid">
+                <button id="qrBtn" class="checkout-btn" onclick="qrCheckout()"><i class="bi bi-qr-code"></i>QR Pay</button>
+                <button id="checkoutBtn" class="checkout-btn primary" onclick="checkout()"><i class="bi bi-nfc"></i>Tap Card</button>
+            </div>
+            <div class="inline-reason" id="qrDisabledReason"></div>
+            <div class="inline-reason" id="tapDisabledReason"></div>
+
+            <div class="keyboard-hint">ENTER = PAY • +/- = QTY</div>
+        </div>
+    </aside>
+</div>
+
+<div class="modal" id="paymentModal">
+    <div class="modal-content">
+        <h2 id="modalTitle">Tap Student Card</h2>
+        <p id="modalMessage">Waiting for card...</p>
+        <div class="modal-actions">
+            <button class="secondary" onclick="closeModal()">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="closeShiftModal">
+    <div class="modal-content">
+        <h2>Close shift?</h2>
+        <p>Terminal: Station 04
+Pending sync: <span id="closeShiftSyncCount">0</span>
+<span id="closeShiftWarning"></span></p>
+        <div class="modal-actions">
+            <button class="secondary" onclick="closeCloseShiftModal()">Cancel</button>
+            <button class="danger" onclick="confirmCloseShift()">Close Shift</button>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+<script>
+    const API_BASE = '/api';
+    const LOGOUT_REDIRECT = '/login';
+
+    let products = [];
+    let cart = [];
+    let selectedCategory = 'All';
+    let socket = null;
+    let arduinoConnected = false;
+    let saleInProgress = false;
+    let qrPollTimer = null;
+    let qrPollAbortController = null;
+    let cardReadPollTimer = null;
+    let cardReadPollInFlight = false;
+    let queuePollTimer = null;
+    let queuePollInFlight = false;
+    let searchDebounceTimer = null;
+
+    let queuePending = 0;
+    let undoTimer = null;
+    let undoAction = null;
+    let voidArmedUntil = 0;
+    const BLOCKED_SYNC_THRESHOLD = 10;
+
+    const REQUEST_TIMEOUT_MS = 10000;
+    const QR_POLL_TIMEOUT_MS = 5000;
+    const QR_POLL_INTERVAL_MS = 1000;
+    const CARD_READ_POLL_INTERVAL_MS = 500;
+    const QUEUE_POLL_INTERVAL_MS = 30000;
+
+    function endpoint(path) {
+        return `${API_BASE}${path}`;
+    }
+
+    function phpPeso(value) {
+        return `₱${Number(value || 0).toFixed(2)}`;
+    }
+
+    function esc(value) {
+        return String(value ?? '').replace(/[&<>'"]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[m]));
+    }
+
+    async function fetchWithTimeout(url, options = {}, timeoutMs = REQUEST_TIMEOUT_MS) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+        const upstreamSignal = options.signal;
+
+        if (upstreamSignal) {
+            if (upstreamSignal.aborted) {
+                controller.abort();
+            } else {
+                upstreamSignal.addEventListener('abort', () => controller.abort(), { once: true });
+            }
+        }
+
+        try {
+            return await fetch(url, { ...options, signal: controller.signal });
+        } finally {
+            clearTimeout(timeoutId);
+        }
+    }
+
+    function showSnackbar(message, action) {
+        const bar = document.getElementById('undoSnackbar');
+        document.getElementById('undoMessage').textContent = message;
+
+        if (undoTimer) clearTimeout(undoTimer);
+        undoAction = action;
+
+        bar.classList.add('show');
+        undoTimer = setTimeout(() => {
+            bar.classList.remove('show');
+            undoAction = null;
+        }, 6000);
+    }
+
+    document.getElementById('undoBtn').addEventListener('click', () => {
+        if (typeof undoAction === 'function') undoAction();
+        undoAction = null;
+        document.getElementById('undoSnackbar').classList.remove('show');
+        if (undoTimer) clearTimeout(undoTimer);
+    });
+
+    function updatePaymentState() {
+        const chip = document.getElementById('paymentStateChip');
+        const hint = document.getElementById('paymentStateHint');
+        const qrBtn = document.getElementById('qrBtn');
+        const tapBtn = document.getElementById('checkoutBtn');
+        const qrReason = document.getElementById('qrDisabledReason');
+        const tapReason = document.getElementById('tapDisabledReason');
+
+        qrReason.textContent = '';
+        tapReason.textContent = '';
+
+        if (queuePending >= BLOCKED_SYNC_THRESHOLD) {
+            chip.className = 'blocked';
+            chip.innerHTML = '<span class="bi bi-dot"></span>SYNC BLOCK • ACTION REQUIRED';
+            hint.textContent = 'Sync pending. Resolve queue before taking payments.';
+            qrBtn.disabled = true;
+            tapBtn.disabled = true;
+            qrReason.textContent = 'Sync pending';
+            tapReason.textContent = 'Sync pending';
+            return;
+        }
+
+        if (!arduinoConnected) {
+            chip.className = 'degraded';
+            chip.innerHTML = '<span class="bi bi-dot"></span>DEGRADED • READER OFFLINE';
+            hint.textContent = 'Tap Card unavailable. Check reader connection.';
+            qrBtn.disabled = cart.length === 0;
+            tapBtn.disabled = true;
+            tapReason.textContent = 'Reader offline';
+            return;
+        }
+
+        chip.className = 'ready';
+        chip.innerHTML = '<span class="bi bi-dot"></span>READY • READER ONLINE';
+        hint.textContent = 'Reader active. Waiting for input...';
+        qrBtn.disabled = cart.length === 0;
+        tapBtn.disabled = cart.length === 0;
+    }
+
+    function stopQrPolling() {
+        if (qrPollTimer) {
+            clearTimeout(qrPollTimer);
+            qrPollTimer = null;
+        }
+        if (qrPollAbortController) {
+            qrPollAbortController.abort();
+            qrPollAbortController = null;
+        }
+    }
+
+    function stopCardReadPolling() {
+        if (cardReadPollTimer) {
+            clearTimeout(cardReadPollTimer);
+            cardReadPollTimer = null;
+        }
+    }
+
+    async function pollCardReadFallback() {
+        if (!saleInProgress || cardReadPollInFlight) return;
+        cardReadPollInFlight = true;
+        try {
+            const res = await fetchWithTimeout('/api/arduino/card-read-pending', {}, 3000);
+            if (!res.ok) return;
+            const data = await res.json().catch(() => ({}));
+            const uid = (data && data.uid) ? String(data.uid).trim() : '';
+            if (uid && saleInProgress) {
+                stopCardReadPolling();
+                completeSale(uid);
+                return;
+            }
+        } catch (e) {
+            if (e.name !== 'AbortError') {
+                console.warn('card-read fallback poll failed:', e.message);
+            }
+        } finally {
+            cardReadPollInFlight = false;
+        }
+
+        if (saleInProgress) {
+            cardReadPollTimer = setTimeout(pollCardReadFallback, CARD_READ_POLL_INTERVAL_MS);
+        }
+    }
+
+    function markScannerSuccess(code) {
+        const meta = document.getElementById('scannerMeta');
+        const pill = document.getElementById('scannerPill');
+        const started = Date.now();
+
+        pill.innerHTML = '<span style="width:8px;height:8px;border-radius:999px;background:#1a8951;"></span>SCANNER: READY';
+        const tick = () => {
+            const age = Math.floor((Date.now() - started) / 1000);
+            meta.textContent = `Last scanned: ${code} (${age}s ago)`;
+        };
+
+        tick();
+        const timer = setInterval(tick, 1000);
+        setTimeout(() => {
+            clearInterval(timer);
+            meta.textContent = 'Last scanned: —';
+        }, 2000);
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('connectBtn').addEventListener('click', connectArduino);
+        document.getElementById('searchBar').addEventListener('input', () => {
+            clearTimeout(searchDebounceTimer);
+            searchDebounceTimer = setTimeout(renderProducts, 180);
+        });
+        loadPorts();
+        loadProducts();
+        fetchArduinoWifiStatus();
+        initWebSocket();
+        scheduleQueueStatusPoll();
+    });
+
+    async function loadPorts() {
+        try {
+            const response = await fetch(endpoint('/ports'));
+            const data = await response.json();
+            const selector = document.getElementById('portSelector');
+            selector.innerHTML = '<option value="">COM Port</option>';
+            (data.ports || []).forEach(port => {
+                const option = document.createElement('option');
+                option.value = port;
+                option.textContent = port;
+                selector.appendChild(option);
+            });
+        } catch (error) {
+            console.error('Failed to load ports:', error);
+        }
+    }
+
+    async function connectArduino() {
+        const port = document.getElementById('portSelector').value;
+        if (!port) {
+            alert('Please select a COM port');
+            return;
+        }
+
+        try {
+            const response = await fetch(endpoint('/connect-arduino'), {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({port})
+            });
+            const data = await response.json();
+            if (data.success) {
+                updateArduinoStatus(true);
+            } else {
+                alert('Failed to connect: ' + data.error);
+            }
+        } catch (error) {
+            alert('Connection error: ' + error.message);
+        }
+    }
+
+    function updateArduinoStatus(connected) {
+        arduinoConnected = connected;
+        updatePaymentState();
+    }
+
+    function updateWifiBadge(data) {
+        const badge = document.getElementById('wifiBadge');
+        if (data.online) {
+            badge.textContent = 'ONLINE';
+            badge.style.color = '#169957';
+            arduinoConnected = true;
+        } else {
+            badge.textContent = 'OFFLINE';
+            badge.style.color = '#9b5c0b';
+            if (!arduinoConnected) arduinoConnected = false;
+        }
+        updatePaymentState();
+    }
+
+    async function fetchArduinoWifiStatus() {
+        try {
+            const token = localStorage.getItem('cashier_token');
+            const resp = await fetch(endpoint('/arduino-wifi-status'), {
+                headers: {'Authorization': 'Bearer ' + token}
+            });
+            if (resp.ok) {
+                const data = await resp.json();
+                updateWifiBadge(data);
+            }
+        } catch (_) {}
+    }
+
+    async function loadProducts() {
+        try {
+            const response = await fetchWithTimeout(endpoint('/products'));
+            if (!response.ok) throw new Error('Server returned ' + response.status);
+            const data = await response.json();
+
+            if (data.products && data.products.length > 0) {
+                products = data.products.filter(p => p.active !== false);
+                const categories = ['All', ...new Set(products.map(p => p.category || 'Other'))];
+                document.getElementById('categories').innerHTML = categories.map(cat =>
+                    `<button class="category-btn ${cat === selectedCategory ? 'active' : ''}" onclick="filterByCategory('${esc(cat)}')">${esc(cat)}</button>`
+                ).join('');
+                renderProducts();
+            } else {
+                document.getElementById('productsGrid').innerHTML = '<div class="product-card">No products available. Please add products in admin dashboard.</div>';
+            }
+        } catch (error) {
+            console.error('Failed to load products:', error);
+            document.getElementById('productsGrid').innerHTML = '<div class="product-card">Error loading products. Check console for details.</div>';
+        }
+    }
+
+    function filterByCategory(category) {
+        selectedCategory = category;
+        const categories = ['All', ...new Set(products.map(p => p.category || 'Other'))];
+        document.getElementById('categories').innerHTML = categories.map(cat =>
+            `<button class="category-btn ${cat === selectedCategory ? 'active' : ''}" onclick="filterByCategory('${esc(cat)}')">${esc(cat)}</button>`
+        ).join('');
+        renderProducts();
+    }
+
+    function seededQty(id) {
+        let hash = 0;
+        for (let i = 0; i < id.length; i++) hash = ((hash << 5) - hash) + id.charCodeAt(i);
+        return Math.abs(hash % 50) + 1;
+    }
+
+    function renderProducts() {
+        const searchTerm = document.getElementById('searchBar').value.toLowerCase();
+
+        const filtered = products.filter(p => {
+            const matchesSearch = p.name.toLowerCase().includes(searchTerm) || String(p.id).toLowerCase().includes(searchTerm);
+            const matchesCategory = selectedCategory === 'All' || (p.category || 'Other') === selectedCategory;
+            return matchesSearch && matchesCategory;
+        });
+
+        const grid = document.getElementById('productsGrid');
+        if (!filtered.length) {
+            grid.innerHTML = '<div class="product-card">No products found.</div>';
+            return;
+        }
+
+        grid.innerHTML = filtered.map(p => {
+            const qty = Number(p.qty ?? p.stock ?? seededQty(String(p.id || p.name)));
+            const image = p.image_url ? `<img src="${esc(p.image_url)}" alt="${esc(p.name)}">` : '<div style="width:100%;height:100%;display:grid;place-items:center;color:#6d6881;"><i class="bi bi-image"></i></div>';
+            return `
+                <article class="product-card" onclick="addToCart('${esc(p.id)}', '${esc(p.name)}', ${Number(p.price || 0)}, '${esc(p.image_url || '')}', '${esc(p.category || '')}')">
+                    <div class="product-image">
+                        ${image}
+                        <span class="qty-chip">QTY: ${qty.toString().padStart(2, '0')}</span>
+                    </div>
+                    <div class="product-name">${esc(p.name)}</div>
+                    <div class="product-meta">
+                        <small>${esc(p.category || 'General')}</small>
+                        <span class="product-price">${phpPeso(p.price)}</span>
+                    </div>
+                </article>
+            `;
+        }).join('');
+    }
+
+    function addToCart(id, name, price, imageUrl = '', category = '') {
+        const existing = cart.find(item => item.id === id);
+        if (existing) {
+            existing.qty++;
+        } else {
+            cart.push({ id, name, price, qty: 1, imageUrl, category, armedUntil: 0 });
+        }
+        markScannerSuccess(id);
+        renderCart();
+    }
+
+    function updateQty(id, delta) {
+        const item = cart.find(i => i.id === id);
+        if (!item) return;
+        item.qty += delta;
+        if (item.qty <= 0) {
+            const idx = cart.findIndex(i => i.id === id);
+            if (idx >= 0) {
+                const removed = cart.splice(idx, 1)[0];
+                showSnackbar('Item removed. Undo?', () => {
+                    cart.splice(idx, 0, removed);
+                    renderCart();
+                });
+            }
+        }
+        renderCart();
+    }
+
+    function removeFromCart(id) {
+        const item = cart.find(i => i.id === id);
+        if (!item) return;
+        const now = Date.now();
+
+        if (item.armedUntil && now <= item.armedUntil) {
+            const idx = cart.findIndex(i => i.id === id);
+            if (idx >= 0) {
+                const removed = cart.splice(idx, 1)[0];
+                showSnackbar('Item removed. Undo?', () => {
+                    removed.armedUntil = 0;
+                    cart.splice(idx, 0, removed);
+                    renderCart();
+                });
+            }
+        } else {
+            item.armedUntil = now + 2500;
+            setTimeout(() => {
+                const current = cart.find(i => i.id === id);
+                if (current && current.armedUntil && Date.now() > current.armedUntil) {
+                    current.armedUntil = 0;
+                    renderCart();
+                }
+            }, 2600);
+        }
+
+        renderCart();
+    }
+
+    function handleVoidClick() {
+        const btn = document.getElementById('voidBtn');
+        const now = Date.now();
+
+        if (voidArmedUntil && now <= voidArmedUntil) {
+            voidArmedUntil = 0;
+            btn.classList.remove('armed');
+            btn.innerHTML = '<i class="bi bi-slash-circle me-1"></i>Void Item';
+
+            if (!cart.length) return;
+            const idx = cart.length - 1;
+            const removed = cart.splice(idx, 1)[0];
+            showSnackbar('Last item voided. Undo?', () => {
+                cart.splice(idx, 0, removed);
+                renderCart();
+            });
+            renderCart();
+            return;
+        }
+
+        voidArmedUntil = now + 2500;
+        btn.classList.add('armed');
+        btn.textContent = 'Tap again to confirm';
+        setTimeout(() => {
+            if (Date.now() > voidArmedUntil) {
+                voidArmedUntil = 0;
+                btn.classList.remove('armed');
+                btn.innerHTML = '<i class="bi bi-slash-circle me-1"></i>Void Item';
+            }
+        }, 2550);
+    }
+
+    function holdCart() {
+        if (!cart.length) return;
+        alert('Cart held for later checkout.');
+    }
+
+    function renderCart() {
+        const itemsEl = document.getElementById('cartItems');
+
+        if (!cart.length) {
+            itemsEl.innerHTML = '<p style="text-align:center;color:#6d6881;font-weight:600;">Cart is empty</p>';
+        } else {
+            itemsEl.innerHTML = cart.map(item => `
+                <div class="cart-item">
+                    <div class="cart-thumb">
+                        ${item.imageUrl ? `<img src="${esc(item.imageUrl)}" alt="${esc(item.name)}">` : '<i class="bi bi-image"></i>'}
+                    </div>
+                    <div class="cart-info">
+                        <h4>${esc(item.name)}</h4>
+                        <small>${phpPeso(item.price)} each</small>
+                    </div>
+                    <div class="qty-control">
+                        <button onclick="updateQty('${esc(item.id)}', -1)" aria-label="Decrease quantity">−</button>
+                        <span>${item.qty}</span>
+                        <button onclick="updateQty('${esc(item.id)}', 1)" aria-label="Increase quantity">+</button>
+                    </div>
+                    <button class="remove-btn ${item.armedUntil && Date.now() <= item.armedUntil ? 'armed' : ''}" onclick="removeFromCart('${esc(item.id)}')">
+                        ${item.armedUntil && Date.now() <= item.armedUntil ? 'Tap again to confirm' : '<i class="bi bi-trash3-fill"></i>'}
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        const subtotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+        const tax = subtotal * 0.12;
+        const total = subtotal + tax;
+
+        document.getElementById('subtotalAmount').textContent = phpPeso(subtotal);
+        document.getElementById('taxAmount').textContent = phpPeso(tax);
+        document.getElementById('cartTotal').textContent = phpPeso(total);
+
+        updatePaymentState();
+    }
+
+    function initWebSocket() {
+        socket = io();
+
+        socket.on('card_read', data => {
+            if (!saleInProgress) return;
+            stopCardReadPolling();
+            const uid = data && data.uid ? String(data.uid).trim() : '';
+            if (!uid) {
+                document.getElementById('modalTitle').textContent = 'Payment Failed';
+                document.getElementById('modalMessage').textContent = 'Card read event missing UID';
+                return;
+            }
+            completeSale(uid);
+        });
+
+        socket.on('card_timeout', () => {
+            document.getElementById('modalTitle').textContent = 'Timeout';
+            document.getElementById('modalMessage').textContent = 'No card detected. Please try again.';
+        });
+
+        socket.on('card_error', data => {
+            document.getElementById('modalTitle').textContent = 'Error';
+            document.getElementById('modalMessage').textContent = data.error;
+        });
+
+        socket.on('nfc_payment', data => completeNFCSale(data.token));
+
+        socket.on('qr_payment', data => {
+            if (!saleInProgress) return;
+            saleInProgress = false;
+            document.getElementById('paymentModal').style.display = 'flex';
+            document.getElementById('modalTitle').textContent = 'QR Payment Received!';
+            document.getElementById('modalMessage').textContent = `New Balance: ${phpPeso(data.new_balance)}`;
+            cart = [];
+            renderCart();
+            checkQueueStatus();
+            setTimeout(() => closeModal(), 2000);
+        });
+
+        socket.on('sale_cancelled', () => {
+            saleInProgress = false;
+        });
+
+        socket.on('arduino_wifi_status', data => {
+            updateWifiBadge(data);
+        });
+    }
+
+    async function qrCheckout() {
+        if (!cart.length || queuePending >= BLOCKED_SYNC_THRESHOLD) return;
+
+        const items = cart.map(item => ({name: item.name, price: item.price, qty: item.qty}));
+        const subtotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+        const total = subtotal + subtotal * 0.12;
+
+        document.getElementById('paymentModal').style.display = 'flex';
+        document.getElementById('modalTitle').textContent = 'QR Pay';
+        document.getElementById('modalMessage').textContent = 'Generating QR code…';
+        saleInProgress = true;
+
+        try {
+            const response = await fetch(endpoint('/qr-generate'), {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({items, total})
+            });
+
+            if (!response.ok) {
+                const err = await response.json().catch(() => ({}));
+                throw new Error(err.error || 'Failed to generate QR (' + response.status + ')');
+            }
+
+            const data = await response.json();
+            const token = data.token;
+
+            document.getElementById('modalTitle').textContent = 'Scan QR on OLED';
+            document.getElementById('modalMessage').textContent = `QR shown on reader display.\nAsk student to scan.\nTotal: ${phpPeso(total)}`;
+
+            async function pollQrPaymentStatus() {
+                if (!saleInProgress) {
+                    stopQrPolling();
+                    return;
+                }
+
+                try {
+                    qrPollAbortController = new AbortController();
+                    const pr = await fetchWithTimeout(endpoint('/qr-paid'), {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({token}),
+                        signal: qrPollAbortController.signal
+                    }, QR_POLL_TIMEOUT_MS);
+
+                    if (pr.ok) {
+                        const pd = await pr.json();
+                        if (pd.paid) {
+                            stopQrPolling();
+                            saleInProgress = false;
+                            document.getElementById('modalTitle').textContent = 'Payment Received!';
+                            document.getElementById('modalMessage').textContent = `New Balance: ${phpPeso(pd.new_balance)}`;
+                            cart = [];
+                            renderCart();
+                            checkQueueStatus();
+                            setTimeout(() => closeModal(), 2000);
+                            return;
+                        }
+                    }
+                } catch (e) {
+                    if (e.name !== 'AbortError') {
+                        console.warn('QR poll failed:', e.message);
+                    }
+                } finally {
+                    qrPollAbortController = null;
+                }
+
+                if (saleInProgress) {
+                    qrPollTimer = setTimeout(pollQrPaymentStatus, QR_POLL_INTERVAL_MS);
+                }
+            }
+
+            stopQrPolling();
+            pollQrPaymentStatus();
+        } catch (error) {
+            saleInProgress = false;
+            document.getElementById('modalTitle').textContent = 'QR Error';
+            document.getElementById('modalMessage').textContent = error.message;
+        }
+    }
+
+    async function checkout() {
+        if (queuePending >= BLOCKED_SYNC_THRESHOLD) return;
+        if (!arduinoConnected) {
+            alert('Tap Card unavailable. Check reader connection.');
+            return;
+        }
+        if (!cart.length) return;
+
+        const items = cart.map(item => ({name: item.name, price: item.price, qty: item.qty}));
+        const subtotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+        const total = subtotal + subtotal * 0.12;
+
+        document.getElementById('paymentModal').style.display = 'flex';
+        document.getElementById('modalTitle').textContent = 'Tap Student Card';
+        document.getElementById('modalMessage').textContent = 'Waiting for card...';
+        saleInProgress = true;
+
+        try {
+            const response = await fetch(endpoint('/process-sale'), {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({items, total})
+            });
+
+            if (!response.ok) throw new Error('Failed to initiate sale');
+            stopCardReadPolling();
+            cardReadPollTimer = setTimeout(pollCardReadFallback, CARD_READ_POLL_INTERVAL_MS);
+        } catch (error) {
+            closeModal();
+            alert('Error: ' + error.message);
+        }
+    }
+
+    async function completeSale(cardUid) {
+        stopCardReadPolling();
+        try {
+            const response = await fetchWithTimeout(endpoint('/complete-sale'), {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({card_uid: cardUid})
+            });
+
+            const data = await response.json();
+            if (data.error) {
+                saleInProgress = false;
+                document.getElementById('modalTitle').textContent = 'Payment Failed';
+                document.getElementById('modalMessage').textContent = data.error;
+            } else {
+                saleInProgress = false;
+                const offlineNote = data.offline ? ' (Offline — will sync)' : '';
+                document.getElementById('modalTitle').textContent = 'Success!';
+                document.getElementById('modalMessage').textContent = `Payment received!\nNew Balance: ${phpPeso(data.new_balance)}${offlineNote}`;
+                if (data.new_balance !== undefined) {
+                    document.getElementById('walletBalance').textContent = phpPeso(data.new_balance);
+                }
+                cart = [];
+                renderCart();
+                checkQueueStatus();
+                setTimeout(() => closeModal(), 2000);
+            }
+        } catch (error) {
+            document.getElementById('modalTitle').textContent = 'Error';
+            document.getElementById('modalMessage').textContent = error.message;
+        }
+    }
+
+    async function completeNFCSale(token) {
+        const modal = document.getElementById('paymentModal');
+        if (modal.style.display !== 'flex') {
+            modal.style.display = 'flex';
+            document.getElementById('modalTitle').textContent = 'NFC Payment';
+            document.getElementById('modalMessage').textContent = 'Processing phone tap...';
+        }
+        try {
+            const response = await fetchWithTimeout(endpoint('/complete-sale-nfc'), {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({virtual_card_token: token})
+            });
+            const data = await response.json();
+            if (data.error) {
+                document.getElementById('modalTitle').textContent = 'Payment Failed';
+                document.getElementById('modalMessage').textContent = data.error;
+            } else {
+                const offlineNote = data.offline ? ' (Offline — will sync)' : '';
+                document.getElementById('modalTitle').textContent = 'Success!';
+                document.getElementById('modalMessage').textContent = `NFC Payment received!\nNew Balance: ${phpPeso(data.new_balance)}${offlineNote}`;
+                if (data.new_balance !== undefined) {
+                    document.getElementById('walletBalance').textContent = phpPeso(data.new_balance);
+                }
+                cart = [];
+                renderCart();
+                checkQueueStatus();
+                setTimeout(() => closeModal(), 2000);
+            }
+        } catch (error) {
+            document.getElementById('modalTitle').textContent = 'Error';
+            document.getElementById('modalMessage').textContent = error.message;
+        }
+    }
+
+    function closeModal() {
+        saleInProgress = false;
+        stopQrPolling();
+        stopCardReadPolling();
+        document.getElementById('paymentModal').style.display = 'none';
+        fetchWithTimeout(endpoint('/cancel-sale'), {method: 'POST'}, 5000).catch(err => {
+            if (err.name !== 'AbortError') console.warn('cancel-sale failed:', err.message);
+        });
+    }
+
+    function logout() {
+        fetchWithTimeout(endpoint('/logout'), {method: 'POST'}, 5000)
+            .catch(() => {})
+            .finally(() => { window.location.href = LOGOUT_REDIRECT; });
+    }
+
+    function openCloseShiftModal() {
+        document.getElementById('closeShiftSyncCount').textContent = queuePending;
+        document.getElementById('closeShiftWarning').textContent = queuePending > 0 ? '\nSome records are not synced yet.' : '';
+        document.getElementById('closeShiftModal').style.display = 'flex';
+    }
+
+    function closeCloseShiftModal() {
+        document.getElementById('closeShiftModal').style.display = 'none';
+    }
+
+    function confirmCloseShift() {
+        closeCloseShiftModal();
+        alert('Shift closed. Terminal signed out.');
+        logout();
+    }
+
+    async function checkQueueStatus() {
+        if (queuePollInFlight) return;
+        queuePollInFlight = true;
+        try {
+            const res = await fetchWithTimeout(endpoint('/queue/status'), {}, 5000);
+            if (!res.ok) return;
+            const data = await res.json();
+            queuePending = Number(data.pending || 0);
+
+            document.getElementById('syncCount').textContent = queuePending;
+
+            const banner = document.getElementById('offlineBanner');
+            if (queuePending > 0) {
+                banner.style.display = 'block';
+                banner.textContent = `⚠ ${queuePending} transaction(s) pending sync. Working offline.`;
+            } else {
+                banner.style.display = 'none';
+            }
+
+            updatePaymentState();
+        } catch (e) {
+            if (e.name !== 'AbortError') {
+                console.warn('queue status check failed:', e.message);
+            }
+        } finally {
+            queuePollInFlight = false;
+        }
+    }
+
+    async function scheduleQueueStatusPoll() {
+        await checkQueueStatus();
+        queuePollTimer = setTimeout(scheduleQueueStatusPoll, QUEUE_POLL_INTERVAL_MS);
+    }
+</script>
+</body>
+</html>

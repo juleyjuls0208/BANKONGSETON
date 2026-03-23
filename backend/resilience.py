@@ -317,29 +317,29 @@ class RateLimiter:
     
     def acquire(self):
         """
-        Acquire permission to make API call
-        Blocks if rate limit exceeded
+        Acquire permission to make API call.
+        Blocks if rate limit exceeded.
         """
-        with self.lock:
-            now = time.time()
-            
-            # Remove old calls outside window
-            self.calls = [t for t in self.calls if now - t < self.window_seconds]
-            
-            # Check if we can make call
-            if len(self.calls) >= self.max_calls:
-                # Calculate wait time
+        while True:
+            wait_time = 0.0
+            with self.lock:
+                now = time.time()
+
+                # Remove old calls outside window
+                self.calls = [t for t in self.calls if now - t < self.window_seconds]
+
+                # Permit immediately when below quota
+                if len(self.calls) < self.max_calls:
+                    self.calls.append(now)
+                    return
+
+                # Compute sleep duration, then release lock before sleeping
                 oldest_call = min(self.calls)
                 wait_time = self.window_seconds - (now - oldest_call)
-                
-                if wait_time > 0:
-                    self.logger.warning(f"Rate limit reached. Waiting {wait_time:.2f}s...")
-                    time.sleep(wait_time)
-                    # Recursively try again
-                    return self.acquire()
-            
-            # Record this call
-            self.calls.append(now)
+
+            if wait_time > 0:
+                self.logger.warning(f"Rate limit reached. Waiting {wait_time:.2f}s...")
+                time.sleep(wait_time)
     
     def get_stats(self) -> Dict[str, Any]:
         """Get rate limiter statistics"""

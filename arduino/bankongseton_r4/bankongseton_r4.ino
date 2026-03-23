@@ -292,48 +292,63 @@ void oledShowReady() {
   display.display();
 }
 
-void renderQr(const String &url) {
-  // Try versions 1–7 until the URL fits (ECC_LOW capacity: V1=17 … V7=154 bytes)
+void renderQr(const String &payload) {
+  // Try versions 1–7 until the payload fits (ECC_LOW capacity: V1=17 … V7=154 bytes)
   QRCode qrcode;
   uint8_t qrData[qrcode_getBufferSize(7)];
   int usedVersion = -1;
   for (int v = 1; v <= 7; v++) {
-    if (qrcode_initText(&qrcode, qrData, v, ECC_LOW, url.c_str()) == 0) {
+    if (qrcode_initText(&qrcode, qrData, v, ECC_LOW, payload.c_str()) == 0) {
       usedVersion = v;
       break;
     }
   }
   if (usedVersion < 0) {
-    Serial.println("QR: version too small for URL length — max 154 chars (V7 ECC-L)");
+    Serial.println("QR: version too small for payload length — max 154 chars (V7 ECC-L)");
     oledShowReady();
     return;
   }
-  // Scale: 3px/module if it fits in OLED_HEIGHT (V1=21 → 63px ✓), else 2px, else 1px
-  uint8_t scale = (qrcode.size * 3 <= OLED_HEIGHT) ? 3 :
-                  (qrcode.size * 2 <= OLED_HEIGHT) ? 2 : 1;
-  // Center on display
-  uint8_t xOff = (OLED_WIDTH  - qrcode.size * scale) / 2;
-  uint8_t yOff = (OLED_HEIGHT - qrcode.size * scale) / 2;
+
+  // Render with standard polarity (dark modules on light background)
+  // plus ISO-style quiet zone so iOS/Android camera apps detect reliably.
+  static const uint8_t QUIET_ZONE_MODULES = 4;
+  int totalModules = qrcode.size + (QUIET_ZONE_MODULES * 2);
+
+  int maxScaleX = OLED_WIDTH / totalModules;
+  int maxScaleY = OLED_HEIGHT / totalModules;
+  int scale = maxScaleX < maxScaleY ? maxScaleX : maxScaleY;
+  if (scale > 3) scale = 3;   // keep module size practical on 128x64 OLED
+  if (scale < 1) {
+    Serial.println("QR: cannot fit payload on OLED with required quiet zone");
+    oledShowReady();
+    return;
+  }
+
+  int qrPixels = totalModules * scale;
+  int xOff = (OLED_WIDTH - qrPixels) / 2;
+  int yOff = (OLED_HEIGHT - qrPixels) / 2;
+
+  // White canvas so the quiet zone/background is "light" for scanners.
   display.clearDisplay();
+  display.fillRect(0, 0, OLED_WIDTH, OLED_HEIGHT, SSD1306_WHITE);
+
   for (uint8_t y = 0; y < qrcode.size; y++) {
     for (uint8_t x = 0; x < qrcode.size; x++) {
       if (qrcode_getModule(&qrcode, x, y)) {
-        // drawPixel per cell — works for any scale value
-        for (uint8_t dy = 0; dy < scale; dy++) {
-          for (uint8_t dx = 0; dx < scale; dx++) {
-            display.drawPixel(xOff + x*scale + dx, yOff + y*scale + dy, SSD1306_WHITE);
-          }
-        }
+        int px = xOff + (x + QUIET_ZONE_MODULES) * scale;
+        int py = yOff + (y + QUIET_ZONE_MODULES) * scale;
+        display.fillRect(px, py, scale, scale, SSD1306_BLACK);
       }
     }
   }
+
   display.display();  // flush entire framebuffer ONCE — never inside the pixel loop
   Serial.print("QR: rendering v");
   Serial.print(usedVersion);
   Serial.print(" scale=");
   Serial.print(scale);
-  Serial.print("px url=");
-  Serial.println(url);
+  Serial.print("px payload=");
+  Serial.println(payload);
 }
 
 // Sends HTTP GET with X-API-Key header; reads through all headers (until blank line);

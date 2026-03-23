@@ -109,14 +109,115 @@ if _parse_worker_count("WEB_CONCURRENCY") > 1 or _parse_worker_count("GUNICORN_W
 ARDUINO_API_KEY = os.environ.get("ARDUINO_API_KEY", "")
 ARDUINO_WIFI_OFFLINE_S = int(os.environ.get("ARDUINO_WIFI_OFFLINE_S", "60"))
 
-# Shared secret for local↔cloud cashier webhook calls
-CASHIER_SHARED_SECRET = os.environ.get("CASHIER_SHARED_SECRET", "")
+# Shared secret for local↔cloud cashier webhook calls.
+# Fallback to JWT_SECRET for legacy deployments that never set a dedicated key.
+CASHIER_SHARED_SECRET = (os.environ.get("CASHIER_SHARED_SECRET", "").strip()
+                         or os.environ.get("JWT_SECRET", "").strip())
 
 # UID pattern for Arduino card reads
 import re
 import jwt as _pyjwt  # aliased to avoid collision with any local 'jwt' variable
 
 UID_PATTERN = re.compile(r"^[0-9A-Fa-f]{8}$|^[0-9A-Fa-f]{14}$")
+
+
+def _build_transaction_row(
+    trans_sheet,
+    *,
+    transaction_id,
+    timestamp,
+    student_id,
+    money_card_number,
+    transaction_type,
+    amount,
+    balance_before,
+    balance_after,
+    status="Completed",
+    error_message="",
+    items=None,
+    station_id="cashier-web",
+):
+    """Build a Transactions Log row aligned to current sheet headers."""
+    items_json = json.dumps(items or [])
+    row_map = {
+        "TransactionID": transaction_id,
+        "Timestamp": timestamp,
+        "StudentID": student_id,
+        "MoneyCardNumber": money_card_number,
+        "TransactionType": transaction_type,
+        "Amount": float(amount),
+        "BalanceBefore": float(balance_before),
+        "BalanceAfter": float(balance_after),
+        "Status": status,
+        "ErrorMessage": error_message,
+        "ItemsJson": items_json,
+        "StationID": station_id,
+    }
+
+    header_aliases = {
+        "transactionid": "TransactionID",
+        "transaction_id": "TransactionID",
+        "txnid": "TransactionID",
+        "timestamp": "Timestamp",
+        "datetime": "Timestamp",
+        "date": "Timestamp",
+        "studentid": "StudentID",
+        "student_id": "StudentID",
+        "moneycardnumber": "MoneyCardNumber",
+        "money_card_number": "MoneyCardNumber",
+        "moneycard": "MoneyCardNumber",
+        "carduid": "MoneyCardNumber",
+        "transactiontype": "TransactionType",
+        "transaction_type": "TransactionType",
+        "type": "TransactionType",
+        "amount": "Amount",
+        "balancebefore": "BalanceBefore",
+        "balance_before": "BalanceBefore",
+        "previousbalance": "BalanceBefore",
+        "balanceafter": "BalanceAfter",
+        "balance_after": "BalanceAfter",
+        "newbalance": "BalanceAfter",
+        "status": "Status",
+        "errormessage": "ErrorMessage",
+        "error_message": "ErrorMessage",
+        "error": "ErrorMessage",
+        "itemsjson": "ItemsJson",
+        "items_json": "ItemsJson",
+        "items": "ItemsJson",
+        "stationid": "StationID",
+        "station_id": "StationID",
+        "station": "StationID",
+        "terminalid": "StationID",
+    }
+
+    def _norm(h):
+        return re.sub(r"[^a-z0-9_]", "", str(h).strip().lower())
+
+    try:
+        headers = [str(h).strip() for h in trans_sheet.row_values(1) if str(h).strip()]
+        if headers:
+            resolved = []
+            for h in headers:
+                canonical = header_aliases.get(_norm(h), h if h in row_map else None)
+                resolved.append(row_map.get(canonical, ""))
+
+            if any(v != "" for v in resolved):
+                return resolved
+
+            logger.warning(
+                "event=transaction_header_unmapped headers=%s; falling back to canonical order",
+                headers,
+            )
+    except Exception:
+        pass
+
+    canonical_headers = [
+        "TransactionID", "Timestamp", "StudentID", "MoneyCardNumber",
+        "TransactionType", "Amount", "BalanceBefore", "BalanceAfter",
+        "Status", "ErrorMessage", "ItemsJson", "StationID",
+    ]
+    return [row_map.get(h, "") for h in canonical_headers]
+
 
 app = Flask(__name__)
 app.secret_key = _secret_key
@@ -130,6 +231,7 @@ app.socketio = socketio
 app.arduino_last_heartbeat = 0.0
 app.pending_qr_token = None
 app.last_qr_payment = None   # set when student confirms; polled by cashier browser
+app.pending_card_read = None
 
 # Register cashier blueprint
 if CASHIER_AVAILABLE:
@@ -292,10 +394,31 @@ def arduino_card_read():
 
     # 3. Emit card_read event — same shape as ArduinoBridge._read_card_thread
     #    Cashier frontend receives this identically to a serial card read (ARDW-03)
+    app.pending_card_read = {"uid": uid, "created_at": time.time()}
     socketio.emit("card_read", {"success": True, "uid": uid})
     logger.info("event=arduino_card_read uid=%s remote=%s", uid, request.remote_addr)
 
     return jsonify({"status": "ok"}), 200
+
+
+@app.route("/api/arduino/card-read-pending", methods=["GET"])
+def arduino_card_read_pending():
+    payload = _decode_cashier_cookie()
+    if not payload and "admin_logged_in" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    pending = app.pending_card_read
+    if pending is None:
+        return jsonify({"uid": None}), 200
+
+    if time.time() - pending.get("created_at", 0) > 10:
+        app.pending_card_read = None
+        return jsonify({"uid": None}), 200
+
+    uid = pending.get("uid")
+    app.pending_card_read = None
+    logger.info("event=arduino_card_read_consumed uid=%s", uid)
+    return jsonify({"uid": uid}), 200
 
 
 @app.route("/api/arduino/heartbeat", methods=["POST"])
@@ -328,6 +451,20 @@ def _decode_student_jwt(token_str: str):
         return _pyjwt.decode(token_str, _jwt_secret, algorithms=["HS256"])
     except Exception:
         return None
+
+
+def _decode_cashier_cookie():
+    """Decode cashier/admin cookie JWT. Returns payload dict or None on failure."""
+    token = request.cookies.get("jwt_token", "")
+    if not token:
+        return None
+    try:
+        payload = _pyjwt.decode(token, _jwt_secret, algorithms=["HS256"])
+    except Exception:
+        return None
+    if payload.get("role") not in {"cashier", "admin"}:
+        return None
+    return payload
 
 
 # ============= QR PAYMENT ROUTES =============
@@ -363,6 +500,8 @@ def cashier_qr_register():
 
     Body: {"token": "...", "cart_snapshot": [...], "total": 0.0,
            "cashier_username": "...", "created_at": 1234567890.0}
+    Note: created_at is accepted for compatibility but cloud-side receive time
+    is the expiry source-of-truth to avoid clock-skew false-expiry.
     Auth: X-Cashier-Secret header must match CASHIER_SHARED_SECRET.
     """
     if not _verify_cashier_secret():
@@ -381,7 +520,9 @@ def cashier_qr_register():
         "cart_snapshot": data.get("cart_snapshot", []),
         "total": float(data.get("total", 0)),
         "cashier_username": data.get("cashier_username", ""),
-        "created_at": float(data.get("created_at", time.time())),
+        # Use cloud-receive time as the expiry source-of-truth.
+        # Remote cashier clocks may drift and can incorrectly age out fresh QR tokens.
+        "created_at": time.time(),
         "cashier_callback_url": data.get("cashier_callback_url", ""),
     }
     logger.info("event=qr_register_ok token=%s total=%.2f", token, app.pending_qr_token["total"])
@@ -504,33 +645,70 @@ def qr_confirm():
         new_balance = current_balance - total
         balance_deducted = False
         last_error = None
-        timestamp = get_philippines_time().strftime("%Y-%m-%d %H:%M:%S")
-        transaction_row = [
-            timestamp, money_card_number, "QR Purchase",
-            -total, new_balance, "Success", json.dumps(items)
-        ]
+        timestamp_dt = get_philippines_time()
+        timestamp = timestamp_dt.strftime("%Y-%m-%d %H:%M:%S")
+        transaction_id = f"TXN-{timestamp_dt.strftime('%Y%m%d%H%M%S')}-{os.urandom(4).hex()}"
+        trans_sheet = db.worksheet("Transactions Log")
+        transaction_row = _build_transaction_row(
+            trans_sheet,
+            transaction_id=transaction_id,
+            timestamp=timestamp,
+            student_id=student_id,
+            money_card_number=money_card_number,
+            transaction_type="QR Purchase",
+            amount=total,
+            balance_before=current_balance,
+            balance_after=new_balance,
+            status="Completed",
+            error_message="",
+            items=items,
+            station_id="cashier-web-qr",
+        )
 
         for attempt in range(1, MAX_RETRIES + 1):
             try:
                 if not balance_deducted:
                     money_sheet.update_cell(account_row, 3, new_balance)
                     balance_deducted = True
-                trans_sheet = db.worksheet("Transactions Log")
-                trans_sheet.append_row(transaction_row)
+                trans_sheet.append_row(transaction_row, table_range="A1")
                 last_error = None
                 break
-            except (gspread.exceptions.APIError, ConnectionError, TimeoutError) as e:
+            except Exception as e:
                 last_error = e
-                logger.warning("qr_confirm attempt %d/%d failed: %s", attempt, MAX_RETRIES, e)
-                if attempt < MAX_RETRIES:
-                    time.sleep(2 ** attempt)
-                else:
-                    if balance_deducted:
-                        try:
-                            money_sheet.update_cell(account_row, 3, current_balance)
-                            logger.error("qr_confirm: rolled back balance for student %s", student_id)
-                        except Exception as rollback_err:
-                            logger.error("qr_confirm: CRITICAL rollback failed: %s", rollback_err)
+                retryable = isinstance(
+                    e,
+                    (gspread.exceptions.APIError, ConnectionError, TimeoutError),
+                )
+                logger.warning(
+                    "qr_confirm attempt %d/%d failed (retryable=%s): %s",
+                    attempt,
+                    MAX_RETRIES,
+                    retryable,
+                    e,
+                )
+
+                if retryable and attempt < MAX_RETRIES:
+                    # Avoid per-request backoff sleeps that tie up worker threads.
+                    continue
+
+                if balance_deducted:
+                    try:
+                        money_sheet.update_cell(account_row, 3, current_balance)
+                        logger.error(
+                            "qr_confirm: rolled back balance to %s for student %s after transaction log failure. Error: %s",
+                            current_balance,
+                            student_id,
+                            e,
+                        )
+                    except Exception as rollback_err:
+                        logger.error(
+                            "qr_confirm: CRITICAL rollback failed for student %s. rollback_error=%s original_error=%s",
+                            student_id,
+                            rollback_err,
+                            e,
+                        )
+
+                if retryable:
                     try:
                         from offline_queue import get_offline_queue
                         q = get_offline_queue()
@@ -547,6 +725,8 @@ def qr_confirm():
                     app.pending_qr_token = None
                     return jsonify({"success": True, "new_balance": new_balance,
                                     "timestamp": timestamp, "offline": True})
+
+                return jsonify({"error": "Service unavailable, please try again"}), 503
 
         if last_error:
             return jsonify({"error": "Service unavailable, please try again"}), 503
@@ -619,15 +799,31 @@ def _ensure_cashier_accounts_sheet():
     if 'Cashier Accounts' not in sheet_titles:
         ws = _db.add_worksheet(title='Cashier Accounts', rows=200, cols=7)
         ws.append_row(CASHIER_ACCOUNTS_HEADERS)
-        import secrets as _secrets
-        try:
+
+        bootstrap_username = os.getenv('CASHIER_BOOTSTRAP_USERNAME', '').strip().lower()
+        bootstrap_password = os.getenv('CASHIER_BOOTSTRAP_PASSWORD', '').strip()
+
+        if bootstrap_username and bootstrap_password:
             import bcrypt as _bcrypt
-            hashed = _bcrypt.hashpw(b'cashier123', _bcrypt.gensalt()).decode()
-        except ImportError:
-            hashed = 'cashier123'
-        import datetime as _dt
-        ws.append_row(['CASHIER-001', 'cashier', hashed, 'Default Cashier', 'Active',
-                       _dt.datetime.now().strftime('%Y-%m-%d %H:%M:%S'), ''])
+            import datetime as _dt
+            import secrets as _secrets
+
+            hashed = _bcrypt.hashpw(bootstrap_password.encode(), _bcrypt.gensalt()).decode()
+            ws.append_row([
+                f"CASHIER-{_secrets.token_hex(4).upper()}",
+                bootstrap_username,
+                hashed,
+                os.getenv('CASHIER_BOOTSTRAP_DISPLAY_NAME', 'Bootstrap Cashier').strip() or 'Bootstrap Cashier',
+                'Active',
+                _dt.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                '',
+            ])
+            logger.warning('cashier_bootstrap_account_created username=%s', bootstrap_username)
+        else:
+            logger.warning(
+                'cashier_accounts_sheet_created_without_bootstrap_account '
+                '(set CASHIER_BOOTSTRAP_USERNAME/CASHIER_BOOTSTRAP_PASSWORD to auto-seed one)'
+            )
     else:
         ws = _db.worksheet('Cashier Accounts')
     return ws
@@ -674,7 +870,7 @@ def create_cashier_account():
             import bcrypt as _bcrypt
             hashed = _bcrypt.hashpw(password.encode(), _bcrypt.gensalt()).decode()
         except ImportError:
-            hashed = password
+            return jsonify({'error': 'bcrypt not installed on server'}), 500
         import datetime as _dt, secrets as _secrets
         account_id = 'CASHIER-' + _secrets.token_hex(3).upper()
         ws = _ensure_cashier_accounts_sheet()
@@ -714,7 +910,7 @@ def update_cashier_account(account_id):
                 import bcrypt as _bcrypt
                 hashed = _bcrypt.hashpw(data['password'].encode(), _bcrypt.gensalt()).decode()
             except ImportError:
-                hashed = data['password']
+                return jsonify({'error': 'bcrypt not installed on server'}), 500
             ws.update_cell(row_idx, 3, hashed)
         if 'status' in data:
             ws.update_cell(row_idx, 5, data['status'])

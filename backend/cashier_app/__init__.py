@@ -1,0 +1,1 @@
+"""Standalone cashier app package."""

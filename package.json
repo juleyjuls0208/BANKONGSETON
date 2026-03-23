@@ -1,5 +1,6 @@
 {
   "dependencies": {
-    "dynamic-skill-creator": "file:../../../gsd-skill-creator"
+    "dynamic-skill-creator": "file:../../../gsd-skill-creator",
+    "gsd-pi": "^2.36.0"
   }
 }

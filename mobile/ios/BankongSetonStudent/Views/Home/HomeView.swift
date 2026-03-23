@@ -49,6 +49,7 @@ struct HomeView: View {
                             .cornerRadius(14)
                             .padding(.horizontal)
                     }
+                    .accessibilityIdentifier("home-qr-pay-button")
                     .sheet(isPresented: $showQrPay) {
                         QRPayView {
                             // On success, refresh balance

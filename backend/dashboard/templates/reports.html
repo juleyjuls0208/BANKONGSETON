@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}Reports — Bangko ng Seton{% endblock %}
+
+{% block content %}
+<style>
+    .reports-head { margin-bottom: 1.1rem; }
+    .reports-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1rem;
+    }
+    .report-card {
+        background: #fff;
+        border: 1px solid #ddd7eb;
+        border-radius: 12px;
+        padding: 1rem;
+    }
+    .report-card h3 {
+        margin: 0 0 0.45rem;
+        font-size: 1.1rem;
+        font-weight: 800;
+    }
+    .report-card p { color: #6d6881; margin-bottom: 0.8rem; }
+    .range-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr auto;
+        gap: 0.6rem;
+        align-items: end;
+    }
+    .range-grid input {
+        height: 40px;
+        border: 1px solid #d8d2e7;
+        border-radius: 8px;
+        padding: 0 0.65rem;
+    }
+    @media (max-width: 1200px) {
+        .reports-grid { grid-template-columns: 1fr; }
+        .range-grid { grid-template-columns: 1fr; }
+    }
+</style>
+
+<section class="reports-head">
+    <h1 class="page-title">Reports <span class="accent">Center</span></h1>
+    <p class="page-subtitle">Download ledger snapshots and student exports.</p>
+</section>
+
+<section class="reports-grid">
+    <article class="report-card">
+        <h3>Transactions Export</h3>
+        <p>Download all transactions in CSV format.</p>
+        <a class="action-btn primary" href="/api/export/transactions?format=csv">Download CSV</a>
+    </article>
+
+    <article class="report-card">
+        <h3>Students Export</h3>
+        <p>Download student registry with latest sheet data.</p>
+        <a class="action-btn primary" href="/api/export/students?format=csv">Download CSV</a>
+    </article>
+
+    <article class="report-card" style="grid-column: 1 / -1;">
+        <h3>Transactions by Date Range</h3>
+        <p>Generate a filtered CSV export for a specific window.</p>
+        <div class="range-grid">
+            <div>
+                <label class="small text-muted">Start date</label>
+                <input type="date" id="reportStartDate">
+            </div>
+            <div>
+                <label class="small text-muted">End date</label>
+                <input type="date" id="reportEndDate">
+            </div>
+            <button class="action-btn secondary" type="button" onclick="downloadRangeReport()">Download</button>
+        </div>
+    </article>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function downloadRangeReport() {
+    const start = document.getElementById('reportStartDate').value;
+    const end = document.getElementById('reportEndDate').value;
+
+    const params = new URLSearchParams({ format: 'csv' });
+    if (start) params.set('start_date', start);
+    if (end) params.set('end_date', end);
+
+    window.location.href = `/api/export/transactions?${params.toString()}`;
+}
+</script>
+{% endblock %}

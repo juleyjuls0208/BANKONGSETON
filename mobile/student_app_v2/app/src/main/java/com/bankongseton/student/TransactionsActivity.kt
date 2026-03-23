@@ -1,10 +1,9 @@
 package com.bankongseton.student
 
+import android.content.Intent
 import android.os.Bundle
-import android.widget.AdapterView
-import android.widget.ArrayAdapter
+import android.util.Log
 import android.widget.LinearLayout
-import android.widget.Spinner
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
@@ -14,6 +13,7 @@ import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
 import com.google.android.material.progressindicator.LinearProgressIndicator
+import com.google.gson.Gson
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -22,6 +22,10 @@ import java.util.Calendar
 import java.util.Locale
 
 class TransactionsActivity : AppCompatActivity() {
+
+    companion object {
+        private const val TAG = "TransactionsActivity"
+    }
 
     private lateinit var recyclerView: RecyclerView
     private lateinit var adapter: TransactionsAdapter
@@ -139,34 +143,85 @@ class TransactionsActivity : AppCompatActivity() {
     }
 
     private fun loadTransactions() {
-        val token = secureStorage.getAuthToken() ?: return
+        val token = secureStorage.getAuthToken()
+        if (token == null) {
+            redirectToLogin("Please log in to view transaction history")
+            return
+        }
 
         loadingIndicator.isVisible = true
         emptyStateLayout.isVisible = false
 
-        ApiClient.apiService.getTransactions("Bearer $token", 200)
+        ApiClient.apiService.getTransactions("Bearer $token", limit = 20, offset = 0)
             .enqueue(object : Callback<TransactionsResponse> {
                 override fun onResponse(
                     call: Call<TransactionsResponse>,
                     response: Response<TransactionsResponse>
                 ) {
                     loadingIndicator.isVisible = false
+
                     if (response.isSuccessful) {
                         allTransactions = response.body()?.transactions ?: emptyList()
                         applyFilters()
-                    } else {
-                        emptyStateLayout.isVisible = true
-                        Toast.makeText(
-                            this@TransactionsActivity,
-                            "Failed to load transactions",
-                            Toast.LENGTH_SHORT
-                        ).show()
+                        return
                     }
+
+                    val apiError = parseErrorBody(response)
+                    Log.w(
+                        TAG,
+                        "loadTransactions failed: code=${response.code()} error=${apiError?.error}"
+                    )
+
+                    when (response.code()) {
+                        401 -> {
+                            redirectToLogin("Session expired — please log in again")
+                            return
+                        }
+
+                        403 -> {
+                            // CARD_LOST and similar auth-denied states should invalidate session.
+                            redirectToLogin(
+                                apiError?.message
+                                    ?: apiError?.error
+                                    ?: "Access denied — please log in again"
+                            )
+                            return
+                        }
+
+                        404 -> {
+                            // Most common 404 here is no money card registered yet.
+                            allTransactions = emptyList()
+                            applyFilters()
+                            Toast.makeText(
+                                this@TransactionsActivity,
+                                apiError?.message
+                                    ?: apiError?.error
+                                    ?: "No transactions found",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                            return
+                        }
+                    }
+
+                    emptyStateLayout.isVisible = true
+                    val fallbackMessage = if (response.code() >= 500) {
+                        "Server error (${response.code()}) — please try again"
+                    } else {
+                        "Failed to load transactions (${response.code()})"
+                    }
+                    Toast.makeText(
+                        this@TransactionsActivity,
+                        apiError?.message
+                            ?: apiError?.error
+                            ?: fallbackMessage,
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
 
                 override fun onFailure(call: Call<TransactionsResponse>, t: Throwable) {
                     loadingIndicator.isVisible = false
                     emptyStateLayout.isVisible = true
+                    Log.e(TAG, "loadTransactions network failure", t)
                     Toast.makeText(
                         this@TransactionsActivity,
                         "Network error — check your connection",
@@ -174,6 +229,29 @@ class TransactionsActivity : AppCompatActivity() {
                     ).show()
                 }
             })
+    }
+
+    private fun parseErrorBody(response: Response<*>): ErrorResponse? {
+        return try {
+            val raw = response.errorBody()?.string()?.trim().orEmpty()
+            if (raw.isEmpty()) return null
+            Gson().fromJson(raw, ErrorResponse::class.java)
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun redirectToLogin(message: String? = null) {
+        secureStorage.clearAuth()
+        message?.let {
+            Toast.makeText(this, it, Toast.LENGTH_SHORT).show()
+        }
+        startActivity(
+            Intent(this, LoginActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            }
+        )
+        finish()
     }
 
     override fun onSupportNavigateUp(): Boolean {

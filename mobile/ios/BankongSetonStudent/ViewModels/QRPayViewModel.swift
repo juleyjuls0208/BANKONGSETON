@@ -14,13 +14,16 @@ final class QRPayViewModel: ObservableObject {
     @Published var state: QRPayState = .scanning
     @Published var isPresented: Bool = true
 
-    func handleScannedURL(_ urlString: String, apiClient: APIClient) {
-        // Extract token from URL last path segment
-        guard let url = URL(string: urlString),
-              let token = url.pathComponents.last, !token.isEmpty,
-              urlString.contains("/api/qr/") else {
-            return  // ignore non-QR URLs
+    func handleScannedURL(_ payload: String, apiClient: APIClient) {
+        guard case .scanning = state else {
+            return
         }
+
+        guard let token = extractQrToken(from: payload) else {
+            state = .error("Invalid QR code. Please scan a payment QR from cashier.")
+            return
+        }
+
         state = .loading
         Task {
             do {
@@ -36,6 +39,45 @@ final class QRPayViewModel: ObservableObject {
                 state = .error("Failed to load cart. Please try again.")
             }
         }
+    }
+
+    private func extractQrToken(from payload: String) -> String? {
+        let trimmed = payload.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty {
+            return nil
+        }
+
+        let plain = trimmed.hasSuffix("/") ? String(trimmed.dropLast()) : trimmed
+        if isTokenCandidate(plain) {
+            return plain
+        }
+
+        guard let url = URL(string: trimmed) else {
+            return nil
+        }
+
+        let segments = url.pathComponents.filter { $0 != "/" }.map {
+            $0.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        guard let qrIndex = segments.lastIndex(where: { $0.caseInsensitiveCompare("qr") == .orderedSame }),
+              qrIndex + 1 < segments.count else {
+            return nil
+        }
+
+        let candidate = segments[qrIndex + 1]
+        return isTokenCandidate(candidate) ? candidate : nil
+    }
+
+    private func isTokenCandidate(_ value: String) -> Bool {
+        let tokenPattern = "^[A-Za-z0-9_-]{6,64}$"
+        return value.range(of: tokenPattern, options: .regularExpression) != nil
+    }
+
+    func handleScannerError(_ message: String) {
+        guard case .scanning = state else {
+            return
+        }
+        state = .error(message)
     }
 
     func confirm(token: String, apiClient: APIClient) {

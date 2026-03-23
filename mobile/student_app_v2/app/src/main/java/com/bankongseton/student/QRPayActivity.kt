@@ -2,7 +2,9 @@ package com.bankongseton.student
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.LinearLayout
@@ -39,8 +41,20 @@ class QRPayActivity : AppCompatActivity() {
     private lateinit var progressConfirm: android.widget.ProgressBar
     private lateinit var secureStorage: SecureStorage
     private lateinit var cameraExecutor: ExecutorService
+    private val scanner by lazy {
+        BarcodeScanning.getClient(
+            BarcodeScannerOptions.Builder()
+                .setBarcodeFormats(Barcode.FORMAT_QR_CODE)
+                .build()
+        )
+    }
     private var scannedToken: String? = null
     private var scanning = true
+
+    companion object {
+        private const val TAG = "QRPayActivity"
+        private val TOKEN_REGEX = Regex("^[A-Za-z0-9_-]{6,64}$")
+    }
 
     private val cameraPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -104,33 +118,58 @@ class QRPayActivity : AppCompatActivity() {
 
     @androidx.annotation.OptIn(androidx.camera.core.ExperimentalGetImage::class)
     private fun processImage(imageProxy: ImageProxy) {
-        if (!scanning) { imageProxy.close(); return }
-        val mediaImage = imageProxy.image ?: run { imageProxy.close(); return }
+        if (!scanning) {
+            imageProxy.close()
+            return
+        }
+
+        val mediaImage = imageProxy.image ?: run {
+            imageProxy.close()
+            return
+        }
+
         val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
-        val options = BarcodeScannerOptions.Builder()
-            .setBarcodeFormats(Barcode.FORMAT_QR_CODE)
-            .build()
-        val scanner = BarcodeScanning.getClient(options)
         scanner.process(image)
             .addOnSuccessListener { barcodes ->
                 for (barcode in barcodes) {
-                    val rawValue = barcode.rawValue ?: continue
-                    // Accept either a bare 8-char hex token or a full /api/qr/<token> URL
-                    val token = when {
-                        rawValue.contains("/api/qr/") ->
-                            rawValue.trimEnd('/').substringAfterLast('/')
-                        rawValue.matches(Regex("[0-9a-fA-F]{8}")) ->
-                            rawValue
-                        else -> continue
-                    }
-                    if (token.isNotEmpty()) {
-                        scanning = false
-                        runOnUiThread { fetchCart(token) }
-                        break
-                    }
+                    val payload = (barcode.rawValue ?: barcode.displayValue ?: "").trim()
+                    val token = extractQrToken(payload) ?: continue
+
+                    scanning = false
+                    Log.d(TAG, "QR token recognized, requesting cart")
+                    runOnUiThread { fetchCart(token) }
+                    break
                 }
             }
-            .addOnCompleteListener { imageProxy.close() }
+            .addOnFailureListener { e ->
+                Log.w(TAG, "QR scan failed on frame", e)
+            }
+            .addOnCompleteListener {
+                imageProxy.close()
+            }
+    }
+
+    private fun extractQrToken(payload: String): String? {
+        if (payload.isBlank()) return null
+
+        // Accept plain token text with optional whitespace/newlines.
+        val plain = payload.trim().removeSuffix("/")
+        if (plain.matches(TOKEN_REGEX)) {
+            return plain
+        }
+
+        // Accept URLs like .../api/qr/<token>, .../qr/<token>, with optional query/fragment.
+        return runCatching {
+            val uri = Uri.parse(plain)
+            val segments = uri.pathSegments.orEmpty().map { it.trim() }
+            val qrIndex = segments.indexOfLast { it.equals("qr", ignoreCase = true) }
+            if (qrIndex >= 0 && qrIndex + 1 < segments.size) {
+                val candidate = segments[qrIndex + 1].trim()
+                if (candidate.matches(TOKEN_REGEX)) candidate else null
+            } else {
+                null
+            }
+        }.getOrNull()
     }
 
     private fun fetchCart(token: String) {
@@ -139,7 +178,7 @@ class QRPayActivity : AppCompatActivity() {
             showError("Not logged in with a valid session. Please log out and log in again.")
             return
         }
-        ApiClient.apiService.getQrCart("Bearer $jwt", token)
+        ApiClient.qrApiService.getQrCart("Bearer $jwt", token)
             .enqueue(object : Callback<QrCartResponse> {
                 override fun onResponse(call: Call<QrCartResponse>, response: Response<QrCartResponse>) {
                     when (response.code()) {
@@ -180,7 +219,7 @@ class QRPayActivity : AppCompatActivity() {
         val token = scannedToken ?: return
         val jwt = secureStorage.getJwtToken() ?: return
         setLoading(true)
-        ApiClient.apiService.confirmQrPayment("Bearer $jwt", QrConfirmRequest(token))
+        ApiClient.qrApiService.confirmQrPayment("Bearer $jwt", QrConfirmRequest(token))
             .enqueue(object : Callback<QrConfirmResponse> {
                 override fun onResponse(call: Call<QrConfirmResponse>, response: Response<QrConfirmResponse>) {
                     setLoading(false)
@@ -221,5 +260,6 @@ class QRPayActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         cameraExecutor.shutdown()
+        scanner.close()
     }
 }

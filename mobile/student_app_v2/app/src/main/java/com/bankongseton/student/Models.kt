@@ -56,7 +56,8 @@ data class MessageResponse(
 )
 
 data class ErrorResponse(
-    val error: String
+    val error: String? = null,
+    val message: String? = null
 )
 
 data class NfcDeviceRequest(

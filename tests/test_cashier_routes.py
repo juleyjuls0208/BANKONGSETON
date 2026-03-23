@@ -83,6 +83,22 @@ def _safe_users_ws(card_uid=None, phone=None):
     return ws
 
 
+def _clear_cashier_accounts_cache():
+    """Clear cached cashier account records across possible route modules."""
+    module_names = (
+        "cashier.cashier_routes",
+        "backend.dashboard.cashier.cashier_routes",
+        "backend.cashier_app.cashier_routes",
+    )
+    for name in module_names:
+        mod = sys.modules.get(name)
+        if mod and hasattr(mod, "invalidate_pattern"):
+            try:
+                mod.invalidate_pattern("cashier_accounts_all")
+            except Exception:
+                pass
+
+
 # ---------------------------------------------------------------------------
 # TestApiLogin — 5 tests
 # ---------------------------------------------------------------------------
@@ -94,6 +110,7 @@ class TestApiLogin:
     def test_login_success_via_sheets(self, flask_app, db):
         """Active cashier account in Sheets → 200 + jwt_token cookie."""
         app, _ = flask_app
+        _clear_cashier_accounts_cache()
         pw_hash = bcrypt.hashpw(b"testpass", bcrypt.gensalt()).decode()
 
         cashier_ws = MagicMock()
@@ -118,8 +135,9 @@ class TestApiLogin:
         assert "jwt_token" in resp.headers.get("Set-Cookie", "")
 
     def test_login_legacy_fallback(self, flask_app, db):
-        """When Cashier Accounts sheet raises, legacy creds still log in."""
+        """When Cashier Accounts read fails, route now returns 401 (legacy fallback removed)."""
         app, _ = flask_app
+        _clear_cashier_accounts_cache()
 
         cashier_ws = MagicMock()
         cashier_ws.get_all_records.side_effect = Exception("Sheet not found")
@@ -131,11 +149,12 @@ class TestApiLogin:
             json={"username": "cashier", "password": "cashier123"},
         )
 
-        assert resp.status_code == 200
+        assert resp.status_code == 401
 
     def test_login_bad_credentials(self, flask_app, db):
         """Wrong password → 401."""
         app, _ = flask_app
+        _clear_cashier_accounts_cache()
         wrong_hash = bcrypt.hashpw(b"differentpass", bcrypt.gensalt()).decode()
 
         cashier_ws = MagicMock()
@@ -155,6 +174,7 @@ class TestApiLogin:
     def test_login_inactive_account(self, flask_app, db):
         """Inactive account returns 401 — actual code, not 403 as roadmap spec says."""
         app, _ = flask_app
+        _clear_cashier_accounts_cache()
         pw_hash = bcrypt.hashpw(b"testpass", bcrypt.gensalt()).decode()
 
         cashier_ws = MagicMock()
@@ -179,6 +199,7 @@ class TestApiLogin:
     def test_login_missing_fields(self, flask_app, db):
         """Empty JSON body → no credentials → 401 (invalid creds path)."""
         app, _ = flask_app
+        _clear_cashier_accounts_cache()
         db.worksheet.return_value.get_all_records.return_value = []
 
         client = app.test_client()
@@ -437,6 +458,39 @@ class TestCompleteSale:
         assert data.get("offline") is True
         # enqueue must have been called with the transaction row
         mock_queue.enqueue.assert_called_once()
+
+    def test_complete_sale_rolls_back_on_non_retryable_log_error(self, flask_app, db):
+        """append_row ValueError should rollback balance and return 503 (no offline success)."""
+        app, _ = flask_app
+        token = _make_cashier_token("cashier1", "cashier")
+
+        money_ws = _money_ws(
+            [{"MoneyCardNumber": _VALID_UID, "Balance": _BALANCE_HIGH, "Status": "active"}]
+        )
+        trans_ws = MagicMock()
+        trans_ws.append_row.side_effect = ValueError("row serialization failed")
+
+        db.worksheet.side_effect = _ws_factory(
+            **{
+                "Money Accounts": money_ws,
+                "Transactions Log": trans_ws,
+                "Users": _safe_users_ws(),
+            }
+        )
+
+        client = app.test_client()
+        client.set_cookie("jwt_token", token)
+        _set_pending(client, _ITEMS, float(_TOTAL))
+
+        resp = client.post(
+            "/cashier/api/complete-sale", json={"card_uid": _VALID_UID}
+        )
+
+        assert resp.status_code == 503
+        # First update deducts, second update rolls back.
+        assert money_ws.update_cell.call_count == 2
+        assert money_ws.update_cell.call_args_list[0].args == (2, 3, pytest.approx(450.0))
+        assert money_ws.update_cell.call_args_list[1].args == (2, 3, pytest.approx(500.0))
 
     def test_complete_sale_sms_failure_nonfatal(self, flask_app, db):
         """SMS notifier raises → sale still returns 200 (non-fatal)."""

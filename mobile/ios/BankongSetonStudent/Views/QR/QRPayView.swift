@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct QRPayView: View {
     @EnvironmentObject var apiClient: APIClient
@@ -49,9 +50,14 @@ struct QRPayView: View {
 
     private var scanningView: some View {
         ZStack(alignment: .bottom) {
-            QRScannerView { scannedURL in
-                viewModel.handleScannedURL(scannedURL, apiClient: apiClient)
-            }
+            QRScannerView(
+                onCodeScanned: { scannedURL in
+                    viewModel.handleScannedURL(scannedURL, apiClient: apiClient)
+                },
+                onError: { errorMessage in
+                    viewModel.handleScannerError(errorMessage)
+                }
+            )
             .ignoresSafeArea()
 
             Text("Point camera at QR code on terminal")
@@ -105,7 +111,7 @@ struct QRPayView: View {
 
                 VStack(spacing: 12) {
                     Button(action: { viewModel.confirm(token: token, apiClient: apiClient) }) {
-                        Text("Pay Now")
+                        Text("Confirm QR Payment")
                             .frame(maxWidth: .infinity)
                             .padding()
                             .background(Color.accentColor)
@@ -166,10 +172,36 @@ struct QRPayView: View {
             Text(message)
                 .multilineTextAlignment(.center)
                 .foregroundColor(.secondary)
+
+            if isCameraPermissionIssue(message) {
+                Button("Open Settings") {
+                    openAppSettings()
+                }
+                .buttonStyle(.bordered)
+            }
+
+            Button("Retry Scan") {
+                viewModel.reset()
+            }
+            .buttonStyle(.borderedProminent)
+
             Button("Close") { dismiss() }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(.bordered)
         }
         .padding()
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private func isCameraPermissionIssue(_ message: String) -> Bool {
+        let normalized = message.lowercased()
+        return normalized.contains("camera") || normalized.contains("permission") || normalized.contains("settings")
+    }
+
+    private func openAppSettings() {
+        guard let settingsURL = URL(string: UIApplication.openSettingsURLString),
+              UIApplication.shared.canOpenURL(settingsURL) else {
+            return
+        }
+        UIApplication.shared.open(settingsURL)
     }
 }

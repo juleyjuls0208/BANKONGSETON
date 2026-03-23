@@ -18,7 +18,8 @@ interface BangkoApiService {
     @GET("student/transactions")
     fun getTransactions(
         @Header("Authorization") token: String,
-        @Query("limit") limit: Int = 50
+        @Query("limit") limit: Int = 50,
+        @Query("offset") offset: Int = 0
     ): Call<TransactionsResponse>
     
     @POST("users/fcm-token")
@@ -61,19 +62,29 @@ interface BangkoApiService {
 }
 
 object ApiClient {
+    // Primary student API (auth, balance, transactions, NFC)
     private const val BASE_URL = "https://juley2823.pythonanywhere.com/api/"
-    
+    // QR backend is currently hosted on a separate service.
+    private const val QR_BASE_URL = "https://bankoseton.pythonanywhere.com/api/"
+
     private val client = OkHttpClient.Builder()
         .connectTimeout(30, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)
         .writeTimeout(30, TimeUnit.SECONDS)
         .build()
-    
+
     private val retrofit = Retrofit.Builder()
         .baseUrl(BASE_URL)
         .client(client)
         .addConverterFactory(GsonConverterFactory.create())
         .build()
-    
+
+    private val qrRetrofit = Retrofit.Builder()
+        .baseUrl(QR_BASE_URL)
+        .client(client)
+        .addConverterFactory(GsonConverterFactory.create())
+        .build()
+
     val apiService: BangkoApiService = retrofit.create(BangkoApiService::class.java)
+    val qrApiService: BangkoApiService = qrRetrofit.create(BangkoApiService::class.java)
 }

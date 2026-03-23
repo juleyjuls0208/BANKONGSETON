@@ -3,9 +3,10 @@ import Foundation
 // MARK: - APIError
 
 enum APIError: Error {
-    case cardLost          // 403 + body["error"] == "CARD_LOST"
-    case unauthorized      // 403 (any other body)
-    case httpError(Int)    // non-2xx other than 403
+    case cardLost          // 403 + error message indicates lost card
+    case unauthorized      // 401/403 when auth fails
+    case loginRejected(String) // login endpoint provided user-facing rejection reason
+    case httpError(Int)    // non-2xx other than auth errors
     case decodingError(Error)
     case networkError(Error)
     case invalidURL        // URL construction failed
@@ -59,6 +60,20 @@ final class APIClient: ObservableObject {
         return request
     }
 
+    private func extractErrorMessage(from data: Data) -> String? {
+        if let payload = try? decoder.decode([String: String].self, from: data) {
+            if let error = payload["error"]?.trimmingCharacters(in: .whitespacesAndNewlines),
+               !error.isEmpty {
+                return error
+            }
+            if let message = payload["message"]?.trimmingCharacters(in: .whitespacesAndNewlines),
+               !message.isEmpty {
+                return message
+            }
+        }
+        return nil
+    }
+
     private func perform<T: Decodable>(_ request: URLRequest) async throws -> T {
         let data: Data
         let response: URLResponse
@@ -72,9 +87,10 @@ final class APIClient: ObservableObject {
                 throw APIError.unauthorized
             }
             if http.statusCode == 403 {
-                // Distinguish CARD_LOST from generic unauthorized
+                // Distinguish lost-card responses from generic unauthorized responses.
                 if let body = try? JSONDecoder().decode([String: String].self, from: data),
-                   body["error"] == "CARD_LOST" {
+                   let error = body["error"]?.lowercased(),
+                   error.contains("lost") {
                     throw APIError.cardLost
                 }
                 throw APIError.unauthorized
@@ -92,16 +108,53 @@ final class APIClient: ObservableObject {
 
     // MARK: - Public Methods
 
-    func login(studentId: String, pin: String) async throws -> LoginResponse {
+    func login(studentId: String) async throws -> LoginResponse {
         guard let url = URL(string: APIEndpoints.baseURL + APIEndpoints.login) else {
             throw APIError.invalidURL
         }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        let body = LoginRequest(studentId: studentId, pin: pin)
+        let body = LoginRequest(studentId: studentId)
         request.httpBody = try encoder.encode(body)
-        return try await perform(request)
+
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await session.data(for: request)
+        } catch {
+            throw APIError.networkError(error)
+        }
+
+        if let http = response as? HTTPURLResponse {
+            if http.statusCode == 401 {
+                throw APIError.unauthorized
+            }
+
+            if http.statusCode == 403 {
+                if let message = extractErrorMessage(from: data),
+                   message.lowercased().contains("lost") {
+                    throw APIError.cardLost
+                }
+                if let message = extractErrorMessage(from: data) {
+                    throw APIError.loginRejected(message)
+                }
+                throw APIError.unauthorized
+            }
+
+            guard (200..<300).contains(http.statusCode) else {
+                if let message = extractErrorMessage(from: data) {
+                    throw APIError.loginRejected(message)
+                }
+                throw APIError.httpError(http.statusCode)
+            }
+        }
+
+        do {
+            return try decoder.decode(LoginResponse.self, from: data)
+        } catch {
+            throw APIError.decodingError(error)
+        }
     }
 
     func getBalance() async throws -> BalanceResponse {

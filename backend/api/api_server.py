@@ -87,7 +87,7 @@ def get_sheets_client():
         if not os.path.exists(credentials_path):
             # Fallback to current directory for backward compatibility
             credentials_path = 'credentials.json'
-        
+
         gc = gspread.service_account(filename=credentials_path)
         return gc.open_by_key(os.getenv('GOOGLE_SHEETS_ID'))
     except Exception as e:
@@ -110,6 +110,17 @@ def get_worksheet_with_retry(sheet_name, retries=2):
             else:
                 raise e
 
+
+def get_sheet_records_cached(sheet_name: str, *, ttl: int = 5):
+    """Read worksheet records with short-lived caching for hot API paths."""
+    cache_key = f"sheet_records:{sheet_name}"
+    records = get_cached(cache_key)
+    if records is None:
+        records = get_worksheet_with_retry(sheet_name).get_all_records()
+        set_cached(cache_key, records, ttl=ttl)
+    return records
+
+
 # Simple token storage (in production, use Redis or database)
 active_sessions = {}
 SESSION_TTL_SECONDS = 8 * 3600  # 8-hour absolute TTL from login
@@ -126,7 +137,7 @@ def _check_session(token):
         return None
     raw = session.get("login_time", 0)
     if isinstance(raw, str):
-        # Legacy: ISO format string — parse to a Unix timestamp
+        # Legacy: ISO format string - parse to a Unix timestamp
         try:
             from datetime import datetime as _dt
             login_timestamp = _dt.fromisoformat(raw).timestamp()
@@ -174,22 +185,22 @@ def require_auth(roles=None):
         @wraps(f)
         def decorated_function(*args, **kwargs):
             token = request.headers.get('Authorization', '').replace('Bearer ', '')
-            
+
             if not token:
                 return jsonify({'error': 'No token provided'}), 401
-            
+
             payload = verify_jwt_token(token)
             if not payload:
                 return jsonify({'error': 'Invalid or expired token'}), 401
-            
+
             # Check role if specified
             if roles and payload.get('role') not in roles:
                 return jsonify({'error': 'Insufficient permissions'}), 403
-            
+
             # Add payload to request context
             request.user = payload
             return f(*args, **kwargs)
-        
+
         return decorated_function
     return decorator
 
@@ -209,7 +220,7 @@ def validate_card_uid(uid):
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
-    """Health check endpoint — standardized contract (S03/R018)"""
+    """Health check endpoint - standardized contract (S03/R018)"""
     t0 = time.time()
     sheets_ok = False
     latency_ms = 0
@@ -248,51 +259,49 @@ def login():
     try:
         data = request.get_json()
         student_id = data.get('student_id', '').strip()
-        
+
         if not student_id:
             return jsonify({'error': 'Student ID required'}), 400
-        
+
         # Search for student in Users sheet
-        users_sheet = get_worksheet_with_retry('Users')
-        records = users_sheet.get_all_records()
-        
+        records = get_sheet_records_cached('Users', ttl=5)
+
         student = None
-        
+
         for record in records:
             if str(record.get('StudentID', '')) == student_id:
                 student = record
                 break
-        
+
         if not student:
             return jsonify({'error': 'Student ID not found'}), 404
-        
+
         # Check if student has account status
         if student.get('Status', '').lower() == 'inactive':
             return jsonify({'error': 'Account is inactive. Please contact admin.'}), 403
-        
+
         # Check if student has a money card
         money_card_number = student.get('MoneyCardNumber', '').strip()
         if not money_card_number:
             return jsonify({'error': 'No money card registered. Please register a money card first.'}), 403
-        
+
         # Check if money card is lost or inactive
-        money_sheet = get_worksheet_with_retry('Money Accounts')
-        money_records = money_sheet.get_all_records()
-        
+        money_records = get_sheet_records_cached('Money Accounts', ttl=5)
+
         normalized_card = normalize_card_uid(money_card_number)
         card_status = None
-        
+
         for record in money_records:
             if normalize_card_uid(record.get('MoneyCardNumber', '')) == normalized_card:
                 card_status = record.get('Status', '').strip()
                 break
-        
+
         if card_status and card_status.lower() == 'lost':
             return jsonify({'error': 'Your money card has been reported as lost. Please contact admin to get a replacement card.'}), 403
-        
+
         if card_status and card_status.lower() != 'active':
             return jsonify({'error': f'Your money card is {card_status}. Please contact admin.'}), 403
-        
+
         # Generate session token
         token = generate_token()
         active_sessions[token] = {
@@ -300,7 +309,7 @@ def login():
             'card_number': student['IDCardNumber'],
             'login_time': time.time()
         }
-        
+
         return jsonify({
             'token': token,
             'jwt_token': generate_jwt_token(student['StudentID'], role='student'),
@@ -312,7 +321,7 @@ def login():
                 'status': student.get('Status', 'Active')
             }
         })
-        
+
     except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
             gspread.exceptions.WorksheetNotFound, ConnectionError, TimeoutError) as e:
         logger.error(f"Google Sheets unavailable in login: {e}")
@@ -330,35 +339,34 @@ def get_profile():
     """
     try:
         token = request.headers.get('Authorization', '').replace('Bearer ', '')
-        
+
         if token not in active_sessions:
             return jsonify({'error': 'Invalid or expired token'}), 401
-        
+
         session = active_sessions[token]
         student_id = session['student_id']
-        
+
         # Get student data
         users_sheet = get_worksheet_with_retry('Users')
         records = get_cached("users_all")
         if records is None:
             records = users_sheet.get_all_records()
             set_cached("users_all", records, ttl=30)
-        
+
         student = None
         for record in records:
             if record['StudentID'] == student_id:
                 student = record
                 break
-        
+
         if not student:
             return jsonify({'error': 'Student not found'}), 404
-        
+
         # Check if money card is lost
         money_card = student.get('MoneyCardNumber', '')
         if money_card:
-            money_sheet = get_worksheet_with_retry('Money Accounts')
-            money_records = money_sheet.get_all_records()
-            
+            money_records = get_sheet_records_cached('Money Accounts', ttl=5)
+
             normalized_card = normalize_card_uid(money_card)
             for money_record in money_records:
                 card = normalize_card_uid(money_record.get('MoneyCardNumber', ''))
@@ -370,9 +378,9 @@ def get_profile():
                             del active_sessions[token]
                         return jsonify({'error': 'CARD_LOST', 'message': 'Your money card has been reported as lost. Please contact admin to get a replacement.'}), 403
                     break
-        
-        print(f"Profile request for student: {student_id}")
-        
+
+        logger.debug("profile_request student_id=%s", student_id)
+
         return jsonify({
             'student_id': student['StudentID'],
             'name': student['Name'],
@@ -382,7 +390,7 @@ def get_profile():
             'parent_email': student.get('ParentEmail', ''),
             'date_registered': student.get('DateRegistered', '')
         })
-        
+
     except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
             gspread.exceptions.WorksheetNotFound, ConnectionError, TimeoutError) as e:
         logger.error(f"Google Sheets unavailable in get_profile: {e}")
@@ -400,52 +408,50 @@ def get_balance():
     """
     try:
         token = request.headers.get('Authorization', '').replace('Bearer ', '')
-        
+
         if token not in active_sessions:
             return jsonify({'error': 'Invalid or expired token'}), 401
-        
+
         session = active_sessions[token]
-        
+
         # Get student's money card
-        users_sheet = get_worksheet_with_retry('Users')
-        records = users_sheet.get_all_records()
-        
+        records = get_sheet_records_cached('Users', ttl=5)
+
         money_card = None
         for record in records:
             if record['StudentID'] == session['student_id']:
                 money_card = record.get('MoneyCardNumber')
                 break
-        
+
         if not money_card:
             return jsonify({'error': 'No money card registered'}), 404
-        
+
         # Get balance from Money Accounts
-        money_sheet = get_worksheet_with_retry('Money Accounts')
-        money_records = money_sheet.get_all_records()
-        
+        money_records = get_sheet_records_cached('Money Accounts', ttl=5)
+
         normalized_card = normalize_card_uid(money_card)
         balance = 0.0
         card_status = None
-        
+
         for record in money_records:
             card = normalize_card_uid(record.get('MoneyCardNumber', ''))
             if card == normalized_card:
                 balance = float(record.get('Balance', 0))
                 card_status = record.get('Status', '').strip()
                 break
-        
+
         # Check if card is lost
         if card_status and card_status.lower() == 'lost':
             # Invalidate session
             if token in active_sessions:
                 del active_sessions[token]
             return jsonify({'error': 'CARD_LOST', 'message': 'Your card has been reported as lost. Please contact admin.'}), 403
-        
+
         return jsonify({
             'balance': balance,
             'money_card': money_card
         })
-        
+
     except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
             gspread.exceptions.WorksheetNotFound, ConnectionError, TimeoutError) as e:
         logger.error(f"Google Sheets unavailable in get_balance: {e}")
@@ -463,30 +469,41 @@ def get_transactions():
     """
     try:
         token = request.headers.get('Authorization', '').replace('Bearer ', '')
-        
+
         if token not in active_sessions:
             return jsonify({'error': 'Invalid or expired token'}), 401
-        
+
         session = active_sessions[token]
-        limit = int(request.args.get('limit', 50))
-        
+
+        # Pagination params are optional and defensive-parsed so malformed query
+        # values don't crash the endpoint.
+        try:
+            limit = int(request.args.get('limit', 50))
+        except (TypeError, ValueError):
+            limit = 50
+        try:
+            offset = int(request.args.get('offset', 0))
+        except (TypeError, ValueError):
+            offset = 0
+
+        limit = max(1, min(limit, 200))
+        offset = max(0, offset)
+
         # Get student's money card
-        users_sheet = get_worksheet_with_retry('Users')
-        records = users_sheet.get_all_records()
-        
+        records = get_sheet_records_cached('Users', ttl=5)
+
         money_card = None
         for record in records:
-            if record['StudentID'] == session['student_id']:
+            if str(record.get('StudentID', '')) == str(session['student_id']):
                 money_card = record.get('MoneyCardNumber')
                 break
-        
+
         if not money_card:
             return jsonify({'error': 'No money card registered'}), 404
-        
+
         # Check if money card is lost
-        money_sheet = get_worksheet_with_retry('Money Accounts')
-        money_records = money_sheet.get_all_records()
-        
+        money_records = get_sheet_records_cached('Money Accounts', ttl=5)
+
         normalized_card = normalize_card_uid(money_card)
         for money_record in money_records:
             card = normalize_card_uid(money_record.get('MoneyCardNumber', ''))
@@ -498,44 +515,79 @@ def get_transactions():
                         del active_sessions[token]
                     return jsonify({'error': 'CARD_LOST', 'message': 'Your money card has been reported as lost. Please contact admin.'}), 403
                 break
-        
+
         # Get transactions
-        trans_sheet = get_worksheet_with_retry('Transactions Log')
-        trans_records = trans_sheet.get_all_records()
-        
-        normalized_card = normalize_card_uid(money_card)
+        trans_records = get_sheet_records_cached('Transactions Log', ttl=10)
+
+        def parse_numeric(value, *, default=0.0):
+            """Parse Sheets numeric values defensively."""
+            if value is None:
+                return default
+            if isinstance(value, (int, float)):
+                return float(value)
+
+            raw = str(value).strip()
+            if not raw:
+                return default
+
+            normalized = raw.replace('₱', '').replace(',', '').replace('PHP', '').strip()
+            return float(normalized)
+
         transactions = []
-        
+
         for record in trans_records:
             card = normalize_card_uid(record.get('MoneyCardNumber', ''))
-            if card == normalized_card:
-                # Parse ItemsJson if available
-                items_json = record.get('ItemsJson', '')
-                items = []
-                if items_json:
-                    try:
-                        items = json.loads(items_json) if isinstance(items_json, str) else items_json
-                    except:
-                        items = []
-                
-                transactions.append({
-                    'timestamp': record.get('Timestamp', ''),
-                    'type': record.get('TransactionType', ''),
-                    'amount': float(record.get('Amount', 0)),
-                    'balance': float(record.get('BalanceAfter', 0)),
-                    'description': f"{record.get('TransactionType', '')} - {record.get('Status', '')}",
-                    'items': items  # Include itemized receipt
-                })
-        
-        # Sort by timestamp descending and limit
+            if card != normalized_card:
+                continue
+
+            # Parse ItemsJson if available
+            items_json = record.get('ItemsJson', '')
+            items = []
+            if items_json:
+                try:
+                    items = json.loads(items_json) if isinstance(items_json, str) else items_json
+                except Exception:
+                    items = []
+
+            tx_type = str(record.get('TransactionType', '')).strip()
+            status = str(record.get('Status', '')).strip()
+
+            try:
+                amount = parse_numeric(record.get('Amount', 0), default=0.0)
+                balance_after = parse_numeric(record.get('BalanceAfter', 0), default=0.0)
+                balance_before = parse_numeric(record.get('BalanceBefore', 0), default=0.0)
+            except ValueError:
+                logger.warning(
+                    "Skipping malformed transaction row in get_transactions: "
+                    f"txn_id={record.get('TransactionID', '')} "
+                    f"money_card={record.get('MoneyCardNumber', '')} "
+                    f"amount={record.get('Amount', '')} "
+                    f"balance_after={record.get('BalanceAfter', '')}"
+                )
+                continue
+
+            transactions.append({
+                'timestamp': str(record.get('Timestamp', '')).strip(),
+                'type': tx_type,
+                'amount': amount,
+                'balance': balance_after,
+                'balance_before': balance_before,
+                'description': f"{tx_type} - {status}".strip(' -'),
+                'items': items  # Include itemized receipt
+            })
+
+        # Sort by timestamp descending and paginate
         transactions.sort(key=lambda x: x['timestamp'], reverse=True)
-        transactions = transactions[:limit]
-        
+        total = len(transactions)
+        transactions = transactions[offset:offset + limit]
+
         return jsonify({
             'transactions': transactions,
-            'count': len(transactions)
+            'count': len(transactions),
+            'total': total,
+            'has_more': (offset + len(transactions)) < total
         })
-        
+
     except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
             gspread.exceptions.WorksheetNotFound, ConnectionError, TimeoutError) as e:
         logger.error(f"Google Sheets unavailable in get_transactions: {e}")
@@ -553,12 +605,12 @@ def logout():
     """
     try:
         token = request.headers.get('Authorization', '').replace('Bearer ', '')
-        
+
         if token in active_sessions:
             del active_sessions[token]
-        
+
         return jsonify({'message': 'Logged out successfully'})
-        
+
     except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
             gspread.exceptions.WorksheetNotFound, ConnectionError, TimeoutError) as e:
         logger.error(f"Google Sheets unavailable in logout: {e}")
@@ -593,7 +645,7 @@ def nfc_register():
         db = get_sheets_client()
 
         # Look up the student's linked RFID money card from the Users sheet
-        # (same source used by login — MoneyCardNumber lives on the Users row)
+        # (same source used by login - MoneyCardNumber lives on the Users row)
         users_sheet = get_worksheet_with_retry("Users")
         user_records = get_cached("users_all")
         if user_records is None:
@@ -610,6 +662,7 @@ def nfc_register():
 
         result = nfc_service.register_virtual_card(student_id, money_card, db)
         invalidate_cached("users_all")
+        invalidate_pattern("sheet_records:Users")
         invalidate_cached("virtual_cards_all")
         logger.info(f"event=nfc_register_success student_id={student_id}")
         return jsonify(
@@ -630,7 +683,7 @@ def nfc_register():
 def nfc_status():
     """Return the NFC registration status for the logged-in student.
 
-    Auth: session token (Bearer) — same as /api/nfc/register.
+    Auth: session token (Bearer) - same as /api/nfc/register.
     Returns:
         200: { is_registered: bool, device_id: str|null, registered_at: str|null }
         401: Invalid or expired session token
@@ -684,7 +737,7 @@ def nfc_status():
 def nfc_unregister():
     """Deactivate the student's active virtual NFC card.
 
-    Auth: session token (Bearer) — same as /api/nfc/register.
+    Auth: session token (Bearer) - same as /api/nfc/register.
     Request body: { "device_id": "..." }
     Returns:
         200: { "message": "Virtual card unregistered" }
@@ -808,7 +861,7 @@ def nfc_pay():
 
             new_balance = round(current_balance - total, 2)
 
-            # Derive Balance column index from record keys — avoids extra row_values(1) API call
+            # Derive Balance column index from record keys - avoids extra row_values(1) API call
             if money_records:
                 try:
                     balance_col_idx = list(money_records[0].keys()).index("Balance") + 1
@@ -849,29 +902,54 @@ def nfc_pay():
         except Exception:
             pass  # Non-fatal: student_id will be blank
 
-        trans_sheet.append_row(
-            [
-                transaction_id,  # TransactionID
-                timestamp_str,  # Timestamp
-                nfc_student_id,  # StudentID
-                money_card_number,  # MoneyCardNumber
-                "NFC Purchase",  # TransactionType
-                total,  # Amount (positive deduction value)
-                current_balance,  # BalanceBefore
-                new_balance,  # BalanceAfter
-                "Completed",  # Status
-                "",  # ErrorMessage
-                json.dumps(items),  # ItemsJson
-                station_id,  # StationID
-            ]
-        )
+        transaction_row = [
+            transaction_id,  # TransactionID
+            timestamp_str,  # Timestamp
+            nfc_student_id,  # StudentID
+            money_card_number,  # MoneyCardNumber
+            "NFC Purchase",  # TransactionType
+            total,  # Amount (positive deduction value)
+            current_balance,  # BalanceBefore
+            new_balance,  # BalanceAfter
+            "Completed",  # Status
+            "",  # ErrorMessage
+            json.dumps(items),  # ItemsJson
+            station_id,  # StationID
+        ]
+
+        try:
+            trans_sheet.append_row(transaction_row, table_range="A1")
+        except Exception as log_err:
+            logger.error(
+                "event=nfc_pay_log_failed money_card=%s error=%s",
+                money_card_number,
+                log_err,
+            )
+            try:
+                money_sheet.update_cell(balance_row_idx, balance_col_idx, current_balance)
+                logger.warning(
+                    "event=nfc_pay_balance_rolled_back money_card=%s balance=%s",
+                    money_card_number,
+                    current_balance,
+                )
+            except Exception as rollback_err:
+                logger.error(
+                    "event=nfc_pay_rollback_failed money_card=%s rollback_error=%s original_error=%s",
+                    money_card_number,
+                    rollback_err,
+                    log_err,
+                )
+            return jsonify({"error": "Service unavailable, please try again"}), 503
+
         invalidate_cached("transactions_all")
+        invalidate_pattern("sheet_records:Money Accounts")
+        invalidate_pattern("sheet_records:Transactions Log")
 
         logger.info(
             f"event=nfc_pay_success money_card={money_card_number} total={total} new_balance={new_balance} station={station_id}"
         )
 
-        # Purchase push notification — fires after transaction committed, never blocks
+        # Purchase push notification - fires after transaction committed, never blocks
         try:
             if nfc_student_id:
                 users_sheet_notif = get_worksheet_with_retry("Users")
@@ -906,7 +984,7 @@ def nfc_pay():
         except Exception as notif_err:
             logger.warning("event=nfc_purchase_notify_failed error=%s", notif_err)
 
-        # Low-balance SMS notification — non-blocking
+        # Low-balance SMS notification - non-blocking
         low_balance_threshold = float(os.getenv("LOW_BALANCE_THRESHOLD", 50))
         if new_balance < low_balance_threshold and phone_number:
             try:
@@ -938,7 +1016,7 @@ def get_products():
     """
     try:
         category = request.args.get('category', None)
-        
+
         # Try to get products from Products sheet first
         try:
             products_sheet = get_worksheet_with_retry('Products')
@@ -946,7 +1024,7 @@ def get_products():
             if records is None:
                 records = products_sheet.get_all_records()
                 set_cached("products_all", records, ttl=30)
-            
+
             products = []
             for record in records:
                 # Only include active products
@@ -958,36 +1036,36 @@ def get_products():
                         'price': float(record.get('Price', 0)),
                         'image_url': record.get('ImageURL', '')
                     }
-                    
+
                     # Filter by category if specified
                     if category is None or product['category'] == category:
                         products.append(product)
-            
+
             return jsonify({
                 'products': products,
                 'count': len(products)
             })
-        
+
         except Exception as sheet_error:
             # Fallback to products.json
             print(f"Products sheet not found, using products.json: {sheet_error}")
             products_file = os.path.join(os.path.dirname(__file__), '..', 'data', 'products.json')
-            
+
             if os.path.exists(products_file):
                 with open(products_file, 'r') as f:
                     products = json.load(f)
-                
+
                 # Filter by category if specified
                 if category:
                     products = [p for p in products if p.get('category') == category]
-                
+
                 return jsonify({
                     'products': products,
                     'count': len(products)
                 })
             else:
                 return jsonify({'products': [], 'count': 0})
-    
+
     except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
             gspread.exceptions.WorksheetNotFound, ConnectionError, TimeoutError) as e:
         logger.error(f"Google Sheets unavailable in get_products: {e}")
@@ -1007,23 +1085,23 @@ def manage_product():
     """
     try:
         data = request.get_json()
-        
+
         # Validate required fields
         required = ['id', 'name', 'category', 'price']
         for field in required:
             if field not in data:
                 return jsonify({'error': f'Missing required field: {field}'}), 400
-        
+
         products_sheet = get_worksheet_with_retry('Products')
         records = products_sheet.get_all_records()
-        
+
         # Check if product exists
         product_row = None
         for idx, record in enumerate(records, start=2):  # Start at 2 (skip header)
             if record.get('ID') == data['id']:
                 product_row = idx
                 break
-        
+
         product_data = [
             data['id'],
             data['name'],
@@ -1033,7 +1111,7 @@ def manage_product():
             'TRUE' if data.get('active', True) else 'FALSE',
             get_philippines_time().strftime('%Y-%m-%d %H:%M:%S') if not product_row else ''
         ]
-        
+
         if product_row:
             # Update existing product
             products_sheet.update(f'A{product_row}:G{product_row}', [product_data])
@@ -1042,7 +1120,7 @@ def manage_product():
             # Add new product
             products_sheet.append_row(product_data)
             return jsonify({'message': 'Product created', 'id': data['id']}), 201
-    
+
     except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
             gspread.exceptions.WorksheetNotFound, ConnectionError, TimeoutError) as e:
         logger.error(f"Google Sheets unavailable in manage_product: {e}")
@@ -1066,42 +1144,42 @@ def process_cashier_transaction():
     """
     try:
         data = request.get_json()
-        
+
         card_uid = data.get('card_uid', '').strip()
         items = data.get('items', [])
         total = float(data.get('total', 0))
-        
+
         if not card_uid or not items or total <= 0:
             return jsonify({'error': 'Invalid transaction data'}), 400
-        
+
         # Validate card UID format before any Sheets query (BUG-02, SEC-04)
         valid, err_msg = validate_card_uid(card_uid)
         if not valid:
             return jsonify({'error': err_msg}), 400
-        
+
         # Normalize card UID
         normalized_card = normalize_card_uid(card_uid)
-        
+
         # Find the money account
         money_sheet = get_worksheet_with_retry('Money Accounts')
         money_records = money_sheet.get_all_records()
-        
+
         account_row = None
         current_balance = 0.0
         student_id = None
-        
+
         for idx, record in enumerate(money_records, start=2):
             if normalize_card_uid(record.get('MoneyCardNumber', '')) == normalized_card:
                 account_row = idx
                 current_balance = float(record.get('Balance', 0))
                 card_status = record.get('Status', '').strip().lower()
-                
+
                 # Check card status
                 if card_status == 'lost':
                     return jsonify({'error': 'Card reported as lost'}), 403
                 if card_status != 'active':
                     return jsonify({'error': f'Card is {card_status}'}), 403
-                
+
                 # Get student ID from associated user
                 student_id_card = record.get('StudentIDCard', '')
                 users_sheet = get_worksheet_with_retry('Users')
@@ -1111,36 +1189,106 @@ def process_cashier_transaction():
                         student_id = user.get('StudentID')
                         break
                 break
-        
+
         if not account_row:
             return jsonify({'error': 'Card not found'}), 404
-        
+
         # Check sufficient balance
         if current_balance < total:
             return jsonify({'error': 'Insufficient funds', 'balance': current_balance}), 400
-        
+
         # Deduct balance
         new_balance = current_balance - total
         money_sheet.update(f'C{account_row}', [[new_balance]])  # Assuming Balance is column C
-        
+
         # Log transaction with ItemsJson
         trans_sheet = get_worksheet_with_retry('Transactions Log')
         timestamp = get_philippines_time().strftime('%Y-%m-%d %H:%M:%S')
-        
-        transaction_row = [
-            timestamp,
-            normalized_card,
-            'Purchase',
-            -total,
-            new_balance,
-            'Success',
-            json.dumps(items)  # ItemsJson as JSON string
-        ]
-        
-        trans_sheet.append_row(transaction_row)
+
+        transaction_id = f"TXN-{get_philippines_time().strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:8]}"
+
+        # Try to enrich student name if available
+        student_name = ''
+        try:
+            if student_id:
+                users_sheet_for_name = get_worksheet_with_retry('Users')
+                users_for_name = users_sheet_for_name.get_all_records()
+                for user in users_for_name:
+                    if str(user.get('StudentID', '')).strip() == str(student_id).strip():
+                        student_name = str(user.get('Name', '')).strip()
+                        break
+        except Exception:
+            # Non-fatal: keep empty name if lookup fails
+            pass
+
+        row_map = {
+            'TransactionID': transaction_id,
+            'Timestamp': timestamp,
+            'StudentID': student_id or '',
+            'StudentName': student_name,
+            'MoneyCardNumber': normalized_card,
+            'TransactionType': 'Purchase',
+            'Type': 'Purchase',
+            'Amount': float(total),
+            'BalanceBefore': float(current_balance),
+            'BalanceAfter': float(new_balance),
+            'Status': 'Completed',
+            'ErrorMessage': '',
+            'ItemsJson': json.dumps(items),
+        }
+
+        try:
+            headers = [str(h).strip() for h in trans_sheet.row_values(1) if str(h).strip()]
+        except Exception:
+            headers = []
+
+        if headers:
+            transaction_row = [row_map.get(h, '') for h in headers]
+        else:
+            # Canonical fallback (schema-first)
+            transaction_row = [
+                row_map['TransactionID'],
+                row_map['Timestamp'],
+                row_map['StudentID'],
+                row_map['MoneyCardNumber'],
+                row_map['TransactionType'],
+                row_map['Amount'],
+                row_map['BalanceBefore'],
+                row_map['BalanceAfter'],
+                row_map['Status'],
+                row_map['ErrorMessage'],
+                row_map['ItemsJson'],
+            ]
+
+        try:
+            trans_sheet.append_row(transaction_row, table_range="A1")
+        except Exception as log_err:
+            logger.error(
+                "process_cashier_transaction: transaction log write failed for card %s: %s",
+                normalized_card,
+                log_err,
+            )
+            try:
+                money_sheet.update(f'C{account_row}', [[current_balance]])
+                logger.warning(
+                    "process_cashier_transaction: rolled back balance for card %s to %s",
+                    normalized_card,
+                    current_balance,
+                )
+            except Exception as rollback_err:
+                logger.error(
+                    "process_cashier_transaction: CRITICAL rollback failed for card %s. rollback_error=%s original_error=%s",
+                    normalized_card,
+                    rollback_err,
+                    log_err,
+                )
+            return jsonify({'error': 'Service unavailable, please try again'}), 503
+
         invalidate_pattern("transactions")
         invalidate_pattern("money_accounts")
-        
+        invalidate_pattern("sheet_records:Money Accounts")
+        invalidate_pattern("sheet_records:Transactions Log")
+
         # Send email receipt (async with retry)
         if student_id:
             users_sheet = get_worksheet_with_retry('Users')
@@ -1150,21 +1298,21 @@ def process_cashier_transaction():
                     parent_email = user.get('ParentEmail', '')
                     student_email = user.get('Email', '')
                     student_name = user.get('Name', 'Student')
-                    
+
                     # Import email service
                     import sys
                     sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'services'))
                     from email_service import email_service
-                    
+
                     email_service.send_receipt(parent_email, student_email, student_name, items, total, new_balance)
                     break
-        
+
         return jsonify({
             'success': True,
             'new_balance': new_balance,
             'timestamp': timestamp
         })
-    
+
     except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
             gspread.exceptions.WorksheetNotFound, ConnectionError, TimeoutError) as e:
         logger.error(f"Google Sheets unavailable in process_cashier_transaction: {e}")
@@ -1186,35 +1334,35 @@ def register_fcm_token():
         user_id = request.user.get('user_id')
         data = request.get_json()
         fcm_token = data.get('fcm_token', '').strip()
-        
+
         if not fcm_token:
             return jsonify({'error': 'FCM token required'}), 400
-        
+
         # Update user's FCM token
         users_sheet = get_worksheet_with_retry('Users')
         records = users_sheet.get_all_records()
-        
+
         user_row = None
         for idx, record in enumerate(records, start=2):
             if str(record.get('StudentID')) == str(user_id):
                 user_row = idx
                 break
-        
+
         if not user_row:
             return jsonify({'error': 'User not found'}), 404
-        
+
         # Find FCMToken column index
         headers = users_sheet.row_values(1)
         if 'FCMToken' not in headers:
             return jsonify({'error': 'FCMToken column not found. Run migration first.'}), 500
-        
+
         fcm_col_idx = headers.index('FCMToken') + 1  # +1 for 1-based indexing
         fcm_col_letter = chr(64 + fcm_col_idx)  # Convert to column letter
-        
+
         users_sheet.update(f'{fcm_col_letter}{user_row}', [[fcm_token]])
-        
+
         return jsonify({'message': 'FCM token registered'})
-    
+
     except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
             gspread.exceptions.WorksheetNotFound, ConnectionError, TimeoutError) as e:
         logger.error(f"Google Sheets unavailable in register_fcm_token: {e}")
@@ -1288,9 +1436,9 @@ def report_lost_card():
     Header: Authorization: Bearer <token>
 
     Actions (all three must succeed):
-      1. Money Accounts  – set Status to 'Lost' for the student's card
-      2. Lost Card Reports – append a new Pending report row
-      3. Session          – invalidate so further requests require re-login
+      1. Money Accounts  - set Status to 'Lost' for the student's card
+      2. Lost Card Reports - append a new Pending report row
+      3. Session          - invalidate so further requests require re-login
 
     Response: { success: true, report_id: str, message: str }
     """
@@ -1359,6 +1507,7 @@ def report_lost_card():
                 money_sheet.update_cell(money_row, status_col, 'Lost')
                 invalidate_cached('money_accounts')
                 invalidate_pattern('money_accounts')
+                invalidate_pattern('sheet_records:Money Accounts')
             except Exception as me:
                 logger.error(f"Failed to update Money Accounts status: {me}", exc_info=True)
                 return jsonify({'error': 'Failed to deactivate card. Please try again.'}), 503
@@ -1383,7 +1532,7 @@ def report_lost_card():
             ])
         except Exception as le:
             logger.error(f"Failed to append Lost Card Reports row: {le}", exc_info=True)
-            # Money Accounts was already updated — log and continue rather than
+            # Money Accounts was already updated - log and continue rather than
             # rolling back, so the card remains blocked. Admin can add the report row manually.
 
         # ── 6. Invalidate session ─────────────────────────────────────────
@@ -1412,15 +1561,15 @@ def report_lost_card():
 if __name__ == '__main__':
     port = int(os.getenv('API_PORT', 5001))
     debug = os.getenv('API_DEBUG', 'False') == 'True'
-    
+
     print(f"""
     ╔════════════════════════════════════════╗
     ║   Bangko ng Seton - Mobile API v2.0    ║
     ╚════════════════════════════════════════╝
-    
+
     🚀 Server running on http://localhost:{port}
     📱 Ready to serve Android app requests
-    
+
     API Endpoints:
     Student:
     - POST /api/auth/login
@@ -1431,15 +1580,15 @@ if __name__ == '__main__':
     - GET  /api/student/lost-card-status
     - POST /api/users/fcm-token
     - POST /api/auth/logout
-    
+
     Cashier/Admin (JWT Required):
     - GET  /api/products
     - POST /api/products
     - POST /api/cashier/transaction
-    
+
     Press Ctrl+C to stop
     """)
-    
+
     app.run(host='0.0.0.0', port=port, debug=debug)
 
 

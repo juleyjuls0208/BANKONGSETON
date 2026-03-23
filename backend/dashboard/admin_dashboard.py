@@ -10,6 +10,7 @@ import serial
 import serial.tools.list_ports
 import time
 import gspread
+from gspread.utils import rowcol_to_a1
 from google.oauth2.service_account import Credentials
 import os
 from dotenv import load_dotenv
@@ -19,6 +20,7 @@ from functools import wraps
 import threading
 import re
 import logging
+from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
 
@@ -87,16 +89,43 @@ def get_philippines_time():
 # --- CORS restriction (SEC-03) ---
 def get_cors_origins():
     """Parse CORS_ORIGINS env var into a list of allowed origins."""
+
+    def _normalize_origin(raw: str) -> str:
+        parsed = urlparse((raw or '').strip())
+        if parsed.scheme in {'http', 'https'} and parsed.netloc:
+            return f"{parsed.scheme}://{parsed.netloc}"
+        return ''
+
     flask_env = os.getenv('FLASK_ENV', 'production')
     origins_str = os.getenv('CORS_ORIGINS', '')
-    origins = [o.strip() for o in origins_str.split(',') if o.strip()]
+
+    placeholder_values = {
+        'YOUR_PRODUCTION_DOMAIN',
+        'https://your-username.pythonanywhere.com',
+        'https://YOUR_USERNAME.pythonanywhere.com',
+    }
+
+    origins = []
+    for raw in origins_str.split(','):
+        value = raw.strip()
+        if not value or value in placeholder_values:
+            continue
+        normalized = _normalize_origin(value)
+        if normalized:
+            origins.append(normalized)
+
+    server_origin = _normalize_origin(os.getenv('SERVER_URL', ''))
+    if server_origin:
+        origins.append(server_origin)
+
     if flask_env == 'development' or not origins:
-        origins = origins + [
+        origins.extend([
             'http://localhost', 'http://localhost:3000', 'http://localhost:5001',
             'http://localhost:5003',
             'http://127.0.0.1', 'http://127.0.0.1:5001', 'http://127.0.0.1:5003'
-        ]
-    return origins
+        ])
+
+    return list(dict.fromkeys(origins))
 
 app = Flask(__name__)
 app.secret_key = _secret_key
@@ -198,6 +227,63 @@ def invalidate_cache(sheet_name=None):
     else:
         _sheets_cache.clear()
 
+
+def get_cached_column_index(worksheet, header_name, ttl=300):
+    """Resolve worksheet column index by header using short-lived cache.
+
+    Some test doubles return non-int sentinels (e.g., MagicMock) for `.find().col`.
+    Normalize to a positive integer and fall back to header-row scan/default order.
+    """
+    def _to_positive_int(value):
+        try:
+            parsed = int(value)
+            return parsed if parsed > 0 else None
+        except (TypeError, ValueError):
+            return None
+
+    cache_key = f"__col__:{worksheet.id}:{header_name}"
+    current_time = time.time()
+    if cache_key in _sheets_cache:
+        cached_col, cached_at = _sheets_cache[cache_key]
+        if current_time - cached_at < ttl:
+            normalized_cached = _to_positive_int(cached_col)
+            if normalized_cached is not None:
+                return normalized_cached
+
+    col_value = None
+
+    try:
+        col_value = _to_positive_int(getattr(worksheet.find(header_name), 'col', None))
+    except Exception:
+        col_value = None
+
+    if col_value is None:
+        try:
+            headers = [str(h).strip() for h in worksheet.row_values(1)]
+            target = str(header_name).strip().lower()
+            for idx, hdr in enumerate(headers, start=1):
+                if hdr.lower() == target:
+                    col_value = idx
+                    break
+        except Exception:
+            col_value = None
+
+    if col_value is None:
+        fallback_map = {
+            'moneycardnumber': 1,
+            'balance': 2,
+            'status': 3,
+            'lastupdated': 4,
+            'totalloaded': 5,
+        }
+        col_value = fallback_map.get(str(header_name).strip().lower())
+
+    if col_value is None:
+        raise ValueError(f"Unable to resolve column index for header '{header_name}'")
+
+    _sheets_cache[cache_key] = (col_value, current_time)
+    return col_value
+
 # Column names expected in the Transactions Log sheet (informational — not
 # passed to get_all_records to avoid crashing on schema drift).
 TRANSACTIONS_LOG_HEADERS = [
@@ -209,32 +295,57 @@ TRANSACTIONS_LOG_HEADERS = [
 def get_transactions_records(sheet):
     """Read all transaction records from the sheet.
 
-    Avoid passing expected_headers — gspread raises GSpreadException if any
-    listed header is absent from the sheet, which breaks the dashboard on any
-    schema drift.  Instead, handle the two known edge-cases defensively:
-
-    1. Trailing blank columns → gspread raises "duplicate headers: ['']".
-       We strip those by re-fetching raw values when that happens.
-    2. Missing/renamed columns → downstream callers already use .get('col', '')
-       so they degrade gracefully without crashing.
+    Handles duplicate/blank headers defensively by falling back to raw values
+    and synthesizing unique header names. Empty rows are skipped.
     """
     try:
         return sheet.get_all_records()
     except Exception as e:
-        err = str(e)
-        if "duplicate" in err.lower() and "''" in err:
-            # Trailing empty header columns — read raw and trim
+        err = str(e).lower()
+        if "duplicate" in err and "header" in err:
             rows = sheet.get_all_values()
             if not rows:
                 return []
-            headers = rows[0]
-            # Find last non-empty header index
-            last = max((i for i, h in enumerate(headers) if h.strip()), default=None)
-            if last is None:
-                return []
-            headers = headers[: last + 1]
-            return [dict(zip(headers, row[: last + 1])) for row in rows[1:]]
+
+            raw_headers = rows[0]
+            headers = []
+            seen = {}
+            for i, h in enumerate(raw_headers):
+                base = str(h).strip() or f"Column{i + 1}"
+                seen[base] = seen.get(base, 0) + 1
+                headers.append(base if seen[base] == 1 else f"{base}__{seen[base]}")
+
+            records = []
+            for row in rows[1:]:
+                if not any(str(cell).strip() for cell in row):
+                    continue
+                padded = row + [""] * (len(headers) - len(row))
+                records.append(dict(zip(headers, padded[: len(headers)])))
+            return records
         raise
+
+
+def is_dashboard_countable_transaction(record, today):
+    """Return True when a transaction row should count in dashboard's today KPI.
+
+    Filters out malformed sheet rows and administrative void rows so the
+    dashboard card reflects real student wallet traffic.
+    """
+    timestamp = str(record.get('Timestamp', '')).strip()
+    if not timestamp or not timestamp.startswith(today):
+        return False
+
+    txn_type = str(record.get('TransactionType', '')).strip().lower()
+    if not txn_type or txn_type == 'void':
+        return False
+
+    status = str(record.get('Status', '')).strip().lower()
+    if status and status not in {'completed', 'success', 'succeeded'}:
+        return False
+
+    txn_id = str(record.get('TransactionID', '')).strip()
+    student_id = str(record.get('StudentID', '')).strip()
+    return bool(txn_id or student_id)
 
 
 # Accept 4-byte (8 hex chars, MIFARE Classic/Ultralight) and
@@ -368,6 +479,39 @@ def products_page():
                          username=session.get('admin_username'),
                          role=session.get('role', 'finance'),
                          active_page='products')
+
+@app.route('/reports')
+@login_required
+def reports_page():
+    """Export and reporting center"""
+    return render_template('reports.html',
+                         username=session.get('admin_username'),
+                         role=session.get('role', 'finance'),
+                         active_page='reports')
+
+@app.route('/settings')
+@login_required
+def settings_page():
+    """Dashboard settings and maintenance"""
+    return render_template('settings.html',
+                         username=session.get('admin_username'),
+                         role=session.get('role', 'finance'),
+                         active_page='settings')
+
+@app.route('/api/settings/cache/refresh', methods=['POST'])
+@login_required
+def refresh_dashboard_cache():
+    """Clear dashboard data caches so next reads pull fresh sheet data."""
+    try:
+        invalidate_pattern('users')
+        invalidate_pattern('transactions')
+        invalidate_pattern('money_accounts')
+        invalidate_pattern('products')
+        invalidate_pattern('fraud')
+        return jsonify({'success': True, 'message': 'Dashboard cache refreshed'})
+    except Exception as e:
+        logger.error(f"Unexpected error in refresh_dashboard_cache: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to refresh cache'}), 500
 
 @app.route('/api/products/list', methods=['GET'])
 @login_required
@@ -823,7 +967,10 @@ def get_stats():
             if transactions is None:
                 transactions = get_transactions_records(transactions_sheet)
                 set_cached("transactions_all", transactions, ttl=10)
-            today_transactions = [t for t in transactions if t.get('Timestamp', '').startswith(today)]
+            today_transactions = [
+                t for t in transactions
+                if is_dashboard_countable_transaction(t, today)
+            ]
         except:
             pass
         
@@ -878,6 +1025,47 @@ def get_students():
         return jsonify({'error': 'Service unavailable, please try again'}), 503
     except Exception as e:
         logger.error(f"Unexpected error in get_students: {e}", exc_info=True)
+        return jsonify({'error': 'An unexpected error occurred'}), 500
+
+@app.route('/api/students/enroll', methods=['POST'])
+@login_required
+@admin_only
+def enroll_student_basic():
+    """Enroll a student record without card linkage."""
+    try:
+        data = request.get_json() or {}
+        student_id = str(data.get('student_id', '')).strip()
+        name = str(data.get('name', '')).strip()
+        parent_email = str(data.get('parent_email', '')).strip()
+
+        if not student_id or not name:
+            return jsonify({'error': 'Student ID and name are required'}), 400
+
+        users_sheet = get_worksheet_with_retry('Users')
+        students = users_sheet.get_all_records()
+
+        if any(str(s.get('StudentID', '')).strip() == student_id for s in students):
+            return jsonify({'error': f'Student ID {student_id} already exists'}), 409
+
+        timestamp = get_philippines_time().strftime('%Y-%m-%d %H:%M:%S')
+        users_sheet.append_row([
+            student_id,
+            name,
+            '',  # IDCardNumber
+            '',  # MoneyCardNumber
+            'Active',
+            parent_email,
+            timestamp,
+        ])
+
+        invalidate_pattern('users')
+        return jsonify({'success': True, 'student_id': student_id})
+    except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
+            gspread.exceptions.WorksheetNotFound, ConnectionError, TimeoutError) as e:
+        logger.error(f"Google Sheets unavailable in enroll_student_basic: {e}")
+        return jsonify({'error': 'Service unavailable, please try again'}), 503
+    except Exception as e:
+        logger.error(f"Unexpected error in enroll_student_basic: {e}", exc_info=True)
         return jsonify({'error': 'An unexpected error occurred'}), 500
 
 @app.route('/api/students/search', methods=['GET'])
@@ -1028,18 +1216,30 @@ def load_balance():
         current_balance = float(account.get('Balance', 0))
         new_balance = current_balance + amount
         
-        balance_col = money_sheet.find('Balance').col
-        money_sheet.update_cell(row_index, balance_col, new_balance)
-        
+        balance_col = get_cached_column_index(money_sheet, 'Balance')
+
         # Update TotalLoaded
         total_loaded = float(account.get('TotalLoaded', 0)) + amount
-        total_col = money_sheet.find('TotalLoaded').col
-        money_sheet.update_cell(row_index, total_col, total_loaded)
-        
+        total_col = get_cached_column_index(money_sheet, 'TotalLoaded')
+
         # Update LastUpdated
         timestamp = get_philippines_time().strftime('%Y-%m-%d %H:%M:%S')
-        update_col = money_sheet.find('LastUpdated').col
-        money_sheet.update_cell(row_index, update_col, timestamp)
+        update_col = get_cached_column_index(money_sheet, 'LastUpdated')
+
+        money_sheet.batch_update([
+            {
+                'range': rowcol_to_a1(row_index, balance_col),
+                'values': [[new_balance]],
+            },
+            {
+                'range': rowcol_to_a1(row_index, total_col),
+                'values': [[total_loaded]],
+            },
+            {
+                'range': rowcol_to_a1(row_index, update_col),
+                'values': [[timestamp]],
+            },
+        ])
         invalidate_pattern("money_accounts")
         invalidate_pattern("transactions")
         
@@ -1513,10 +1713,7 @@ def read_card_thread(card_type):
 
         # Validate UID — 4-byte (8 hex) or 7-byte (14 hex)
         if not uid or not UID_PATTERN.match(uid):
-            try:
-                get_logger('card_reader').warning(f"Malformed UID from bridge: {uid!r}")
-            except Exception:
-                print(f"[WARNING] Malformed UID: {uid!r}")
+            logger.warning("malformed_uid_from_bridge uid=%r", uid)
             socketio.emit('card_error', {'message': f'Unrecognised card format ({uid!r}) — try again', 'requires_ack': True})
             socketio.emit('status', {'type': 'error', 'message': f'Bad UID format: {uid!r}'})
             return
@@ -1548,127 +1745,154 @@ def read_card_thread(card_type):
 def handle_id_card(uid):
     """Handle ID card registration - check for duplicates in BOTH ID and money cards"""
     try:
-        print(f"[DEBUG] Checking ID card: {uid}")
         normalized_uid = normalize_card_uid(uid)
-        print(f"[DEBUG] Normalized UID: {normalized_uid}")
-        
+
         # Check if card is already registered
         users_sheet = get_worksheet_with_retry('Users')
         users_records = users_sheet.get_all_records()
-        print(f"[DEBUG] Found {len(users_records)} users in sheet")
-        
-        for i, record in enumerate(users_records):
+
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug(
+                "card_check_started type=id_card uid=%s normalized_uid=%s users_count=%d",
+                uid,
+                normalized_uid,
+                len(users_records),
+            )
+
+        for record in users_records:
             # Check IDCardNumber
-            existing_id_card_raw = record.get('IDCardNumber', '')
-            existing_id_card = normalize_card_uid(existing_id_card_raw)
-            
+            existing_id_card = normalize_card_uid(record.get('IDCardNumber', ''))
+
             # Check MoneyCardNumber
-            existing_money_card_raw = record.get('MoneyCardNumber', '')
-            existing_money_card = normalize_card_uid(existing_money_card_raw)
-            
-            print(f"[DEBUG] User {i+1}: StudentID={record.get('StudentID')}, IDCardNumber='{existing_id_card}', MoneyCardNumber='{existing_money_card}'")
-            
+            existing_money_card = normalize_card_uid(record.get('MoneyCardNumber', ''))
+
             # Check if UID matches ID card
             if existing_id_card == normalized_uid and existing_id_card:
                 existing_student = record.get('StudentID', '')
                 existing_name = record.get('Name', '')
-                print(f"[DEBUG] ✗ DUPLICATE! This card is already registered as ID card for {existing_name} ({existing_student})")
+                logger.info(
+                    "duplicate_card_detected type=id_card uid=%s existing_student=%s existing_name=%s",
+                    normalized_uid,
+                    existing_student,
+                    existing_name,
+                )
                 send_error("Card in use")
                 socketio.emit('card_error', {'message': f'This card is already registered as ID card for {existing_name} ({existing_student})'})
                 return
-            
+
             # Check if UID matches money card
             if existing_money_card == normalized_uid and existing_money_card:
                 existing_student = record.get('StudentID', '')
                 existing_name = record.get('Name', '')
-                print(f"[DEBUG] ✗ DUPLICATE! This card is already registered as money card for {existing_name} ({existing_student})")
+                logger.info(
+                    "duplicate_card_detected type=money_card uid=%s existing_student=%s existing_name=%s",
+                    normalized_uid,
+                    existing_student,
+                    existing_name,
+                )
                 send_error("Card in use")
                 socketio.emit('card_error', {'message': f'This card is already registered as money card for {existing_name} ({existing_student})'})
                 return
-        
-        # Card is new, proceed with registration
-        print(f"[DEBUG] Card is new (not used as ID or money card), showing registration modal")
+
+        logger.info(
+            "card_available_for_registration uid=%s users_scanned=%d",
+            normalized_uid,
+            len(users_records),
+        )
         send_success("Card read!")
         socketio.emit('id_card_read', {'uid': uid})
     except Exception as e:
-        print(f"[ERROR] Error checking ID card: {e}")
-        import traceback
-        traceback.print_exc()
+        logger.exception("error_checking_id_card uid=%s", uid)
         send_error("Error")
         socketio.emit('card_error', {'message': str(e)})
+
 
 def handle_money_card(uid):
     """Handle money card linking - check for duplicates in BOTH ID and money cards"""
     global pending_student_id
-    
+
     try:
         student_id = pending_student_id
         if not student_id:
             send_error("No student")
             socketio.emit('card_error', {'message': 'No student ID provided'})
             return
-        
-        print(f"[DEBUG] Linking money card: {uid} to student: {student_id}")
+
         normalized_uid = normalize_card_uid(uid)
-        print(f"[DEBUG] Normalized UID: {normalized_uid}")
-        
+
         # Check if card already exists in Money Accounts
         money_sheet = get_worksheet_with_retry('Money Accounts')
         money_records = money_sheet.get_all_records()
-        print(f"[DEBUG] Found {len(money_records)} money accounts in sheet")
-        
-        for i, record in enumerate(money_records):
+
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug(
+                "card_link_started uid=%s normalized_uid=%s student_id=%s money_accounts_count=%d",
+                uid,
+                normalized_uid,
+                student_id,
+                len(money_records),
+            )
+
+        for record in money_records:
             existing_card = normalize_card_uid(record.get('MoneyCardNumber', ''))
             if existing_card == normalized_uid:
-                print(f"[DEBUG] ✗ DUPLICATE in Money Accounts: {existing_card}")
+                logger.info("duplicate_money_card_detected uid=%s", normalized_uid)
                 send_error("Card exists")
                 socketio.emit('card_error', {'message': 'This card is already registered as a money card'})
                 return
-        
+
         # Check if card is already used as ID card or money card in Users sheet
         users_sheet = get_worksheet_with_retry('Users')
         users_records = users_sheet.get_all_records()
-        print(f"[DEBUG] Found {len(users_records)} users in sheet")
-        
-        for i, record in enumerate(users_records):
+
+        for record in users_records:
             # Check MoneyCardNumber
-            existing_money_card_raw = record.get('MoneyCardNumber', '')
-            existing_money_card = normalize_card_uid(existing_money_card_raw)
-            
+            existing_money_card = normalize_card_uid(record.get('MoneyCardNumber', ''))
+
             # Check IDCardNumber
-            existing_id_card_raw = record.get('IDCardNumber', '')
-            existing_id_card = normalize_card_uid(existing_id_card_raw)
-            
-            print(f"[DEBUG] User {i+1}: StudentID={record.get('StudentID')}, IDCardNumber='{existing_id_card}', MoneyCardNumber='{existing_money_card}'")
-            
+            existing_id_card = normalize_card_uid(record.get('IDCardNumber', ''))
+
             # Check if UID matches money card
             if existing_money_card == normalized_uid and existing_money_card:
                 existing_student = record.get('StudentID', '')
                 existing_name = record.get('Name', '')
                 if str(existing_student).strip() != str(student_id).strip():
-                    print(f"[DEBUG] ✗ DUPLICATE! Card is already money card for {existing_name} ({existing_student})")
+                    logger.info(
+                        "duplicate_money_card_owner uid=%s existing_student=%s existing_name=%s",
+                        normalized_uid,
+                        existing_student,
+                        existing_name,
+                    )
                     send_error("Card in use")
                     socketio.emit('card_error', {'message': f'This card is already money card for {existing_name} ({existing_student})'})
                     return
-            
+
             # Check if UID matches ID card (same student trying to use ID card as money card)
             if existing_id_card == normalized_uid and existing_id_card:
                 existing_student = record.get('StudentID', '')
                 existing_name = record.get('Name', '')
                 # Block even if it's the same student - must use different cards
                 if str(existing_student).strip() == str(student_id).strip():
-                    print(f"[DEBUG] ✗ SAME CARD! Student trying to use ID card as money card")
+                    logger.info(
+                        "same_card_reused_as_money_card_blocked uid=%s student_id=%s",
+                        normalized_uid,
+                        student_id,
+                    )
                     send_error("Use different card")
                     socketio.emit('card_error', {'message': 'Cannot use ID card as money card. Please use a different card.'})
                     return
                 else:
-                    print(f"[DEBUG] ✗ DUPLICATE! Card is already ID card for {existing_name} ({existing_student})")
+                    logger.info(
+                        "duplicate_id_card_detected_for_money_link uid=%s existing_student=%s existing_name=%s",
+                        normalized_uid,
+                        existing_student,
+                        existing_name,
+                    )
                     send_error("Card in use")
                     socketio.emit('card_error', {'message': f'This card is already registered as ID card for {existing_name} ({existing_student}). Cannot use as money card.'})
                     return
-        
+
         # Find the student to link the card to
-        print(f"[DEBUG] No duplicates found, proceeding with linking")
         user_row_index = None
         student_record = None
         for i, record in enumerate(users_records):
@@ -1676,19 +1900,19 @@ def handle_money_card(uid):
                 user_row_index = i + 2
                 student_record = record
                 break
-        
+
         if not user_row_index:
             send_error("Student not found")
             socketio.emit('card_error', {'message': 'Student not found'})
             return
-        
+
         # Get student's ID card number
         id_card_number = student_record.get('IDCardNumber', '')
-        
+
         # Update Users sheet
         money_card_col = users_sheet.find('MoneyCardNumber').col
         users_sheet.update_cell(user_row_index, money_card_col, uid)
-        
+
         # Create money account
         timestamp = get_philippines_time().strftime('%Y-%m-%d %H:%M:%S')
         money_row = [
@@ -1700,17 +1924,21 @@ def handle_money_card(uid):
             0.0                 # TotalLoaded
         ]
         money_sheet.append_row(money_row)
-        
+
+        logger.info(
+            "money_card_linked uid=%s student_id=%s users_scanned=%d",
+            normalized_uid,
+            student_id,
+            len(users_records),
+        )
         send_success("Linked!")
         socketio.emit('money_card_linked', {
             'student_id': student_id,
             'card_uid': uid
         })
-        
+
     except Exception as e:
-        print(f"Error linking money card: {e}")
-        import traceback
-        traceback.print_exc()
+        logger.exception("error_linking_money_card uid=%s student_id=%s", uid, pending_student_id)
         send_error("Error")
         socketio.emit('card_error', {'message': str(e)})
 
@@ -1725,10 +1953,15 @@ def register_student():
         id_card_uid = data.get('id_card_uid')
         parent_email = data.get('parent_email', '')
         
-        print(f"[DEBUG] Registering student: {student_id}, {name}, ID Card: {id_card_uid}")
-        
+        logger.debug(
+            "student_register_start student_id=%s name=%s id_card_uid=%s",
+            student_id,
+            name,
+            id_card_uid,
+        )
+
         normalized_uid = normalize_card_uid(id_card_uid)
-        print(f"[DEBUG] Normalized ID Card: {normalized_uid}")
+        logger.debug("student_register_normalized_uid student_id=%s uid=%s", student_id, normalized_uid)
         
         # Check for duplicates
         users_sheet = get_worksheet_with_retry('Users')
@@ -1737,7 +1970,7 @@ def register_student():
         # Check if Student ID already exists
         for record in users_records:
             if str(record.get('StudentID', '')).strip() == str(student_id).strip():
-                print(f"[DEBUG] DUPLICATE Student ID found: {student_id}")
+                logger.debug("student_register_duplicate_student_id student_id=%s", student_id)
                 socketio.emit('card_error', {'message': f'Student ID {student_id} already exists'})
                 return jsonify({'error': f'Student ID {student_id} already exists'}), 400
         
@@ -1750,7 +1983,11 @@ def register_student():
             if existing_id_card == normalized_uid and existing_id_card:
                 existing_student = record.get('StudentID', '')
                 existing_name = record.get('Name', '')
-                print(f"[DEBUG] DUPLICATE ID Card found: {normalized_uid} belongs to {existing_name} ({existing_student})")
+                logger.debug(
+                    "student_register_duplicate_id_card uid=%s existing_student=%s",
+                    normalized_uid,
+                    existing_student,
+                )
                 socketio.emit('card_error', {'message': f'This card is already registered as ID card for {existing_name} ({existing_student})'})
                 return jsonify({'error': f'This card is already registered as ID card for {existing_name} ({existing_student})'}), 400
             
@@ -1758,11 +1995,15 @@ def register_student():
             if existing_money_card == normalized_uid and existing_money_card:
                 existing_student = record.get('StudentID', '')
                 existing_name = record.get('Name', '')
-                print(f"[DEBUG] DUPLICATE! Card is already money card for {existing_name} ({existing_student})")
+                logger.debug(
+                    "student_register_duplicate_money_card uid=%s existing_student=%s",
+                    normalized_uid,
+                    existing_student,
+                )
                 socketio.emit('card_error', {'message': f'This card is already registered as money card for {existing_name} ({existing_student}). Cannot use as ID card.'})
                 return jsonify({'error': f'This card is already registered as money card for {existing_name} ({existing_student}). Cannot use as ID card.'}), 400
         
-        print(f"[DEBUG] No duplicates found, proceeding with registration")
+        logger.debug("student_register_no_duplicates student_id=%s", student_id)
         timestamp = get_philippines_time().strftime('%Y-%m-%d %H:%M:%S')
         
         row = [
@@ -1775,7 +2016,7 @@ def register_student():
             timestamp
         ]
         users_sheet.append_row(row)
-        print(f"[DEBUG] Student registered successfully!")
+        logger.info("student_registered student_id=%s name=%s", student_id, name)
         
         send_success("Registered!")
         socketio.emit('student_registered', {
@@ -2007,8 +2248,8 @@ def replace_lost_card():
             break
     
     if not pending_report:
-        print(f"DEBUG: No pending report found for {student_id}")
-        print(f"DEBUG: Available reports: {[{r.get('StudentID'): r.get('Status')} for r in lost_records]}")
+        logger.debug("lost_card_pending_report_not_found student_id=%s", student_id)
+        logger.debug("lost_card_available_reports statuses=%s", [{r.get('StudentID'): r.get('Status')} for r in lost_records])
         return jsonify({'error': 'No pending lost card report for this student'}), 400
     
     # Store student_id for card reading
@@ -2058,7 +2299,7 @@ def handle_replace_card(uid):
         
         # Normalize and check for duplicates
         normalized_uid = normalize_card_uid(uid)
-        print(f"[DEBUG] Replacing with card: {uid}, normalized: {normalized_uid}")
+        logger.debug("replace_card_start student_id=%s uid=%s normalized_uid=%s", student_id, uid, normalized_uid)
         
         # Check if new card is already in use
         users_sheet = get_worksheet_with_retry('Users')
@@ -2082,13 +2323,17 @@ def handle_replace_card(uid):
                 existing_name = record.get('Name', '')
                 # Block if it's this student's ID card
                 if current_student_id == str(student_id).strip():
-                    print(f"[DEBUG] ✗ Student trying to use their own ID card as replacement")
+                    logger.debug("replace_card_rejected_self_id_card student_id=%s", student_id)
                     send_error("Use different card")
                     socketio.emit('card_error', {'message': 'Cannot use your ID card as money card. Please use a different card.'})
                     return
                 # Block if it's another student's ID card
                 else:
-                    print(f"[DEBUG] ✗ Card is ID card for {existing_name} ({current_student_id})")
+                    logger.debug(
+                        "replace_card_rejected_existing_id_card uid=%s existing_student=%s",
+                        normalized_uid,
+                        current_student_id,
+                    )
                     send_error("Card in use")
                     socketio.emit('card_error', {'message': f'This card is already registered as ID card for {existing_name} ({current_student_id}).'})
                     return
@@ -2098,12 +2343,16 @@ def handle_replace_card(uid):
             normalized_old = normalize_card_uid(old_card)
             if existing_money_card == normalized_uid and existing_money_card and existing_money_card != normalized_old:
                 existing_name = record.get('Name', '')
-                print(f"[DEBUG] ✗ Card is already money card for {existing_name} ({current_student_id})")
+                logger.debug(
+                    "replace_card_rejected_existing_money_card uid=%s existing_student=%s",
+                    normalized_uid,
+                    current_student_id,
+                )
                 send_error("Card in use")
                 socketio.emit('card_error', {'message': f'This card is already registered as money card for {existing_name} ({current_student_id}).'})
                 return
         
-        print(f"[DEBUG] ✓ Card is available for replacement")
+        logger.debug("replace_card_candidate_available student_id=%s uid=%s", student_id, normalized_uid)
         
         # Get student's ID card number
         id_card_number = student_record.get('IDCardNumber', '') if student_record else ''
@@ -2267,23 +2516,31 @@ def _ensure_cashier_accounts_sheet():
     if 'Cashier Accounts' not in sheet_titles:
         ws = db.add_worksheet(title='Cashier Accounts', rows=200, cols=7)
         ws.append_row(CASHIER_ACCOUNTS_HEADERS)
-        # Seed the default account so existing cashier login keeps working
-        import secrets as _secrets
-        try:
+
+        bootstrap_username = os.getenv('CASHIER_BOOTSTRAP_USERNAME', '').strip().lower()
+        bootstrap_password = os.getenv('CASHIER_BOOTSTRAP_PASSWORD', '').strip()
+
+        if bootstrap_username and bootstrap_password:
             import bcrypt as _bcrypt
-            hashed = _bcrypt.hashpw(b'cashier123', _bcrypt.gensalt()).decode()
-        except ImportError:
-            hashed = 'cashier123'  # Fallback plain if bcrypt unavailable
-        import datetime as _dt
-        ws.append_row([
-            'CASHIER-001',
-            'cashier',
-            hashed,
-            'Default Cashier',
-            'Active',
-            _dt.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-            '',
-        ])
+            import datetime as _dt
+            import secrets as _secrets
+
+            hashed = _bcrypt.hashpw(bootstrap_password.encode(), _bcrypt.gensalt()).decode()
+            ws.append_row([
+                f"CASHIER-{_secrets.token_hex(4).upper()}",
+                bootstrap_username,
+                hashed,
+                os.getenv('CASHIER_BOOTSTRAP_DISPLAY_NAME', 'Bootstrap Cashier').strip() or 'Bootstrap Cashier',
+                'Active',
+                _dt.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                '',
+            ])
+            logger.warning('cashier_bootstrap_account_created username=%s', bootstrap_username)
+        else:
+            logger.warning(
+                'cashier_accounts_sheet_created_without_bootstrap_account '
+                '(set CASHIER_BOOTSTRAP_USERNAME/CASHIER_BOOTSTRAP_PASSWORD to auto-seed one)'
+            )
     else:
         ws = db.worksheet('Cashier Accounts')
     return ws
@@ -2377,7 +2634,7 @@ def update_cashier_account(account_id):
                         hashed = _bcrypt.hashpw(data['password'].encode(), _bcrypt.gensalt()).decode()
                         ws.update_cell(idx, 3, hashed)
                     except ImportError:
-                        pass
+                        return jsonify({'error': 'bcrypt not installed on server'}), 500
                 return jsonify({'success': True})
         return jsonify({'error': 'Account not found'}), 404
     except (gspread.exceptions.APIError, ConnectionError, TimeoutError) as e:
@@ -2522,6 +2779,7 @@ def _get_fraud_detector_with_sheets():
 
 @app.route('/fraud-alerts')
 @login_required
+@admin_only
 def fraud_alerts_page():
     return render_template('fraud_alerts.html',
                          username=session.get('admin_username'),
@@ -2531,6 +2789,7 @@ def fraud_alerts_page():
 
 @app.route('/api/fraud/alerts', methods=['GET'])
 @login_required
+@admin_only
 def get_fraud_alerts():
     """GET /api/fraud/alerts?unresolved_only=true&risk_level=high&limit=100"""
     try:
@@ -2562,6 +2821,7 @@ def get_fraud_alerts():
 
 @app.route('/api/fraud/alerts/<alert_id>/resolve', methods=['POST'])
 @login_required
+@admin_only
 def resolve_fraud_alert(alert_id):
     """POST /api/fraud/alerts/<id>/resolve  body: {"notes": "..."}"""
     try:
@@ -2639,6 +2899,7 @@ def unsuspend_card_route(uid):
 
 @app.route('/api/fraud/suspended', methods=['GET'])
 @login_required
+@admin_only
 def get_suspended_cards():
     """GET /api/fraud/suspended"""
     try:

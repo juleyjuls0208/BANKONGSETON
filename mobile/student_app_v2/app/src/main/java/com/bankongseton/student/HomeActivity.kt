@@ -223,7 +223,7 @@ class HomeActivity : AppCompatActivity() {
         }
 
         val token = secureStorage.getAuthToken() ?: return
-        ApiClient.apiService.getTransactions("Bearer $token", 200)
+        ApiClient.apiService.getTransactions("Bearer $token", limit = 200, offset = 0)
             .enqueue(object : Callback<TransactionsResponse> {
                 override fun onResponse(
                     call: Call<TransactionsResponse>,
@@ -311,7 +311,7 @@ class HomeActivity : AppCompatActivity() {
     private fun loadRecentTransactions() {
         val token = secureStorage.getAuthToken() ?: return
 
-        ApiClient.apiService.getTransactions("Bearer $token", 5)
+        ApiClient.apiService.getTransactions("Bearer $token", limit = 5, offset = 0)
             .enqueue(object : Callback<TransactionsResponse> {
                 override fun onResponse(
                     call: Call<TransactionsResponse>,

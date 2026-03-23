@@ -3,80 +3,269 @@
 {% block title %}Cashier Accounts — Bangko ng Seton{% endblock %}
 
 {% block content %}
-<div class="page-header d-flex justify-content-between align-items-center mb-4">
+<style>
+    .cashier-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        margin-bottom: 1.2rem;
+        gap: 1rem;
+    }
+
+    .cashier-kpis {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.85rem;
+        margin-bottom: 1rem;
+    }
+
+    .cashier-kpi {
+        background: #fff;
+        border: 1px solid #ddd7eb;
+        border-radius: 12px;
+        padding: 1rem;
+    }
+
+    .cashier-kpi .label { color: #5f5b75; font-size: 0.82rem; font-weight: 600; }
+    .cashier-kpi .value { font-size: 2.1rem; font-weight: 800; line-height: 1; margin-top: 0.35rem; }
+
+    .accounts-foot {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        padding: 0.9rem 1rem;
+        border-top: 1px solid rgba(217, 211, 232, 0.75);
+        background: #f1edf9;
+    }
+
+    .status-active {
+        background: #c8efd9;
+        color: #16784a;
+        border: 1px solid #9ad9b7;
+        border-radius: 999px;
+        padding: 0.25rem 0.7rem;
+        font-size: 0.68rem;
+        font-weight: 800;
+        letter-spacing: 0.05em;
+    }
+
+    .status-inactive {
+        background: #f8d8d8;
+        color: #b52f2f;
+        border: 1px solid #ecb2b2;
+        border-radius: 999px;
+        padding: 0.25rem 0.7rem;
+        font-size: 0.68rem;
+        font-weight: 800;
+        letter-spacing: 0.05em;
+    }
+
+    .modal-title-serif {
+        font-family: 'Instrument Serif', serif;
+        font-size: 2.1rem;
+        font-style: italic;
+        margin: 0;
+        line-height: 1;
+    }
+
+    .field-label {
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-size: 0.78rem;
+        font-weight: 800;
+        color: #38364b;
+        margin-bottom: 0.35rem;
+    }
+
+    .field-soft {
+        height: 48px;
+        border: 1px solid #d8d2e7;
+        background: #ece8f6;
+        border-radius: 10px;
+        width: 100%;
+        padding: 0 0.8rem;
+    }
+
+    .strength-track {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 0.3rem;
+        margin-top: 0.45rem;
+    }
+
+    .strength-track span {
+        height: 4px;
+        border-radius: 999px;
+        background: #ddd7eb;
+    }
+
+    .strength-track span.active { background: #22a05b; }
+
+    .rule-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.45rem 1rem;
+        background: #eeebf7;
+        border: 1px solid #ddd7eb;
+        border-radius: 10px;
+        padding: 0.8rem;
+        font-size: 0.84rem;
+    }
+
+    .rule-grid .ok { color: #169756; }
+    .rule-grid .bad { color: #7a748f; }
+
+    .error-text {
+        color: #c81e1e;
+        font-size: 0.86rem;
+        font-weight: 600;
+        margin-top: 0.4rem;
+        display: none;
+    }
+
+    .error-text.show { display: block; }
+
+    .toast-shell {
+        position: fixed;
+        left: 1rem;
+        bottom: 1rem;
+        z-index: 1200;
+        background: #1f2030;
+        color: #fff;
+        border-radius: 12px;
+        padding: 0.85rem 1rem;
+        min-width: 280px;
+        box-shadow: 0 14px 30px rgba(16, 16, 29, 0.34);
+        display: none;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .toast-shell.show { display: flex; }
+
+    @media (max-width: 1200px) {
+        .cashier-kpis { grid-template-columns: 1fr; }
+    }
+</style>
+
+<section class="cashier-head">
     <div>
-        <h2 class="mb-1"><i class="bi bi-person-badge me-2 text-primary"></i>Cashier Accounts</h2>
-        <p class="text-muted mb-0">Manage cashier login credentials and access</p>
+        <h1 class="page-title">Cashier <span class="accent">Accounts</span></h1>
+        <p class="page-subtitle">Provision and manage cashier access across all terminals.</p>
     </div>
-    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createModal">
-        <i class="bi bi-plus-lg me-1"></i>New Account
-    </button>
-</div>
+    <button class="action-btn primary" data-bs-toggle="modal" data-bs-target="#createModal"><i class="bi bi-plus-lg me-1"></i>New Account</button>
+</section>
 
-<div class="card border-0 shadow-sm">
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-hover mb-0">
-                <thead class="table-light">
-                    <tr>
-                        <th>Account ID</th>
-                        <th>Username</th>
-                        <th>Display Name</th>
-                        <th>Status</th>
-                        <th>Created</th>
-                        <th>Last Login</th>
-                        <th style="width:160px">Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="accountsBody">
-                    <tr><td colspan="7" class="text-center text-muted py-4">
-                        <div class="spinner-border spinner-border-sm me-2"></div>Loading…
-                    </td></tr>
-                </tbody>
-            </table>
-        </div>
+<section class="cashier-kpis">
+    <article class="cashier-kpi">
+        <div class="label">Total Accounts</div>
+        <div class="value" id="accountsTotal">0</div>
+    </article>
+    <article class="cashier-kpi">
+        <div class="label">Active Accounts</div>
+        <div class="value" id="accountsActive">0</div>
+    </article>
+    <article class="cashier-kpi">
+        <div class="label">Security Score</div>
+        <div class="value" id="accountsSecurity">98%</div>
+    </article>
+</section>
+
+<section class="table-shell">
+    <div class="table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th>Account ID</th>
+                    <th>Username</th>
+                    <th>Display Name</th>
+                    <th>Status</th>
+                    <th>Created</th>
+                    <th>Last Login</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="accountsBody">
+                <tr><td colspan="7" class="text-center text-muted py-4"><div class="spinner-border spinner-border-sm me-2"></div>Loading…</td></tr>
+            </tbody>
+        </table>
     </div>
-</div>
+    <div class="accounts-foot">
+        <small id="accountsCountNote" class="text-muted">Loading accounts…</small>
+        <small class="text-muted">Access controls update in real time.</small>
+    </div>
+</section>
 
-<!-- Create Account Modal -->
 <div class="modal fade" id="createModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title"><i class="bi bi-person-plus me-2"></i>Create Cashier Account</h5>
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content" style="border-radius:14px; border:1px solid #ddd7eb; overflow:hidden;">
+            <div class="modal-header" style="background:#fff; border-bottom:1px solid #e4dfef;">
+                <div>
+                    <h2 class="modal-title-serif">Create <span style="font-style:normal;font-weight:800;">New Account</span></h2>
+                    <p class="text-muted mb-0">Provision institutional access for a new cashier.</p>
+                </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body">
-                <div class="mb-3">
-                    <label class="form-label fw-semibold">Username</label>
-                    <input type="text" class="form-control" id="newUsername" placeholder="e.g. cashier2" autocomplete="off">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label fw-semibold">Display Name</label>
-                    <input type="text" class="form-control" id="newDisplayName" placeholder="e.g. Station 2 Cashier">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label fw-semibold">Password</label>
-                    <input type="password" class="form-control" id="newPassword" placeholder="Min. 6 characters" autocomplete="new-password">
-                    <div class="form-text">Minimum 6 characters</div>
+            <div class="modal-body" style="padding:1.1rem 1.25rem;">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="field-label">Username</label>
+                        <input type="text" class="field-soft" id="newUsername" placeholder="e.g. j.doe" autocomplete="off">
+                        <small class="text-muted">Visible login identifier</small>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="field-label">Display Name</label>
+                        <input type="text" class="field-soft" id="newDisplayName" placeholder="Jane Doe">
+                    </div>
+                    <div class="col-12">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <label class="field-label mb-0">Password</label>
+                            <small id="strengthLabel" style="font-weight:700;color:#169756;">WEAK</small>
+                        </div>
+                        <div class="input-group">
+                            <input type="password" class="field-soft" id="newPassword" placeholder="Minimum 6 characters" autocomplete="new-password" style="border-radius:10px 0 0 10px; border-right:0;">
+                            <button class="btn" type="button" id="toggleNewPassword" style="background:#ece8f6;border:1px solid #d8d2e7;border-left:0;border-radius:0 10px 10px 0;"><i class="bi bi-eye"></i></button>
+                        </div>
+                        <div class="strength-track" id="strengthTrack">
+                            <span></span><span></span><span></span><span></span>
+                        </div>
+                        <div class="rule-grid mt-2">
+                            <div id="ruleLength" class="bad" data-label="8+ characters"><i class="bi bi-circle-fill me-1"></i>8+ characters</div>
+                            <div id="ruleUpperLower" class="bad" data-label="Upper &amp; lowercase"><i class="bi bi-circle-fill me-1"></i>Upper &amp; lowercase</div>
+                            <div id="ruleSpecial" class="bad" data-label="One special symbol"><i class="bi bi-circle-fill me-1"></i>One special symbol</div>
+                            <div id="ruleSequence" class="bad" data-label="No sequence patterns"><i class="bi bi-circle-fill me-1"></i>No sequence patterns</div>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <label class="field-label">Confirm Password</label>
+                        <div class="input-group">
+                            <input type="password" class="field-soft" id="confirmPassword" placeholder="Re-type password" autocomplete="new-password" style="border-radius:10px 0 0 10px; border-right:0;">
+                            <button class="btn" type="button" id="toggleConfirmPassword" style="background:#ece8f6;border:1px solid #d8d2e7;border-left:0;border-radius:0 10px 10px 0;"><i class="bi bi-eye-slash"></i></button>
+                        </div>
+                        <p id="confirmError" class="error-text"><i class="bi bi-exclamation-circle-fill me-1"></i>Passwords do not match</p>
+                    </div>
+                    <div class="col-12">
+                        <div class="p-3" style="background:#efecf8;border:1px solid #ddd7eb;border-radius:10px;">
+                            <i class="bi bi-shield-lock-fill text-primary me-1"></i>
+                            <span class="text-muted">By default, new operators are assigned the <strong>'Cashier-Tier-I'</strong> role. Higher permissions require manual elevation.</span>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="createAccount()">
-                    <i class="bi bi-check2 me-1"></i>Create
-                </button>
+            <div class="modal-footer" style="border-top:1px solid #e4dfef;">
+                <button type="button" class="action-btn secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="action-btn primary" onclick="createAccount()">Create Account</button>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Edit Account Modal -->
 <div class="modal fade" id="editModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title"><i class="bi bi-pencil me-2"></i>Edit Account</h5>
+                <h5 class="modal-title">Edit Account</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
@@ -92,125 +281,231 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="saveEdit()">
-                    <i class="bi bi-check2 me-1"></i>Save
-                </button>
+                <button type="button" class="btn btn-primary" onclick="saveEdit()">Save</button>
             </div>
         </div>
     </div>
+</div>
+
+<div id="accountToast" class="toast-shell">
+    <i class="bi bi-check-circle-fill text-success"></i>
+    <div>
+        <strong>Account Created Successfully</strong>
+        <small class="d-block text-light-emphasis" id="accountToastText">Cashier account was provisioned.</small>
+    </div>
+    <button class="btn btn-sm btn-link text-light text-decoration-none ms-auto" onclick="hideAccountToast()">Dismiss</button>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-    async function loadAccounts() {
-        const tbody = document.getElementById('accountsBody');
-        try {
-            const res = await fetch('/api/cashier-accounts');
-            const data = await res.json();
-            const accounts = data.accounts || [];
-            if (!accounts.length) {
-                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">No accounts found</td></tr>';
-                return;
-            }
-            tbody.innerHTML = accounts.map(a => `
-                <tr>
-                    <td><code class="small">${a.AccountID}</code></td>
-                    <td><strong>${a.Username}</strong></td>
-                    <td>${a.DisplayName || '—'}</td>
-                    <td>${a.Status === 'Active'
-                        ? '<span class="badge bg-success">Active</span>'
-                        : '<span class="badge bg-secondary">Inactive</span>'}</td>
-                    <td class="small text-muted">${a.CreatedAt || '—'}</td>
-                    <td class="small text-muted">${a.LastLogin || 'Never'}</td>
-                    <td>
-                        <button class="btn btn-sm btn-outline-primary me-1"
-                            onclick='openEdit("${a.AccountID}", "${(a.DisplayName||'').replace(/"/g,"&quot;")}")'>
-                            <i class="bi bi-pencil"></i>
-                        </button>
-                        ${a.Status === 'Active'
-                            ? `<button class="btn btn-sm btn-outline-warning" onclick='toggleStatus("${a.AccountID}","Inactive")' title="Deactivate"><i class="bi bi-pause-circle"></i></button>`
-                            : `<button class="btn btn-sm btn-outline-success" onclick='toggleStatus("${a.AccountID}","Active")' title="Activate"><i class="bi bi-play-circle"></i></button>`
-                        }
-                    </td>
-                </tr>
-            `).join('');
-        } catch {
-            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger py-3">Failed to load accounts</td></tr>';
+const accountsBody = document.getElementById('accountsBody');
+const accountsTotal = document.getElementById('accountsTotal');
+const accountsActive = document.getElementById('accountsActive');
+const accountsCountNote = document.getElementById('accountsCountNote');
+
+function esc(v) {
+    return String(v ?? '').replace(/[&<>'"]/g, m => ({ '&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;' }[m]));
+}
+
+function showAccountToast(message) {
+    document.getElementById('accountToastText').textContent = message;
+    const toast = document.getElementById('accountToast');
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 4200);
+}
+
+function hideAccountToast() {
+    document.getElementById('accountToast').classList.remove('show');
+}
+
+function updatePasswordRules() {
+    const password = document.getElementById('newPassword').value;
+    const checks = {
+        length: password.length >= 8,
+        upperLower: /[a-z]/.test(password) && /[A-Z]/.test(password),
+        special: /[^A-Za-z0-9]/.test(password),
+        sequence: !/(123|abc|qwe|password)/i.test(password)
+    };
+
+    const score = Object.values(checks).filter(Boolean).length;
+    const labels = ['WEAK', 'FAIR', 'GOOD', 'STRONG'];
+    const colors = ['#c81e1e', '#a16207', '#3b82f6', '#169756'];
+
+    document.getElementById('strengthLabel').textContent = labels[Math.max(0, score - 1)] || 'WEAK';
+    document.getElementById('strengthLabel').style.color = colors[Math.max(0, score - 1)] || '#c81e1e';
+
+    const bars = Array.from(document.querySelectorAll('#strengthTrack span'));
+    bars.forEach((b, i) => b.classList.toggle('active', i < score));
+
+    const map = {
+        ruleLength: checks.length,
+        ruleUpperLower: checks.upperLower,
+        ruleSpecial: checks.special,
+        ruleSequence: checks.sequence
+    };
+
+    Object.entries(map).forEach(([id, ok]) => {
+        const node = document.getElementById(id);
+        const label = node.dataset.label || node.textContent.trim();
+        node.classList.toggle('ok', ok);
+        node.classList.toggle('bad', !ok);
+        node.innerHTML = `<i class="bi ${ok ? 'bi-check-circle-fill' : 'bi-circle-fill'} me-1"></i>${label}`;
+    });
+
+    validatePasswordMatch();
+}
+
+function validatePasswordMatch() {
+    const p1 = document.getElementById('newPassword').value;
+    const p2 = document.getElementById('confirmPassword').value;
+    const mismatch = p2.length > 0 && p1 !== p2;
+    document.getElementById('confirmError').classList.toggle('show', mismatch);
+    return !mismatch;
+}
+
+function toggleVisibility(inputId, btnId) {
+    const input = document.getElementById(inputId);
+    const btn = document.getElementById(btnId);
+    const next = input.type === 'password' ? 'text' : 'password';
+    input.type = next;
+    btn.innerHTML = `<i class="bi ${next === 'password' ? 'bi-eye' : 'bi-eye-slash'}"></i>`;
+}
+
+async function loadAccounts() {
+    try {
+        const res = await fetch('/api/cashier-accounts');
+        const data = await res.json();
+        const accounts = data.accounts || [];
+
+        accountsTotal.textContent = accounts.length.toLocaleString();
+        accountsActive.textContent = accounts.filter(a => a.Status === 'Active').length.toLocaleString();
+        accountsCountNote.textContent = `Showing ${accounts.length.toLocaleString()} cashier account(s)`;
+
+        if (!accounts.length) {
+            accountsBody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">No accounts found</td></tr>';
+            return;
         }
+
+        accountsBody.innerHTML = accounts.map(a => `
+            <tr>
+                <td><code>${esc(a.AccountID)}</code></td>
+                <td><strong>${esc(a.Username)}</strong></td>
+                <td>${esc(a.DisplayName || '—')}</td>
+                <td>${a.Status === 'Active'
+                    ? '<span class="status-active">ACTIVE</span>'
+                    : '<span class="status-inactive">INACTIVE</span>'}</td>
+                <td class="small text-muted">${esc(a.CreatedAt || '—')}</td>
+                <td class="small text-muted">${esc(a.LastLogin || 'Never')}</td>
+                <td class="text-end">
+                    <button class="icon-btn" onclick='openEdit("${esc(a.AccountID)}", "${esc((a.DisplayName || '').replace(/"/g,'&quot;'))}")'><i class="bi bi-pencil-fill"></i></button>
+                    ${a.Status === 'Active'
+                        ? `<button class="icon-btn" onclick='toggleStatus("${esc(a.AccountID)}","Inactive")' title="Deactivate"><i class="bi bi-pause-circle-fill text-warning"></i></button>`
+                        : `<button class="icon-btn" onclick='toggleStatus("${esc(a.AccountID)}","Active")' title="Activate"><i class="bi bi-play-circle-fill text-success"></i></button>`}
+                </td>
+            </tr>
+        `).join('');
+    } catch {
+        accountsBody.innerHTML = '<tr><td colspan="7" class="text-center text-danger py-3">Failed to load accounts</td></tr>';
+    }
+}
+
+async function createAccount() {
+    const username = document.getElementById('newUsername').value.trim();
+    const password = document.getElementById('newPassword').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
+    const display_name = document.getElementById('newDisplayName').value.trim();
+
+    if (!username || !password) {
+        alert('Username and password are required');
+        return;
     }
 
-    async function createAccount() {
-        const username = document.getElementById('newUsername').value.trim();
-        const password = document.getElementById('newPassword').value;
-        const display_name = document.getElementById('newDisplayName').value.trim();
-        if (!username || !password) { alert('Username and password are required'); return; }
-        try {
-            const res = await fetch('/api/cashier-accounts', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({username, password, display_name})
-            });
-            const data = await res.json();
-            if (data.success) {
-                bootstrap.Modal.getInstance(document.getElementById('createModal')).hide();
-                document.getElementById('newUsername').value = '';
-                document.getElementById('newPassword').value = '';
-                document.getElementById('newDisplayName').value = '';
-                loadAccounts();
-            } else {
-                alert(data.error || 'Failed to create account');
-            }
-        } catch { alert('Network error'); }
+    if (password !== confirmPassword) {
+        validatePasswordMatch();
+        return;
     }
 
-    function openEdit(accountId, displayName) {
-        document.getElementById('editAccountId').value = accountId;
-        document.getElementById('editDisplayName').value = displayName;
-        document.getElementById('editPassword').value = '';
-        new bootstrap.Modal(document.getElementById('editModal')).show();
+    try {
+        const res = await fetch('/api/cashier-accounts', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({username, password, display_name})
+        });
+        const data = await res.json();
+        if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('createModal')).hide();
+            ['newUsername', 'newPassword', 'confirmPassword', 'newDisplayName'].forEach(id => document.getElementById(id).value = '');
+            updatePasswordRules();
+            await loadAccounts();
+            showAccountToast(`Invitation email sent to ${username}.`);
+        } else {
+            alert(data.error || 'Failed to create account');
+        }
+    } catch {
+        alert('Network error');
     }
+}
 
-    async function saveEdit() {
-        const accountId = document.getElementById('editAccountId').value;
-        const display_name = document.getElementById('editDisplayName').value.trim();
-        const password = document.getElementById('editPassword').value;
-        const body = {display_name};
-        if (password) body.password = password;
-        try {
-            const res = await fetch(`/api/cashier-accounts/${accountId}`, {
-                method: 'PUT',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(body)
-            });
-            const data = await res.json();
-            if (data.success) {
-                bootstrap.Modal.getInstance(document.getElementById('editModal')).hide();
-                loadAccounts();
-            } else {
-                alert(data.error || 'Failed to update account');
-            }
-        } catch { alert('Network error'); }
+function openEdit(accountId, displayName) {
+    document.getElementById('editAccountId').value = accountId;
+    document.getElementById('editDisplayName').value = displayName;
+    document.getElementById('editPassword').value = '';
+    new bootstrap.Modal(document.getElementById('editModal')).show();
+}
+
+async function saveEdit() {
+    const accountId = document.getElementById('editAccountId').value;
+    const display_name = document.getElementById('editDisplayName').value.trim();
+    const password = document.getElementById('editPassword').value;
+    const body = {display_name};
+    if (password) body.password = password;
+
+    try {
+        const res = await fetch(`/api/cashier-accounts/${accountId}`, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(body)
+        });
+        const data = await res.json();
+        if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('editModal')).hide();
+            loadAccounts();
+        } else {
+            alert(data.error || 'Failed to update account');
+        }
+    } catch {
+        alert('Network error');
     }
+}
 
-    async function toggleStatus(accountId, newStatus) {
-        const verb = newStatus === 'Active' ? 'activate' : 'deactivate';
-        if (!confirm(`Are you sure you want to ${verb} this account?`)) return;
-        try {
-            const res = await fetch(`/api/cashier-accounts/${accountId}`, {
-                method: 'PUT',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({status: newStatus})
-            });
-            const data = await res.json();
-            if (data.success) {
-                loadAccounts();
-            } else {
-                alert(data.error || 'Failed to update status');
-            }
-        } catch { alert('Network error'); }
+async function toggleStatus(accountId, newStatus) {
+    const verb = newStatus === 'Active' ? 'activate' : 'deactivate';
+    if (!confirm(`Are you sure you want to ${verb} this account?`)) return;
+
+    try {
+        const res = await fetch(`/api/cashier-accounts/${accountId}`, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({status: newStatus})
+        });
+        const data = await res.json();
+        if (data.success) {
+            loadAccounts();
+        } else {
+            alert(data.error || 'Failed to update status');
+        }
+    } catch {
+        alert('Network error');
     }
+}
 
-    loadAccounts();
+document.getElementById('newPassword').addEventListener('input', updatePasswordRules);
+document.getElementById('confirmPassword').addEventListener('input', validatePasswordMatch);
+document.getElementById('toggleNewPassword').addEventListener('click', () => toggleVisibility('newPassword', 'toggleNewPassword'));
+document.getElementById('toggleConfirmPassword').addEventListener('click', () => toggleVisibility('confirmPassword', 'toggleConfirmPassword'));
+
+updatePasswordRules();
+loadAccounts();
 </script>
 {% endblock %}

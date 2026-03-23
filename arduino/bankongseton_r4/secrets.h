@@ -13,7 +13,7 @@
 // Flask server on the school LAN (no trailing slash)
 // Wireless mode (WiFi enabled above): use port 5003 — dashboard has /api/nfc/tap
 // USB serial mode (WiFi commented out): FLASK_HOST is unused, value doesn't matter
-#define FLASK_HOST "192.168.68.104:5003"
+#define FLASK_HOST "192.168.68.104:5010"
 
 // Must match ARDUINO_API_KEY in Flask .env
 #define SECRET_API_KEY "testkey123"

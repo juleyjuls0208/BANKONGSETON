@@ -19,6 +19,7 @@ Physical RFID card tapped at the cashier counter completes a sale — balance de
 - Android app (student_app_v2): balance, transactions, FCM push, NFC HCE pay (being removed in M005/S05)
 - iOS app (mobile/ios/BankongSetonStudent): balance, transactions, FCM push — QR payment coming in M005/S04
 - Standalone cashier app (M006/S01-S05): login + JWT cookie auth + `/api/products` + modern POS screen + standalone payment/Arduino/QR APIs on port 5010 (`/api/process-sale`, `/api/complete-sale`, `/api/complete-sale-nfc`, `/api/qr-generate`, `/api/cancel-sale`, `/api/queue/status`, `/api/queue/sync`, `/api/arduino/*`); closure is now anchored by `.gsd/milestones/M006/slices/S05/S05-UAT-BUNDLE.{json,md}` (`overall.live_ready=true`, required flows `live_success`, no `:5003` request-trace hits) and summarized in `.gsd/milestones/M006/M006-SUMMARY.md`
+- M007 planning is now scoped: complete iOS UI-UX rework against `C:\Users\admin\Downloads\stitch_redesigned_login`, QR-only payment UX, and iOS 17+ demo acceptance on real device
 
 ## Architecture / Key Patterns
 
@@ -43,3 +44,4 @@ See `.gsd/REQUIREMENTS.md` for the explicit capability contract, requirement sta
 - [x] M004: NFC Phone Payment Fix — APDU retry firmware, end-to-end NFC validation
 - [x] M005: RC522 + OLED + QR Payment — swap PN532→RC522 on R4, LCD→OLED on R4, QR payment on both Android and iOS
 - [x] M006: Standalone Cashier Web App — dedicated port-5010 cashier site with modern POS UI, isolated from admin dashboard (**S01–S05 complete; closure evidence anchored in `.gsd/milestones/M006/slices/S05/S05-UAT-BUNDLE.{json,md}`**)
+- [ ] M007: iOS UI-UX Rework — stitch-faithful redesign with fully interactive in-scope controls, QR-only payment UX, and iOS 17+ on-device demo readiness

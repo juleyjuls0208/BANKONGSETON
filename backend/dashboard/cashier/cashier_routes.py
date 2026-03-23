@@ -6,14 +6,21 @@ import requests as _http
 
 from flask import Blueprint, render_template, jsonify, request, redirect, url_for
 from functools import wraps
+import importlib
 import jwt
 import os
 import json
 import re
 import gspread
 import logging
+import sys
 import time
 import uuid
+
+try:
+    import bcrypt as _bcrypt
+except ImportError:
+    _bcrypt = None
 
 try:
     import sys as _sys
@@ -35,6 +42,175 @@ JWT_SECRET = os.getenv('JWT_SECRET', 'bangko-jwt-secret-2026')
 JWT_ALGORITHM = 'HS256'
 
 UID_PATTERN = re.compile(r'^[0-9A-Fa-f]{8}$|^[0-9A-Fa-f]{14}$')
+
+
+def _resolve_runtime_module():
+    """Resolve the dashboard runtime module without importing entrypoints per request.
+
+    Priority:
+    1) __main__ when running an entrypoint script directly
+    2) already-imported dashboard_core/admin_dashboard modules
+    3) import dashboard_core, then admin_dashboard as final fallback
+    """
+    main_mod = sys.modules.get('__main__')
+    if main_mod and hasattr(main_mod, 'get_sheets_client'):
+        return main_mod
+
+    module_names = (
+        'backend.dashboard.dashboard_core',
+        'dashboard_core',
+        'backend.dashboard.admin_dashboard',
+        'admin_dashboard',
+    )
+
+    for name in module_names:
+        mod = sys.modules.get(name)
+        if mod and hasattr(mod, 'get_sheets_client'):
+            return mod
+
+    for name in module_names:
+        try:
+            mod = importlib.import_module(name)
+            if hasattr(mod, 'get_sheets_client'):
+                return mod
+        except Exception:
+            continue
+
+    raise RuntimeError('Unable to resolve dashboard runtime module')
+
+
+def _get_sheets_client():
+    return _resolve_runtime_module().get_sheets_client()
+
+
+def _get_philippines_time():
+    mod = _resolve_runtime_module()
+    fn = getattr(mod, 'get_philippines_time', None)
+    if callable(fn):
+        return fn()
+    from datetime import datetime
+    return datetime.now()
+
+
+def _normalize_card_uid(uid):
+    mod = _resolve_runtime_module()
+    fn = getattr(mod, 'normalize_card_uid', None)
+    if callable(fn):
+        return fn(uid)
+    if uid is None:
+        return ''
+    uid_str = str(uid).strip()
+    if not uid_str:
+        return ''
+    return uid_str.lstrip('0').upper()
+
+
+def _build_transaction_row(
+    trans_sheet,
+    *,
+    transaction_id,
+    timestamp,
+    student_id,
+    money_card_number,
+    transaction_type,
+    amount,
+    balance_before,
+    balance_after,
+    status='Completed',
+    error_message='',
+    items=None,
+    station_id='cashier-web',
+):
+    """Build a Transactions Log row aligned to current sheet headers.
+
+    This keeps cashier writes compatible across schema variants:
+    - legacy 7-column rows
+    - 10-column core rows
+    - extended rows with ItemsJson / StationID
+    """
+    items_json = json.dumps(items or [])
+    row_map = {
+        'TransactionID': transaction_id,
+        'Timestamp': timestamp,
+        'StudentID': student_id,
+        'MoneyCardNumber': money_card_number,
+        'TransactionType': transaction_type,
+        'Amount': float(amount),
+        'BalanceBefore': float(balance_before),
+        'BalanceAfter': float(balance_after),
+        'Status': status,
+        'ErrorMessage': error_message,
+        'ItemsJson': items_json,
+        'StationID': station_id,
+    }
+
+    # Header aliases tolerate sheet variants like "Transaction ID", "Money Card Number",
+    # "Type", "Error Message", etc.
+    header_aliases = {
+        'transactionid': 'TransactionID',
+        'transaction_id': 'TransactionID',
+        'txnid': 'TransactionID',
+        'timestamp': 'Timestamp',
+        'datetime': 'Timestamp',
+        'date': 'Timestamp',
+        'studentid': 'StudentID',
+        'student_id': 'StudentID',
+        'moneycardnumber': 'MoneyCardNumber',
+        'money_card_number': 'MoneyCardNumber',
+        'moneycard': 'MoneyCardNumber',
+        'carduid': 'MoneyCardNumber',
+        'transactiontype': 'TransactionType',
+        'transaction_type': 'TransactionType',
+        'type': 'TransactionType',
+        'amount': 'Amount',
+        'balancebefore': 'BalanceBefore',
+        'balance_before': 'BalanceBefore',
+        'previousbalance': 'BalanceBefore',
+        'balanceafter': 'BalanceAfter',
+        'balance_after': 'BalanceAfter',
+        'newbalance': 'BalanceAfter',
+        'status': 'Status',
+        'errormessage': 'ErrorMessage',
+        'error_message': 'ErrorMessage',
+        'error': 'ErrorMessage',
+        'itemsjson': 'ItemsJson',
+        'items_json': 'ItemsJson',
+        'items': 'ItemsJson',
+        'stationid': 'StationID',
+        'station_id': 'StationID',
+        'station': 'StationID',
+        'terminalid': 'StationID',
+    }
+
+    def _norm(h):
+        return re.sub(r'[^a-z0-9_]', '', str(h).strip().lower())
+
+    try:
+        headers = [str(h).strip() for h in trans_sheet.row_values(1) if str(h).strip()]
+        if headers:
+            resolved = []
+            for h in headers:
+                canonical = header_aliases.get(_norm(h), h if h in row_map else None)
+                resolved.append(row_map.get(canonical, ''))
+
+            if any(v != '' for v in resolved):
+                return resolved
+
+            logger.warning(
+                "event=transaction_header_unmapped headers=%s; falling back to canonical order",
+                headers,
+            )
+    except Exception:
+        # Fall back to canonical order when header lookup is unavailable.
+        pass
+
+    canonical_headers = [
+        'TransactionID', 'Timestamp', 'StudentID', 'MoneyCardNumber',
+        'TransactionType', 'Amount', 'BalanceBefore', 'BalanceAfter',
+        'Status', 'ErrorMessage', 'ItemsJson', 'StationID'
+    ]
+    return [row_map.get(h, '') for h in canonical_headers]
+
 
 def jwt_required(roles=None):
     """Decorator to require JWT authentication"""
@@ -71,6 +247,10 @@ def login():
 
 @cashier_bp.route('/api/login', methods=['POST'])
 def api_login():
+    if _bcrypt is None:
+        logger.error("bcrypt dependency unavailable; refusing cashier login")
+        return jsonify({'error': 'Authentication service unavailable'}), 503
+
     data = request.get_json()
     username = data.get('username', '').strip().lower()
     password = data.get('password', '').strip()
@@ -80,45 +260,33 @@ def api_login():
 
     # Try Google Sheets Cashier Accounts first
     try:
-        import sys, os
-        sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-        from admin_dashboard import get_sheets_client
-        db = get_sheets_client()
+        db = _get_sheets_client()
         try:
             ws = db.worksheet('Cashier Accounts')
-            records = ws.get_all_records()
+            records = get_cached('cashier_accounts_all')
+            if records is None:
+                records = ws.get_all_records()
+                set_cached('cashier_accounts_all', records, ttl=10)
             for row in records:
                 if row.get('Username', '').lower() == username:
                     if row.get('Status', '').lower() != 'active':
                         return jsonify({'error': 'Account is inactive'}), 401
                     pw_hash = row.get('PasswordHash', '')
-                    try:
-                        import bcrypt as _bcrypt
-                        if _bcrypt.checkpw(password.encode(), pw_hash.encode()):
-                            authenticated = True
-                            display_name = row.get('DisplayName', username)
-                            # Update LastLogin
-                            try:
-                                from datetime import datetime
-                                idx = records.index(row) + 2
-                                ws.update_cell(idx, 7, datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
-                            except Exception:
-                                pass
-                    except ImportError:
-                        # Fallback: plain comparison if bcrypt not available
-                        if pw_hash == password:
-                            authenticated = True
-                            display_name = row.get('DisplayName', username)
+                    if pw_hash and _bcrypt.checkpw(password.encode(), pw_hash.encode()):
+                        authenticated = True
+                        display_name = row.get('DisplayName', username)
+                        # Update LastLogin
+                        try:
+                            from datetime import datetime
+                            idx = records.index(row) + 2
+                            ws.update_cell(idx, 7, datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+                        except Exception:
+                            pass
                     break
         except Exception:
-            pass  # Sheet not found — fall through to legacy
+            pass
     except Exception:
         pass
-
-    # Legacy fallback: hardcoded credentials
-    if not authenticated and username == 'cashier' and password == 'cashier123':
-        authenticated = True
-        display_name = 'Cashier'
 
     if authenticated:
         from datetime import datetime, timedelta
@@ -247,14 +415,10 @@ def connect_arduino():
 def get_products():
     """Get active products for the cashier POS grid"""
     try:
-        import sys
-        sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
-        from admin_dashboard import get_sheets_client
-
-        db = get_sheets_client()
-        products_sheet = db.worksheet('Products')
         records = get_cached("products_all")
         if records is None:
+            db = _get_sheets_client()
+            products_sheet = db.worksheet('Products')
             records = products_sheet.get_all_records()
             set_cached("products_all", records, ttl=30)
 
@@ -297,10 +461,17 @@ def process_sale():
             return jsonify({'error': 'Invalid sale data'}), 400
         
         # Store pending transaction
-        flask_session['pending_transaction'] = {
+        pending_tx = {
             'items': items,
             'total': total,
             'cashier_id': request.user.get('user_id')
+        }
+        flask_session['pending_transaction'] = pending_tx
+        # Also keep a process-level fallback in case session state is lost during UI reconnects.
+        current_app.pending_sale = {
+            **pending_tx,
+            'created_at': time.time(),
+            'cashier_username': request.user.get('username', ''),
         }
         
         # Emit event to start card reading (frontend will listen via WebSocket)
@@ -329,11 +500,11 @@ def complete_sale():
     """Complete sale after card is read"""
     try:
         from flask import session as flask_session, current_app
-        import sys
-        sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
-        
-        from admin_dashboard import get_sheets_client, normalize_card_uid, get_philippines_time
-        
+
+        db = _get_sheets_client()
+        normalize_card_uid = _normalize_card_uid
+        get_philippines_time = _get_philippines_time
+
         data = request.get_json()
         card_uid = data.get('card_uid', '').strip()
         
@@ -344,8 +515,8 @@ def complete_sale():
         if not UID_PATTERN.match(card_uid):
             return jsonify({'error': 'Card UID format is invalid -- please scan the card again'}), 400
         
-        # Get pending transaction
-        pending = flask_session.get('pending_transaction')
+        # Get pending transaction (session first, then process-level fallback)
+        pending = flask_session.get('pending_transaction') or getattr(current_app, 'pending_sale', None)
         if not pending:
             return jsonify({'error': 'No pending transaction'}), 400
         
@@ -353,7 +524,6 @@ def complete_sale():
         total = pending['total']
         
         normalized_card = normalize_card_uid(card_uid)
-        db = get_sheets_client()
         
         # Find money account
         money_sheet = db.worksheet('Money Accounts')
@@ -418,19 +588,43 @@ def complete_sale():
         new_balance = current_balance - total
         balance_deducted = False
         last_error = None
-        timestamp = get_philippines_time().strftime('%Y-%m-%d %H:%M:%S')
+        timestamp_dt = get_philippines_time()
+        timestamp = timestamp_dt.strftime('%Y-%m-%d %H:%M:%S')
+        transaction_id = f"TXN-{timestamp_dt.strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:8]}"
+
+        # Resolve student context once so transaction logging and notifications
+        # use the same source of truth.
+        matched_user = None
+        student_id = ''
+        try:
+            users_sheet = db.worksheet('Users')
+            user_records = users_sheet.get_all_records()
+            for user in user_records:
+                if normalize_card_uid(user.get('MoneyCardNumber', '')) == normalized_card:
+                    matched_user = user
+                    student_id = str(user.get('StudentID', '')).strip()
+                    break
+        except Exception:
+            matched_user = None
 
         # Build transaction_row before the retry loop so it is always available
         # for the offline-queue fallback even when update_cell fails on attempt 1.
-        transaction_row = [
-            timestamp,
-            normalized_card,
-            'Purchase',
-            -total,
-            new_balance,
-            'Success',
-            json.dumps(items)
-        ]
+        trans_sheet = db.worksheet('Transactions Log')
+        transaction_row = _build_transaction_row(
+            trans_sheet,
+            transaction_id=transaction_id,
+            timestamp=timestamp,
+            student_id=student_id,
+            money_card_number=normalized_card,
+            transaction_type='Purchase',
+            amount=total,
+            balance_before=current_balance,
+            balance_after=new_balance,
+            status='Completed',
+            error_message='',
+            items=items,
+            station_id='cashier-web',
+        )
 
         for attempt in range(1, MAX_RETRIES + 1):
             try:
@@ -440,34 +634,56 @@ def complete_sale():
                     balance_deducted = True
 
                 # Step 2: Log transaction
-                trans_sheet = db.worksheet('Transactions Log')
-
-                trans_sheet.append_row(transaction_row)
+                trans_sheet.append_row(transaction_row, table_range='A1')
                 invalidate_pattern("transactions")
                 invalidate_pattern("money_accounts")
+                logger.info(
+                    "event=transaction_logged flow=complete_sale tx=%s card=%s total=%.2f",
+                    transaction_id,
+                    normalized_card,
+                    total,
+                )
                 last_error = None
                 break  # Success
 
-            except (gspread.exceptions.APIError, ConnectionError, TimeoutError) as e:
+            except Exception as e:
                 last_error = e
-                logger.warning(f"complete_sale attempt {attempt}/{MAX_RETRIES} failed: {e}")
-                if attempt < MAX_RETRIES:
-                    time.sleep(2 ** attempt)  # Exponential backoff: 2s, 4s
-                else:
-                    # All retries exhausted — attempt rollback if balance was deducted
-                    if balance_deducted:
-                        try:
-                            money_sheet.update_cell(account_row, 3, current_balance)
-                            logger.error(
-                                f"complete_sale: all {MAX_RETRIES} attempts failed; "
-                                f"balance rolled back to {current_balance} for card {normalized_card}. Error: {e}"
-                            )
-                        except Exception as rollback_err:
-                            logger.error(
-                                f"complete_sale: CRITICAL — rollback also failed for card {normalized_card}. "
-                                f"Balance may be incorrect. Rollback error: {rollback_err}. Original error: {e}"
-                            )
-                    # Queue the transaction for later sync
+                retryable = isinstance(
+                    e,
+                    (gspread.exceptions.APIError, ConnectionError, TimeoutError),
+                )
+                logger.warning(
+                    "complete_sale attempt %d/%d failed (retryable=%s): %s",
+                    attempt,
+                    MAX_RETRIES,
+                    retryable,
+                    e,
+                )
+
+                if retryable and attempt < MAX_RETRIES:
+                    # Keep retries non-blocking for request workers; final failure falls back to offline queue.
+                    continue
+
+                # Non-retryable failures should still rollback to avoid Money Accounts / Transactions Log drift.
+                if balance_deducted:
+                    try:
+                        money_sheet.update_cell(account_row, 3, current_balance)
+                        logger.error(
+                            "complete_sale: rolled back balance to %s for card %s after transaction log failure. Error: %s",
+                            current_balance,
+                            normalized_card,
+                            e,
+                        )
+                    except Exception as rollback_err:
+                        logger.error(
+                            "complete_sale: CRITICAL — rollback also failed for card %s. Balance may be incorrect. Rollback error: %s. Original error: %s",
+                            normalized_card,
+                            rollback_err,
+                            e,
+                        )
+
+                if retryable:
+                    # Queue retryable failures for later sync.
                     try:
                         import sys as _sys
                         _sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
@@ -485,38 +701,33 @@ def complete_sale():
                         'message': 'Sale processed offline — will sync when connection is restored.'
                     })
 
+                return jsonify({'error': 'Service unavailable, please try again'}), 503
+
         if last_error:
             # Should not reach here, but guard just in case
             return jsonify({'error': 'Service unavailable, please try again'}), 503
         
         # Clear pending transaction
         flask_session.pop('pending_transaction', None)
+        current_app.pending_sale = None
         
         # Send email (async)
         try:
-            users_sheet = db.worksheet('Users')
-            user_records = users_sheet.get_all_records()
-            
-            matched_user = None
-            for user in user_records:
-                if normalize_card_uid(user.get('MoneyCardNumber', '')) == normalized_card:
-                    matched_user = user
-                    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'services'))
-                    from email_service import EmailService
-                    
-                    email_service = EmailService()
-                    email_service.send_receipt(
-                        user.get('ParentEmail', ''),
-                        user.get('Email', ''),
-                        user.get('Name', 'Student'),
-                        items,
-                        total,
-                        new_balance
-                    )
-                    break
+            if matched_user:
+                sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'services'))
+                from email_service import EmailService
+
+                email_service = EmailService()
+                email_service.send_receipt(
+                    matched_user.get('ParentEmail', ''),
+                    matched_user.get('Email', ''),
+                    matched_user.get('Name', 'Student'),
+                    items,
+                    total,
+                    new_balance
+                )
         except Exception as e:
             print(f"Email send error (non-fatal): {e}")
-            matched_user = None
 
         # Send SMS notification to parent (purchase + low-balance check)
         try:
@@ -608,18 +819,17 @@ def complete_sale_nfc():
     """
     try:
         from flask import session as flask_session, current_app
-        import sys
-        sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
-        from admin_dashboard import get_sheets_client, normalize_card_uid, get_philippines_time
+        db = _get_sheets_client()
+        get_philippines_time = _get_philippines_time
 
         data = request.get_json()
         virtual_card_token = str(data.get('virtual_card_token', '')).strip()
         if not virtual_card_token:
             return jsonify({'error': 'virtual_card_token required'}), 400
 
-        # Get pending transaction
-        pending = flask_session.get('pending_transaction')
+        # Get pending transaction (session first, then process-level fallback)
+        pending = flask_session.get('pending_transaction') or getattr(current_app, 'pending_sale', None)
         if not pending:
             logger.warning("event=nfc_sale_no_pending")
             return jsonify({'error': 'No pending transaction'}), 400
@@ -628,7 +838,6 @@ def complete_sale_nfc():
         total = pending['total']
 
         # Resolve virtual card token → MoneyCardNumber via VirtualCards sheet
-        db = get_sheets_client()
         vc_records = db.worksheet('VirtualCards').get_all_records()
         matched = next(
             (r for r in vc_records
@@ -680,19 +889,43 @@ def complete_sale_nfc():
         new_balance = current_balance - total
         balance_deducted = False
         last_error = None
-        timestamp = get_philippines_time().strftime('%Y-%m-%d %H:%M:%S')
+        timestamp_dt = get_philippines_time()
+        timestamp = timestamp_dt.strftime('%Y-%m-%d %H:%M:%S')
+        transaction_id = f"TXN-{timestamp_dt.strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:8]}"
+
+        # Resolve student context once so transaction logging and notifications
+        # use the same source of truth.
+        matched_user = None
+        student_id = ''
+        try:
+            users_sheet = db.worksheet('Users')
+            user_records = users_sheet.get_all_records()
+            for user in user_records:
+                if str(user.get('MoneyCardNumber', '')).strip() == money_card_number:
+                    matched_user = user
+                    student_id = str(user.get('StudentID', '')).strip()
+                    break
+        except Exception:
+            matched_user = None
 
         # Build transaction_row before the retry loop so it is always available
         # for the offline-queue fallback even when update_cell fails on attempt 1.
-        transaction_row = [
-            timestamp,
-            money_card_number,
-            'NFC Purchase',
-            -total,
-            new_balance,
-            'Success',
-            json.dumps(items)
-        ]
+        trans_sheet = db.worksheet('Transactions Log')
+        transaction_row = _build_transaction_row(
+            trans_sheet,
+            transaction_id=transaction_id,
+            timestamp=timestamp,
+            student_id=student_id,
+            money_card_number=money_card_number,
+            transaction_type='NFC Purchase',
+            amount=total,
+            balance_before=current_balance,
+            balance_after=new_balance,
+            status='Completed',
+            error_message='',
+            items=items,
+            station_id='cashier-web-nfc',
+        )
 
         for attempt in range(1, MAX_RETRIES + 1):
             try:
@@ -702,34 +935,56 @@ def complete_sale_nfc():
                     balance_deducted = True
 
                 # Step 2: Log transaction
-                trans_sheet = db.worksheet('Transactions Log')
-
-                trans_sheet.append_row(transaction_row)
+                trans_sheet.append_row(transaction_row, table_range='A1')
                 invalidate_pattern("transactions")
                 invalidate_pattern("money_accounts")
+                logger.info(
+                    "event=transaction_logged flow=complete_sale_nfc tx=%s card=%s total=%.2f",
+                    transaction_id,
+                    money_card_number,
+                    total,
+                )
                 last_error = None
                 break  # Success
 
-            except (gspread.exceptions.APIError, ConnectionError, TimeoutError) as e:
+            except Exception as e:
                 last_error = e
-                logger.warning(f"complete_sale_nfc attempt {attempt}/{MAX_RETRIES} failed: {e}")
-                if attempt < MAX_RETRIES:
-                    time.sleep(2 ** attempt)  # Exponential backoff: 2s, 4s
-                else:
-                    # All retries exhausted — attempt rollback if balance was deducted
-                    if balance_deducted:
-                        try:
-                            money_sheet.update_cell(account_row, 3, current_balance)
-                            logger.error(
-                                f"complete_sale_nfc: all {MAX_RETRIES} attempts failed; "
-                                f"balance rolled back to {current_balance} for card {money_card_number}. Error: {e}"
-                            )
-                        except Exception as rollback_err:
-                            logger.error(
-                                f"complete_sale_nfc: CRITICAL — rollback also failed for card {money_card_number}. "
-                                f"Balance may be incorrect. Rollback error: {rollback_err}. Original error: {e}"
-                            )
-                    # Queue the transaction for later sync
+                retryable = isinstance(
+                    e,
+                    (gspread.exceptions.APIError, ConnectionError, TimeoutError),
+                )
+                logger.warning(
+                    "complete_sale_nfc attempt %d/%d failed (retryable=%s): %s",
+                    attempt,
+                    MAX_RETRIES,
+                    retryable,
+                    e,
+                )
+
+                if retryable and attempt < MAX_RETRIES:
+                    # Keep retries non-blocking for request workers; final failure falls back to offline queue.
+                    continue
+
+                # Non-retryable failures should still rollback to avoid Money Accounts / Transactions Log drift.
+                if balance_deducted:
+                    try:
+                        money_sheet.update_cell(account_row, 3, current_balance)
+                        logger.error(
+                            "complete_sale_nfc: rolled back balance to %s for card %s after transaction log failure. Error: %s",
+                            current_balance,
+                            money_card_number,
+                            e,
+                        )
+                    except Exception as rollback_err:
+                        logger.error(
+                            "complete_sale_nfc: CRITICAL — rollback also failed for card %s. Balance may be incorrect. Rollback error: %s. Original error: %s",
+                            money_card_number,
+                            rollback_err,
+                            e,
+                        )
+
+                if retryable:
+                    # Queue retryable failures for later sync.
                     try:
                         import sys as _sys
                         _sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
@@ -747,12 +1002,15 @@ def complete_sale_nfc():
                         'message': 'Sale processed offline — will sync when connection is restored.'
                     })
 
+                return jsonify({'error': 'Service unavailable, please try again'}), 503
+
         if last_error:
             # Should not reach here, but guard just in case
             return jsonify({'error': 'Service unavailable, please try again'}), 503
 
         # Clear pending transaction (replay prevention)
         flask_session.pop('pending_transaction', None)
+        current_app.pending_sale = None
 
         logger.info(
             "event=nfc_sale_complete token_len=%d card=%s total=%.2f",
@@ -760,30 +1018,22 @@ def complete_sale_nfc():
         )
 
         # Send email (async)
-        matched_user = None
         try:
-            users_sheet = db.worksheet('Users')
-            user_records = users_sheet.get_all_records()
+            if matched_user:
+                sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'services'))
+                from email_service import EmailService
 
-            for user in user_records:
-                if str(user.get('MoneyCardNumber', '')).strip() == money_card_number:
-                    matched_user = user
-                    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'services'))
-                    from email_service import EmailService
-
-                    email_service = EmailService()
-                    email_service.send_receipt(
-                        user.get('ParentEmail', ''),
-                        user.get('Email', ''),
-                        user.get('Name', 'Student'),
-                        items,
-                        total,
-                        new_balance
-                    )
-                    break
+                email_service = EmailService()
+                email_service.send_receipt(
+                    matched_user.get('ParentEmail', ''),
+                    matched_user.get('Email', ''),
+                    matched_user.get('Name', 'Student'),
+                    items,
+                    total,
+                    new_balance
+                )
         except Exception as e:
             print(f"Email send error (non-fatal): {e}")
-            matched_user = None
 
         # Send SMS notification to parent (purchase + low-balance check)
         try:
@@ -868,6 +1118,7 @@ def cancel_sale():
     t = current_app.pending_qr_token
     token = (t or {}).get("token", "")
     flask_session.pop('pending_transaction', None)
+    current_app.pending_sale = None
     current_app.pending_qr_token = None
     current_app.socketio.emit('sale_cancelled', {})
     if token:
@@ -913,11 +1164,9 @@ def queue_sync():
     """POST /cashier/api/queue/sync — attempt to drain pending queue."""
     try:
         import sys
-        sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-        from admin_dashboard import get_sheets_client
         sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
         from offline_queue import get_offline_queue
-        db = get_sheets_client()
+        db = _get_sheets_client()
         synced, failed = get_offline_queue().process_queue(db)
         return jsonify({'synced': synced, 'failed': failed})
     except Exception as e:
@@ -925,9 +1174,19 @@ def queue_sync():
         return jsonify({'error': 'An unexpected error occurred'}), 500
 
 
+def _shared_cashier_secret() -> str:
+    """Return webhook auth secret, falling back to JWT secret when unset.
+
+    This keeps local↔cloud QR sync working in deployments that configured
+    JWT_SECRET but never added a dedicated CASHIER_SHARED_SECRET.
+    """
+    return (os.getenv("CASHIER_SHARED_SECRET", "").strip()
+            or os.getenv("JWT_SECRET", "").strip())
+
+
 def _cloud_headers():
     """Headers for local→cloud cashier calls."""
-    return {"X-Cashier-Secret": os.getenv("CASHIER_SHARED_SECRET", ""),
+    return {"X-Cashier-Secret": _shared_cashier_secret(),
             "Content-Type": "application/json"}
 
 
@@ -936,17 +1195,27 @@ def _push_qr_to_cloud(pending: dict, req):
     Builds a cashier_callback_url so PythonAnywhere can notify us on payment.
     """
     pa_url = os.getenv("PYTHONANYWHERE_URL", "").rstrip("/")
-    if not pa_url or not os.getenv("CASHIER_SHARED_SECRET"):
+    if not pa_url or not _shared_cashier_secret():
         return  # cloud sync disabled — local/LAN-only mode
     try:
         scheme = "https" if req.is_secure else "http"
         callback_url = f"{scheme}://{req.host}/api/cashier/qr-paid"
-        _http.post(
+        payload = {k: v for k, v in pending.items() if k != "cashier_callback_url"}
+        payload["cashier_callback_url"] = callback_url
+        resp = _http.post(
             f"{pa_url}/api/cashier/qr-register",
-            json={k: v for k, v in pending.items() if k != "cashier_callback_url"},
+            json=payload,
             headers=_cloud_headers(),
             timeout=5,
         )
+        if resp.status_code >= 400:
+            logger.warning(
+                "event=qr_cloud_push_rejected token=%s status=%s body=%s",
+                pending.get("token"),
+                resp.status_code,
+                (resp.text or "")[:200],
+            )
+            return
         logger.info("event=qr_pushed_to_cloud token=%s", pending.get("token"))
     except Exception as e:
         logger.warning("event=qr_cloud_push_failed error=%s (LAN-only fallback)", e)
@@ -955,7 +1224,7 @@ def _push_qr_to_cloud(pending: dict, req):
 def _cancel_qr_on_cloud(token: str):
     """Tell PythonAnywhere to clear the pending QR token (fire-and-forget)."""
     pa_url = os.getenv("PYTHONANYWHERE_URL", "").rstrip("/")
-    if not pa_url or not os.getenv("CASHIER_SHARED_SECRET"):
+    if not pa_url or not _shared_cashier_secret():
         return
     try:
         _http.post(

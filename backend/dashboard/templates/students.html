@@ -3,88 +3,325 @@
 {% block title %}Students — Bangko ng Seton{% endblock %}
 
 {% block content %}
-<div class="page-header d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h2 class="mb-1"><i class="bi bi-people me-2"></i>Student Management</h2>
-        <p class="text-muted mb-0">Search and view all registered students</p>
-    </div>
-</div>
+<style>
+    .students-head {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        margin-bottom: 1.2rem;
+        gap: 1rem;
+    }
 
-<div class="card border-0 shadow-sm">
-    <div class="card-body">
-        <!-- Search Bar -->
-        <div class="row mb-3">
-            <div class="col-md-5">
-                <div class="input-group">
-                    <span class="input-group-text"><i class="bi bi-search"></i></span>
-                    <input type="text" class="form-control" id="searchInput" placeholder="Search by name or ID...">
+    .students-actions {
+        display: flex;
+        gap: 0.65rem;
+    }
+
+    .students-actions .action-btn {
+        min-width: 95px;
+    }
+
+    .students-toolbar {
+        margin-bottom: 0.9rem;
+        display: flex;
+        gap: 0.65rem;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .students-toolbar .search-box {
+        position: relative;
+        width: min(420px, 100%);
+    }
+
+    .students-toolbar .search-box i {
+        position: absolute;
+        top: 50%;
+        left: 0.72rem;
+        transform: translateY(-50%);
+        color: #6f6b83;
+    }
+
+    .students-toolbar input {
+        width: 100%;
+        height: 42px;
+        border-radius: 10px;
+        border: 1px solid #d7d1e7;
+        background: #ece8f6;
+        padding: 0 0.8rem 0 2.2rem;
+    }
+
+    .status-chip {
+        padding: 0.28rem 0.72rem;
+        border-radius: 999px;
+        font-size: 0.72rem;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+    }
+
+    .status-active {
+        background: #c8efd9;
+        color: #16784a;
+        border: 1px solid #9ad9b7;
+    }
+
+    .status-inactive {
+        background: #f8d8d8;
+        color: #b52f2f;
+        border: 1px solid #ecb2b2;
+    }
+
+    .card-state {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.42rem;
+        font-weight: 600;
+    }
+
+    .card-state.ok { color: #16784a; }
+    .card-state.lost { color: #c21f1f; }
+
+    .student-id {
+        color: #3525cd;
+        font-weight: 800;
+        text-decoration: none;
+    }
+
+    .students-foot {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        padding: 0.95rem 1rem;
+        border-top: 1px solid rgba(217, 211, 232, 0.75);
+        background: #f1edf9;
+    }
+
+    .pager {
+        display: inline-flex;
+        gap: 0.4rem;
+        align-items: center;
+    }
+
+    .pager button {
+        width: 34px;
+        height: 34px;
+        border-radius: 8px;
+        border: 1px solid #d6d0e7;
+        background: #fff;
+        color: #4f4a62;
+        font-weight: 700;
+    }
+
+    .pager button.active {
+        background: #3525cd;
+        color: #fff;
+        border-color: #3525cd;
+    }
+</style>
+
+<section class="students-head">
+    <div>
+        <h1 class="page-title">Student <span class="accent">Registrar</span></h1>
+        <p class="page-subtitle">Managing student ledgers across the institution.</p>
+    </div>
+    <div class="students-actions">
+        <button id="filterBtn" class="action-btn secondary" onclick="toggleFilter()"><i class="bi bi-funnel me-1"></i>Filter</button>
+        <button class="action-btn secondary" onclick="toggleSort()"><i class="bi bi-sort-down me-1"></i>Sort</button>
+        {% if role == 'admin' %}
+        <button class="action-btn primary" data-bs-toggle="modal" data-bs-target="#enrollModal"><i class="bi bi-person-plus-fill me-1"></i>Enroll Student</button>
+        {% else %}
+        <a class="action-btn primary" href="/reports" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;"><i class="bi bi-download me-1"></i>Export Students</a>
+        {% endif %}
+    </div>
+</section>
+
+<section class="students-toolbar">
+    <div class="search-box">
+        <i class="bi bi-search"></i>
+        <input type="text" id="searchInput" placeholder="Search students by name or ID...">
+    </div>
+</section>
+
+<section class="table-shell">
+    <div class="table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th>Student ID</th>
+                    <th>Name</th>
+                    <th>Balance (₱)</th>
+                    <th>Account Status</th>
+                    <th>Card State</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="studentsTable">
+                <tr>
+                    <td colspan="6" class="text-center text-muted py-4">
+                        <div class="spinner-border spinner-border-sm me-2"></div>Loading students...
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="students-foot">
+        <small id="studentsCountNote" class="text-muted">Loading entries...</small>
+        <div class="pager" style="display:none;"><!-- Pagination not yet implemented --></div>
+    </div>
+</section>
+
+{% if role == 'admin' %}
+<div class="modal fade" id="enrollModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Enroll Student</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Student ID</label>
+                    <input type="text" class="form-control" id="enrollStudentId" placeholder="e.g. 202612345">
                 </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Student Name</label>
+                    <input type="text" class="form-control" id="enrollStudentName" placeholder="Full name">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Parent Email (optional)</label>
+                    <input type="email" class="form-control" id="enrollParentEmail" placeholder="parent@email.com">
+                </div>
+                <small class="text-muted">Card linking can be done later from card management workflows.</small>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="submitEnrollment()">Enroll</button>
             </div>
         </div>
-
-        <!-- Students Table -->
-        <div class="table-responsive">
-            <table class="table table-hover mb-0">
-                <thead class="table-light">
-                    <tr>
-                        <th>Student ID</th>
-                        <th>Name</th>
-                        <th>ID Card</th>
-                        <th>Money Card</th>
-                        <th>Balance</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-                <tbody id="studentsTable">
-                    <tr>
-                        <td colspan="6" class="text-center text-muted py-4">
-                            <div class="spinner-border spinner-border-sm me-2"></div>Loading students...
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
     </div>
 </div>
+{% endif %}
 {% endblock %}
 
 {% block extra_js %}
 <script>
+
+    let allStudents = [];
+    let currentSort = { field: 'Name', asc: true };
+    let currentFilter = 'all'; // all, active, lost
+    
+    function setStudents(students) {
+        allStudents = students;
+        applySortAndFilter();
+    }
+    
+    function toggleSort() {
+        if (currentSort.field === 'Name') {
+            currentSort = { field: 'Balance', asc: false };
+        } else if (currentSort.field === 'Balance') {
+            currentSort = { field: 'Name', asc: true };
+        }
+        applySortAndFilter();
+    }
+    
+    function toggleFilter() {
+        if (currentFilter === 'all') currentFilter = 'active';
+        else if (currentFilter === 'active') currentFilter = 'lost';
+        else currentFilter = 'all';
+        
+        const btn = document.getElementById('filterBtn');
+        if (btn) {
+            if (currentFilter === 'all') btn.innerHTML = '<i class="bi bi-funnel me-1"></i>Filter';
+            else if (currentFilter === 'active') btn.innerHTML = '<i class="bi bi-funnel-fill text-success me-1"></i>Active Only';
+            else btn.innerHTML = '<i class="bi bi-funnel-fill text-danger me-1"></i>Lost Cards';
+        }
+        applySortAndFilter();
+    }
+    
+    function applySortAndFilter() {
+        let filtered = [...allStudents];
+        
+        if (currentFilter === 'active') {
+            filtered = filtered.filter(s => String(s.Status || 'Active').toLowerCase() === 'active');
+        } else if (currentFilter === 'lost') {
+            filtered = filtered.filter(s => !String(s.MoneyCardNumber || '').trim());
+        }
+        
+        filtered.sort((a, b) => {
+            if (currentSort.field === 'Name') {
+                const nameA = String(a.Name || '').toLowerCase();
+                const nameB = String(b.Name || '').toLowerCase();
+                return currentSort.asc ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
+            } else if (currentSort.field === 'Balance') {
+                const balA = Number(a.Balance || 0);
+                const balB = Number(b.Balance || 0);
+                return currentSort.asc ? balA - balB : balB - balA;
+            }
+            return 0;
+        });
+        
+        displayStudents(filtered, false);
+    }
+
+    const studentsBody = document.getElementById('studentsTable');
+    const studentsCountNote = document.getElementById('studentsCountNote');
+
     document.addEventListener('DOMContentLoaded', () => {
         loadStudents();
         document.getElementById('searchInput').addEventListener('input', searchStudents);
     });
 
+    function esc(value) {
+        return String(value ?? '').replace(/[&<>'"]/g, m => ({ '&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;' }[m]));
+    }
+
     async function loadStudents() {
         try {
             const response = await fetch('/api/students');
             const data = await response.json();
-            displayStudents(data.students);
+            setStudents(data.students || []);
         } catch (error) {
             console.error('Error loading students:', error);
-            document.getElementById('studentsTable').innerHTML =
-                '<tr><td colspan="6" class="text-center text-danger py-3">Failed to load students</td></tr>';
+            studentsBody.innerHTML = '<tr><td colspan="6" class="text-center text-danger py-3">Failed to load students</td></tr>';
         }
     }
 
-    function displayStudents(students) {
-        const tbody = document.getElementById('studentsTable');
+    function displayStudents(students, updateGlobal = true) {
+        if (updateGlobal) allStudents = students;
 
         if (!students || students.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">No students found</td></tr>';
+            studentsBody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">No students found</td></tr>';
+            studentsCountNote.textContent = 'Showing 0 entries';
             return;
         }
 
-        tbody.innerHTML = students.map(s => `
-            <tr>
-                <td>${s.StudentID}</td>
-                <td><strong>${s.Name}</strong></td>
-                <td><code class="small">${s.IDCardNumber || '—'}</code></td>
-                <td><code class="small">${s.MoneyCardNumber || '—'}</code></td>
-                <td>₱${(parseFloat(s.Balance) || 0).toFixed(2)}</td>
-                <td><span class="badge ${s.Status === 'Active' ? 'bg-success' : 'bg-secondary'}">${s.Status || 'Active'}</span></td>
-            </tr>
-        `).join('');
+        studentsCountNote.textContent = `Showing 1 to ${Math.min(students.length, 10)} of ${students.length.toLocaleString()} entries`;
+
+        studentsBody.innerHTML = students.slice(0, 50).map(s => {
+            const balance = Number(s.Balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            const isActive = String(s.Status || 'Active').toLowerCase() === 'active';
+            const hasCard = !!String(s.MoneyCardNumber || '').trim();
+            const cardStateClass = hasCard ? 'ok' : 'lost';
+            const cardStateText = hasCard ? 'Linked' : 'LOST';
+            const cardIcon = hasCard ? 'bi-check-circle-fill' : 'bi-exclamation-circle-fill';
+
+            return `
+                <tr>
+                    <td><a class="student-id" href="#">${esc(s.StudentID || 'N/A')}</a></td>
+                    <td><strong>${esc(s.Name || 'Unnamed')}</strong></td>
+                    <td><strong>${balance}</strong></td>
+                    <td><span class="status-chip ${isActive ? 'status-active' : 'status-inactive'}">${isActive ? 'ACTIVE' : 'INACTIVE'}</span></td>
+                    <td>
+                        <span class="card-state ${cardStateClass}">
+                            <i class="bi ${cardIcon}"></i>
+                            ${cardStateText}
+                        </span>
+                    </td>
+                    <td><button class="icon-btn" onclick="window.location.href='/transactions?q=' + encodeURIComponent('${esc(s.StudentID)}')"><i class="bi bi-clock-history"></i></button></td>
+                </tr>
+            `;
+        }).join('');
     }
 
     async function searchStudents() {
@@ -92,10 +329,46 @@
         try {
             const response = await fetch(`/api/students/search?q=${encodeURIComponent(query)}`);
             const data = await response.json();
-            displayStudents(data.students);
+            setStudents(data.students || []);
         } catch (error) {
             console.error('Error searching:', error);
         }
     }
+
+    {% if role == 'admin' %}
+    async function submitEnrollment() {
+        const student_id = document.getElementById('enrollStudentId').value.trim();
+        const name = document.getElementById('enrollStudentName').value.trim();
+        const parent_email = document.getElementById('enrollParentEmail').value.trim();
+
+        if (!student_id || !name) {
+            alert('Student ID and student name are required.');
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/students/enroll', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ student_id, name, parent_email })
+            });
+
+            const data = await response.json();
+            if (!response.ok || !data.success) {
+                alert(data.error || 'Failed to enroll student');
+                return;
+            }
+
+            const modalEl = document.getElementById('enrollModal');
+            bootstrap.Modal.getInstance(modalEl)?.hide();
+            document.getElementById('enrollStudentId').value = '';
+            document.getElementById('enrollStudentName').value = '';
+            document.getElementById('enrollParentEmail').value = '';
+            await loadStudents();
+        } catch (error) {
+            alert('Network error while enrolling student');
+        }
+    }
+    {% endif %}
 </script>
 {% endblock %}
