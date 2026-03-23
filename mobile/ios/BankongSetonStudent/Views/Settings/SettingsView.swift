@@ -26,7 +26,9 @@ struct SettingsView: View {
 
                     Button(role: .destructive) {
                         Task {
-                            await viewModel.logout(apiClient: apiClient, authManager: authManager)
+                            await viewModel.logout {
+                                await authManager.logout(apiClient: apiClient)
+                            }
                         }
                     } label: {
                         HStack {

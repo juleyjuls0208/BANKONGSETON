@@ -231,3 +231,19 @@ Example:
 The S04 behavior contract (`tests/test_verify_m007_s04_budget_lostcard_behavior_contract.py`) checks literal source markers like `Button("Report Lost Card")` and `Button("Retry Report")`, not just runtime-equivalent button labels.
 
 **Rule:** when refactoring LostCardView button layout, keep those literal `Button("...")` forms (or update the contract tests in the same task) so source-contract verification does not fail on stylistic-only rewrites.
+
+---
+
+## iOS auth/session clear boundary: do not delete settings-owned keys in `AuthManager.clearAll()`
+
+When adding local Settings persistence channels (theme/accent/display name), reusing `AuthManager.clearAll()` as-is will erase preferences during logout/session-expiry paths and break deterministic rehydrate behavior.
+
+**Rule:** keep authentication/session keys and settings-preference keys separate. `clearAll()` may delete auth/session caches (`auth_token`, `student_id`, `student_name`, `jwt_token`, etc.) but must not delete settings-owned keys (for this slice: `theme_mode`, `settings_accent_hex`, `settings_display_name`) unless an explicit settings-reset action requests it.
+
+---
+
+## iOS accent settings wiring: keep Settings accent options aligned with `AppTheme` resolver map
+
+`AppTheme.normalizedAccentHex(_:)` now validates persisted accent values against a finite `accentPairsByHex` map and falls back to `AppTheme.defaultAccentHex` for unknown values.
+
+**Rule:** when adding/updating selectable accent values in `SettingsView`, use hex values that exist in `AppTheme.accentPairsByHex` (or update that map in the same change). Otherwise selected accents will silently normalize back to default on save/load.

@@ -2,6 +2,40 @@ import SwiftUI
 
 /// Centralized design tokens for stitch-faithful styling across the app.
 enum AppTheme {
+    static let defaultAccentHex = "#2D9CDB"
+
+    private static let accentPairsByHex: [String: (primary: String, secondary: String)] = [
+        "#2D9CDB": ("#2D9CDB", "#1E88E5"),
+        "#1565C0": ("#1565C0", "#1E88E5"),
+        "#4F46E5": ("#4F46E5", "#4338CA"),
+        "#0F766E": ("#0F766E", "#0D9488"),
+        "#B45309": ("#B45309", "#C2410C")
+    ]
+
+    static func normalizedAccentHex(_ persistedAccentHex: String?) -> String {
+        let normalized = persistedAccentHex?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .uppercased()
+
+        guard let normalized, accentPairsByHex[normalized] != nil else {
+            return defaultAccentHex
+        }
+
+        return normalized
+    }
+
+    static func accentColor(for persistedAccentHex: String?) -> Color {
+        let normalized = normalizedAccentHex(persistedAccentHex)
+        let resolved = accentPairsByHex[normalized] ?? accentPairsByHex[defaultAccentHex]!
+        return Color(hex: resolved.primary)
+    }
+
+    static func accentSecondaryColor(for persistedAccentHex: String?) -> Color {
+        let normalized = normalizedAccentHex(persistedAccentHex)
+        let resolved = accentPairsByHex[normalized] ?? accentPairsByHex[defaultAccentHex]!
+        return Color(hex: resolved.secondary)
+    }
+
     enum Palette {
         static let background = Color(hex: "#F4F7FB")
         static let surface = Color.white
@@ -63,6 +97,17 @@ enum AppTheme {
     }
 }
 
+private struct AppAccentHexEnvironmentKey: EnvironmentKey {
+    static let defaultValue: String = AppTheme.defaultAccentHex
+}
+
+extension EnvironmentValues {
+    var appAccentHex: String {
+        get { self[AppAccentHexEnvironmentKey.self] }
+        set { self[AppAccentHexEnvironmentKey.self] = AppTheme.normalizedAccentHex(newValue) }
+    }
+}
+
 struct AppShadow {
     let color: Color
     let radius: CGFloat
@@ -73,5 +118,9 @@ struct AppShadow {
 extension View {
     func appThemeShadow(_ shadow: AppShadow) -> some View {
         self.shadow(color: shadow.color, radius: shadow.radius, x: shadow.x, y: shadow.y)
+    }
+
+    func appThemeAccentHex(_ accentHex: String) -> some View {
+        environment(\.appAccentHex, AppTheme.normalizedAccentHex(accentHex))
     }
 }

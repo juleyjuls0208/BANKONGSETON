@@ -57,6 +57,15 @@ struct HomeView: View {
             .refreshable {
                 await viewModel.load(apiClient: apiClient, authManager: authManager)
             }
+            .onAppear {
+                viewModel.refreshResolvedDisplayName(backendDisplayName: authManager.studentName)
+            }
+            .onChange(of: authManager.studentName) { newValue in
+                viewModel.refreshResolvedDisplayName(backendDisplayName: newValue)
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .settingsDisplayNameDidChange)) { _ in
+                viewModel.refreshResolvedDisplayName(backendDisplayName: authManager.studentName)
+            }
             .task {
                 await viewModel.load(apiClient: apiClient, authManager: authManager)
             }
@@ -69,7 +78,7 @@ struct HomeView: View {
     private var balanceCard: some View {
         StitchCard(padding: 0) {
             VStack(spacing: AppTheme.Spacing.xs) {
-                Text(authManager.studentName)
+                Text(viewModel.resolvedDisplayName)
                     .font(AppTheme.Typography.body)
                     .foregroundStyle(AppTheme.Palette.textInverse.opacity(0.9))
 

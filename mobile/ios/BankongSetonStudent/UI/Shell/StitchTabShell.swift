@@ -8,6 +8,8 @@ struct StitchTabItem<Tab: Hashable>: Identifiable, Hashable {
 
 struct StitchTabShell<Tab: Hashable, Content: View>: View {
     @Binding var selection: Tab
+    @Environment(\.appAccentHex) private var accentHex
+
     let tabs: [StitchTabItem<Tab>]
     @ViewBuilder let content: (Tab) -> Content
 
@@ -30,6 +32,8 @@ struct StitchTabShell<Tab: Hashable, Content: View>: View {
         HStack(spacing: AppTheme.Spacing.sm) {
             ForEach(tabs) { tab in
                 let isActive = tab.id == selection
+                let activeBackground = AppTheme.accentColor(for: accentHex)
+                let activeBorder = AppTheme.accentSecondaryColor(for: accentHex).opacity(0.45)
 
                 Button {
                     withAnimation(.easeInOut(duration: 0.2)) {
@@ -52,13 +56,13 @@ struct StitchTabShell<Tab: Hashable, Content: View>: View {
                         RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous)
                             .fill(
                                 isActive
-                                    ? AppTheme.Palette.brandPrimary
+                                    ? activeBackground
                                     : AppTheme.Palette.surfaceSubtle
                             )
                     )
                     .overlay {
                         RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous)
-                            .stroke(AppTheme.Palette.border, lineWidth: 1)
+                            .stroke(isActive ? activeBorder : AppTheme.Palette.border, lineWidth: 1)
                     }
                 }
                 .buttonStyle(.plain)

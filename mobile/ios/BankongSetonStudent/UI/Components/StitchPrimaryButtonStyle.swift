@@ -2,6 +2,7 @@ import SwiftUI
 
 struct StitchPrimaryButtonStyle: ButtonStyle {
     @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.appAccentHex) private var accentHex
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
@@ -21,21 +22,15 @@ struct StitchPrimaryButtonStyle: ButtonStyle {
             return AnyShapeStyle(AppTheme.Palette.disabled)
         }
 
-        if isPressed {
-            return AnyShapeStyle(
-                LinearGradient(
-                    colors: [AppTheme.Palette.brandSecondary, AppTheme.Palette.brandPrimary],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-            )
-        }
+        let gradientColors = isPressed
+            ? [AppTheme.accentSecondaryColor(for: accentHex), AppTheme.accentColor(for: accentHex)]
+            : [AppTheme.accentColor(for: accentHex), AppTheme.accentSecondaryColor(for: accentHex)]
 
         return AnyShapeStyle(
             LinearGradient(
-                colors: [AppTheme.Palette.brandPrimary, AppTheme.Palette.brandSecondary],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
+                colors: gradientColors,
+                startPoint: isPressed ? .top : .topLeading,
+                endPoint: isPressed ? .bottom : .bottomTrailing
             )
         )
     }
