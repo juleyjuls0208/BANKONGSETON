@@ -263,3 +263,11 @@ In Settings, leaving `personalInfoSaveState`/`accentApplyState` at `.saved` afte
 For Home → QRPay → History continuity, a direct callback refreshes Home but does not reliably refresh Transactions after tab switches or view recreation.
 
 **Rule:** publish post-payment continuity with a shared persisted scalar (e.g., `@AppStorage("qr_payment_success_continuity_tick")`) and consume it with `task(id:)` in dependent screens. Add a local one-shot guard at the callback source and a last-seen dedupe guard in the consumer view model to prevent duplicate side effects from multi-trigger UI paths (manual + auto dismiss).
+
+---
+
+## Xcode project path checks: `.xcodeproj` is a directory, not a file
+
+When adding shell preflight checks for iOS builds, testing a project path like `mobile/ios/.../BankongSetonStudent.xcodeproj` with `[[ -f ... ]]` will fail even though the project exists, because `.xcodeproj` is a package directory.
+
+**Rule:** use `[[ -e ... ]]` (or `[[ -d ... ]]`) for `.xcodeproj` existence checks in verifier scripts.

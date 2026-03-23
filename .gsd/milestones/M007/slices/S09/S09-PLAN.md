@@ -21,6 +21,7 @@
 
 - `rtk proxy python -m pytest -q tests/test_verify_m007_s09_runtime_contract.py tests/test_verify_m007_s09_evidence_contract.py`
 - `rtk proxy sh scripts/verify-m007-s09.sh`
+- `rtk proxy python -c "from pathlib import Path; txt=Path('scripts/verify-m007-s09.sh').read_text(encoding='utf-8'); required=['set -euo pipefail','fail_with_guidance','phase=s07_baseline','phase=apple_tooling','phase=simulator_build','phase=xctrace_templates','phase=artifact_completeness','guidance=']; missing=[x for x in required if x not in txt]; assert not missing, missing"`
 - `rtk proxy python -c "import json; from pathlib import Path; p=Path('.gsd/milestones/M007/slices/S09/S09-RUNTIME-PROOF.json'); data=json.loads(p.read_text(encoding='utf-8')); required=['generated_at','host','overall_verdict','phases']; missing=[k for k in required if k not in data]; assert not missing, missing; phase_ids={phase['id'] for phase in data['phases']}; expected={'s07_baseline','apple_tooling','simulator_build','xctrace_templates','artifact_completeness'}; assert expected.issubset(phase_ids), sorted(expected-phase_ids)"`
 - `rtk proxy python -c "from pathlib import Path; txt=Path('.gsd/milestones/M007/slices/S09/S09-UAT-RESULT.md').read_text(encoding='utf-8'); required=['S07-01','S07-02','S07-03','S07-04','S07-05','S07-06','S07-07','S07-08','S07-09','S07-10','S07-11','Final S09 UAT verdict','Tester','Device model','iOS version','App build','Sign-off']; missing=[x for x in required if x not in txt]; assert not missing, missing"`
 - `rtk proxy python -c "from pathlib import Path; txt=Path('.gsd/milestones/M007/M007-VALIDATION.md').read_text(encoding='utf-8'); required=['S09','S09-RUNTIME-PROOF.json','S09-UAT-RESULT.md']; missing=[x for x in required if x not in txt]; assert not missing, missing"`
@@ -40,7 +41,7 @@
 
 ## Tasks
 
-- [ ] **T01: Author S09 phased runtime verifier and evidence contract tests** `est:1h 20m`
+- [x] **T01: Author S09 phased runtime verifier and evidence contract tests** `est:1h 20m`
   - Why: S09 closure needs a deterministic, inspectable gate before Apple-host execution and manual UAT can be trusted.
   - Files: `scripts/verify-m007-s09.sh`, `scripts/verify-m007-s09-runtime.py`, `tests/test_verify_m007_s09_runtime_contract.py`, `tests/test_verify_m007_s09_evidence_contract.py`
   - Do: Implement an S09 verifier with phase-tagged diagnostics and guidance hooks, add a runtime-proof serializer for JSON/Markdown artifacts, and add pytest contracts asserting required phase markers plus proof-schema expectations.
