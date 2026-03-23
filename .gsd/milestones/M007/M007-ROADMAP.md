@@ -62,7 +62,7 @@ This milestone is complete only when all are true:
 - [x] **S04: Budget + Receipt + Lost-Card Redesign** `risk:medium` `depends:[S01]`
   > After this: budget, receipt, and lost-card flows are redesigned and interactive with in-scope behavior; receipt utility actions removed per scope.
 
-- [ ] **S05: Settings Rework + Local Persistence + Scope Cleanup** `risk:medium` `depends:[S01]`
+- [x] **S05: Settings Rework + Local Persistence + Scope Cleanup** `risk:medium` `depends:[S01]`
   > After this: accent color and personal info edit persist locally, non-scope settings groups are removed, and no decorative secondary dead actions remain.
 
 - [ ] **S06: Motion and Performance Tuning (iOS 17+)** `risk:medium` `depends:[S02,S03,S04,S05]`
