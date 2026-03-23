@@ -92,14 +92,14 @@ final class APIClient: ObservableObject {
 
     // MARK: - Public Methods
 
-    func login(studentId: String, pin: String) async throws -> LoginResponse {
+    func login(studentId: String) async throws -> LoginResponse {
         guard let url = URL(string: APIEndpoints.baseURL + APIEndpoints.login) else {
             throw APIError.invalidURL
         }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        let body = LoginRequest(studentId: studentId, pin: pin)
+        let body = LoginRequest(studentId: studentId)
         request.httpBody = try encoder.encode(body)
         return try await perform(request)
     }

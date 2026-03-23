@@ -22,7 +22,7 @@ struct LoginView: View {
                                     .foregroundStyle(AppTheme.Palette.textPrimary)
                                     .frame(maxWidth: .infinity, alignment: .leading)
 
-                                Text("Use your Student ID and PIN to continue.")
+                                Text("Use your Student ID to continue.")
                                     .font(AppTheme.Typography.caption)
                                     .foregroundStyle(AppTheme.Palette.textSecondary)
                                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -34,10 +34,6 @@ struct LoginView: View {
                                     .stitchFieldStyle()
                                     .accessibilityIdentifier("login-student-id-field")
 
-                                SecureField("PIN", text: $viewModel.pin)
-                                    .textContentType(.oneTimeCode)
-                                    .stitchFieldStyle()
-                                    .accessibilityIdentifier("login-pin-field")
 
                                 if let error = viewModel.errorMessage {
                                     HStack(alignment: .top, spacing: AppTheme.Spacing.xs) {
@@ -82,7 +78,7 @@ struct LoginView: View {
                             }
                         }
 
-                        Text("Never share your PIN with anyone.")
+                        Text("Use your assigned Student ID to sign in.")
                             .font(AppTheme.Typography.caption)
                             .foregroundStyle(AppTheme.Palette.textSecondary)
                             .frame(maxWidth: .infinity, alignment: .center)

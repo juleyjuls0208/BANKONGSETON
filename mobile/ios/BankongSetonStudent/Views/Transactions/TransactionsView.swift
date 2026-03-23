@@ -342,10 +342,12 @@ struct TransactionsView: View {
         switch filter {
         case .all:
             return "All"
-        case .debit:
-            return "Debit"
-        case .credit:
-            return "Credit"
+        case .qrPay:
+            return "QR Pay"
+        case .cardPay:
+            return "Card Pay"
+        case .load:
+            return "Load"
         }
     }
 

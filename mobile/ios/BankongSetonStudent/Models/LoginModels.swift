@@ -4,11 +4,9 @@ import Foundation
 
 struct LoginRequest: Codable {
     let studentId: String
-    let pin: String
 
     enum CodingKeys: String, CodingKey {
         case studentId = "student_id"
-        case pin
     }
 }
 

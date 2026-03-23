@@ -271,3 +271,19 @@ For Home → QRPay → History continuity, a direct callback refreshes Home but 
 When adding shell preflight checks for iOS builds, testing a project path like `mobile/ios/.../BankongSetonStudent.xcodeproj` with `[[ -f ... ]]` will fail even though the project exists, because `.xcodeproj` is a package directory.
 
 **Rule:** use `[[ -e ... ]]` (or `[[ -d ... ]]`) for `.xcodeproj` existence checks in verifier scripts.
+
+---
+
+## iOS student login contract in M007/S09: backend expects only `student_id` (no PIN)
+
+`backend/api/api_server.py` login handler reads only `student_id` and does not validate a PIN. Keeping PIN UI/state in iOS creates stale UX and contract drift.
+
+**Rule:** in `BankongSetonStudent` auth flow, keep login request/state student-ID only unless backend contract changes and acceptance tests are updated together.
+
+---
+
+## iOS transactions override taxonomy (M007/S09): user-facing filters are `QR Pay` / `Card Pay` / `Load`
+
+Legacy `Debit`/`Credit` UI labels are superseded by override acceptance criteria. Source-contract tests now treat those legacy labels as regressions on the transactions surface.
+
+**Rule:** if transaction filtering is refactored, preserve the `QR Pay` / `Card Pay` / `Load` taxonomy and update model mapping + view labels together.

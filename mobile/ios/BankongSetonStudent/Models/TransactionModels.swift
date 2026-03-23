@@ -40,8 +40,9 @@ struct Transaction: Codable, Identifiable, Hashable {
 
 enum TransactionFilter: String, CaseIterable, Codable {
     case all
-    case debit
-    case credit
+    case qrPay = "qr_pay"
+    case cardPay = "card_pay"
+    case load
 }
 
 enum TransactionDirection: String, Codable {
@@ -58,6 +59,14 @@ extension Transaction {
 
     private static let creditTypeSignals: [String] = [
         "load", "top up", "topup", "credit", "refund", "deposit"
+    ]
+
+    private static let qrPayTypeSignals: [String] = [
+        "qr", "scan to pay"
+    ]
+
+    private static let cardPayTypeSignals: [String] = [
+        "purchase", "payment", "debit", "expense", "card"
     ]
 
     var normalizedTypeValue: String {
@@ -96,6 +105,28 @@ extension Transaction {
         normalizedDirection == .credit
     }
 
+    var normalizedFilterCategory: TransactionFilter {
+        let normalizedType = normalizedTypeValue
+
+        if Self.creditTypeSignals.contains(where: { normalizedType.contains($0) }) {
+            return .load
+        }
+
+        if Self.qrPayTypeSignals.contains(where: { normalizedType.contains($0) }) {
+            return .qrPay
+        }
+
+        if Self.cardPayTypeSignals.contains(where: { normalizedType.contains($0) }) {
+            return .cardPay
+        }
+
+        if isCreditLike {
+            return .load
+        }
+
+        return .cardPay
+    }
+
     var isNavigable: Bool {
         let normalizedType = normalizedTypeValue
         let isPurchaseFamily = normalizedType.contains("purchase") || normalizedType.contains("payment")
@@ -108,10 +139,8 @@ extension Transaction {
         switch filter {
         case .all:
             return true
-        case .debit:
-            return isDebitLike
-        case .credit:
-            return isCreditLike
+        case .qrPay, .cardPay, .load:
+            return normalizedFilterCategory == filter
         }
     }
 

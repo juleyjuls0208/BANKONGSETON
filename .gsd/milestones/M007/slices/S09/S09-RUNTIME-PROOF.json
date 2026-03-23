@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0.0",
   "generated_at": "2026-03-23T10:21:26Z",
-  "updated_at": "2026-03-23T10:32:24Z",
+  "updated_at": "2026-03-23T11:23:47Z",
   "host": {
     "hostname": "DESKTOP-KKMDPBP",
     "platform": "Windows",
@@ -28,9 +28,9 @@
       "status": "pass",
       "command": "rtk proxy sh scripts/verify-m007-s07.sh",
       "exit_code": 0,
-      "started_at": "2026-03-23T10:32:20Z",
-      "finished_at": "2026-03-23T10:32:24Z",
-      "updated_at": "2026-03-23T10:32:24Z",
+      "started_at": "2026-03-23T11:23:43Z",
+      "finished_at": "2026-03-23T11:23:46Z",
+      "updated_at": "2026-03-23T11:23:47Z",
       "guidance": [
         "phase s07_baseline completed successfully"
       ]
@@ -40,9 +40,9 @@
       "status": "fail",
       "command": "xcodebuild -version && xcrun --version",
       "exit_code": 1,
-      "started_at": "2026-03-23T10:32:24Z",
-      "finished_at": "2026-03-23T10:32:24Z",
-      "updated_at": "2026-03-23T10:32:24Z",
+      "started_at": "2026-03-23T11:23:47Z",
+      "finished_at": "2026-03-23T11:23:47Z",
+      "updated_at": "2026-03-23T11:23:47Z",
       "guidance": [
         "Apple tooling is unavailable in PATH (xcodebuild/xcrun check failed).",
         "Run on an Apple-capable host with Xcode CLI tools installed (xcode-select --install)."
