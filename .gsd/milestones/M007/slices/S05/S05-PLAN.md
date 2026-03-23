@@ -21,7 +21,7 @@
 - `rtk proxy python -m pytest -q tests/test_verify_m007_s05_settings_behavior_contract.py tests/test_verify_m007_s05_settings_design_contract.py`
 - `rtk proxy sh scripts/verify-m007-s05.sh`
 - `rtk proxy bash scripts/verify-m007-s05.sh`
-- `rtk proxy python -c "import subprocess; p=subprocess.run(['rtk','proxy','sh','scripts/verify-m007-s05.sh'], capture_output=True, text=True); out=(p.stdout or '') + (p.stderr or ''); required=['behavior-contract','design-contract','static-contract']; missing=[x for x in required if x not in out]; assert not missing, missing"`
+- `rtk proxy python -c "import subprocess; p=subprocess.run(['rtk','proxy','sh','scripts/verify-m007-s05.sh'], capture_output=True, text=True); out=(p.stdout or '') + (p.stderr or ''); required=['preflight','behavior-contract','design-contract','static-contract']; missing=[x for x in required if x not in out]; assert not missing, missing"`
 - `rtk proxy xcodebuild -project mobile/ios/BankongSetonStudent/BankongSetonStudent.xcodeproj -scheme BankongSetonStudent -destination 'platform=iOS Simulator,name=iPhone 15' build`
 - `rtk proxy python -c "from pathlib import Path; assert Path('.gsd/milestones/M007/slices/S05/S05-UAT.md').exists()"`
 
@@ -52,7 +52,7 @@
   - Do: Introduce one reactive accent resolution path used by shared shell/primary-action styling and wire persisted personal-info value into home display with safe fallback behavior.
   - Verify: `rtk proxy python -c "from pathlib import Path; shell=Path('mobile/ios/BankongSetonStudent/UI/Shell/StitchTabShell.swift').read_text().lower(); btn=Path('mobile/ios/BankongSetonStudent/UI/Components/StitchPrimaryButtonStyle.swift').read_text().lower(); vm=Path('mobile/ios/BankongSetonStudent/ViewModels/HomeViewModel.swift').read_text(); assert 'accent' in shell and 'accent' in btn; assert 'resolvedDisplayName' in vm"`
   - Done when: Changing accent/personal info in Settings is reflected in at least shared shell + primary actions + home display path without hardcoded-only fallback.
-- [ ] **T03: Rework Settings UI to stitch style and remove out-of-scope/dead actions** `est:2h`
+- [x] **T03: Rework Settings UI to stitch style and remove out-of-scope/dead actions** `est:2h`
   - Why: R061 requires scope cleanup and R055/R056 require stitch-faithful, fully actionable controls.
   - Files: `mobile/ios/BankongSetonStudent/Views/Settings/SettingsView.swift`, `mobile/ios/BankongSetonStudent/ViewModels/SettingsViewModel.swift`, `mobile/ios/BankongSetonStudent/BankongSetonStudent.xcodeproj/project.pbxproj`
   - Do: Replace legacy Form with stitch card/list styling, bind personal-info save and accent selection controls with accessible labels/state, keep Report Lost Card and Logout actionable, and remove forbidden non-scope/payment-method groups.

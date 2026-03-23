@@ -247,3 +247,11 @@ When adding local Settings persistence channels (theme/accent/display name), reu
 `AppTheme.normalizedAccentHex(_:)` now validates persisted accent values against a finite `accentPairsByHex` map and falls back to `AppTheme.defaultAccentHex` for unknown values.
 
 **Rule:** when adding/updating selectable accent values in `SettingsView`, use hex values that exist in `AppTheme.accentPairsByHex` (or update that map in the same change). Otherwise selected accents will silently normalize back to default on save/load.
+
+---
+
+## iOS settings save/apply UX: reset persistence state to `.idle` when editable values change
+
+In Settings, leaving `personalInfoSaveState`/`accentApplyState` at `.saved` after the user edits name or selects a different accent makes status text misleading (“saved/applied”) before the next explicit action.
+
+**Rule:** for explicit save/apply flows, reset state to `.idle` whenever the bound editable value changes (`editableDisplayName`, `selectedAccentHex`) and only set `.saved` inside the explicit action handlers (`savePersonalInfo()`, `applyAccent(_)`).

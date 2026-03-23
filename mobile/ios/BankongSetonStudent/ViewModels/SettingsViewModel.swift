@@ -15,8 +15,23 @@ final class SettingsViewModel: ObservableObject {
         }
     }
 
-    @Published var editableDisplayName: String
-    @Published var selectedAccentHex: String
+    @Published var editableDisplayName: String {
+        didSet {
+            personalInfoSaveState = .idle
+        }
+    }
+
+    @Published var selectedAccentHex: String {
+        didSet {
+            let normalizedAccentHex = AppTheme.normalizedAccentHex(selectedAccentHex)
+            if normalizedAccentHex != selectedAccentHex {
+                selectedAccentHex = normalizedAccentHex
+                return
+            }
+
+            accentApplyState = .idle
+        }
+    }
     @Published private(set) var personalInfoSaveState: SettingsPersistenceState = .idle
     @Published private(set) var accentApplyState: SettingsPersistenceState = .idle
     @Published var isLoggingOut = false

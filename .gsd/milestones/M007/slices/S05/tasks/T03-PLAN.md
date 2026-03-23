@@ -50,3 +50,10 @@ Replace the legacy settings Form with stitch-style groups/components that expose
 - `mobile/ios/BankongSetonStudent/Views/Settings/SettingsView.swift` — stitch-style, scope-clean, fully actionable settings UI.
 - `mobile/ios/BankongSetonStudent/ViewModels/SettingsViewModel.swift` — binding refinements needed by the updated settings interactions.
 - `mobile/ios/BankongSetonStudent/BankongSetonStudent.xcodeproj/project.pbxproj` — source registration updates if new settings subviews are added.
+
+## Observability Impact
+
+- Signals changed: settings UI now surfaces deterministic save/apply state transitions (`personalInfoSaveState`, `accentApplyState`) through visible status/action states.
+- Inspection surfaces: `SettingsView.swift` action wiring (`savePersonalInfo`, `applyAccent`, `Report Lost Card`, `Logout`) plus T03 contract commands that assert required markers and forbidden-string absence.
+- Failure visibility: if scope cleanup regresses, forbidden labels are caught by static contract checks; if wiring regresses, required marker checks fail.
+- Redaction constraints: verification and diagnostics must not print persisted personal-info values; checks remain marker-based.
