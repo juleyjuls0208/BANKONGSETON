@@ -14,6 +14,9 @@ def test_settings_scope_cleanup_keeps_only_in_scope_actions_visible():
     contents = read_text(SETTINGS_VIEW_PATH)
 
     required_entries = [
+        "Personal Info",
+        "Appearance",
+        "Account Actions",
         "Report Lost Card",
         "Logout",
     ]
@@ -33,18 +36,41 @@ def test_settings_scope_cleanup_keeps_only_in_scope_actions_visible():
         assert entry not in contents, f"Out-of-scope Settings action leaked into UI: {entry}"
 
 
-def test_settings_design_contract_requires_stitch_surface_and_persistence_controls():
+def test_settings_design_contract_requires_stitch_surface_tokens_status_markers_and_actionable_controls():
     contents = read_text(SETTINGS_VIEW_PATH)
 
     required_entries = [
+        "NavigationStack",
         "StitchCard",
         "StitchPrimaryButtonStyle",
+        "stitchFieldStyle()",
         "AppTheme.Palette",
+        "AppTheme.Spacing",
+        "AppTheme.Typography",
+        "AppTheme.Radius",
+        "settings-screen-root",
+        "settings-display-name-field",
+        "settings-save-personal-info-button",
+        "settings-theme-picker",
+        "settings-apply-accent-button",
+        "settings-personal-info-status",
+        "settings-accent-status",
+        "settings-report-lost-card-link",
+        "settings-logout-button",
+        "settings-accent-option-\\(option.id)",
         "editableDisplayName",
         "selectedAccentHex",
         "savePersonalInfo",
         "applyAccent",
     ]
 
+    forbidden_entries = [
+        "Form {",
+        "Section(\"Personal Info\")",
+    ]
+
     for entry in required_entries:
         assert entry in contents, f"Settings stitch/persistence design marker missing: {entry}"
+
+    for entry in forbidden_entries:
+        assert entry not in contents, f"Legacy non-stitch settings structure leaked into S05 surface: {entry}"

@@ -58,7 +58,7 @@
   - Do: Replace legacy Form with stitch card/list styling, bind personal-info save and accent selection controls with accessible labels/state, keep Report Lost Card and Logout actionable, and remove forbidden non-scope/payment-method groups.
   - Verify: `rtk proxy python -c "from pathlib import Path; t=Path('mobile/ios/BankongSetonStudent/Views/Settings/SettingsView.swift').read_text(); assert 'Report Lost Card' in t and 'Logout' in t; assert all(x not in t for x in ['Privacy & Security','Tuition Auto-Pay','Campus Discounts','Payment Method'])"`
   - Done when: Settings screen contains only in-scope actionable groups and no visible decorative dead controls.
-- [ ] **T04: Add S05 behavior/design contracts, verifier script, and UAT closure doc** `est:1h`
+- [x] **T04: Add S05 behavior/design contracts, verifier script, and UAT closure doc** `est:1h`
   - Why: Slice completion needs deterministic proof that persistence, scope cleanup, and continuity contracts remain intact.
   - Files: `tests/test_verify_m007_s05_settings_behavior_contract.py`, `tests/test_verify_m007_s05_settings_design_contract.py`, `scripts/verify-m007-s05.sh`, `.gsd/milestones/M007/slices/S05/S05-UAT.md`
   - Do: Implement behavior/design contract tests, add phased S05 verifier (`preflight`, `behavior-contract`, `design-contract`, `static-contract`), and write manual UAT checklist including Windows shell fallback note.
