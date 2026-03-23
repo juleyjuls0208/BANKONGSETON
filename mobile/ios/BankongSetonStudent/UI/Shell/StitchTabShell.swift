@@ -9,6 +9,7 @@ struct StitchTabItem<Tab: Hashable>: Identifiable, Hashable {
 struct StitchTabShell<Tab: Hashable, Content: View>: View {
     @Binding var selection: Tab
     @Environment(\.appAccentHex) private var accentHex
+    @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
 
     let tabs: [StitchTabItem<Tab>]
     @ViewBuilder let content: (Tab) -> Content
@@ -36,7 +37,12 @@ struct StitchTabShell<Tab: Hashable, Content: View>: View {
                 let activeBorder = AppTheme.accentSecondaryColor(for: accentHex).opacity(0.45)
 
                 Button {
-                    withAnimation(.easeInOut(duration: 0.2)) {
+                    withAnimation(
+                        AppTheme.Motion.animation(
+                            for: .tabSelection,
+                            accessibilityReduceMotion: accessibilityReduceMotion
+                        )
+                    ) {
                         selection = tab.id
                     }
                 } label: {

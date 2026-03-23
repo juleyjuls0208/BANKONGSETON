@@ -49,3 +49,9 @@ Create one shared motion policy seam in the design system layer and apply it to 
 - `mobile/ios/BankongSetonStudent/UI/Components/StitchPrimaryButtonStyle.swift` — policy-driven press feedback with Reduce Motion branch.
 - `mobile/ios/BankongSetonStudent/UI/Shell/StitchTabShell.swift` — policy-driven tab transition tuning with Reduce Motion branch.
 - `mobile/ios/BankongSetonStudent/UI/Components/StitchCard.swift` — card interaction/render tuning aligned to shared motion/perf policy.
+
+## Observability Impact
+
+- Runtime signals: shared primitives expose explicit `accessibilityReduceMotion` branches and consume one `AppTheme` motion-policy seam instead of ad hoc animation constants.
+- Inspection surfaces: `mobile/ios/BankongSetonStudent/UI/Theme/AppTheme.swift`, `mobile/ios/BankongSetonStudent/UI/Components/StitchPrimaryButtonStyle.swift`, `mobile/ios/BankongSetonStudent/UI/Shell/StitchTabShell.swift`, and `mobile/ios/BankongSetonStudent/UI/Components/StitchCard.swift` are the direct source-of-truth for this task’s behavior.
+- Failure visibility: task verification checks surface missing motion/reduce-motion wiring and reject decorative infinite loops (`repeatForever`) with explicit assertion failures.

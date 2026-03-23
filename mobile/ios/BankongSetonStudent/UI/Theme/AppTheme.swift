@@ -95,6 +95,86 @@ enum AppTheme {
             y: 3
         )
     }
+
+    enum Motion {
+        enum Duration {
+            static let quick: Double = 0.12
+            static let standard: Double = 0.20
+            static let emphasized: Double = 0.24
+            static let reduced: Double = 0.08
+        }
+
+        enum Curve {
+            case easeOut
+            case easeInOut
+        }
+
+        enum Primitive {
+            case primaryButtonPress
+            case tabSelection
+            case cardSurface
+        }
+
+        static func animation(
+            for primitive: Primitive,
+            accessibilityReduceMotion: Bool
+        ) -> Animation {
+            if accessibilityReduceMotion {
+                return .linear(duration: Duration.reduced)
+            }
+
+            switch primitive {
+            case .primaryButtonPress:
+                return makeAnimation(duration: Duration.quick, curve: .easeOut)
+            case .tabSelection:
+                return makeAnimation(duration: Duration.standard, curve: .easeInOut)
+            case .cardSurface:
+                return makeAnimation(duration: Duration.emphasized, curve: .easeOut)
+            }
+        }
+
+        static func pressedScale(
+            isPressed: Bool,
+            accessibilityReduceMotion: Bool
+        ) -> CGFloat {
+            guard isPressed else {
+                return 1
+            }
+
+            return accessibilityReduceMotion ? 0.992 : 0.98
+        }
+
+        static func cardScale(
+            isHighlighted: Bool,
+            accessibilityReduceMotion: Bool
+        ) -> CGFloat {
+            guard isHighlighted else {
+                return 1
+            }
+
+            return accessibilityReduceMotion ? 1 : 1.01
+        }
+
+        static func cardVerticalOffset(
+            isHighlighted: Bool,
+            accessibilityReduceMotion: Bool
+        ) -> CGFloat {
+            guard isHighlighted else {
+                return 0
+            }
+
+            return accessibilityReduceMotion ? 0 : -1
+        }
+
+        private static func makeAnimation(duration: Double, curve: Curve) -> Animation {
+            switch curve {
+            case .easeOut:
+                return .easeOut(duration: duration)
+            case .easeInOut:
+                return .easeInOut(duration: duration)
+            }
+        }
+    }
 }
 
 private struct AppAccentHexEnvironmentKey: EnvironmentKey {

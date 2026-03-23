@@ -23,6 +23,7 @@
 - `rtk proxy sh scripts/verify-m007-s06.sh`
 - `rtk proxy bash scripts/verify-m007-s06.sh`
 - `rtk proxy python -c "import subprocess; p=subprocess.run(['rtk','proxy','sh','scripts/verify-m007-s06.sh'], capture_output=True, text=True); out=(p.stdout or '') + (p.stderr or ''); required=['preflight','behavior-contract','design-contract','static-contract']; missing=[x for x in required if x not in out]; assert not missing, missing"`
+- `rtk proxy python -c "import subprocess; p=subprocess.run(['rtk','proxy','sh','scripts/verify-m007-s06.sh'], capture_output=True, text=True); out=(p.stdout or '') + (p.stderr or ''); tags=['preflight','behavior-contract','design-contract','static-contract']; missing=[x for x in tags if x not in out]; assert not missing, missing; assert any(marker in out.lower() for marker in ['fail','pass','missing','required','forbidden'])"`
 - `rtk proxy xcodebuild -project mobile/ios/BankongSetonStudent/BankongSetonStudent.xcodeproj -scheme BankongSetonStudent -destination 'platform=iOS Simulator,name=iPhone 15' build`
 - `rtk proxy xcrun xctrace list templates`
 - `rtk proxy python -c "from pathlib import Path; assert Path('.gsd/milestones/M007/slices/S06/S06-UAT.md').exists()"`
@@ -42,7 +43,7 @@
 
 ## Tasks
 
-- [ ] **T01: Establish centralized motion policy and Reduce Motion wiring in shared primitives** `est:2h`
+- [x] **T01: Establish centralized motion policy and Reduce Motion wiring in shared primitives** `est:2h`
   - Why: S06 cannot converge on a coherent feel if each screen uses ad hoc timings/curves; shared primitives must consume one policy first.
   - Files: `mobile/ios/BankongSetonStudent/UI/Theme/AppTheme.swift`, `mobile/ios/BankongSetonStudent/UI/Components/StitchPrimaryButtonStyle.swift`, `mobile/ios/BankongSetonStudent/UI/Shell/StitchTabShell.swift`, `mobile/ios/BankongSetonStudent/UI/Components/StitchCard.swift`
   - Do: Add a centralized motion token/policy surface in `AppTheme`, wire it into button press feedback/tab transitions/card rendering behavior, and add Reduce Motion-aware branches without introducing unconditional iOS 17-only APIs.
