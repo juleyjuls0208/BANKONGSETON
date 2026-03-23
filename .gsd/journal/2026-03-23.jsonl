@@ -64,3 +64,11 @@
 {"ts":"2026-03-23T07:46:07.286Z","flowId":"06f3924f-439a-4018-ae35-14cce18117cf","seq":2,"eventType":"dispatch-match","rule":"planning (no research, not S01) → research-slice","data":{"unitType":"research-slice","unitId":"M007/S08"}}
 {"ts":"2026-03-23T07:46:07.309Z","flowId":"06f3924f-439a-4018-ae35-14cce18117cf","seq":3,"eventType":"unit-start","data":{"unitType":"research-slice","unitId":"M007/S08"}}
 {"ts":"2026-03-23T07:59:14.435Z","flowId":"06f3924f-439a-4018-ae35-14cce18117cf","seq":4,"eventType":"unit-end","data":{"unitType":"research-slice","unitId":"M007/S08","status":"completed","artifactVerified":true},"causedBy":{"flowId":"06f3924f-439a-4018-ae35-14cce18117cf","seq":3}}
+{"ts":"2026-03-23T07:59:15.825Z","flowId":"06f3924f-439a-4018-ae35-14cce18117cf","seq":5,"eventType":"iteration-end","data":{"iteration":1}}
+{"ts":"2026-03-23T07:59:15.826Z","flowId":"126881ef-284a-4adf-91c7-bcaa6506115c","seq":1,"eventType":"iteration-start","data":{"iteration":2}}
+{"ts":"2026-03-23T07:59:15.996Z","flowId":"126881ef-284a-4adf-91c7-bcaa6506115c","seq":2,"eventType":"dispatch-match","rule":"planning → plan-slice","data":{"unitType":"plan-slice","unitId":"M007/S08"}}
+{"ts":"2026-03-23T07:59:16.027Z","flowId":"126881ef-284a-4adf-91c7-bcaa6506115c","seq":3,"eventType":"unit-start","data":{"unitType":"plan-slice","unitId":"M007/S08"}}
+{"ts":"2026-03-23T08:16:25.667Z","flowId":"a1eb4179-0f7e-40c3-87bc-991edc57156b","seq":1,"eventType":"iteration-start","data":{"iteration":1}}
+{"ts":"2026-03-23T08:16:25.823Z","flowId":"a1eb4179-0f7e-40c3-87bc-991edc57156b","seq":2,"eventType":"dispatch-match","rule":"planning → plan-slice","data":{"unitType":"plan-slice","unitId":"M007/S08"}}
+{"ts":"2026-03-23T08:16:25.849Z","flowId":"a1eb4179-0f7e-40c3-87bc-991edc57156b","seq":3,"eventType":"unit-start","data":{"unitType":"plan-slice","unitId":"M007/S08"}}
+{"ts":"2026-03-23T08:24:24.720Z","flowId":"a1eb4179-0f7e-40c3-87bc-991edc57156b","seq":4,"eventType":"unit-end","data":{"unitType":"plan-slice","unitId":"M007/S08","status":"completed","artifactVerified":true},"causedBy":{"flowId":"a1eb4179-0f7e-40c3-87bc-991edc57156b","seq":3}}
