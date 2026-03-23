@@ -35,6 +35,12 @@ Replace placeholder summaries for S02, S03, and S04 with authoritative artifacts
 
 - `rtk proxy python -c "exec(\"from pathlib import Path\\nbase=Path('.gsd/milestones/M007/slices')\\nchecks={'S02':['D077','D078','D079'],'S03':['D080'],'S04':['D081','D082']}\\nrequired=['provides:','affects:','key_files:','drill_down_paths:','verification_result:','## Forward Intelligence']\\nfail={}\\nfor sid,decs in checks.items():\\n txt=(base/sid/f'{sid}-SUMMARY.md').read_text(encoding='utf-8')\\n issues=[k for k in required if k not in txt]\\n if 'verification_result: unknown' in txt or 'doctor recovery placeholder' in txt.lower(): issues.append('placeholder_residue')\\n if f'{sid}-UAT-RESULT.md' not in txt: issues.append('missing_uat_result_reference')\\n issues.extend([f'missing_{d}' for d in decs if d not in txt])\\n if issues: fail[sid]=issues\\nassert not fail, fail\")"`
 
+## Observability Impact
+
+- **Signals added/updated:** S02/S03/S04 summaries become machine-auditable with populated frontmatter, decision IDs, verifier/UAT references, and concrete Forward Intelligence instead of placeholder prose.
+- **Inspection path for future agents:** inspect `.gsd/milestones/M007/slices/S08/tasks/T01-EVIDENCE-MATRIX.md` first, then verify each rewritten summary (`S02-SUMMARY.md`, `S03-SUMMARY.md`, `S04-SUMMARY.md`) links to `S0x-UAT-RESULT.md` and the expected decision IDs.
+- **Failure visibility:** the task verifier surfaces missing parser-required frontmatter keys, placeholder residue, missing UAT-result links, and missing decision IDs per slice.
+
 ## Inputs
 
 - `.gsd/milestones/M007/slices/S08/tasks/T01-EVIDENCE-MATRIX.md` — normalized authoritative evidence for S02–S06.

@@ -43,7 +43,7 @@
   - Do: Run S02–S06 verifiers serially, extract per-slice requirement/decision/proof cards from existing artifacts, and write a normalized matrix that downstream rewrite tasks use as the only evidence input.
   - Verify: `rtk proxy sh scripts/verify-m007-s02.sh && rtk proxy sh scripts/verify-m007-s03.sh && rtk proxy sh scripts/verify-m007-s04.sh && rtk proxy sh scripts/verify-m007-s05.sh && rtk proxy sh scripts/verify-m007-s06.sh && rtk proxy python -c "from pathlib import Path; p=Path('.gsd/milestones/M007/slices/S08/tasks/T01-EVIDENCE-MATRIX.md'); txt=p.read_text(encoding='utf-8'); required=['S02','S03','S04','S05','S06','D077','D078','D079','D080','D081','D082','D083','D084']; missing=[x for x in required if x not in txt]; assert p.exists() and not missing, missing"`
   - Done when: Evidence matrix exists, is non-empty, and contains all S02–S06 + D077–D084 references from authoritative artifacts.
-- [ ] **T02: Backfill authoritative summaries for S02–S04** `est:1h 40m`
+- [x] **T02: Backfill authoritative summaries for S02–S04** `est:1h 40m`
   - Why: Replacing three placeholder summaries first retires highest drift risk and creates a repeatable pattern for remaining slices.
   - Files: `.gsd/milestones/M007/slices/S08/tasks/T01-EVIDENCE-MATRIX.md`, `.gsd/milestones/M007/slices/S01/S01-SUMMARY.md`, `.gsd/milestones/M007/slices/S07/S07-SUMMARY.md`, `.gsd/milestones/M007/slices/S02/S02-SUMMARY.md`, `.gsd/milestones/M007/slices/S03/S03-SUMMARY.md`, `.gsd/milestones/M007/slices/S04/S04-SUMMARY.md`
   - Do: Rewrite S02–S04 summaries using the authoritative summary shape (frontmatter + delivery narrative + verification table + forward intelligence), and explicitly ground claims in matrix evidence (including UAT verdict and known platform constraints).
