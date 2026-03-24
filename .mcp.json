@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "google-stitch": {
+      "command": "node",
+      "args": [
+        "scripts/google-stitch-mcp-proxy.mjs"
+      ]
+    }
+  }
+}

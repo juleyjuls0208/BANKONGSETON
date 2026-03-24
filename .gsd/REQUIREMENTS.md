@@ -430,14 +430,113 @@ This file is the explicit capability and coverage contract for the project.
 
 ### R063 — On-Device Demo Readiness Gate
 - Class: launchability
-- Status: active
+- Status: validated
 - Description: The final redesigned iOS build is ready for manual install and pass/fail acceptance by the user on a physical iOS 17+ phone across full app journey, including override checkpoints (dark-mode default launch, no-PIN login, and transactions filters `QR Pay`/`Card Pay`/`Load`)
 - Why it matters: Final acceptance is human on-device, not simulator-only
 - Source: user
 - Primary owning slice: M007/S07
 - Supporting slices: M007/S02, M007/S03, M007/S04, M007/S05, M007/S06
+- Validation: validated
+- Notes: Local Windows runtime proof remains fail at `apple_tooling` (`xcodebuild`/`xcrun` unavailable), but user-confirmed Apple-host physical-device execution completed and S09 UAT verdict is PASS.
+
+### R068 — Full iOS UX Rollback Baseline (pre-M007)
+- Class: primary-user-loop
+- Status: active
+- Description: iOS surfaces are restored to the pre-M007 interaction baseline (commit `558d8bc`) before applying M008 upgrades.
+- Why it matters: The current iOS direction is explicitly rejected as messy and laggy; rollback is required to recover trust and speed.
+- Source: user
+- Primary owning slice: M008-l1ngya/S02
+- Supporting slices: M008-l1ngya/S03, M008-l1ngya/S04, M008-l1ngya/S05
 - Validation: mapped
-- Notes: S09 published explicit post-override closure evidence (`S09-RUNTIME-PROOF.*`, `S09-UAT-RESULT.md`) with current FAIL attribution to missing Apple tooling/physical execution in this executor; final sign-off remains pending on Apple-capable runner.
+- Notes: Baseline restoration is structural, not partial visual tweaking.
+
+### R069 — Native TabView Navigation (remove custom floating shell)
+- Class: quality-attribute
+- Status: active
+- Description: The custom floating tab shell is replaced with native iOS TabView chrome.
+- Why it matters: Native tab chrome reduces visual heaviness and interaction lag risk in a speed-first minimalist direction.
+- Source: user
+- Primary owning slice: M008-l1ngya/S02
+- Supporting slices: M008-l1ngya/S05
+- Validation: mapped
+- Notes: Approved as explicit UX change proposal during M008 discussion.
+
+### R070 — Credit-Card Home Balance Hero
+- Class: primary-user-loop
+- Status: active
+- Description: Home screen presents student name and current balance in a minimalist credit-card style hero.
+- Why it matters: This is the primary visual anchor requested for the refreshed UX.
+- Source: user
+- Primary owning slice: M008-l1ngya/S03
+- Supporting slices: M008-l1ngya/S05
+- Validation: mapped
+- Notes: Must preserve readable hierarchy and fast feel.
+
+### R071 — Transactions Filtering Without Search Bar
+- Class: primary-user-loop
+- Status: active
+- Description: Transactions supports filter chips while removing the search bar entirely.
+- Why it matters: User requested filtering capability but explicitly does not want search UI.
+- Source: user
+- Primary owning slice: M008-l1ngya/S04
+- Supporting slices: M008-l1ngya/S05
+- Validation: mapped
+- Notes: Filter taxonomy remains `QR Pay` / `Card Pay` / `Load`.
+
+### R072 — Minimalist Appearance Controls (Theme + Accent only)
+- Class: continuity
+- Status: active
+- Description: Settings provides appearance controls for theme mode and accent color only.
+- Why it matters: User wants appearance customization without expanding Settings complexity.
+- Source: user
+- Primary owning slice: M008-l1ngya/S04
+- Supporting slices: M008-l1ngya/S05
+- Validation: mapped
+- Notes: Reduced-motion control is explicitly deferred.
+
+### R073 — Budget Contract Reliability via Student Budgets Sheet
+- Class: integration
+- Status: active
+- Description: Budget limit and spend segments load from a stable backend contract backed by a dedicated `Student Budgets` sheet.
+- Why it matters: Current iOS budget segments fail to load; reliability must be repaired at API/data boundary, not only in UI.
+- Source: user
+- Primary owning slice: M008-l1ngya/S01
+- Supporting slices: M008-l1ngya/S05
+- Validation: mapped
+- Notes: Includes backend + iOS integration (not iOS-only fallback patching).
+
+### R074 — Explicit Budget Failure Visibility
+- Class: failure-visibility
+- Status: active
+- Description: Budget load/save failures are surfaced with clear retryable UX and non-silent diagnostics.
+- Why it matters: Silent or stale fallbacks hide breakage and create false confidence during demo use.
+- Source: inferred
+- Primary owning slice: M008-l1ngya/S01
+- Supporting slices: M008-l1ngya/S05
+- Validation: mapped
+- Notes: Distinguish segment-level failure states where possible.
+
+### R075 — Strict Manual On-Device Acceptance for M008
+- Class: launchability
+- Status: active
+- Description: M008 closes only after user-performed manual device verification and explicit PASS/FAIL call.
+- Why it matters: Host environment is Windows, so final UX acceptance must be grounded in real-device checks.
+- Source: user
+- Primary owning slice: M008-l1ngya/S06
+- Supporting slices: M008-l1ngya/S03, M008-l1ngya/S04, M008-l1ngya/S05
+- Validation: mapped
+- Notes: User is the acceptance authority for pass/fail at milestone close.
+
+### R076 — Preserve QR Payment Continuity During UX Rollback
+- Class: constraint
+- Status: active
+- Description: UX rollback and minimalism changes must not break existing QR payment flow continuity.
+- Why it matters: Payment loop remains core product value and cannot regress while visual direction changes.
+- Source: inferred
+- Primary owning slice: M008-l1ngya/S03
+- Supporting slices: M008-l1ngya/S02, M008-l1ngya/S06
+- Validation: mapped
+- Notes: Home → QR → post-success continuity must remain intact.
 
 ## Deferred
 
@@ -452,7 +551,49 @@ This file is the explicit capability and coverage contract for the project.
 - Validation: unmapped
 - Notes: Deferred per explicit user instruction to keep personal info edit local-only
 
+### R077 — Appearance Motion Control in Settings
+- Class: quality-attribute
+- Status: deferred
+- Description: Add an explicit in-app reduced-motion toggle in Settings.
+- Why it matters: Could improve accessibility control later, but user intentionally scoped appearance to theme + accent only for M008.
+- Source: user
+- Primary owning slice: none
+- Supporting slices: none
+- Validation: unmapped
+- Notes: Deferred by explicit scope choice during M008 planning.
+
 ## Out of Scope
+
+### R078 — Transactions Search Bar
+- Class: anti-feature
+- Status: out-of-scope
+- Description: Search UI on the transactions screen.
+- Why it matters: User explicitly wants filter-only transactions and no search bar in M008.
+- Source: user
+- Primary owning slice: none
+- Supporting slices: none
+- Validation: n/a
+- Notes: If search returns later, it must be planned as a new requirement.
+
+### R079 — Custom Floating Stitch Tab Shell
+- Class: anti-feature
+- Status: out-of-scope
+- Description: Retaining the custom floating tab shell introduced in the stitch-era rework.
+- Why it matters: User approved replacing it with native TabView as a speed-first UX direction.
+- Source: user
+- Primary owning slice: none
+- Supporting slices: none
+- Validation: n/a
+
+### R080 — Stitch-Parity as Primary Visual Objective for M008
+- Class: constraint
+- Status: out-of-scope
+- Description: Using stitch-parity as the primary design target for this milestone.
+- Why it matters: M008 direction is explicit old-UX rollback + minimalist refresh, not stitch continuation.
+- Source: user
+- Primary owning slice: none
+- Supporting slices: none
+- Validation: n/a
 
 ### R065 — Payment Methods Management UI (iOS)
 - Class: anti-feature
@@ -587,8 +728,21 @@ This file is the explicit capability and coverage contract for the project.
 | R060 | continuity | active | M007/S05 | M007/S07 | mapped |
 | R061 | constraint | active | M007/S05 | M007/S04, M007/S07 | mapped |
 | R062 | quality-attribute | active | M007/S06 | M007/S07 | mapped |
-| R063 | launchability | active | M007/S07 | M007/S02, M007/S03, M007/S04, M007/S05, M007/S06 | mapped |
+| R063 | launchability | validated | M007/S07 | M007/S02, M007/S03, M007/S04, M007/S05, M007/S06 | validated |
+| R068 | primary-user-loop | active | M008-l1ngya/S02 | M008-l1ngya/S03, M008-l1ngya/S04, M008-l1ngya/S05 | mapped |
+| R069 | quality-attribute | active | M008-l1ngya/S02 | M008-l1ngya/S05 | mapped |
+| R070 | primary-user-loop | active | M008-l1ngya/S03 | M008-l1ngya/S05 | mapped |
+| R071 | primary-user-loop | active | M008-l1ngya/S04 | M008-l1ngya/S05 | mapped |
+| R072 | continuity | active | M008-l1ngya/S04 | M008-l1ngya/S05 | mapped |
+| R073 | integration | active | M008-l1ngya/S01 | M008-l1ngya/S05 | mapped |
+| R074 | failure-visibility | active | M008-l1ngya/S01 | M008-l1ngya/S05 | mapped |
+| R075 | launchability | active | M008-l1ngya/S06 | M008-l1ngya/S03, M008-l1ngya/S04, M008-l1ngya/S05 | mapped |
+| R076 | constraint | active | M008-l1ngya/S03 | M008-l1ngya/S02, M008-l1ngya/S06 | mapped |
 | R064 | admin/support | deferred | none | none | unmapped |
+| R077 | quality-attribute | deferred | none | none | unmapped |
+| R078 | anti-feature | out-of-scope | none | none | n/a |
+| R079 | anti-feature | out-of-scope | none | none | n/a |
+| R080 | constraint | out-of-scope | none | none | n/a |
 | R065 | anti-feature | out-of-scope | none | none | n/a |
 | R066 | constraint | out-of-scope | none | none | n/a |
 | R067 | constraint | out-of-scope | none | none | n/a |
@@ -598,7 +752,7 @@ This file is the explicit capability and coverage contract for the project.
 
 ## Coverage Summary
 
-- Active requirements: 17
-- Mapped to slices: 17
-- Validated: 27
+- Active requirements: 25
+- Mapped to slices: 25
+- Validated: 28
 - Unmapped active requirements: 0

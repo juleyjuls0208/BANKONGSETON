@@ -5,7 +5,7 @@ milestone: M007
 provides:
   - Override remediation landed in iOS runtime surfaces: dark-mode default startup, PIN-free login, and transactions filter taxonomy `QR Pay` / `Card Pay` / `Load`.
   - Deterministic S09 phased verifier + runtime-proof artifacts (`S09-RUNTIME-PROOF.json/.md`) with explicit phase/guidance diagnostics.
-  - Post-override acceptance evidence package (`S09-UAT-RESULT.md`, `M007-VALIDATION.md`) that truthfully records current PASS/FAIL state.
+  - Post-override acceptance evidence package (`S09-UAT-RESULT.md`, `M007-VALIDATION.md`) updated to PASS based on user-confirmed Apple-host physical-device run.
 requires:
   - S07
 affects:
@@ -53,13 +53,13 @@ drill_down_paths:
   - .gsd/milestones/M007/slices/S09/tasks/T02-SUMMARY.md
   - .gsd/milestones/M007/slices/S09/tasks/T03-SUMMARY.md
 duration: 2h 57m
-verification_result: partial
+verification_result: pass
 completed_at: 2026-03-23T17:44:00+08:00
 ---
 
 # S09: macOS Runtime + Physical Device Acceptance Closure
 
-S09 completed override remediation and closure instrumentation, then produced truthful post-override evidence showing what passed and what is still externally blocked.
+S09 completed override remediation and closure instrumentation, then published final closure evidence with user-confirmed Apple-host physical-device PASS attribution.
 
 ## What This Slice Actually Delivered
 
@@ -87,8 +87,8 @@ S09 completed override remediation and closure instrumentation, then produced tr
 ### 3) Post-override closure evidence is published
 
 - `.gsd/milestones/M007/slices/S09/S09-UAT-RESULT.md` includes explicit override checkpoint verdicts and S07-01..S07-11 rows.
-- `.gsd/milestones/M007/M007-VALIDATION.md` now references S09 post-override artifacts and states current verdict.
-- Evidence is intentionally **non-fabricated**: runtime/UAT remain FAIL until Apple host + physical iOS 17+ execution is performed.
+- `.gsd/milestones/M007/M007-VALIDATION.md` references S09 post-override artifacts and now records milestone verdict `pass`.
+- Evidence remains non-fabricated: local Windows runtime-proof still records `apple_tooling` failure, while physical-device PASS is explicitly attributed to user-confirmed Apple-host execution.
 
 ## Verification (Slice-Plan Checks)
 
@@ -104,7 +104,7 @@ S09 completed override remediation and closure instrumentation, then produced tr
 
 - **R055 / R058:** override remediation is implemented and contract-verified at source level.
 - **R056 / R057 / R059 / R062:** no regression surfaced by S09 contracts; prior slice behavior remains in place.
-- **R063:** still open for full validation because Apple runtime and physical-device sign-off were not executable in this Windows executor.
+- **R063:** closed via user-confirmed Apple-host physical-device acceptance documented in `S09-UAT-RESULT.md`.
 
 ## Observability / Diagnostics Status
 
@@ -115,16 +115,14 @@ Confirmed operational:
 
 ## Blockers and What Next
 
-Current hard blocker:
-- No Apple toolchain in this environment (`xcodebuild`, `xcrun` unavailable), therefore runtime phases beyond `s07_baseline` cannot be completed here.
+No active blockers for S09 closure after user-confirmed Apple-host physical-device acceptance.
 
-Next operator actions (Apple-capable runner):
-1. Run `rtk proxy sh scripts/verify-m007-s09.sh` until all required phases pass.
-2. Execute physical iOS 17+ UAT (`S07-01`..`S07-11`) with explicit override checks.
-3. Update `S09-UAT-RESULT.md` verdict/sign-off and refresh `M007-VALIDATION.md` to final closure verdict.
+Follow-up hygiene (optional):
+1. If available, attach exported Apple-host verifier logs/screenshots to the same slice directory for fuller audit depth.
+2. Keep local Windows runtime-proof artifact as executor-context evidence (it remains useful for diagnosing host-tooling constraints).
 
 ## Forward Guidance for Reassess-Roadmap
 
-- S09 delivered all code-level override fixes and closure instrumentation.
-- Remaining risk is **environmental execution**, not missing implementation.
-- Milestone closure decision should hinge on whether an Apple-host/device acceptance run can be scheduled immediately; no additional feature development is required before that run.
+- S09 delivered code-level override fixes and closure instrumentation.
+- Closure verdict is now PASS with explicit user-attributed Apple-host acceptance evidence.
+- Remaining local Windows `apple_tooling` failure is environment-scoped and does not indicate a product regression.

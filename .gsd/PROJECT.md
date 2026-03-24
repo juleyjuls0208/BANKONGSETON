@@ -1,36 +1,28 @@
-# BankongSeton — Cashless Canteen System
+# Project
 
 ## What This Is
 
-A cashless payment system for a school canteen. Students carry RFID cards or use the mobile app (Android + iOS). Cashiers run a browser-based POS terminal backed by Flask + Google Sheets. An Arduino UNO R4 WiFi acts as the wireless payment terminal; an Arduino UNO R3 handles card registration and lost-card replacement only.
+BankongSeton is a school cashless canteen system using Flask backends, Google Sheets, cashier web terminals, Arduino hardware, and student mobile apps (Android and iOS).
 
 ## Core Value
 
-Physical RFID card tapped at the cashier counter completes a sale — balance debited, parent notified, cashier sees confirmation. Everything else extends this loop.
+A student payment at the canteen counter must complete reliably end-to-end (debit recorded, cashier confirmed, balances consistent) with clear failure visibility when anything is unavailable.
 
 ## Current State
 
-- Flask backend deployed on PythonAnywhere (dashboard app + API server)
-- Google Sheets as the primary datastore
-- Cashier browser UI with real-time SocketIO events
-- Arduino UNO R4 WiFi: **RC522 MFRC522 + SSD1306 OLED firmware** (M005/S01+S02 done) — WiFi card-read routing, heartbeat, WiFi badge preserved; Adafruit SSD1306 driver active; QR poll loop (500ms, GET /api/arduino/qr-pending) renders bitmaps on OLED; directory `bankongseton_r4/`
-- Arduino UNO R3: uses RC522 RFID — card registration and lost-card replacement only; README updated (M005/S01)
-- **Backend QR payment flow** (M005/S03 done): `POST /cashier/api/qr-generate` → `GET /api/arduino/qr-pending` → student scans → `GET /api/qr/<token>` → `POST /api/qr/confirm` → balance debited → `qr_payment` SocketIO → cashier success modal; `app.pending_qr_token` in-memory state; `jwt_token` in student login response; 14/14 contract checks pass
-- Android app (student_app_v2): balance, transactions, FCM push, NFC HCE pay (being removed in M005/S05)
-- iOS app (mobile/ios/BankongSetonStudent): balance, transactions, FCM push, and QR pay flow are implemented; M007/S09 override remediation is landed (dark-mode default startup, PIN-free login, `QR Pay` / `Card Pay` / `Load` filters) with closure evidence in `.gsd/milestones/M007/slices/S09/`, while final Apple-host/runtime + physical iOS 17+ sign-off is still pending
-- Standalone cashier app (M006/S01-S05): login + JWT cookie auth + `/api/products` + modern POS screen + standalone payment/Arduino/QR APIs on port 5010 (`/api/process-sale`, `/api/complete-sale`, `/api/complete-sale-nfc`, `/api/qr-generate`, `/api/cancel-sale`, `/api/queue/status`, `/api/queue/sync`, `/api/arduino/*`); closure is now anchored by `.gsd/milestones/M006/slices/S05/S05-UAT-BUNDLE.{json,md}` (`overall.live_ready=true`, required flows `live_success`, no `:5003` request-trace hits) and summarized in `.gsd/milestones/M006/M006-SUMMARY.md`
-- M007 planning is now scoped: complete iOS UI-UX rework against `C:\Users\admin\Downloads\stitch_redesigned_login`, QR-only payment UX, mandatory dark-mode-first startup, PIN-free login, and `QR Pay` / `Card Pay` / `Load` transactions filters, with iOS 17+ demo acceptance on real device
+- M001–M007 are completed and recorded in `.gsd/milestones/`
+- Backend stack is split across dashboard (`backend/dashboard/`) and API (`backend/api/`) Flask apps with Google Sheets as primary datastore
+- Standalone cashier app (M006) runs on port 5010 with isolated routes and closure evidence in `.gsd/milestones/M006/slices/S05/`
+- Arduino R4 uses RC522 + OLED QR flow; Arduino R3 remains registration/lost-card terminal
+- iOS app (`mobile/ios/BankongSetonStudent/`) has completed M007 stitch-era rework, but user-directed M008 now supersedes visual direction toward old-UX rollback + minimalist speed-first UI
 
 ## Architecture / Key Patterns
 
-- Dashboard Flask app: `backend/dashboard/web_app.py` (routes + SocketIO), `cashier/cashier_routes.py` (payment logic)
-- API Flask app: `backend/api/api_server.py` (student-facing REST)
-- Cache layer: `backend/cache.py` — get_cached/set_cached/invalidate_pattern
-- Offline queue: `backend/offline_queue.py` — SQLite WAL, syncs on reconnect
-- Arduino R4: `arduino/bankongseton_r4/bankongseton_r4.ino` — RC522 MFRC522 firmware (M005/S01); OLED placeholder ready for S02
-- Arduino R3: `arduino/bankongseton_nfc_r3/bankongseton_nfc_r3.ino`
-- Android: `mobile/student_app_v2/` — Kotlin, Retrofit, Firebase FCM
-- iOS: `mobile/ios/BankongSetonStudent/` — SwiftUI, URLSession, no payment method pre-M005
+- Flask + SocketIO for cashier/backend runtime integration
+- Google Sheets for operational records (Users, Money Accounts, Transactions Log, etc.)
+- Contract-first verification with script/test artifacts under `scripts/` and `tests/`
+- SwiftUI iOS app with view/viewmodel separation and shared theme/components under `UI/`
+- Append-only project governance via `.gsd/DECISIONS.md`, `.gsd/REQUIREMENTS.md`, and milestone artifacts
 
 ## Capability Contract
 
@@ -38,10 +30,11 @@ See `.gsd/REQUIREMENTS.md` for the explicit capability contract, requirement sta
 
 ## Milestone Sequence
 
-- [x] M001: Operational Hardening & Feature Completion — fraud UI, SMS, cashier accounts, void, offline queue, push notifications
-- [x] M002: Production Readiness & Deployment Stability — requirements, cache, worker safety, tests, health checks, runbook
-- [x] M003: Wireless Cashier Payment Terminal — R4 WiFi routing fix, phone NFC cashier pay, WiFi badge, powerbank hardening
-- [x] M004: NFC Phone Payment Fix — APDU retry firmware, end-to-end NFC validation
-- [x] M005: RC522 + OLED + QR Payment — swap PN532→RC522 on R4, LCD→OLED on R4, QR payment on both Android and iOS
-- [x] M006: Standalone Cashier Web App — dedicated port-5010 cashier site with modern POS UI, isolated from admin dashboard (**S01–S05 complete; closure evidence anchored in `.gsd/milestones/M006/slices/S05/S05-UAT-BUNDLE.{json,md}`**)
-- [ ] M007: iOS UI-UX Rework — stitch-faithful redesign with fully interactive in-scope controls, QR-only payment UX, and iOS 17+ on-device demo readiness
+- [x] M001: Operational Hardening & Feature Completion — fraud UI, SMS, cashier accounts, void flow, offline queue, push notifications
+- [x] M002: Production Readiness & Deployment Stability — dependency integrity, cache/worker safety, tests, health checks, deployment runbook
+- [x] M003: Wireless Cashier Payment Terminal — R4 WiFi routing, cashier WiFi status, powerbank stability hardening
+- [x] M004: NFC Phone Payment Fix — APDU retry cycle and reliability validation work
+- [x] M005: RC522 + OLED + QR Payment — PN532 retirement, OLED QR rendering, backend QR flow, mobile QR paths
+- [x] M006: Standalone Cashier Web App — isolated cashier runtime on port 5010 with modern POS and closure evidence
+- [x] M007: iOS UI-UX Rework — stitch-parity phase with QR-only flow, override remediation, and closure artifacts
+- [ ] M008-l1ngya: iOS UX Rollback + Minimalist Refresh — restore old iOS baseline, add filter-only transactions and minimalist appearance controls, redesign home balance as credit-card UI, replace custom shell with native tabs, and repair budget reliability
