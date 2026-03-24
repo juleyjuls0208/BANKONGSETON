@@ -14,6 +14,8 @@ final class QRPayViewModel: ObservableObject {
     @Published var state: QRPayState = .scanning
     @Published var isPresented: Bool = true
 
+    private var activeQRAPIBaseURLOverride: String?
+
     func handleScannedURL(_ payload: String, apiClient: APIClient) {
         guard case .scanning = state else {
             log("Ignoring duplicate scan while state is \(state.debugLabel)")
@@ -37,12 +39,19 @@ final class QRPayViewModel: ObservableObject {
             return
         }
 
-        log("Accepted QR payload source=\(parsedPayload.source), token=\(redact(parsedPayload.token))")
+        activeQRAPIBaseURLOverride = parsedPayload.apiBaseURLOverride
+        let resolvedEndpoint = parsedPayload.apiBaseURLOverride ?? APIEndpoints.baseURL
+        log(
+            "Accepted QR payload source=\(parsedPayload.source), token=\(redact(parsedPayload.token)), endpoint=\(resolvedEndpoint)"
+        )
         transition(to: .loading, reason: "scan_accepted_\(parsedPayload.source)")
 
         Task {
             do {
-                let cart = try await apiClient.getQrCart(token: parsedPayload.token)
+                let cart = try await apiClient.getQrCart(
+                    token: parsedPayload.token,
+                    apiBaseURLOverride: parsedPayload.apiBaseURLOverride
+                )
                 transition(to: .confirming(cart: cart, token: parsedPayload.token), reason: "cart_loaded")
             } catch APIError.httpError(404), APIError.httpError(410) {
                 transition(
@@ -88,11 +97,16 @@ final class QRPayViewModel: ObservableObject {
             return
         }
 
+        let apiBaseURLOverride = activeQRAPIBaseURLOverride
+
         transition(to: .loading, reason: "confirm_started")
 
         Task {
             do {
-                let response = try await apiClient.confirmQrPayment(token: token)
+                let response = try await apiClient.confirmQrPayment(
+                    token: token,
+                    apiBaseURLOverride: apiBaseURLOverride
+                )
                 transition(to: .success(newBalance: response.newBalance), reason: "confirm_success")
             } catch APIError.httpError(402) {
                 transition(
@@ -124,6 +138,7 @@ final class QRPayViewModel: ObservableObject {
     }
 
     func reset() {
+        activeQRAPIBaseURLOverride = nil
         transition(to: .scanning, reason: "user_retry")
     }
 
@@ -135,6 +150,14 @@ final class QRPayViewModel: ObservableObject {
 
     private func parseScannedPayload(_ payload: String) -> ParsedQRPayload? {
         if let urlToken = extractTokenFromQRURL(payload), isValidToken(urlToken) {
+            if let trustedBaseURL = extractTrustedAPIBaseURLOverride(from: payload, token: urlToken) {
+                return ParsedQRPayload(
+                    token: urlToken,
+                    source: "url_direct",
+                    apiBaseURLOverride: trustedBaseURL
+                )
+            }
+
             return ParsedQRPayload(token: urlToken, source: "url")
         }
 
@@ -158,9 +181,13 @@ final class QRPayViewModel: ObservableObject {
             .split(separator: "/")
             .map(String.init)
 
+        let reservedTailSegments: Set<String> = [
+            "confirm", "generate", "pending", "status", "register", "cancel", "paid"
+        ]
+
         for index in 0..<parts.count {
             let current = parts[index].lowercased()
-            guard current == "qr", index > 0, parts[index - 1].lowercased() == "api", index + 1 < parts.count else {
+            guard current == "qr", index + 1 < parts.count else {
                 continue
             }
 
@@ -170,10 +197,94 @@ final class QRPayViewModel: ObservableObject {
                 .first
                 .map(String.init) ?? ""
 
-            return token.removingPercentEncoding ?? token
+            let decodedToken = token.removingPercentEncoding ?? token
+            if reservedTailSegments.contains(decodedToken.lowercased()) {
+                continue
+            }
+
+            return decodedToken
         }
 
         return nil
+    }
+
+    private func extractTrustedAPIBaseURLOverride(from payload: String, token: String) -> String? {
+        guard let components = URLComponents(string: payload),
+              let scheme = components.scheme?.lowercased(),
+              (scheme == "http" || scheme == "https"),
+              let host = components.host?.lowercased(),
+              !host.isEmpty else {
+            return nil
+        }
+
+        let segments = components.path
+            .split(separator: "/")
+            .map(String.init)
+
+        guard let qrIndex = segments.lastIndex(where: { $0.lowercased() == "qr" }),
+              qrIndex + 1 < segments.count else {
+            return nil
+        }
+
+        let encodedToken = segments[qrIndex + 1]
+        let decodedToken = encodedToken.removingPercentEncoding ?? encodedToken
+        guard decodedToken == token else {
+            return nil
+        }
+
+        guard isTrustedQRHost(host, scheme: scheme) else {
+            log("Ignoring untrusted QR host=\(host). Falling back to default API endpoint.")
+            return nil
+        }
+
+        let prefixSegments = segments.prefix(qrIndex)
+        let prefixPath = prefixSegments.isEmpty ? "" : "/" + prefixSegments.joined(separator: "/")
+
+        var baseURL = "\(scheme)://\(host)"
+        if let port = components.port {
+            baseURL += ":\(port)"
+        }
+
+        return baseURL + prefixPath
+    }
+
+    private func isTrustedQRHost(_ host: String, scheme: String) -> Bool {
+        let normalizedHost = host.lowercased()
+        let defaultAPIHost = URL(string: APIEndpoints.baseURL)?.host?.lowercased()
+
+        if let defaultAPIHost, normalizedHost == defaultAPIHost {
+            return scheme == "https"
+        }
+
+        if normalizedHost == "localhost" || normalizedHost == "127.0.0.1" || normalizedHost == "::1" {
+            return true
+        }
+
+        if normalizedHost.hasSuffix(".local") {
+            return true
+        }
+
+        return isPrivateIPv4Host(normalizedHost)
+    }
+
+    private func isPrivateIPv4Host(_ host: String) -> Bool {
+        let octets = host.split(separator: ".")
+        guard octets.count == 4 else { return false }
+
+        let values = octets.compactMap { Int($0) }
+        guard values.count == 4, values.allSatisfy({ (0...255).contains($0) }) else {
+            return false
+        }
+
+        let first = values[0]
+        let second = values[1]
+
+        if first == 10 { return true }
+        if first == 172 && (16...31).contains(second) { return true }
+        if first == 192 && second == 168 { return true }
+        if first == 169 && second == 254 { return true }
+
+        return false
     }
 
     private func isValidToken(_ token: String) -> Bool {
@@ -196,6 +307,13 @@ final class QRPayViewModel: ObservableObject {
 private struct ParsedQRPayload {
     let token: String
     let source: String
+    let apiBaseURLOverride: String?
+
+    init(token: String, source: String, apiBaseURLOverride: String? = nil) {
+        self.token = token
+        self.source = source
+        self.apiBaseURLOverride = apiBaseURLOverride
+    }
 }
 
 private extension QRPayState {

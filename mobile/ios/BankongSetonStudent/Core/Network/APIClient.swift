@@ -24,12 +24,18 @@ final class APIClient: ObservableObject {
 
     // MARK: - Private Helpers
 
+    private func buildURL(baseURL: String, path: String) -> URL? {
+        let normalizedBase = baseURL.hasSuffix("/") ? String(baseURL.dropLast()) : baseURL
+        let normalizedPath = path.hasPrefix("/") ? path : "/\(path)"
+        return URL(string: normalizedBase + normalizedPath)
+    }
+
     private func authenticatedRequest(
         path: String,
         method: String = "GET",
         body: Data? = nil
     ) throws -> URLRequest {
-        guard let url = URL(string: APIEndpoints.baseURL + path) else {
+        guard let url = buildURL(baseURL: APIEndpoints.baseURL, path: path) else {
             throw APIError.invalidURL
         }
         var request = URLRequest(url: url)
@@ -45,9 +51,13 @@ final class APIClient: ObservableObject {
     private func jwtRequest(
         path: String,
         method: String = "GET",
-        body: Data? = nil
+        body: Data? = nil,
+        baseURLOverride: String? = nil
     ) throws -> URLRequest {
-        guard let url = URL(string: APIEndpoints.baseURL + path) else {
+        let candidateBaseURL = baseURLOverride?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let targetBaseURL = (candidateBaseURL?.isEmpty == false ? candidateBaseURL : nil) ?? APIEndpoints.baseURL
+
+        guard let url = buildURL(baseURL: targetBaseURL, path: path) else {
             throw APIError.invalidURL
         }
         var request = URLRequest(url: url)
@@ -195,15 +205,20 @@ final class APIClient: ObservableObject {
         return try await perform(req)
     }
 
-    func getQrCart(token: String) async throws -> QrCartResponse {
-        let req = try jwtRequest(path: APIEndpoints.qrCart + token)
+    func getQrCart(token: String, apiBaseURLOverride: String? = nil) async throws -> QrCartResponse {
+        let req = try jwtRequest(path: APIEndpoints.qrCart + token, baseURLOverride: apiBaseURLOverride)
         return try await perform(req)
     }
 
-    func confirmQrPayment(token: String) async throws -> QrConfirmResponse {
+    func confirmQrPayment(token: String, apiBaseURLOverride: String? = nil) async throws -> QrConfirmResponse {
         let body = QrConfirmRequest(token: token)
         let bodyData = try encoder.encode(body)
-        let req = try jwtRequest(path: APIEndpoints.qrConfirm, method: "POST", body: bodyData)
+        let req = try jwtRequest(
+            path: APIEndpoints.qrConfirm,
+            method: "POST",
+            body: bodyData,
+            baseURLOverride: apiBaseURLOverride
+        )
         return try await perform(req)
     }
 }
