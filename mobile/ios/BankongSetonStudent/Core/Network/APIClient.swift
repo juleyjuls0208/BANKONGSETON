@@ -52,10 +52,11 @@ final class APIClient: ObservableObject {
         path: String,
         method: String = "GET",
         body: Data? = nil,
-        baseURLOverride: String? = nil
+        baseURLOverride: String? = nil,
+        fallbackBaseURL: String = APIEndpoints.baseURL
     ) throws -> URLRequest {
         let candidateBaseURL = baseURLOverride?.trimmingCharacters(in: .whitespacesAndNewlines)
-        let targetBaseURL = (candidateBaseURL?.isEmpty == false ? candidateBaseURL : nil) ?? APIEndpoints.baseURL
+        let targetBaseURL = (candidateBaseURL?.isEmpty == false ? candidateBaseURL : nil) ?? fallbackBaseURL
 
         guard let url = buildURL(baseURL: targetBaseURL, path: path) else {
             throw APIError.invalidURL
@@ -206,7 +207,11 @@ final class APIClient: ObservableObject {
     }
 
     func getQrCart(token: String, apiBaseURLOverride: String? = nil) async throws -> QrCartResponse {
-        let req = try jwtRequest(path: APIEndpoints.qrCart + token, baseURLOverride: apiBaseURLOverride)
+        let req = try jwtRequest(
+            path: APIEndpoints.qrCart + token,
+            baseURLOverride: apiBaseURLOverride,
+            fallbackBaseURL: APIEndpoints.qrBaseURL
+        )
         return try await perform(req)
     }
 
@@ -217,7 +222,8 @@ final class APIClient: ObservableObject {
             path: APIEndpoints.qrConfirm,
             method: "POST",
             body: bodyData,
-            baseURLOverride: apiBaseURLOverride
+            baseURLOverride: apiBaseURLOverride,
+            fallbackBaseURL: APIEndpoints.qrBaseURL
         )
         return try await perform(req)
     }

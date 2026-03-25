@@ -233,7 +233,7 @@ final class QRPayViewModel: ObservableObject {
         }
 
         guard isTrustedQRHost(host, scheme: scheme) else {
-            log("Ignoring untrusted QR host=\(host). Falling back to default API endpoint.")
+            log("Ignoring untrusted QR host=\(host). Falling back to configured QR API endpoint.")
             return nil
         }
 
@@ -250,9 +250,12 @@ final class QRPayViewModel: ObservableObject {
 
     private func isTrustedQRHost(_ host: String, scheme: String) -> Bool {
         let normalizedHost = host.lowercased()
-        let defaultAPIHost = URL(string: APIEndpoints.baseURL)?.host?.lowercased()
+        let trustedPublicHosts = Set(
+            [APIEndpoints.baseURL, APIEndpoints.qrBaseURL]
+                .compactMap { URL(string: $0)?.host?.lowercased() }
+        )
 
-        if let defaultAPIHost, normalizedHost == defaultAPIHost {
+        if trustedPublicHosts.contains(normalizedHost) {
             return scheme == "https"
         }
 
