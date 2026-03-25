@@ -105,7 +105,7 @@ struct HomeView: View {
             .onAppear {
                 viewModel.refreshResolvedDisplayName(backendDisplayName: authManager.studentName)
             }
-            .onChange(of: authManager.studentName) { newValue in
+            .onChange(of: authManager.studentName) { _, newValue in
                 viewModel.refreshResolvedDisplayName(backendDisplayName: newValue)
             }
             .onReceive(NotificationCenter.default.publisher(for: .settingsDisplayNameDidChange)) { _ in

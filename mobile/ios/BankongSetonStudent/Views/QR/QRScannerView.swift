@@ -35,6 +35,7 @@ struct QRScannerView: UIViewControllerRepresentable {
             self.onScannerFailure = onScannerFailure
         }
 
+        @objc
         func metadataOutput(
             _ output: AVCaptureMetadataOutput,
             didOutput metadataObjects: [AVMetadataObject],

@@ -255,7 +255,7 @@ struct BudgetView: View {
                 TextField("Enter monthly limit", text: $limitInput)
                     .keyboardType(.decimalPad)
                     .stitchFieldStyle()
-                    .onChange(of: limitInput) { _ in
+                    .onChange(of: limitInput) {
                         hasEditedLimit = true
                         saveSuccessMessage = nil
                     }
