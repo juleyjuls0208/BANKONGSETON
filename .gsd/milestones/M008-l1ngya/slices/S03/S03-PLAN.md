@@ -11,7 +11,7 @@ Negative Tests (Q7): empty display name and empty transaction list rendering, AP
   - Estimate: 1h 30m
   - Files: mobile/ios/BankongSetonStudent/Views/Home/HomeView.swift, mobile/ios/BankongSetonStudent/Views/QR/QRPayView.swift, mobile/ios/BankongSetonStudent/ViewModels/HomeViewModel.swift, tests/test_verify_m007_s07_integration_behavior_contract.py
   - Verify: rtk proxy python -m pytest -q tests/test_verify_m007_s07_integration_behavior_contract.py::test_qr_success_handoff_remains_wired_from_home_sheet_to_refresh_path
-- [ ] **T02: Add S03 Home rollback contract suite and phased verifier chaining S02 guards** — Lock S03 closure to executable proof for R070/R076 and prevent rollback regressions from leaking into established S02 boundaries.
+- [x] **T02: Added phased S03 verifier chaining S02 guards and tightened Home rollback contract diagnostics with file-path marker context.** — Lock S03 closure to executable proof for R070/R076 and prevent rollback regressions from leaking into established S02 boundaries.
 Failure Modes (Q5): dependencies are `tests/test_verify_m008_s03_ios_home_rollback_contract.py` and chained `scripts/verify-m008-s02.sh`; on downstream failure bubble phase-specific guidance and stop closure.
 Load Profile (Q6): shared resources are pytest process + serial phase runner; per operation cost is one S03 suite + one continuity node check + one S02 chain run; 10x impact is runtime growth, not semantic drift, because phases are serial.
 Negative Tests (Q7): preflight missing files fail with guidance, removed continuity marker fails home-qr-continuity phase, and script must fail if S02 chain fails even when S03 local tests pass.

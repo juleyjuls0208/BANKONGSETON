@@ -10,20 +10,21 @@ def read_text(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
-def assert_required_markers(contents: str, markers: list[str], contract: str) -> None:
+def assert_required_markers(path: Path, contents: str, markers: list[str], contract: str) -> None:
     for marker in markers:
-        assert marker in contents, f"{contract}: missing required marker: {marker}"
+        assert marker in contents, f"{contract}: missing required marker in {path}: {marker}"
 
 
-def assert_forbidden_markers(contents: str, markers: list[str], contract: str) -> None:
+def assert_forbidden_markers(path: Path, contents: str, markers: list[str], contract: str) -> None:
     found = [marker for marker in markers if marker in contents]
-    assert not found, f"{contract}: found forbidden markers: {found}"
+    assert not found, f"{contract}: found forbidden markers in {path}: {found}"
 
 
 def test_home_exposes_minimal_credit_card_hero_contract() -> None:
     contents = read_text(HOME_VIEW_PATH)
 
     assert_required_markers(
+        HOME_VIEW_PATH,
         contents,
         [
             "private var creditCardHero: some View",
@@ -42,6 +43,7 @@ def test_home_removes_m007_heavy_transition_scaffolding() -> None:
     contents = read_text(HOME_VIEW_PATH)
 
     assert_forbidden_markers(
+        HOME_VIEW_PATH,
         contents,
         [
             "private var screenTransitionAnimation: Animation",
@@ -60,6 +62,7 @@ def test_home_keeps_qr_entry_and_post_success_continuity_seam() -> None:
     contents = read_text(HOME_VIEW_PATH)
 
     assert_required_markers(
+        HOME_VIEW_PATH,
         contents,
         [
             '.sheet(isPresented: $showQrPay) {',
@@ -81,6 +84,7 @@ def test_home_negative_paths_keep_stable_empty_and_retry_surfaces() -> None:
     contents = read_text(HOME_VIEW_PATH)
 
     assert_required_markers(
+        HOME_VIEW_PATH,
         contents,
         [
             "No recent transactions.",
