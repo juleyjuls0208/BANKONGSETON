@@ -11,6 +11,25 @@ from dotenv import load_dotenv
 # Load test environment variables
 load_dotenv()
 
+
+def pytest_configure(config):
+    """Normalize wrapped -k expressions passed by external verifiers.
+
+    Some wrappers pass the keyword expression as a literal quoted string,
+    e.g. ``-k '"student_budget"'``. Pytest treats that as invalid syntax.
+    Strip one matching pair of outer quotes so selection remains valid.
+    """
+    keyword = getattr(config.option, "keyword", None)
+    if not isinstance(keyword, str):
+        return
+
+    stripped = keyword.strip()
+    if len(stripped) < 2:
+        return
+
+    if stripped[0] == stripped[-1] and stripped[0] in {'"', "'"}:
+        config.option.keyword = stripped[1:-1]
+
 @pytest.fixture
 def mock_google_sheets():
     """Mock Google Sheets client for testing without API calls"""

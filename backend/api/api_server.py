@@ -121,6 +121,126 @@ def get_sheet_records_cached(sheet_name: str, *, ttl: int = 5):
     return records
 
 
+STUDENT_BUDGETS_SHEET_NAME = "Student Budgets"
+STUDENT_BUDGETS_HEADERS = ["StudentID", "MonthlyLimit", "YearMonth", "UpdatedAt"]
+
+
+def get_current_ph_year_month() -> str:
+    """Return current year-month in PH timezone (YYYY-MM)."""
+    return get_philippines_time().strftime('%Y-%m')
+
+
+def invalidate_student_budgets_cache() -> None:
+    """Invalidate cache entries used by the student budget contract routes."""
+    cache_key = f"sheet_records:{STUDENT_BUDGETS_SHEET_NAME}"
+    invalidate_cached(cache_key)
+    invalidate_pattern(cache_key)
+
+
+def ensure_student_budgets_sheet():
+    """Get or lazily create Student Budgets worksheet with canonical headers."""
+    try:
+        sheet = get_worksheet_with_retry(STUDENT_BUDGETS_SHEET_NAME)
+    except gspread.exceptions.WorksheetNotFound:
+        logger.info("budget_sheet_create start")
+        sheet = db.add_worksheet(
+            title=STUDENT_BUDGETS_SHEET_NAME,
+            rows=1000,
+            cols=len(STUDENT_BUDGETS_HEADERS),
+        )
+        sheet.append_row(STUDENT_BUDGETS_HEADERS)
+        invalidate_student_budgets_cache()
+        return sheet
+
+    headers = [str(value).strip() for value in sheet.row_values(1)]
+    if headers[:len(STUDENT_BUDGETS_HEADERS)] != STUDENT_BUDGETS_HEADERS:
+        logger.warning("budget_sheet_header_repair applied")
+        sheet.update('A1:D1', [STUDENT_BUDGETS_HEADERS])
+
+    return sheet
+
+
+def resolve_budget_student(student_id: str):
+    """Validate student identity and money-card binding for budget endpoints."""
+    for record in get_sheet_records_cached('Users', ttl=5):
+        if str(record.get('StudentID', '')).strip() != str(student_id).strip():
+            continue
+
+        if not str(record.get('MoneyCardNumber', '')).strip():
+            return None, ('No money card registered', 404)
+
+        return record, None
+
+    return None, ('Student not found', 404)
+
+
+def parse_budget_limit(value):
+    """Parse budget limit value from sheet/user input; returns float or None."""
+    if value is None:
+        return None
+
+    if isinstance(value, (int, float)):
+        return float(value)
+
+    raw = str(value).strip()
+    if not raw:
+        return None
+
+    normalized = raw.replace('₱', '').replace('PHP', '').replace(',', '').strip()
+    if not normalized:
+        return None
+
+    return float(normalized)
+
+
+SPEND_TRANSACTION_KEYWORDS = ('purchase', 'spend', 'debit', 'payment')
+
+
+def get_current_ph_month_bounds():
+    """Return [month_start, next_month_start) in PH timezone for current month."""
+    now = get_philippines_time()
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    if month_start.month == 12:
+        next_month_start = month_start.replace(year=month_start.year + 1, month=1)
+    else:
+        next_month_start = month_start.replace(month=month_start.month + 1)
+    return month_start, next_month_start
+
+
+def parse_transaction_timestamp(value):
+    """Parse transaction timestamp into PH timezone-aware datetime."""
+    if isinstance(value, datetime):
+        parsed = value
+    else:
+        raw = str(value).strip()
+        if not raw:
+            raise ValueError('timestamp is empty')
+
+        normalized = raw.replace('Z', '+00:00') if raw.endswith('Z') else raw
+        try:
+            parsed = datetime.fromisoformat(normalized)
+        except ValueError as exc:
+            raise ValueError('timestamp is malformed') from exc
+
+    if parsed.tzinfo is None:
+        return PHILIPPINES_TZ.localize(parsed)
+
+    return parsed.astimezone(PHILIPPINES_TZ)
+
+
+def is_completed_spend_record(record) -> bool:
+    """Return True when a transaction row represents completed spending."""
+    status = str(record.get('Status', '')).strip().lower()
+    if status != 'completed':
+        return False
+
+    transaction_type = str(record.get('TransactionType') or record.get('Type') or '').strip().lower()
+    if not transaction_type:
+        return False
+
+    return any(keyword in transaction_type for keyword in SPEND_TRANSACTION_KEYWORDS)
+
+
 # Simple token storage (in production, use Redis or database)
 active_sessions = {}
 SESSION_TTL_SECONDS = 8 * 3600  # 8-hour absolute TTL from login
@@ -595,6 +715,208 @@ def get_transactions():
     except Exception as e:
         logger.error(f"Unexpected error in get_transactions: {e}", exc_info=True)
         return jsonify({'error': 'An unexpected error occurred'}), 500
+
+
+@app.route('/api/student/budget', methods=['GET'])
+def get_student_budget():
+    """Read the authenticated student's current-month budget limit."""
+    try:
+        token = request.headers.get('Authorization', '').replace('Bearer ', '')
+        session = _check_session(token)
+        if session is None:
+            logger.warning('budget_route_auth_error action=get')
+            return jsonify({'error': 'Invalid or expired token'}), 401
+
+        student_id = str(session.get('student_id', '')).strip()
+        _, student_error = resolve_budget_student(student_id)
+        if student_error:
+            message, status = student_error
+            logger.warning('budget_route_student_guard_failed action=get status=%s', status)
+            return jsonify({'error': message}), status
+
+        year_month = get_current_ph_year_month()
+        ensure_student_budgets_sheet()
+        records = get_sheet_records_cached(STUDENT_BUDGETS_SHEET_NAME, ttl=5)
+
+        monthly_limit = None
+        for record in records:
+            record_student_id = str(record.get('StudentID', '')).strip()
+            record_month = str(record.get('YearMonth', '')).strip()
+            if record_student_id == student_id and record_month == year_month:
+                try:
+                    monthly_limit = parse_budget_limit(record.get('MonthlyLimit'))
+                except ValueError:
+                    logger.warning('budget_route_malformed_limit action=get month=%s', year_month)
+                    monthly_limit = None
+                break
+
+        return jsonify({
+            'monthly_limit': monthly_limit,
+            'year_month': year_month,
+        })
+
+    except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
+            gspread.exceptions.WorksheetNotFound, ConnectionError, TimeoutError) as e:
+        logger.error('budget_route_unavailable action=get error=%s', e)
+        return jsonify({'error': 'Service unavailable, please try again'}), 503
+    except Exception as e:
+        logger.error('budget_route_unexpected action=get error=%s', e, exc_info=True)
+        return jsonify({'error': 'An unexpected error occurred'}), 500
+
+
+@app.route('/api/student/budget', methods=['POST'])
+def upsert_student_budget():
+    """Create or update current-month budget limit for authenticated student."""
+    try:
+        token = request.headers.get('Authorization', '').replace('Bearer ', '')
+        session = _check_session(token)
+        if session is None:
+            logger.warning('budget_route_auth_error action=post')
+            return jsonify({'error': 'Invalid or expired token'}), 401
+
+        student_id = str(session.get('student_id', '')).strip()
+        _, student_error = resolve_budget_student(student_id)
+        if student_error:
+            message, status = student_error
+            logger.warning('budget_route_student_guard_failed action=post status=%s', status)
+            return jsonify({'error': message}), status
+
+        payload = request.get_json(silent=True) or {}
+        raw_monthly_limit = payload.get('monthly_limit')
+        if raw_monthly_limit is None:
+            return jsonify({'error': 'monthly_limit is required'}), 400
+
+        try:
+            monthly_limit = parse_budget_limit(raw_monthly_limit)
+        except ValueError:
+            return jsonify({'error': 'monthly_limit must be numeric'}), 400
+
+        if monthly_limit is None:
+            return jsonify({'error': 'monthly_limit must be numeric'}), 400
+
+        if monthly_limit < 0:
+            return jsonify({'error': 'monthly_limit must be zero or greater'}), 400
+
+        monthly_limit = round(float(monthly_limit), 2)
+        year_month = get_current_ph_year_month()
+        updated_at = get_philippines_time().strftime('%Y-%m-%d %H:%M:%S')
+
+        budgets_sheet = ensure_student_budgets_sheet()
+        existing_records = get_sheet_records_cached(STUDENT_BUDGETS_SHEET_NAME, ttl=5)
+
+        existing_row_index = None
+        for row_index, record in enumerate(existing_records, start=2):
+            record_student_id = str(record.get('StudentID', '')).strip()
+            record_month = str(record.get('YearMonth', '')).strip()
+            if record_student_id == student_id and record_month == year_month:
+                existing_row_index = row_index
+                break
+
+        row_payload = [student_id, monthly_limit, year_month, updated_at]
+        if existing_row_index is None:
+            budgets_sheet.append_row(row_payload, table_range='A1')
+        else:
+            budgets_sheet.update(f'A{existing_row_index}:D{existing_row_index}', [row_payload])
+
+        invalidate_student_budgets_cache()
+
+        return jsonify({
+            'success': True,
+            'monthly_limit': monthly_limit,
+            'year_month': year_month,
+        })
+
+    except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
+            gspread.exceptions.WorksheetNotFound, ConnectionError, TimeoutError) as e:
+        logger.error('budget_route_unavailable action=post error=%s', e)
+        return jsonify({'error': 'Service unavailable, please try again'}), 503
+    except Exception as e:
+        logger.error('budget_route_unexpected action=post error=%s', e, exc_info=True)
+        return jsonify({'error': 'An unexpected error occurred'}), 500
+
+
+@app.route('/api/budget-summary', methods=['GET'])
+def get_budget_summary():
+    """Return current-month spending summary for authenticated student."""
+    try:
+        token = request.headers.get('Authorization', '').replace('Bearer ', '')
+        session = _check_session(token)
+        if session is None:
+            logger.warning('budget_summary_auth_error action=get')
+            return jsonify({'error': 'Invalid or expired token'}), 401
+
+        student_id = str(session.get('student_id', '')).strip()
+        student_record, student_error = resolve_budget_student(student_id)
+        if student_error:
+            message, status = student_error
+            logger.warning('budget_summary_student_guard_failed action=get status=%s', status)
+            return jsonify({'error': message}), status
+
+        normalized_card = normalize_card_uid(student_record.get('MoneyCardNumber', ''))
+        month_start, next_month_start = get_current_ph_month_bounds()
+        year_month = month_start.strftime('%Y-%m')
+
+        monthly_spend = 0.0
+        trans_records = get_sheet_records_cached('Transactions Log', ttl=10)
+
+        for row_index, record in enumerate(trans_records, start=2):
+            if normalize_card_uid(record.get('MoneyCardNumber', '')) != normalized_card:
+                continue
+
+            if not is_completed_spend_record(record):
+                continue
+
+            txn_id = str(record.get('TransactionID', '')).strip()
+
+            try:
+                timestamp = parse_transaction_timestamp(record.get('Timestamp'))
+            except ValueError:
+                logger.warning(
+                    'budget_summary_malformed_row reason=timestamp row=%s txn_id=%s',
+                    row_index,
+                    txn_id,
+                )
+                continue
+
+            if timestamp < month_start or timestamp >= next_month_start:
+                continue
+
+            try:
+                amount = parse_budget_limit(record.get('Amount'))
+            except ValueError:
+                logger.warning(
+                    'budget_summary_malformed_row reason=amount row=%s txn_id=%s',
+                    row_index,
+                    txn_id,
+                )
+                continue
+
+            if amount is None:
+                logger.warning(
+                    'budget_summary_malformed_row reason=empty_amount row=%s txn_id=%s',
+                    row_index,
+                    txn_id,
+                )
+                continue
+
+            if amount <= 0:
+                continue
+
+            monthly_spend += amount
+
+        return jsonify({
+            'monthly_spend': round(monthly_spend, 2),
+            'year_month': year_month,
+        })
+
+    except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
+            gspread.exceptions.WorksheetNotFound, ConnectionError, TimeoutError) as e:
+        logger.error('budget_summary_unavailable action=get error=%s', e)
+        return jsonify({'error': 'Service unavailable, please try again'}), 503
+    except Exception as e:
+        logger.error('budget_summary_unexpected action=get error=%s', e, exc_info=True)
+        return jsonify({'error': 'An unexpected error occurred'}), 500
+
 
 @app.route('/api/auth/logout', methods=['POST'])
 def logout():

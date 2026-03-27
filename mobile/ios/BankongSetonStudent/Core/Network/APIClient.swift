@@ -24,18 +24,14 @@ final class APIClient: ObservableObject {
 
     // MARK: - Private Helpers
 
-    private func buildURL(baseURL: String, path: String) -> URL? {
-        let normalizedBase = baseURL.hasSuffix("/") ? String(baseURL.dropLast()) : baseURL
-        let normalizedPath = path.hasPrefix("/") ? path : "/\(path)"
-        return URL(string: normalizedBase + normalizedPath)
-    }
-
     private func authenticatedRequest(
         path: String,
         method: String = "GET",
-        body: Data? = nil
+        body: Data? = nil,
+        baseURLOverride: String? = nil
     ) throws -> URLRequest {
-        guard let url = buildURL(baseURL: APIEndpoints.baseURL, path: path) else {
+        let baseURL = baseURLOverride ?? APIEndpoints.baseURL
+        guard let url = URL(string: baseURL + path) else {
             throw APIError.invalidURL
         }
         var request = URLRequest(url: url)
@@ -52,13 +48,10 @@ final class APIClient: ObservableObject {
         path: String,
         method: String = "GET",
         body: Data? = nil,
-        baseURLOverride: String? = nil,
-        fallbackBaseURL: String = APIEndpoints.baseURL
+        baseURLOverride: String? = nil
     ) throws -> URLRequest {
-        let candidateBaseURL = baseURLOverride?.trimmingCharacters(in: .whitespacesAndNewlines)
-        let targetBaseURL = (candidateBaseURL?.isEmpty == false ? candidateBaseURL : nil) ?? fallbackBaseURL
-
-        guard let url = buildURL(baseURL: targetBaseURL, path: path) else {
+        let baseURL = baseURLOverride ?? APIEndpoints.baseURL
+        guard let url = URL(string: baseURL + path) else {
             throw APIError.invalidURL
         }
         var request = URLRequest(url: url)
@@ -164,6 +157,9 @@ final class APIClient: ObservableObject {
         do {
             return try decoder.decode(LoginResponse.self, from: data)
         } catch {
+            if let message = extractErrorMessage(from: data) {
+                throw APIError.loginRejected(message)
+            }
             throw APIError.decodingError(error)
         }
     }
@@ -206,24 +202,21 @@ final class APIClient: ObservableObject {
         return try await perform(req)
     }
 
-    func getQrCart(token: String, apiBaseURLOverride: String? = nil) async throws -> QrCartResponse {
-        let req = try jwtRequest(
-            path: APIEndpoints.qrCart + token,
-            baseURLOverride: apiBaseURLOverride,
-            fallbackBaseURL: APIEndpoints.qrBaseURL
-        )
+    func getQrCart(token: String, baseURLOverride: String? = nil) async throws -> QrCartResponse {
+        let resolvedBaseURL = baseURLOverride ?? APIEndpoints.qrBaseURL
+        let req = try jwtRequest(path: APIEndpoints.qrCart + token, baseURLOverride: resolvedBaseURL)
         return try await perform(req)
     }
 
-    func confirmQrPayment(token: String, apiBaseURLOverride: String? = nil) async throws -> QrConfirmResponse {
+    func confirmQrPayment(token: String, baseURLOverride: String? = nil) async throws -> QrConfirmResponse {
         let body = QrConfirmRequest(token: token)
         let bodyData = try encoder.encode(body)
+        let resolvedBaseURL = baseURLOverride ?? APIEndpoints.qrBaseURL
         let req = try jwtRequest(
             path: APIEndpoints.qrConfirm,
             method: "POST",
             body: bodyData,
-            baseURLOverride: apiBaseURLOverride,
-            fallbackBaseURL: APIEndpoints.qrBaseURL
+            baseURLOverride: resolvedBaseURL
         )
         return try await perform(req)
     }

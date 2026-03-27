@@ -40,24 +40,31 @@ struct MainTabView: View {
     @EnvironmentObject var authManager: AuthManager
     @State private var selectedTab: MainTab = .home
 
-    private var shellTabs: [StitchTabItem<MainTab>] {
-        MainTab.allCases.map {
-            StitchTabItem(id: $0, title: $0.title, systemImage: $0.systemImage)
-        }
-    }
-
     var body: some View {
-        StitchTabShell(selection: $selectedTab, tabs: shellTabs) { tab in
-            switch tab {
-            case .home:
-                HomeView()
-            case .history:
-                TransactionsView()
-            case .budget:
-                BudgetView()
-            case .settings:
-                SettingsView()
-            }
+        TabView(selection: $selectedTab) {
+            HomeView()
+                .tabItem {
+                    Label(MainTab.home.title, systemImage: MainTab.home.systemImage)
+                }
+                .tag(MainTab.home)
+
+            TransactionsView()
+                .tabItem {
+                    Label(MainTab.history.title, systemImage: MainTab.history.systemImage)
+                }
+                .tag(MainTab.history)
+
+            BudgetView()
+                .tabItem {
+                    Label(MainTab.budget.title, systemImage: MainTab.budget.systemImage)
+                }
+                .tag(MainTab.budget)
+
+            SettingsView()
+                .tabItem {
+                    Label(MainTab.settings.title, systemImage: MainTab.settings.systemImage)
+                }
+                .tag(MainTab.settings)
         }
         .alert("Session Expired", isPresented: $authManager.showSessionExpiredAlert) {
             Button("Sign In") {
