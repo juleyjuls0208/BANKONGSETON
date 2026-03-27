@@ -15,6 +15,7 @@ A student payment at the canteen counter must complete reliably end-to-end (debi
 - Standalone cashier app (M006) runs on port 5010 with isolated routes and closure evidence in `.gsd/milestones/M006/slices/S05/`
 - Arduino R4 uses RC522 + OLED QR flow; Arduino R3 remains registration/lost-card terminal
 - iOS app (`mobile/ios/BankongSetonStudent/`) has completed M007 stitch-era rework, but user-directed M008 now supersedes visual direction toward old-UX rollback + minimalist speed-first UI
+- M008-l1ngya S02 delivered native `TabView` root navigation (floating stitch shell removed) plus a phased rollback verifier (`scripts/verify-m008-s02.sh`) that gates tab-shell, budget, QR, and login regressions
 
 ## Architecture / Key Patterns
 

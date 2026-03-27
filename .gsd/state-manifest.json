@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "exported_at": "2026-03-27T10:03:25.002Z",
+  "exported_at": "2026-03-27T11:36:30.059Z",
   "milestones": [
     {
       "id": "M001",
@@ -160,11 +160,102 @@
       "milestone_id": "M008-l1ngya",
       "id": "S02",
       "title": "",
-      "status": "pending",
+      "status": "complete",
       "risk": "medium",
       "depends": [],
       "demo": "",
       "created_at": "2026-03-27T10:03:24.927Z",
+      "completed_at": "2026-03-27T10:09:46.923Z",
+      "full_summary_md": "---\nid: S02\nparent: M008-l1ngya\nmilestone: M008-l1ngya\nprovides:\n  - Native `TabView` root shell baseline for M008 rollback work (R069).\n  - Deterministic regression gate command for downstream slices (`scripts/verify-m008-s02.sh`).\nrequires:\n  []\naffects:\n  - S03\n  - S04\n  - S05\n  - S06\nkey_files:\n  - mobile/ios/BankongSetonStudent/Views/MainTabView.swift\n  - tests/test_verify_m008_s02_ios_rollback_contract.py\n  - scripts/verify-m008-s02.sh\n  - .gsd/milestones/M008-l1ngya/slices/S02/tasks/T01-SUMMARY.md\n  - .gsd/DECISIONS.md\n  - .gsd/PROJECT.md\nkey_decisions:\n  - Kept `MainTab` enum metadata and session-expired alert flow unchanged while replacing only the root shell composition with native `TabView`.\n  - Locked rollback closure to one phased verifier (`scripts/verify-m008-s02.sh`) that co-runs shell, budget, QR, and login regression suites with phase-scoped guidance output.\npatterns_established:\n  - For rollback slices that touch shared UI scaffolding, bind closure to one phased verifier that includes adjacent-regression suites, not only local assertions.\n  - Preserve existing session/auth failure surfaces while swapping structural UI containers to prevent hidden boundary regressions.\nobservability_surfaces:\n  - `scripts/verify-m008-s02.sh` phase logs (`phase=<name> status=...`) with guidance lines on failures.\n  - Contract tests in `tests/test_verify_m008_s02_ios_rollback_contract.py` that expose shell-drift signatures (missing native markers, forbidden stitch markers, alert contract drift).\ndrill_down_paths:\n  - .gsd/milestones/M008-l1ngya/slices/S02/tasks/T01-SUMMARY.md\nduration: \"\"\nverification_result: passed\ncompleted_at: 2026-03-27T10:09:46.924Z\nblocker_discovered: false\n---\n\n# S02: Full UX Rollback Baseline + Native Tab Bar\n\n**Native iOS tab navigation now runs on `TabView` (floating stitch shell removed) with a phased rollback verifier that also protects budget, QR, and login contracts.**\n\n## What Happened\n\nS02 delivered the structural navigation rollback anchor for M008 by replacing `StitchTabShell`/`StitchTabItem` composition in `MainTabView` with native `TabView(selection:)` and four native tab items (`Home`, `History`, `Budget`, `Settings`). The change intentionally preserved existing auth/session-expiry behavior (`showSessionExpiredAlert`, `Sign In`, `authManager.clearAll()`) so rollback of chrome did not alter session boundary semantics. To make this slice executable and safe for downstream rollback work, the slice added a dedicated source-contract suite (`tests/test_verify_m008_s02_ios_rollback_contract.py`) and a phased harness (`scripts/verify-m008-s02.sh`) that validates shell migration and keeps budget, QR, and student-ID-only login regressions in the same closure command.\n\n## Verification\n\nRe-ran all slice contracts and phased checks successfully:\n- `rtk proxy python -m py_compile tests/test_verify_m008_s02_ios_rollback_contract.py`\n- `rtk proxy python -m pytest -q tests/test_verify_m008_s02_ios_rollback_contract.py`\n- `rtk proxy python -m pytest -q tests/test_verify_m008_s01_ios_budget_contract.py`\n- `rtk proxy python -m pytest -q tests/test_verify_m007_s02_qr_behavior_contract.py`\n- `rtk proxy python -m pytest -q tests/test_verify_m007_s09_override_contract.py::test_login_state_and_payload_are_student_id_only`\n- `rtk proxy \"C:\\Program Files\\Git\\bin\\bash.exe\" scripts/verify-m008-s02.sh`\nAll passed, including all verifier phases and final `status=passed`.\n\n## Requirements Advanced\n\n- R068 — Implemented native tab chrome in `MainTabView` and removed stitch-shell markers while preserving root app navigation semantics.\n- R069 — Delivered native `TabView` + `.tabItem` shell replacement with explicit source-contract enforcement.\n- R076 — Embedded QR continuity regression checks in the phased S02 verifier to ensure rollback work does not break existing QR-path contracts.\n\n## Requirements Validated\n\n- R069 — `tests/test_verify_m008_s02_ios_rollback_contract.py` and `scripts/verify-m008-s02.sh` pass with native tab markers present and stitch-shell markers absent.\n\n## New Requirements Surfaced\n\n- None.\n\n## Requirements Invalidated or Re-scoped\n\nNone.\n\n## Deviations\n\n`rtk proxy bash scripts/verify-m008-s02.sh` is not runnable on this Windows host when `/bin/bash` is absent; verifier execution uses `rtk proxy \"C:\\Program Files\\Git\\bin\\bash.exe\" scripts/verify-m008-s02.sh` with identical script semantics.\n\n## Known Limitations\n\nS02 only establishes the navigation-shell rollback baseline and guards; broader pre-M007 surface rollback (home card-style hero, transactions filter-only UX, settings minimalism refinements) remains for subsequent slices. Swift LSP diagnostics are still unavailable on this host, so proof is contract-test/verifier driven.\n\n## Follow-ups\n\nS03 should proceed from this shell baseline and avoid reintroducing custom floating-tab abstractions. Keep `scripts/verify-m008-s02.sh` in the default pre-merge loop while Home rollback and QR continuity refinements land, so tab-shell drift is caught before later UX slices.\n\n## Files Created/Modified\n\n- `mobile/ios/BankongSetonStudent/Views/MainTabView.swift` — Replaced floating stitch shell with native `TabView` + `.tabItem` labels/tags while preserving session-expired alert behavior.\n- `tests/test_verify_m008_s02_ios_rollback_contract.py` — Added rollback source-contract tests asserting native tab markers, stitch-shell absence, and session-expired alert continuity.\n- `scripts/verify-m008-s02.sh` — Added phased S02 verifier with `preflight`, `s02-rollback-contract`, `budget-regression`, `qr-regression`, and `login-regression` stages plus phase-scoped guidance output.\n- `.gsd/DECISIONS.md` — Appended S02 decisions: rollback verifier composition and R069 validation evidence.\n- `.gsd/PROJECT.md` — Refreshed project current-state section to include delivered S02 navigation/verification baseline.\n",
+      "full_uat_md": "# S02: Full UX Rollback Baseline + Native Tab Bar — UAT\n\n**Milestone:** M008-l1ngya\n**Written:** 2026-03-27T10:09:46.924Z\n\n# S02: Full UX Rollback Baseline + Native Tab Bar — UAT\n\n**Milestone:** M008-l1ngya\n**Written:** 2026-03-27\n\n## UAT Type\n\n- UAT mode: artifact-driven\n- Why this mode is sufficient: S02 is a structural shell + regression-gate slice; acceptance is based on source contracts and phased verifier behavior, not device-only runtime interactions.\n\n## Preconditions\n\n- Repo is at `C:\\Users\\admin\\Desktop\\projects\\BANKONGSETON`.\n- Python + pytest are available in the active environment.\n- iOS source files and verifier scripts exist at:\n  - `mobile/ios/BankongSetonStudent/Views/MainTabView.swift`\n  - `tests/test_verify_m008_s02_ios_rollback_contract.py`\n  - `scripts/verify-m008-s02.sh`\n- On Windows hosts without `/bin/bash`, Git Bash executable is available at `C:\\Program Files\\Git\\bin\\bash.exe`.\n\n## Smoke Test\n\nRun:\n\n1. `rtk proxy \"C:\\Program Files\\Git\\bin\\bash.exe\" scripts/verify-m008-s02.sh`\n2. **Expected:** all phases pass and final line reports `[verify-m008-s02] status=passed`.\n\n## Test Cases\n\n### 1. Native tab shell contract is present\n\n1. Run `rtk proxy python -m pytest -q tests/test_verify_m008_s02_ios_rollback_contract.py::test_main_tab_view_uses_native_tab_view_with_all_four_tab_items`\n2. **Expected:** pass; confirms `TabView(selection:)`, four `Label(...)` tab items, and four matching `.tag(...)` markers are present in `MainTabView.swift`.\n\n### 2. Floating stitch shell markers are removed\n\n1. Run `rtk proxy python -m pytest -q tests/test_verify_m008_s02_ios_rollback_contract.py::test_main_tab_view_removes_stitch_shell_markers`\n2. **Expected:** pass; confirms forbidden markers (`StitchTabShell(`, `StitchTabItem<MainTab>`, `shellTabs`) are absent.\n\n### 3. Session-expired alert behavior is preserved\n\n1. Run `rtk proxy python -m pytest -q tests/test_verify_m008_s02_ios_rollback_contract.py::test_main_tab_view_preserves_session_expired_alert_behavior`\n2. **Expected:** pass; confirms alert title/text, `Sign In` action, and `authManager.clearAll()` are still wired.\n\n### 4. Regression harness still protects budget/QR/login\n\n1. Run `rtk proxy \"C:\\Program Files\\Git\\bin\\bash.exe\" scripts/verify-m008-s02.sh`\n2. **Expected:** each phase passes:\n   - `s02-rollback-contract`\n   - `budget-regression`\n   - `qr-regression`\n   - `login-regression`\n3. **Expected:** no phase emits `status=failed` or `guidance=` failure lines.\n\n## Edge Cases\n\n### Windows shell-path fallback for verifier execution\n\n1. Run `rtk proxy bash scripts/verify-m008-s02.sh` on a host with no `/bin/bash`.\n2. Confirm failure reflects shell-availability issue, not contract regressions.\n3. Re-run with `rtk proxy \"C:\\Program Files\\Git\\bin\\bash.exe\" scripts/verify-m008-s02.sh`.\n4. **Expected:** second command passes fully, proving verifier semantics are intact under Windows fallback path.\n\n## Failure Signals\n\n- Any missing/forbidden marker assertion in `test_verify_m008_s02_ios_rollback_contract.py`.\n- Any `phase=<name> status=failed` line in `scripts/verify-m008-s02.sh` output.\n- `guidance=` lines indicating tab-shell drift, budget regression, QR regression, or login payload drift.\n\n## Requirements Proved By This UAT\n\n- R069 — Native `TabView` navigation shell is implemented and protected by executable contract checks.\n- R076 (partial guard) — QR continuity regression suite remains enforced during shell rollback.\n\n## Not Proven By This UAT\n\n- Full pre-M007 UX rollback across all iOS surfaces (home hero redesign, transactions UX simplification, settings scope trim).\n- On-device performance/feel acceptance on physical iOS hardware (deferred to later M008 slices and final manual acceptance gate).\n\n## Notes for Tester\n\n- Use the phased verifier as the canonical S02 signal first; run individual tests only when a phase fails and deeper triage is needed.\n- On Windows, treat `/bin/bash` errors as environment constraints and use Git Bash path execution for authoritative results.\n",
+      "goal": "",
+      "success_criteria": "",
+      "proof_level": "",
+      "integration_closure": "",
+      "observability_impact": "",
+      "sequence": 0,
+      "replan_triggered_at": null
+    },
+    {
+      "milestone_id": "M008-l1ngya",
+      "id": "S03",
+      "title": "Home Rollback + Credit-Card Hero + QR Continuity",
+      "status": "pending",
+      "risk": "high",
+      "depends": [
+        "S02"
+      ],
+      "demo": "Home shows minimalist credit-card balance hero with preserved QR entry/continuity checks passing.",
+      "created_at": "2026-03-27T10:15:28.451Z",
+      "completed_at": null,
+      "full_summary_md": "",
+      "full_uat_md": "",
+      "goal": "Roll back `HomeView` to a minimalist pre-M007-style surface centered on a credit-card balance hero while preserving the QR entry + post-success continuity seam and chaining S02 regression guards.",
+      "success_criteria": "- Directly satisfy **R070** by shipping `HomeView` with a minimalist credit-card hero that prominently shows student name, formatted peso balance, and `Current Balance` label without reintroducing heavy stitched home composition patterns.\n- Directly satisfy **R076** by preserving Home→QR→success continuity markers (`didConsumePresentedQRSuccess`, `qr_payment_success_continuity_tick`, `handleQRPaySuccessCompletion`, `refreshAfterQRSuccess`) and validating them with executable source-contract tests.\n- Support **R068** by keeping native `TabView` shell assumptions from S02 intact while changing only Home surface composition.\n- Support **R075** by ensuring rollback proof remains deterministic through a one-command phased verifier that chains S03 contracts plus `scripts/verify-m008-s02.sh`.\n- **Threat Surface (Q3) — Abuse:** duplicate QR success callbacks can trigger double refresh or stale UI state if dedupe guard is removed; accidental reintroduction of custom shell markers can bypass rollback constraints.\n- **Threat Surface (Q3) — Data exposure:** Home shows student display name and balance only; no JWT/token or full QR payload should be logged in new assertions/scripts.\n- **Threat Surface (Q3) — Input trust:** `HomeView` consumes backend/API-derived student/balance/transaction values and settings display-name updates; contracts must guard seam markers against drift.\n- **Requirement Impact (Q4) — Requirements touched:** R068, R070, R075, R076.\n- **Requirement Impact (Q4) — Re-verify:** S03 home rollback contract suite, Home QR success handoff node test, and full S02 phased regression chain.\n- **Requirement Impact (Q4) — Decisions revisited:** D088 and D089 remain valid and are extended with Home-specific rollback proof.",
+      "proof_level": "- This slice proves: integration\n- Real runtime required: no (artifact-driven source contracts + phased verifier)\n- Human/UAT required: no (manual on-device gate remains in S06)",
+      "integration_closure": "- Upstream surfaces consumed: `mobile/ios/BankongSetonStudent/Views/Home/HomeView.swift`, `mobile/ios/BankongSetonStudent/Views/QR/QRPayView.swift`, `mobile/ios/BankongSetonStudent/ViewModels/HomeViewModel.swift`, `tests/test_verify_m007_s07_integration_behavior_contract.py`, `scripts/verify-m008-s02.sh`.\n- New wiring introduced in this slice: S03-specific Home rollback contract suite + phased verifier (`scripts/verify-m008-s03.sh`) that runs Home contract, continuity node check, then S02 regression chain.\n- What remains before the milestone is truly usable end-to-end: S04 minimalist Transactions/Settings restoration, S05 integrated closure, and S06 manual device acceptance.",
+      "observability_impact": "- Runtime signals: retain Home continuity tick increment log and duplicate-callback guard log in `handleQRPaySuccessCompletion()`.\n- Inspection surfaces: `tests/test_verify_m008_s03_ios_home_rollback_contract.py`, `tests/test_verify_m007_s07_integration_behavior_contract.py::test_qr_success_handoff_remains_wired_from_home_sheet_to_refresh_path`, and `scripts/verify-m008-s03.sh` phase output.\n- Failure visibility: phased verifier must emit `phase=<name> status=failed` plus actionable `guidance=` lines for home-contract drift vs continuity-chain regressions.\n- Redaction constraints: verifier/script output must not print JWTs, full QR tokens, or other secrets.",
+      "sequence": 0,
+      "replan_triggered_at": null
+    },
+    {
+      "milestone_id": "M008-l1ngya",
+      "id": "S04",
+      "title": "Transactions/Settings Minimalist Scope Restoration",
+      "status": "pending",
+      "risk": "high",
+      "depends": [
+        "S03"
+      ],
+      "demo": "Transactions is filter-only (no search) and Settings exposes theme+accent-only appearance controls.",
+      "created_at": "2026-03-27T10:15:28.451Z",
+      "completed_at": null,
+      "full_summary_md": "",
+      "full_uat_md": "",
+      "goal": "",
+      "success_criteria": "",
+      "proof_level": "",
+      "integration_closure": "",
+      "observability_impact": "",
+      "sequence": 0,
+      "replan_triggered_at": null
+    },
+    {
+      "milestone_id": "M008-l1ngya",
+      "id": "S05",
+      "title": "Integrated UX Closure + Requirement Validation",
+      "status": "pending",
+      "risk": "medium",
+      "depends": [
+        "S01",
+        "S02",
+        "S03",
+        "S04"
+      ],
+      "demo": "Integrated login→home→transactions→budget→settings flow passes contract and regression suites with no QR regressions.",
+      "created_at": "2026-03-27T10:15:28.451Z",
+      "completed_at": null,
+      "full_summary_md": "",
+      "full_uat_md": "",
+      "goal": "",
+      "success_criteria": "",
+      "proof_level": "",
+      "integration_closure": "",
+      "observability_impact": "",
+      "sequence": 0,
+      "replan_triggered_at": null
+    },
+    {
+      "milestone_id": "M008-l1ngya",
+      "id": "S06",
+      "title": "Manual On-Device UAT Gate",
+      "status": "pending",
+      "risk": "medium",
+      "depends": [
+        "S05"
+      ],
+      "demo": "User executes manual iOS device acceptance and records explicit PASS/FAIL evidence for milestone closeout.",
+      "created_at": "2026-03-27T10:15:28.451Z",
       "completed_at": null,
       "full_summary_md": "",
       "full_uat_md": "",
@@ -210,6 +301,93 @@
       "inputs": [],
       "expected_output": [],
       "observability_impact": "",
+      "full_plan_md": "",
+      "sequence": 0
+    },
+    {
+      "milestone_id": "M008-l1ngya",
+      "slice_id": "S03",
+      "id": "T01",
+      "title": "Rolled HomeView back to a minimalist credit-card hero while preserving QR success continuity guard/tick refresh wiring.",
+      "status": "complete",
+      "one_liner": "Rolled HomeView back to a minimalist credit-card hero while preserving QR success continuity guard/tick refresh wiring.",
+      "narrative": "Activated required skills, confirmed no Qodo config was available in this runner, and implemented a contract-first rollback. Added `tests/test_verify_m008_s03_ios_home_rollback_contract.py` to lock the intended Home rollback shape and seam requirements, then refactored `HomeView.swift` to a simpler credit-card hero composition with lightweight QR entry + recent transactions. Preserved `.sheet(isPresented: $showQrPay)` flow and continuity seam (`didConsumePresentedQRSuccess`, `qr_payment_success_continuity_tick`, one-shot guard log, tick increment, and `refreshAfterQRSuccess(...)`). Added explicit error-surface retry action while keeping pull-to-refresh path.",
+      "verification_result": "Passed S03 Home contract tests and the targeted M007 S07 continuity-node regression. Verified seam markers and observability log markers remain present in Home/HomeViewModel. Slice-level verifier command `scripts/verify-m008-s03.sh` currently fails with missing file (expected until T02 adds the verifier script).",
+      "duration": "",
+      "completed_at": "2026-03-27T11:36:30.033Z",
+      "blocker_discovered": false,
+      "deviations": "Created initial S03 contract test file in T01 (planned in T02) to satisfy first-task test-first and negative-path coverage requirements.",
+      "known_issues": "`scripts/verify-m008-s03.sh` is not present yet, so full slice one-command verification remains incomplete until T02. Swift LSP diagnostics are unavailable in this environment.",
+      "key_files": [
+        "mobile/ios/BankongSetonStudent/Views/Home/HomeView.swift",
+        "tests/test_verify_m008_s03_ios_home_rollback_contract.py",
+        ".gsd/milestones/M008-l1ngya/slices/S03/tasks/T01-SUMMARY.md"
+      ],
+      "key_decisions": [
+        "Preserved Home QR continuity seam exactly while simplifying only Home layout composition.",
+        "Added explicit in-card Retry control in Home error state to keep failure recovery visible and local to the screen."
+      ],
+      "full_summary_md": "---\nid: T01\nparent: S03\nmilestone: M008-l1ngya\nkey_files:\n  - mobile/ios/BankongSetonStudent/Views/Home/HomeView.swift\n  - tests/test_verify_m008_s03_ios_home_rollback_contract.py\n  - .gsd/milestones/M008-l1ngya/slices/S03/tasks/T01-SUMMARY.md\nkey_decisions:\n  - Preserved Home QR continuity seam exactly while simplifying only Home layout composition.\n  - Added explicit in-card Retry control in Home error state to keep failure recovery visible and local to the screen.\nduration: \"\"\nverification_result: mixed\ncompleted_at: 2026-03-27T11:36:30.034Z\nblocker_discovered: false\n---\n\n# T01: Rolled HomeView back to a minimalist credit-card hero while preserving QR success continuity guard/tick refresh wiring.\n\n**Rolled HomeView back to a minimalist credit-card hero while preserving QR success continuity guard/tick refresh wiring.**\n\n## What Happened\n\nActivated required skills, confirmed no Qodo config was available in this runner, and implemented a contract-first rollback. Added `tests/test_verify_m008_s03_ios_home_rollback_contract.py` to lock the intended Home rollback shape and seam requirements, then refactored `HomeView.swift` to a simpler credit-card hero composition with lightweight QR entry + recent transactions. Preserved `.sheet(isPresented: $showQrPay)` flow and continuity seam (`didConsumePresentedQRSuccess`, `qr_payment_success_continuity_tick`, one-shot guard log, tick increment, and `refreshAfterQRSuccess(...)`). Added explicit error-surface retry action while keeping pull-to-refresh path.\n\n## Verification\n\nPassed S03 Home contract tests and the targeted M007 S07 continuity-node regression. Verified seam markers and observability log markers remain present in Home/HomeViewModel. Slice-level verifier command `scripts/verify-m008-s03.sh` currently fails with missing file (expected until T02 adds the verifier script).\n\n## Verification Evidence\n\n| # | Command | Exit Code | Verdict | Duration |\n|---|---------|-----------|---------|----------|\n| 1 | `rtk proxy python -m py_compile tests/test_verify_m008_s03_ios_home_rollback_contract.py` | 0 | ✅ pass | 110ms |\n| 2 | `rtk proxy python -m pytest -q tests/test_verify_m008_s03_ios_home_rollback_contract.py` | 0 | ✅ pass | 530ms |\n| 3 | `rtk proxy python -m pytest -q tests/test_verify_m007_s07_integration_behavior_contract.py::test_qr_success_handoff_remains_wired_from_home_sheet_to_refresh_path` | 0 | ✅ pass | 510ms |\n| 4 | `rtk grep \"qr_payment_success_continuity_tick\\|didConsumePresentedQRSuccess\\|handleQRPaySuccessCompletion\" mobile/ios/BankongSetonStudent/Views/Home/HomeView.swift` | 0 | ✅ pass | 90ms |\n| 5 | `rtk grep \"Ignoring duplicate QR success callback\\|QR success continuity tick advanced\\|Refreshing Home data after QR payment success dismiss\\|Completed Home refresh after QR payment success dismiss\" mobile/ios/BankongSetonStudent/Views/Home/HomeView.swift mobile/ios/BankongSetonStudent/ViewModels/HomeViewModel.swift` | 0 | ✅ pass | 80ms |\n| 6 | `rtk proxy \"C:\\Program Files\\Git\\bin\\bash.exe\" scripts/verify-m008-s03.sh` | 127 | ❌ fail | 70ms |\n\n\n## Deviations\n\nCreated initial S03 contract test file in T01 (planned in T02) to satisfy first-task test-first and negative-path coverage requirements.\n\n## Known Issues\n\n`scripts/verify-m008-s03.sh` is not present yet, so full slice one-command verification remains incomplete until T02. Swift LSP diagnostics are unavailable in this environment.\n\n## Files Created/Modified\n\n- `mobile/ios/BankongSetonStudent/Views/Home/HomeView.swift`\n- `tests/test_verify_m008_s03_ios_home_rollback_contract.py`\n- `.gsd/milestones/M008-l1ngya/slices/S03/tasks/T01-SUMMARY.md`\n",
+      "description": "Deliver the Home rollback implementation for R070 without breaking R076 continuity. Keep Home surface simple and native while retaining the exact QR success callback/tick/refresh seam used by QR and Transactions continuity guards.\nFailure Modes (Q5): dependencies are `HomeViewModel.load(...)` API fetch and `QRPayView` success callback path; on API errors keep explicit error banner/retry visibility, on callback duplication preserve `didConsumePresentedQRSuccess` guard and one-shot tick increment.\nLoad Profile (Q6): shared resources are Home load/refresh path + transaction list rendering; per operation cost is one post-success refresh plus normal initial load; 10x risk is duplicate callback churn if dedupe guard is removed.\nNegative Tests (Q7): empty display name and empty transaction list rendering, API refresh failure after QR success, repeated success callback in one presentation should increment continuity tick once.",
+      "estimate": "1h 30m",
+      "files": [
+        "mobile/ios/BankongSetonStudent/Views/Home/HomeView.swift",
+        "mobile/ios/BankongSetonStudent/Views/QR/QRPayView.swift",
+        "mobile/ios/BankongSetonStudent/ViewModels/HomeViewModel.swift",
+        "tests/test_verify_m007_s07_integration_behavior_contract.py"
+      ],
+      "verify": "rtk proxy python -m pytest -q tests/test_verify_m007_s07_integration_behavior_contract.py::test_qr_success_handoff_remains_wired_from_home_sheet_to_refresh_path",
+      "inputs": [
+        "`mobile/ios/BankongSetonStudent/Views/Home/HomeView.swift`",
+        "`mobile/ios/BankongSetonStudent/Views/QR/QRPayView.swift`",
+        "`mobile/ios/BankongSetonStudent/ViewModels/HomeViewModel.swift`",
+        "`mobile/ios/BankongSetonStudent/DesignSystem/AppTheme.swift`"
+      ],
+      "expected_output": [
+        "`mobile/ios/BankongSetonStudent/Views/Home/HomeView.swift`"
+      ],
+      "observability_impact": "Preserve/clarify Home QR continuity logs and keep UI failure states inspectable through existing error banner + continuity tick seam markers.",
+      "full_plan_md": "",
+      "sequence": 0
+    },
+    {
+      "milestone_id": "M008-l1ngya",
+      "slice_id": "S03",
+      "id": "T02",
+      "title": "Add S03 Home rollback contract suite and phased verifier chaining S02 guards",
+      "status": "pending",
+      "one_liner": "",
+      "narrative": "",
+      "verification_result": "",
+      "duration": "",
+      "completed_at": null,
+      "blocker_discovered": false,
+      "deviations": "",
+      "known_issues": "",
+      "key_files": [],
+      "key_decisions": [],
+      "full_summary_md": "",
+      "description": "Lock S03 closure to executable proof for R070/R076 and prevent rollback regressions from leaking into established S02 boundaries.\nFailure Modes (Q5): dependencies are `tests/test_verify_m008_s03_ios_home_rollback_contract.py` and chained `scripts/verify-m008-s02.sh`; on downstream failure bubble phase-specific guidance and stop closure.\nLoad Profile (Q6): shared resources are pytest process + serial phase runner; per operation cost is one S03 suite + one continuity node check + one S02 chain run; 10x impact is runtime growth, not semantic drift, because phases are serial.\nNegative Tests (Q7): preflight missing files fail with guidance, removed continuity marker fails home-qr-continuity phase, and script must fail if S02 chain fails even when S03 local tests pass.",
+      "estimate": "1h 10m",
+      "files": [
+        "tests/test_verify_m008_s03_ios_home_rollback_contract.py",
+        "scripts/verify-m008-s03.sh",
+        "scripts/verify-m008-s02.sh",
+        "tests/test_verify_m007_s07_integration_behavior_contract.py",
+        "mobile/ios/BankongSetonStudent/Views/Home/HomeView.swift"
+      ],
+      "verify": "rtk proxy python -m py_compile tests/test_verify_m008_s03_ios_home_rollback_contract.py && rtk proxy \"C:\\Program Files\\Git\\bin\\bash.exe\" scripts/verify-m008-s03.sh",
+      "inputs": [
+        "`mobile/ios/BankongSetonStudent/Views/Home/HomeView.swift`",
+        "`tests/test_verify_m007_s07_integration_behavior_contract.py`",
+        "`scripts/verify-m008-s02.sh`",
+        "`tests/test_verify_m008_s02_ios_rollback_contract.py`"
+      ],
+      "expected_output": [
+        "`tests/test_verify_m008_s03_ios_home_rollback_contract.py`",
+        "`scripts/verify-m008-s03.sh`"
+      ],
+      "observability_impact": "Adds S03 phase-labeled verifier output (`preflight`, `s03-home-contract`, `home-qr-continuity`, `s02-regression-chain`) so regressions localize to home contract drift vs downstream guard failures.",
       "full_plan_md": "",
       "sequence": 0
     }
@@ -459,11 +637,59 @@
       "seq": 1,
       "id": "S02",
       "when_context": "",
-      "scope": "pending",
+      "scope": "complete",
       "decision": "medium",
       "choice": "[]",
       "rationale": "",
       "revisable": "2026-03-27T10:03:24.927Z",
+      "made_by": "2026-03-27T10:09:46.923Z",
+      "superseded_by": "---\nid: S02\nparent: M008-l1ngya\nmilestone: M008-l1ngya\nprovides:\n  - Native `TabView` root shell baseline for M008 rollback work (R069).\n  - Deterministic regression gate command for downstream slices (`scripts/verify-m008-s02.sh`).\nrequires:\n  []\naffects:\n  - S03\n  - S04\n  - S05\n  - S06\nkey_files:\n  - mobile/ios/BankongSetonStudent/Views/MainTabView.swift\n  - tests/test_verify_m008_s02_ios_rollback_contract.py\n  - scripts/verify-m008-s02.sh\n  - .gsd/milestones/M008-l1ngya/slices/S02/tasks/T01-SUMMARY.md\n  - .gsd/DECISIONS.md\n  - .gsd/PROJECT.md\nkey_decisions:\n  - Kept `MainTab` enum metadata and session-expired alert flow unchanged while replacing only the root shell composition with native `TabView`.\n  - Locked rollback closure to one phased verifier (`scripts/verify-m008-s02.sh`) that co-runs shell, budget, QR, and login regression suites with phase-scoped guidance output.\npatterns_established:\n  - For rollback slices that touch shared UI scaffolding, bind closure to one phased verifier that includes adjacent-regression suites, not only local assertions.\n  - Preserve existing session/auth failure surfaces while swapping structural UI containers to prevent hidden boundary regressions.\nobservability_surfaces:\n  - `scripts/verify-m008-s02.sh` phase logs (`phase=<name> status=...`) with guidance lines on failures.\n  - Contract tests in `tests/test_verify_m008_s02_ios_rollback_contract.py` that expose shell-drift signatures (missing native markers, forbidden stitch markers, alert contract drift).\ndrill_down_paths:\n  - .gsd/milestones/M008-l1ngya/slices/S02/tasks/T01-SUMMARY.md\nduration: \"\"\nverification_result: passed\ncompleted_at: 2026-03-27T10:09:46.924Z\nblocker_discovered: false\n---\n\n# S02: Full UX Rollback Baseline + Native Tab Bar\n\n**Native iOS tab navigation now runs on `TabView` (floating stitch shell removed) with a phased rollback verifier that also protects budget, QR, and login contracts.**\n\n## What Happened\n\nS02 delivered the structural navigation rollback anchor for M008 by replacing `StitchTabShell`/`StitchTabItem` composition in `MainTabView` with native `TabView(selection:)` and four native tab items (`Home`, `History`, `Budget`, `Settings`). The change intentionally preserved existing auth/session-expiry behavior (`showSessionExpiredAlert`, `Sign In`, `authManager.clearAll()`) so rollback of chrome did not alter session boundary semantics. To make this slice executable and safe for downstream rollback work, the slice added a dedicated source-contract suite (`tests/test_verify_m008_s02_ios_rollback_contract.py`) and a phased harness (`scripts/verify-m008-s02.sh`) that validates shell migration and keeps budget, QR, and student-ID-only login regressions in the same closure command.\n\n## Verification\n\nRe-ran all slice contracts and phased checks successfully:\n- `rtk proxy python -m py_compile tests/test_verify_m008_s02_ios_rollback_contract.py`\n- `rtk proxy python -m pytest -q tests/test_verify_m008_s02_ios_rollback_contract.py`\n- `rtk proxy python -m pytest -q tests/test_verify_m008_s01_ios_budget_contract.py`\n- `rtk proxy python -m pytest -q tests/test_verify_m007_s02_qr_behavior_contract.py`\n- `rtk proxy python -m pytest -q tests/test_verify_m007_s09_override_contract.py::test_login_state_and_payload_are_student_id_only`\n- `rtk proxy \"C:\\Program Files\\Git\\bin\\bash.exe\" scripts/verify-m008-s02.sh`\nAll passed, including all verifier phases and final `status=passed`.\n\n## Requirements Advanced\n\n- R068 — Implemented native tab chrome in `MainTabView` and removed stitch-shell markers while preserving root app navigation semantics.\n- R069 — Delivered native `TabView` + `.tabItem` shell replacement with explicit source-contract enforcement.\n- R076 — Embedded QR continuity regression checks in the phased S02 verifier to ensure rollback work does not break existing QR-path contracts.\n\n## Requirements Validated\n\n- R069 — `tests/test_verify_m008_s02_ios_rollback_contract.py` and `scripts/verify-m008-s02.sh` pass with native tab markers present and stitch-shell markers absent.\n\n## New Requirements Surfaced\n\n- None.\n\n## Requirements Invalidated or Re-scoped\n\nNone.\n\n## Deviations\n\n`rtk proxy bash scripts/verify-m008-s02.sh` is not runnable on this Windows host when `/bin/bash` is absent; verifier execution uses `rtk proxy \"C:\\Program Files\\Git\\bin\\bash.exe\" scripts/verify-m008-s02.sh` with identical script semantics.\n\n## Known Limitations\n\nS02 only establishes the navigation-shell rollback baseline and guards; broader pre-M007 surface rollback (home card-style hero, transactions filter-only UX, settings minimalism refinements) remains for subsequent slices. Swift LSP diagnostics are still unavailable on this host, so proof is contract-test/verifier driven.\n\n## Follow-ups\n\nS03 should proceed from this shell baseline and avoid reintroducing custom floating-tab abstractions. Keep `scripts/verify-m008-s02.sh` in the default pre-merge loop while Home rollback and QR continuity refinements land, so tab-shell drift is caught before later UX slices.\n\n## Files Created/Modified\n\n- `mobile/ios/BankongSetonStudent/Views/MainTabView.swift` — Replaced floating stitch shell with native `TabView` + `.tabItem` labels/tags while preserving session-expired alert behavior.\n- `tests/test_verify_m008_s02_ios_rollback_contract.py` — Added rollback source-contract tests asserting native tab markers, stitch-shell absence, and session-expired alert continuity.\n- `scripts/verify-m008-s02.sh` — Added phased S02 verifier with `preflight`, `s02-rollback-contract`, `budget-regression`, `qr-regression`, and `login-regression` stages plus phase-scoped guidance output.\n- `.gsd/DECISIONS.md` — Appended S02 decisions: rollback verifier composition and R069 validation evidence.\n- `.gsd/PROJECT.md` — Refreshed project current-state section to include delivered S02 navigation/verification baseline.\n"
+    },
+    {
+      "seq": 2,
+      "id": "S03",
+      "when_context": "Home Rollback + Credit-Card Hero + QR Continuity",
+      "scope": "pending",
+      "decision": "high",
+      "choice": "[\"S02\"]",
+      "rationale": "Home shows minimalist credit-card balance hero with preserved QR entry/continuity checks passing.",
+      "revisable": "2026-03-27T10:15:28.451Z",
+      "made_by": "agent",
+      "superseded_by": ""
+    },
+    {
+      "seq": 3,
+      "id": "S04",
+      "when_context": "Transactions/Settings Minimalist Scope Restoration",
+      "scope": "pending",
+      "decision": "high",
+      "choice": "[\"S03\"]",
+      "rationale": "Transactions is filter-only (no search) and Settings exposes theme+accent-only appearance controls.",
+      "revisable": "2026-03-27T10:15:28.451Z",
+      "made_by": "agent",
+      "superseded_by": ""
+    },
+    {
+      "seq": 4,
+      "id": "S05",
+      "when_context": "Integrated UX Closure + Requirement Validation",
+      "scope": "pending",
+      "decision": "medium",
+      "choice": "[\"S01\",\"S02\",\"S03\",\"S04\"]",
+      "rationale": "Integrated login→home→transactions→budget→settings flow passes contract and regression suites with no QR regressions.",
+      "revisable": "2026-03-27T10:15:28.451Z",
+      "made_by": "agent",
+      "superseded_by": ""
+    },
+    {
+      "seq": 5,
+      "id": "S06",
+      "when_context": "Manual On-Device UAT Gate",
+      "scope": "pending",
+      "decision": "medium",
+      "choice": "[\"S05\"]",
+      "rationale": "User executes manual iOS device acceptance and records explicit PASS/FAIL evidence for milestone closeout.",
+      "revisable": "2026-03-27T10:15:28.451Z",
       "made_by": "agent",
       "superseded_by": ""
     },
@@ -1222,6 +1448,66 @@
       "revisable": "[]",
       "made_by": "[]",
       "superseded_by": "[]"
+    },
+    {
+      "seq": 260,
+      "id": "D088",
+      "when_context": "M008-l1ngya/S02",
+      "scope": "pattern",
+      "decision": "M008/S02 rollback verification composition",
+      "choice": "Use one phased verifier (`scripts/verify-m008-s02.sh`) that enforces native-tab rollback contract plus budget/QR/login regression suites with phase-scoped guidance output.",
+      "rationale": "S02 changes navigation shell but can silently break adjacent UX contracts. A single phase-logged verifier made drift localization deterministic (`s02-rollback-contract`, `budget-regression`, `qr-regression`, `login-regression`) and is now the authoritative closure signal for this slice.",
+      "revisable": "Yes",
+      "made_by": "agent",
+      "superseded_by": null
+    },
+    {
+      "seq": 261,
+      "id": "D089",
+      "when_context": "M008-l1ngya S02",
+      "scope": "pattern",
+      "decision": "Rollback verifier shape for M008 S02",
+      "choice": "Adopt a single phased verifier script for tab shell, budget, QR, and login regression gates.",
+      "rationale": "Navigation shell work can regress nearby UX contracts; a phased script gives deterministic failure localization and one closure command.",
+      "revisable": "Yes",
+      "made_by": "agent",
+      "superseded_by": null
+    },
+    {
+      "seq": 262,
+      "id": "D090",
+      "when_context": "M008-l1ngya/S02",
+      "scope": "requirement",
+      "decision": "R069",
+      "choice": "validated",
+      "rationale": "S02 implemented native `TabView` root shell in MainTabView, removed stitch shell markers, and passed rollback + regression verifier phases via `scripts/verify-m008-s02.sh` and related pytest suites.",
+      "revisable": "Yes",
+      "made_by": "agent",
+      "superseded_by": null
+    },
+    {
+      "seq": 263,
+      "id": "D091",
+      "when_context": "M008-l1ngya/S03",
+      "scope": "pattern",
+      "decision": "S03 rollback closure command composition",
+      "choice": "Use `scripts/verify-m008-s03.sh` as the canonical S03 verifier with phased checks (`s03-home-contract`, `home-qr-continuity`) chained to `scripts/verify-m008-s02.sh` for shell/budget/QR/login regression guard coverage.",
+      "rationale": "S03 changes Home structure but must preserve QR continuity and inherited S02 rollback boundaries. A chained phased verifier keeps failure localization deterministic and prevents accepting Home-only green states while shared rollback contracts regress.",
+      "revisable": "Yes",
+      "made_by": "agent",
+      "superseded_by": null
+    },
+    {
+      "seq": 264,
+      "id": "D092",
+      "when_context": "M008-l1ngya/S03",
+      "scope": "pattern",
+      "decision": "S03 rollback closure command composition",
+      "choice": "Adopt `scripts/verify-m008-s03.sh` phased verifier and chain `scripts/verify-m008-s02.sh` as downstream regression guard.",
+      "rationale": "Home rollback in S03 can pass local checks while breaking continuity or prior rollback boundaries. Chaining phases localizes failures and enforces inherited guardrails before slice closure.",
+      "revisable": "Yes",
+      "made_by": "agent",
+      "superseded_by": null
     }
   ],
   "verification_evidence": [
@@ -1312,6 +1598,72 @@
       "verdict": "✅ pass",
       "duration_ms": 4200,
       "created_at": "2026-03-27T10:03:24.928Z"
+    },
+    {
+      "id": 9,
+      "task_id": "T01",
+      "slice_id": "S03",
+      "milestone_id": "M008-l1ngya",
+      "command": "rtk proxy python -m py_compile tests/test_verify_m008_s03_ios_home_rollback_contract.py",
+      "exit_code": 0,
+      "verdict": "✅ pass",
+      "duration_ms": 110,
+      "created_at": "2026-03-27T11:36:30.034Z"
+    },
+    {
+      "id": 10,
+      "task_id": "T01",
+      "slice_id": "S03",
+      "milestone_id": "M008-l1ngya",
+      "command": "rtk proxy python -m pytest -q tests/test_verify_m008_s03_ios_home_rollback_contract.py",
+      "exit_code": 0,
+      "verdict": "✅ pass",
+      "duration_ms": 530,
+      "created_at": "2026-03-27T11:36:30.034Z"
+    },
+    {
+      "id": 11,
+      "task_id": "T01",
+      "slice_id": "S03",
+      "milestone_id": "M008-l1ngya",
+      "command": "rtk proxy python -m pytest -q tests/test_verify_m007_s07_integration_behavior_contract.py::test_qr_success_handoff_remains_wired_from_home_sheet_to_refresh_path",
+      "exit_code": 0,
+      "verdict": "✅ pass",
+      "duration_ms": 510,
+      "created_at": "2026-03-27T11:36:30.034Z"
+    },
+    {
+      "id": 12,
+      "task_id": "T01",
+      "slice_id": "S03",
+      "milestone_id": "M008-l1ngya",
+      "command": "rtk grep \"qr_payment_success_continuity_tick\\|didConsumePresentedQRSuccess\\|handleQRPaySuccessCompletion\" mobile/ios/BankongSetonStudent/Views/Home/HomeView.swift",
+      "exit_code": 0,
+      "verdict": "✅ pass",
+      "duration_ms": 90,
+      "created_at": "2026-03-27T11:36:30.034Z"
+    },
+    {
+      "id": 13,
+      "task_id": "T01",
+      "slice_id": "S03",
+      "milestone_id": "M008-l1ngya",
+      "command": "rtk grep \"Ignoring duplicate QR success callback\\|QR success continuity tick advanced\\|Refreshing Home data after QR payment success dismiss\\|Completed Home refresh after QR payment success dismiss\" mobile/ios/BankongSetonStudent/Views/Home/HomeView.swift mobile/ios/BankongSetonStudent/ViewModels/HomeViewModel.swift",
+      "exit_code": 0,
+      "verdict": "✅ pass",
+      "duration_ms": 80,
+      "created_at": "2026-03-27T11:36:30.034Z"
+    },
+    {
+      "id": 14,
+      "task_id": "T01",
+      "slice_id": "S03",
+      "milestone_id": "M008-l1ngya",
+      "command": "rtk proxy \"C:\\Program Files\\Git\\bin\\bash.exe\" scripts/verify-m008-s03.sh",
+      "exit_code": 127,
+      "verdict": "❌ fail",
+      "duration_ms": 70,
+      "created_at": "2026-03-27T11:36:30.034Z"
     }
   ]
 }
