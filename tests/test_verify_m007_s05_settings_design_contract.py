@@ -14,7 +14,6 @@ def test_settings_scope_cleanup_keeps_only_in_scope_actions_visible():
     contents = read_text(SETTINGS_VIEW_PATH)
 
     required_entries = [
-        "Personal Info",
         "Appearance",
         "Account Actions",
         "Report Lost Card",
@@ -49,19 +48,16 @@ def test_settings_design_contract_requires_stitch_surface_tokens_status_markers_
         "AppTheme.Typography",
         "AppTheme.Radius",
         "settings-screen-root",
-        "settings-display-name-field",
-        "settings-save-personal-info-button",
         "settings-theme-picker",
         "settings-apply-accent-button",
-        "settings-personal-info-status",
         "settings-accent-status",
         "settings-report-lost-card-link",
         "settings-logout-button",
         "settings-accent-option-\\(option.id)",
-        "editableDisplayName",
         "selectedAccentHex",
-        "savePersonalInfo",
         "applyAccent",
+        "appearanceCard",
+        "accountActionsCard",
     ]
 
     forbidden_entries = [

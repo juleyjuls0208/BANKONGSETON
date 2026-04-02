@@ -35,54 +35,6 @@ struct SettingsView: View {
         .preferredColorScheme(viewModel.colorScheme)
     }
 
-    private var personalInfoCard: some View {
-        StitchCard {
-            VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
-                Text("Personal Info")
-                    .font(AppTheme.Typography.headline)
-                    .foregroundStyle(AppTheme.Palette.textPrimary)
-
-                Text("Update the display name shown on your home screen.")
-                    .font(AppTheme.Typography.body)
-                    .foregroundStyle(AppTheme.Palette.textSecondary)
-                    .multilineTextAlignment(.leading)
-
-                TextField("Display name", text: $viewModel.editableDisplayName)
-                    .textInputAutocapitalization(.words)
-                    .autocorrectionDisabled()
-                    .stitchFieldStyle()
-                    .accessibilityIdentifier("settings-display-name-field")
-                    .accessibilityLabel("Display name")
-                    .accessibilityHint("Updates the name shown on your account surfaces")
-
-                Button {
-                    viewModel.savePersonalInfo()
-                } label: {
-                    HStack(spacing: AppTheme.Spacing.xs) {
-                        if isSavingPersonalInfo {
-                            ProgressView()
-                                .tint(AppTheme.Palette.textInverse)
-                                .accessibilityLabel("Saving personal info")
-                        }
-
-                        Text(isSavingPersonalInfo ? "Saving Personal Info..." : "Save Personal Info")
-                    }
-                }
-                .buttonStyle(StitchPrimaryButtonStyle())
-                .disabled(!canSavePersonalInfo)
-                .accessibilityIdentifier("settings-save-personal-info-button")
-                .accessibilityHint("Saves your updated display name locally on this device")
-
-                Text(personalInfoStatusMessage)
-                    .font(AppTheme.Typography.caption)
-                    .foregroundStyle(personalInfoStatusColor)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .accessibilityIdentifier("settings-personal-info-status")
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-    }
-
     private var appearanceCard: some View {
         StitchCard {
             VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
@@ -103,6 +55,7 @@ struct SettingsView: View {
                 .pickerStyle(.segmented)
                 .accessibilityIdentifier("settings-theme-picker")
                 .accessibilityLabel("Theme")
+                .stitchFieldStyle()
 
                 LazyVGrid(
                     columns: [
@@ -203,20 +156,8 @@ struct SettingsView: View {
         }
     }
 
-    private var canSavePersonalInfo: Bool {
-        !isSavingPersonalInfo
-    }
-
     private var canApplyAccent: Bool {
         !isApplyingAccent
-    }
-
-    private var isSavingPersonalInfo: Bool {
-        if case .applying = viewModel.personalInfoSaveState {
-            return true
-        }
-
-        return false
     }
 
     private var isApplyingAccent: Bool {
@@ -225,28 +166,6 @@ struct SettingsView: View {
         }
 
         return false
-    }
-
-    private var personalInfoStatusMessage: String {
-        switch viewModel.personalInfoSaveState {
-        case .idle:
-            return "Edit your name and tap Save Personal Info."
-        case .applying:
-            return "Saving personal info..."
-        case .saved:
-            return "Personal info saved on this device."
-        }
-    }
-
-    private var personalInfoStatusColor: Color {
-        switch viewModel.personalInfoSaveState {
-        case .idle:
-            return AppTheme.Palette.textSecondary
-        case .applying:
-            return AppTheme.Palette.brandPrimary
-        case .saved:
-            return AppTheme.Palette.success
-        }
     }
 
     private var accentStatusMessage: String {

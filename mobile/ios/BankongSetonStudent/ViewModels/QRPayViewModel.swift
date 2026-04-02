@@ -41,9 +41,7 @@ final class QRPayViewModel: ObservableObject {
 
         activeQRAPIBaseURLOverride = parsedPayload.apiBaseURLOverride
         let resolvedEndpoint = parsedPayload.apiBaseURLOverride ?? APIEndpoints.baseURL
-        log(
-            "Accepted QR payload source=\(parsedPayload.source), token=\(redact(parsedPayload.token)), endpoint=\(resolvedEndpoint)"
-        )
+        log("Accepted QR payload source=\(parsedPayload.source), token=\(redact(parsedPayload.token)), endpoint=\(resolvedEndpoint)")
         transition(to: .loading, reason: "scan_accepted_\(parsedPayload.source)")
 
         Task {

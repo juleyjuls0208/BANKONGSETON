@@ -32,7 +32,7 @@ Run `rtk proxy python -m py_compile mobile/ios/BankongSetonStudent/Views/Transac
   - Estimate: 15-30 min
   - Files: mobile/ios/BankongSetonStudent/Views/Transactions/TransactionsView.swift, mobile/ios/BankongSetonStudent/Views/Settings/SettingsView.swift
   - Verify: rtk proxy python -m py_compile mobile/ios/BankongSetonStudent/Views/Transactions/TransactionsView.swift && rtk proxy python -m py_compile mobile/ios/BankongSetonStudent/Views/Settings/SettingsView.swift && echo "T01 source edits verified"
-- [ ] **T02: Create S04 contracts, update S07/S05 contracts, and build phased verifier** — ## Update M007 continuity contracts + add S04 contracts + write phased verifier
+- [x] **T02: S04 rollback contract test (4 tests), S04 verifier shell script, updated S07/S05 contracts, and full source cleanup all done — chain green** — ## Update M007 continuity contracts + add S04 contracts + write phased verifier
 
 ### Files to modify
 - `tests/test_verify_m007_s07_integration_behavior_contract.py`

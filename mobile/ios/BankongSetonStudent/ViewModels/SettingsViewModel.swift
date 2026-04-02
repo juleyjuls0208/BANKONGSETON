@@ -3,10 +3,8 @@ import SwiftUI
 @MainActor
 final class SettingsViewModel: ObservableObject {
     private let themeModeKey = "theme_mode"
-    private let studentNameKey = "student_name"
 
     let settingsAccentHexKey = "settings_accent_hex"
-    let settingsDisplayNameKey = "settings_display_name"
     private let defaultAccentHex = AppTheme.defaultAccentHex
 
     @Published var selectedTheme: String {
@@ -22,12 +20,6 @@ final class SettingsViewModel: ObservableObject {
         }
     }
 
-    @Published var editableDisplayName: String {
-        didSet {
-            personalInfoSaveState = .idle
-        }
-    }
-
     @Published var selectedAccentHex: String {
         didSet {
             let normalizedAccentHex = AppTheme.normalizedAccentHex(selectedAccentHex)
@@ -39,7 +31,6 @@ final class SettingsViewModel: ObservableObject {
             accentApplyState = .idle
         }
     }
-    @Published private(set) var personalInfoSaveState: SettingsPersistenceState = .idle
     @Published private(set) var accentApplyState: SettingsPersistenceState = .idle
     @Published var isLoggingOut = false
 
@@ -59,11 +50,6 @@ final class SettingsViewModel: ObservableObject {
 
         let persistedAccentHex = KeychainHelper.read(forKey: settingsAccentHexKey, default: defaultAccentHex)
         selectedAccentHex = AppTheme.normalizedAccentHex(persistedAccentHex)
-
-        editableDisplayName = Self.loadPersistedDisplayName(
-            settingsDisplayNameKey: settingsDisplayNameKey,
-            studentNameKey: studentNameKey
-        )
     }
 
     var colorScheme: ColorScheme? {
@@ -72,16 +58,6 @@ final class SettingsViewModel: ObservableObject {
         case "dark": return .dark
         default: return nil   // nil = follow system
         }
-    }
-
-    func savePersonalInfo() {
-        personalInfoSaveState = .applying
-
-        editableDisplayName = editableDisplayName.trimmingCharacters(in: .whitespacesAndNewlines)
-        KeychainHelper.save(editableDisplayName, forKey: settingsDisplayNameKey)
-
-        personalInfoSaveState = .saved
-        NotificationCenter.default.post(name: .settingsDisplayNameDidChange, object: nil)
     }
 
     func applyAccent(_ accentHex: String) {
@@ -111,21 +87,9 @@ final class SettingsViewModel: ObservableObject {
             return "system"
         }
     }
-
-    private static func loadPersistedDisplayName(
-        settingsDisplayNameKey: String,
-        studentNameKey: String
-    ) -> String {
-        if let persistedDisplayName = KeychainHelper.read(forKey: settingsDisplayNameKey) {
-            return persistedDisplayName
-        }
-
-        return KeychainHelper.read(forKey: studentNameKey, default: "")
-    }
 }
 
 extension Notification.Name {
     static let settingsThemeDidChange = Notification.Name("settings.theme.didChange")
     static let settingsAccentDidChange = Notification.Name("settings.accent.didChange")
-    static let settingsDisplayNameDidChange = Notification.Name("settings.display-name.didChange")
 }

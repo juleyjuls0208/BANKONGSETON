@@ -116,12 +116,11 @@ def test_home_and_transactions_keep_receipt_access_paths_after_final_assembly() 
     )
 
 
-def test_transactions_search_filter_load_more_continuity_markers_remain_intact() -> None:
+def test_transactions_filter_only_and_load_more_continuity_markers_remain_intact() -> None:
+    # R071: filter-only (search bar removed); QR continuity tick and load-more remain
     assert_required_markers(
         TRANSACTIONS_VIEW_PATH,
         [
-            '.searchable(',
-            'text: $viewModel.searchQuery',
             'Picker("Transaction Type", selection: $viewModel.selectedFilter)',
             '@AppStorage("qr_payment_success_continuity_tick") private var qrPaymentSuccessContinuityTick = 0',
             '.task(id: qrPaymentSuccessContinuityTick)',
@@ -129,13 +128,23 @@ def test_transactions_search_filter_load_more_continuity_markers_remain_intact()
             'private var transactionStateKey: String',
             'private var stateCardTransition: AnyTransition',
             '.animation(screenTransitionAnimation, value: transactionStateKey)',
-            '"transactions-clear-search-filter-button"',
+            '"transactions-clear-filter-button"',
             '"transactions-retry-initial-button"',
             '"transactions-retry-pagination-button"',
             '"transactions-load-more-button"',
             'viewModel.clearSearchAndFilter()',
         ],
         "transactions_view_continuity",
+    )
+
+    assert_required_markers(
+        TRANSACTIONS_VIEW_PATH,
+        [
+            'Picker("Transaction Type", selection: $viewModel.selectedFilter)',
+            'ForEach(TransactionFilter.allCases, id: \\.self)',
+            '"transactions-filter-picker"',
+        ],
+        "transactions_filter_only",
     )
 
     assert_required_markers(
