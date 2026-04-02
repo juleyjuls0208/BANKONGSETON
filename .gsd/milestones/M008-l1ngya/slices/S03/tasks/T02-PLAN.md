@@ -40,7 +40,7 @@ Create executable S03 closure proof by adding Home rollback source-contract test
 1. Load repo constraints via `qodo-get-rules` and inspect existing verifier style in `scripts/verify-m008-s02.sh`.
 2. Add `tests/test_verify_m008_s03_ios_home_rollback_contract.py` asserting R070 Home hero markers plus forbidden heavy-shell markers and required continuity seam markers.
 3. Add `scripts/verify-m008-s03.sh` with phases: `preflight`, `s03-home-contract`, `home-qr-continuity`, `s02-regression-chain`.
-4. Ensure phase failures emit actionable `guidance=` lines and use Windows-compatible invocation (`C:\Program Files\Git\bin\bash.exe`) in verification guidance.
+4. Ensure phase failures emit actionable `guidance=` lines and use Windows-compatible invocation (`C:/Progra~1/Git/bin/bash.exe`) in verification guidance.
 5. Run full S03 verifier and iterate until all phases pass.
 
 ## Must-Haves
@@ -54,7 +54,7 @@ Create executable S03 closure proof by adding Home rollback source-contract test
 
 - `rtk proxy python -m py_compile tests/test_verify_m008_s03_ios_home_rollback_contract.py`
 - `rtk proxy python -m pytest -q tests/test_verify_m008_s03_ios_home_rollback_contract.py`
-- `rtk proxy "C:\Program Files\Git\bin\bash.exe" scripts/verify-m008-s03.sh`
+- `rtk proxy C:/Progra~1/Git/bin/bash.exe scripts/verify-m008-s03.sh`
 
 ## Observability Impact
 

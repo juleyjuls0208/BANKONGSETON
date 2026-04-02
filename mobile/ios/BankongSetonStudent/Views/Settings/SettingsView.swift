@@ -22,7 +22,6 @@ struct SettingsView: View {
 
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: AppTheme.Spacing.lg) {
-                        personalInfoCard
                         appearanceCard
                         accountActionsCard
                     }

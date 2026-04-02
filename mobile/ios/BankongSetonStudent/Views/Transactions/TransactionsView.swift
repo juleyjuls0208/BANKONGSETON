@@ -26,11 +26,6 @@ struct TransactionsView: View {
             .animation(screenTransitionAnimation, value: transactionStateKey)
             .animation(screenTransitionAnimation, value: viewModel.transactions.count)
             .navigationTitle("Transactions")
-            .searchable(
-                text: $viewModel.searchQuery,
-                placement: .navigationBarDrawer(displayMode: .always),
-                prompt: "Search by type, date, or amount"
-            )
             .textInputAutocapitalization(.never)
             .autocorrectionDisabled()
             .refreshable {
@@ -52,8 +47,8 @@ struct TransactionsView: View {
         }
     }
 
-    private var hasActiveSearchOrFilter: Bool {
-        !viewModel.searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || viewModel.selectedFilter != .all
+    private var hasActiveFilter: Bool {
+        viewModel.selectedFilter != .all
     }
 
     private var screenTransitionAnimation: Animation {
@@ -123,15 +118,15 @@ struct TransactionsView: View {
                 .accessibilityIdentifier("transactions-filter-picker")
                 .accessibilityLabel("Transaction type filter")
 
-                if hasActiveSearchOrFilter {
+                if hasActiveFilter {
                     Button {
                         viewModel.clearSearchAndFilter()
                     } label: {
-                        Label("Clear Search & Filter", systemImage: "xmark.circle")
+                        Label("Clear Filter", systemImage: "xmark.circle")
                     }
                     .buttonStyle(StitchPrimaryButtonStyle())
-                    .accessibilityIdentifier("transactions-clear-search-filter-button")
-                    .accessibilityHint("Resets search text and type filter")
+                    .accessibilityIdentifier("transactions-clear-filter-button")
+                    .accessibilityHint("Resets type filter")
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -275,10 +270,11 @@ struct TransactionsView: View {
                 Button {
                     viewModel.clearSearchAndFilter()
                 } label: {
-                    Label("Clear Search & Filter", systemImage: "xmark.circle")
+                    Label("Clear Filter", systemImage: "xmark.circle")
                 }
                 .buttonStyle(StitchPrimaryButtonStyle())
                 .accessibilityIdentifier("transactions-clear-no-match-button")
+                .accessibilityHint("Resets type filter")
             }
             .frame(maxWidth: .infinity)
         }

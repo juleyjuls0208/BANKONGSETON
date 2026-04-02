@@ -307,3 +307,14 @@ Then rerun `rtk proxy sh scripts/verify-m007-s09.sh` so timestamps/phase rows re
 S09 requires Apple tooling (`xcodebuild`, `xcrun`) and physical iOS 17+ execution. In Windows/non-Apple executors, those checks are not runnable even when source contracts pass.
 
 **Rule:** keep `S09-UAT-RESULT.md` and `M007-VALIDATION.md` explicitly marked FAIL/blocked when Apple runtime phases cannot execute. Do not convert closure artifacts to PASS until runtime proof phases and physical-device sign-off are genuinely completed on an Apple-capable runner.
+
+---
+
+## Windows verifier command parsing: prefer no-space Git Bash path in plan-level verify commands
+
+Some automation runners execute verification commands by tokenizing plain strings instead of shell-parsing quotes. Commands like `rtk proxy "C:\Program Files\Git\bin\bash.exe" scripts/verify-...` can then fail with `os error 123` because the first token becomes `"C:\Program`.
+
+**Rule:** in task/slice verification command lines (especially plan artifacts consumed by gate runners), prefer:
+- `rtk proxy C:/Progra~1/Git/bin/bash.exe scripts/verify-....sh`
+
+Keep quoted long-path guidance only as a fallback inside shell scripts, not as the primary gate command string.

@@ -11,7 +11,8 @@ S03_HOME_CONTRACT_TEST="tests/test_verify_m008_s03_ios_home_rollback_contract.py
 S07_CONTINUITY_TEST_NODE="tests/test_verify_m007_s07_integration_behavior_contract.py::test_qr_success_handoff_remains_wired_from_home_sheet_to_refresh_path"
 S02_CHAIN_VERIFIER="scripts/verify-m008-s02.sh"
 
-WINDOWS_GIT_BASH_EXE="C:\\Program Files\\Git\\bin\\bash.exe"
+WINDOWS_GIT_BASH_EXE_SHORT="C:/Progra~1/Git/bin/bash.exe"
+WINDOWS_GIT_BASH_EXE_LONG="C:\\Program Files\\Git\\bin\\bash.exe"
 WINDOWS_GIT_BASH_POSIX="/c/Program Files/Git/bin/bash.exe"
 
 log() {
@@ -36,7 +37,7 @@ require_file() {
   if [[ ! -f "${file}" ]]; then
     fail_with_guidance "preflight" 2 \
       "Required file is missing: ${file}" \
-      "Restore/create the missing artifact, then re-run: rtk proxy \"${WINDOWS_GIT_BASH_EXE}\" scripts/verify-m008-s03.sh"
+      "Restore/create the missing artifact, then re-run: rtk proxy ${WINDOWS_GIT_BASH_EXE_SHORT} scripts/verify-m008-s03.sh"
   fi
 }
 
@@ -50,7 +51,7 @@ run_phase() {
   if [[ "${1:-}" != "--" ]]; then
     fail_with_guidance "preflight" 2 \
       "run_phase invocation is missing '--' delimiter for command arguments" \
-      "Fix script wiring and re-run: rtk proxy \"${WINDOWS_GIT_BASH_EXE}\" scripts/verify-m008-s03.sh"
+      "Fix script wiring and re-run: rtk proxy ${WINDOWS_GIT_BASH_EXE_SHORT} scripts/verify-m008-s03.sh"
   fi
   shift
 
@@ -83,8 +84,13 @@ run_preflight() {
 }
 
 run_s02_regression_chain() {
+  if [[ -x "${WINDOWS_GIT_BASH_EXE_SHORT}" ]]; then
+    rtk proxy "${WINDOWS_GIT_BASH_EXE_SHORT}" "${S02_CHAIN_VERIFIER}"
+    return
+  fi
+
   if [[ -x "${WINDOWS_GIT_BASH_POSIX}" ]]; then
-    rtk proxy "${WINDOWS_GIT_BASH_EXE}" "${S02_CHAIN_VERIFIER}"
+    rtk proxy "${WINDOWS_GIT_BASH_EXE_LONG}" "${S02_CHAIN_VERIFIER}"
     return
   fi
 
@@ -111,7 +117,7 @@ main() {
   run_phase "s02-regression-chain" \
     "scripts/verify-m008-s02.sh" \
     "S02 rollback regression chain failed; downstream shell/budget/QR/login guards regressed." \
-    "If stderr includes 'execvpe(/bin/bash) failed', run with Git Bash explicitly: rtk proxy \"${WINDOWS_GIT_BASH_EXE}\" scripts/verify-m008-s02.sh" \
+    "If stderr includes 'execvpe(/bin/bash) failed', run with Git Bash explicitly: rtk proxy ${WINDOWS_GIT_BASH_EXE_SHORT} scripts/verify-m008-s02.sh" \
     -- run_s02_regression_chain
 
   log "status=passed"

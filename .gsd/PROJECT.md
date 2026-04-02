@@ -16,6 +16,7 @@ A student payment at the canteen counter must complete reliably end-to-end (debi
 - Arduino R4 uses RC522 + OLED QR flow; Arduino R3 remains registration/lost-card terminal
 - iOS app (`mobile/ios/BankongSetonStudent/`) has completed M007 stitch-era rework, but user-directed M008 now supersedes visual direction toward old-UX rollback + minimalist speed-first UI
 - M008-l1ngya S02 delivered native `TabView` root navigation (floating stitch shell removed) plus a phased rollback verifier (`scripts/verify-m008-s02.sh`) that gates tab-shell, budget, QR, and login regressions
+- M008-l1ngya S03 delivered Home rollback to a minimalist credit-card hero while preserving QR success continuity seam (`didConsumePresentedQRSuccess` + continuity tick), with phased closure gate `scripts/verify-m008-s03.sh` chaining S02 regressions
 
 ## Architecture / Key Patterns
 
