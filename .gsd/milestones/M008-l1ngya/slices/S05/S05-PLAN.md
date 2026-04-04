@@ -26,7 +26,7 @@ Name the test file correctly so it is picked up by pytest conventions.
   - Estimate: 45min
   - Files: tests/test_verify_m008_s05_ios_integration_contract.py
   - Verify: rtk proxy python -m pytest -q tests/test_verify_m008_s05_ios_integration_contract.py → all tests pass
-- [ ] **T03: Run S05 verifier and close slice** — 1. Run `rtk proxy "C:\Program Files\Git\bin\bash.exe" scripts/verify-m008-s05.sh` and confirm all phases pass.
+- [x] **T03: Run S05 verifier and close slice — all phases pass** — 1. Run `rtk proxy "C:\Program Files\Git\bin\bash.exe" scripts/verify-m008-s05.sh` and confirm all phases pass.
 2. Run `rtk proxy python -m pytest -q tests/test_verify_m008_s05_ios_integration_contract.py` and confirm all tests pass.
 3. Write S05-SUMMARY.md with oneLiner, narrative, verification evidence.
 4. Write S05-UAT.md with test cases and pass/fail verdicts.

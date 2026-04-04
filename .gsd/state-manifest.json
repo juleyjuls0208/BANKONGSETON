@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "exported_at": "2026-04-04T09:41:55.128Z",
+  "exported_at": "2026-04-04T09:47:07.727Z",
   "milestones": [
     {
       "id": "M001",
@@ -244,7 +244,7 @@
       "milestone_id": "M008-l1ngya",
       "id": "S05",
       "title": "Integrated UX Closure + Requirement Validation",
-      "status": "pending",
+      "status": "complete",
       "risk": "medium",
       "depends": [
         "S01",
@@ -254,9 +254,9 @@
       ],
       "demo": "Integrated login→home→transactions→budget→settings flow passes contract and regression suites with no QR regressions.",
       "created_at": "2026-03-27T10:15:28.451Z",
-      "completed_at": null,
-      "full_summary_md": "",
-      "full_uat_md": "",
+      "completed_at": "2026-04-04T09:47:07.700Z",
+      "full_summary_md": "---\nid: S05\nparent: M008-l1ngya\nmilestone: M008-l1ngya\nprovides:\n  - Chained shell verifier proof that full login→home→transactions→budget→settings flow is coherent\n  - Top-level integration contract with 17 cross-surface + cross-slice regression tests\n  - S05-SUMMARY.md and S05-UAT.md closeout artifacts\nrequires:\n  - slice: S01\n    provides: S01 budget contract (backend+iOS endpoint markers)\n  - slice: S02\n    provides: S02 tab-view rollback + regression guards (budget/QR/login)\n  - slice: S03\n    provides: S03 home/QR continuity + S02 regression chain\n  - slice: S04\n    provides: S04 transactions/settings rollback + S03 regression chain\naffects:\n  - M008/S06 manual on-device UAT gate\nkey_files:\n  - scripts/verify-m008-s05.sh\n  - tests/test_verify_m008_s05_ios_integration_contract.py\n  - .gsd/milestones/M008-l1ngya/slices/S05/S05-SUMMARY.md\n  - .gsd/milestones/M008-l1ngya/slices/S05/S05-UAT.md\nkey_decisions:\n  - Ran each S01-S04 verifier independently as top-level S05 phases so each reports its own status=passed/failed log line, making failures easier to isolate without scrolling through a nested chain\n  - Used Windows Git Bash short-path fallback (C:/Progra~1/Git/bin/bash.exe) uniformly for all sub-verifier invocations\n  - Used split-line markers for filterTitle cases in integration contract (case .qrPay: / return \"QR Pay\") to match actual Swift source formatting\npatterns_established:\n  - Chained verifier shell runs sub-verifiers as top-level phases for isolated failure reporting\n  - Integration contract test validates cross-slice forbidden markers to catch regression\nobservability_surfaces:\n  - none\ndrill_down_paths:\n  - tasks/T01-SUMMARY.md\n  - tasks/T02-SUMMARY.md\n  - tasks/T03-SUMMARY.md\nduration: \"\"\nverification_result: passed\ncompleted_at: 2026-04-04T09:47:07.701Z\nblocker_discovered: false\n---\n\n# S05: Integrated UX Closure + Requirement Validation\n\n**Integrated UX closure passes — all S01-S04 phases verified, 17/17 contract tests pass**\n\n## What Happened\n\nS05 is the integrated closure gate for M008. Three tasks produced the slice deliverables: T01 created the chained shell verifier (verify-m008-s05.sh) running all four phase verifiers as independent top-level phases — all 4 phases passed. T02 created the 17-test integration contract covering all rollback surfaces (MainTabView, HomeView, TransactionsView, BudgetView, SettingsView) plus three cross-slice forbidden-marker regression guards — all 17 tests passed. T03 ran both verifiers, confirmed all gates passed, and produced the S05-SUMMARY.md and S05-UAT.md closeout artifacts. The slice proves the full login→home→transactions→budget→settings rollback flow is coherent with no QR regressions. The nested regression chains in S04 verified S03→S02→S01 dependencies are intact. S06 (manual on-device UAT) is unblocked.\n\n## Verification\n\nBoth gates passed: all 4 phases of scripts/verify-m008-s05.sh reported status=passed (including nested regression chains S04→S03→S02→S01), and all 17 integration contract tests passed in 0.53s. S05-SUMMARY.md and S05-UAT.md closeout artifacts produced.\n\n## Requirements Advanced\n\nNone.\n\n## Requirements Validated\n\n- R068 — S01 source contracts + S02 native TabView contract — MainTabView uses native TabView with 4 Label items\n- R069 — MainTabView contract test — TabView(selection:) + 4 Label items + 4 .tag markers present\n- R070 — HomeView creditCardHero contract test — creditCardHero with balance text + gradient + identifier present\n- R071 — TransactionsView contract test — filter-only Picker present, no .searchable forbidden markers absent\n- R072 — SettingsView contract test — appearanceCard with theme/accent identifiers present, personalInfoCard absent\n- R073 — BudgetView endpoint wiring + S01 backend contract verified via chained verifier\n- R074 — BudgetViewModel retry path preserved in budget-regression chain (S02) which is part of S04 regression chain\n- R076 — QR continuity seams in HomeView + TransactionsView preserved via QR regression chain (S02) which is part of S04 regression chain\n\n## New Requirements Surfaced\n\nNone.\n\n## Requirements Invalidated or Re-scoped\n\nNone.\n\n## Deviations\n\nNone.\n\n## Known Limitations\n\n[\"On Windows host, Apple runtime (xcodebuild, xcrun) cannot execute; runtime proof for on-device acceptance deferred to S06\", \"Source-contract tests validate Swift source markers, not runtime iOS behavior on device\"]\n\n## Follow-ups\n\n[\"M008/S06 manual on-device UAT gate requires physical iOS hardware; S05 source contracts are a pre-condition, not the final acceptance signal\", \"Final iOS UX acceptance on device remains user-performed manual validation\"]\n\n## Files Created/Modified\n\n- `scripts/verify-m008-s05.sh` — chained shell verifier running all 4 phase verifiers in sequence\n- `tests/test_verify_m008_s05_ios_integration_contract.py` — 17 integration contract tests across all rollback surfaces\n",
+      "full_uat_md": "# S05: Integrated UX Closure + Requirement Validation — UAT\n\n**Milestone:** M008-l1ngya\n**Written:** 2026-04-04T09:47:07.701Z\n\n## Test Cases\n\n### 1. S05 integration contract — 17 cross-surface tests\n`rtk proxy python -m pytest -q tests/test_verify_m008_s05_ios_integration_contract.py`\n\nAll 17 tests pass:\n1. MainTabView native tabs (TabView + 4 Label items + 4 .tag markers) ✅\n2. Session-expired alert preserved ✅\n3. Home QR entry CTA ✅\n4. Home credit-card hero ✅\n5. Home M007 scaffolding removed ✅\n6. Home QR continuity seam ✅\n7. Transactions filter-only, no search ✅\n8. Transactions QR Pay/Card Pay/Load taxonomy ✅\n9. Transactions QR continuity seam ✅\n10. Transactions receipt + load-more ✅\n11. BudgetView endpoint wiring ✅\n12. Budget progress + limit editor ✅\n13. Settings appearance + account cards ✅\n14. Settings no personal info card ✅\n15. No StitchTabShell in MainTabView (forbidden) ✅\n16. No searchable in Transactions (forbidden) ✅\n17. No fullscreen-stitch in Home (forbidden) ✅\n\n### 2. Chained S01-S04 verifier — all 4 phases pass\n`rtk proxy \"C:\\Program Files\\Git\\bin\\bash.exe\" scripts/verify-m008-s05.sh`\n\n- s01-budget-contract: ✅ passed\n- s02-tabview-rollback: ✅ passed\n- s03-home-qr-rollback: ✅ passed\n- s04-transactions-settings-rollback: ✅ passed\n\nS04's nested regression chain verified: S03→S02→S01 dependency chain intact.\n",
       "goal": "Run the integrated UX closure — chained S01-S04 verifiers plus a top-level integration contract test — proving the full login→home→transactions→budget→settings rollback flow is coherent with no QR regressions, then produce the UAT verdict and consolidated requirements validation.",
       "success_criteria": "All S01-S04 chained verifiers pass (S01 budget contract, S02 TabView/regression, S03 Home/QR, S04 transactions/settings); integration contract test passes (no forbidden markers, QR entry point present, filter taxonomy correct); overall S05 gate reports `status=passed`.",
       "proof_level": "contract + regression",
@@ -601,19 +601,22 @@
       "milestone_id": "M008-l1ngya",
       "slice_id": "S05",
       "id": "T03",
-      "title": "Run S05 verifier and close slice",
-      "status": "pending",
-      "one_liner": "",
-      "narrative": "",
-      "verification_result": "",
+      "title": "Run S05 verifier and close slice — all phases pass",
+      "status": "complete",
+      "one_liner": "Run S05 verifier and close slice — all phases pass",
+      "narrative": "Ran both slice verification gates. The chained shell verifier (scripts/verify-m008-s05.sh) executed all four phases — S01 budget contract, S02 tab-view rollback, S03 home/QR rollback, S04 transactions/settings rollback — and all reported status=passed. The integration contract test (tests/test_verify_m008_s05_ios_integration_contract.py) ran 17 tests covering MainTabView, HomeView, TransactionsView, BudgetView, and SettingsView surfaces plus cross-slice forbidden markers, all passing. Then produced S05-SUMMARY.md and S05-UAT.md closeout artifacts and called gsd_slice_complete to record the slice done.",
+      "verification_result": "Both gates passed: all 4 phases of verify-m008-s05.sh reported status=passed (including nested regression chains S04→S03→S02→S01), and all 17 integration contract tests passed in 0.53s.",
       "duration": "",
-      "completed_at": null,
+      "completed_at": "2026-04-04T09:46:15.501Z",
       "blocker_discovered": false,
-      "deviations": "",
-      "known_issues": "",
-      "key_files": [],
+      "deviations": "None.",
+      "known_issues": "None.",
+      "key_files": [
+        ".gsd/milestones/M008-l1ngya/slices/S05/S05-SUMMARY.md",
+        ".gsd/milestones/M008-l1ngya/slices/S05/S05-UAT.md"
+      ],
       "key_decisions": [],
-      "full_summary_md": "",
+      "full_summary_md": "---\nid: T03\nparent: S05\nmilestone: M008-l1ngya\nkey_files:\n  - .gsd/milestones/M008-l1ngya/slices/S05/S05-SUMMARY.md\n  - .gsd/milestones/M008-l1ngya/slices/S05/S05-UAT.md\nkey_decisions:\n  - (none)\nduration: \"\"\nverification_result: passed\ncompleted_at: 2026-04-04T09:46:15.501Z\nblocker_discovered: false\n---\n\n# T03: Run S05 verifier and close slice — all phases pass\n\n**Run S05 verifier and close slice — all phases pass**\n\n## What Happened\n\nRan both slice verification gates. The chained shell verifier (scripts/verify-m008-s05.sh) executed all four phases — S01 budget contract, S02 tab-view rollback, S03 home/QR rollback, S04 transactions/settings rollback — and all reported status=passed. The integration contract test (tests/test_verify_m008_s05_ios_integration_contract.py) ran 17 tests covering MainTabView, HomeView, TransactionsView, BudgetView, and SettingsView surfaces plus cross-slice forbidden markers, all passing. Then produced S05-SUMMARY.md and S05-UAT.md closeout artifacts and called gsd_slice_complete to record the slice done.\n\n## Verification\n\nBoth gates passed: all 4 phases of verify-m008-s05.sh reported status=passed (including nested regression chains S04→S03→S02→S01), and all 17 integration contract tests passed in 0.53s.\n\n## Verification Evidence\n\n| # | Command | Exit Code | Verdict | Duration |\n|---|---------|-----------|---------|----------|\n| 1 | `rtk proxy python -m pytest -q tests/test_verify_m008_s05_ios_integration_contract.py` | 0 | ✅ pass | 530ms |\n| 2 | `rtk proxy \"C:\\Program Files\\Git\\bin\\bash.exe\" scripts/verify-m008-s05.sh` | 0 | ✅ pass | 25000ms |\n\n\n## Deviations\n\nNone.\n\n## Known Issues\n\nNone.\n\n## Files Created/Modified\n\n- `.gsd/milestones/M008-l1ngya/slices/S05/S05-SUMMARY.md`\n- `.gsd/milestones/M008-l1ngya/slices/S05/S05-UAT.md`\n",
       "description": "1. Run `rtk proxy \"C:\\Program Files\\Git\\bin\\bash.exe\" scripts/verify-m008-s05.sh` and confirm all phases pass.\n2. Run `rtk proxy python -m pytest -q tests/test_verify_m008_s05_ios_integration_contract.py` and confirm all tests pass.\n3. Write S05-SUMMARY.md with oneLiner, narrative, verification evidence.\n4. Write S05-UAT.md with test cases and pass/fail verdicts.\n5. Use `gsd_slice_complete` to close the slice with `overall_verdict=PASS` and record requirements advanced/validated.",
       "estimate": "30min",
       "files": [
@@ -991,13 +994,13 @@
       "seq": 4,
       "id": "S05",
       "when_context": "Integrated UX Closure + Requirement Validation",
-      "scope": "pending",
+      "scope": "complete",
       "decision": "medium",
       "choice": "[\"S01\",\"S02\",\"S03\",\"S04\"]",
       "rationale": "Integrated login→home→transactions→budget→settings flow passes contract and regression suites with no QR regressions.",
       "revisable": "2026-03-27T10:15:28.451Z",
-      "made_by": "agent",
-      "superseded_by": ""
+      "made_by": "2026-04-04T09:47:07.700Z",
+      "superseded_by": "---\nid: S05\nparent: M008-l1ngya\nmilestone: M008-l1ngya\nprovides:\n  - Chained shell verifier proof that full login→home→transactions→budget→settings flow is coherent\n  - Top-level integration contract with 17 cross-surface + cross-slice regression tests\n  - S05-SUMMARY.md and S05-UAT.md closeout artifacts\nrequires:\n  - slice: S01\n    provides: S01 budget contract (backend+iOS endpoint markers)\n  - slice: S02\n    provides: S02 tab-view rollback + regression guards (budget/QR/login)\n  - slice: S03\n    provides: S03 home/QR continuity + S02 regression chain\n  - slice: S04\n    provides: S04 transactions/settings rollback + S03 regression chain\naffects:\n  - M008/S06 manual on-device UAT gate\nkey_files:\n  - scripts/verify-m008-s05.sh\n  - tests/test_verify_m008_s05_ios_integration_contract.py\n  - .gsd/milestones/M008-l1ngya/slices/S05/S05-SUMMARY.md\n  - .gsd/milestones/M008-l1ngya/slices/S05/S05-UAT.md\nkey_decisions:\n  - Ran each S01-S04 verifier independently as top-level S05 phases so each reports its own status=passed/failed log line, making failures easier to isolate without scrolling through a nested chain\n  - Used Windows Git Bash short-path fallback (C:/Progra~1/Git/bin/bash.exe) uniformly for all sub-verifier invocations\n  - Used split-line markers for filterTitle cases in integration contract (case .qrPay: / return \"QR Pay\") to match actual Swift source formatting\npatterns_established:\n  - Chained verifier shell runs sub-verifiers as top-level phases for isolated failure reporting\n  - Integration contract test validates cross-slice forbidden markers to catch regression\nobservability_surfaces:\n  - none\ndrill_down_paths:\n  - tasks/T01-SUMMARY.md\n  - tasks/T02-SUMMARY.md\n  - tasks/T03-SUMMARY.md\nduration: \"\"\nverification_result: passed\ncompleted_at: 2026-04-04T09:47:07.701Z\nblocker_discovered: false\n---\n\n# S05: Integrated UX Closure + Requirement Validation\n\n**Integrated UX closure passes — all S01-S04 phases verified, 17/17 contract tests pass**\n\n## What Happened\n\nS05 is the integrated closure gate for M008. Three tasks produced the slice deliverables: T01 created the chained shell verifier (verify-m008-s05.sh) running all four phase verifiers as independent top-level phases — all 4 phases passed. T02 created the 17-test integration contract covering all rollback surfaces (MainTabView, HomeView, TransactionsView, BudgetView, SettingsView) plus three cross-slice forbidden-marker regression guards — all 17 tests passed. T03 ran both verifiers, confirmed all gates passed, and produced the S05-SUMMARY.md and S05-UAT.md closeout artifacts. The slice proves the full login→home→transactions→budget→settings rollback flow is coherent with no QR regressions. The nested regression chains in S04 verified S03→S02→S01 dependencies are intact. S06 (manual on-device UAT) is unblocked.\n\n## Verification\n\nBoth gates passed: all 4 phases of scripts/verify-m008-s05.sh reported status=passed (including nested regression chains S04→S03→S02→S01), and all 17 integration contract tests passed in 0.53s. S05-SUMMARY.md and S05-UAT.md closeout artifacts produced.\n\n## Requirements Advanced\n\nNone.\n\n## Requirements Validated\n\n- R068 — S01 source contracts + S02 native TabView contract — MainTabView uses native TabView with 4 Label items\n- R069 — MainTabView contract test — TabView(selection:) + 4 Label items + 4 .tag markers present\n- R070 — HomeView creditCardHero contract test — creditCardHero with balance text + gradient + identifier present\n- R071 — TransactionsView contract test — filter-only Picker present, no .searchable forbidden markers absent\n- R072 — SettingsView contract test — appearanceCard with theme/accent identifiers present, personalInfoCard absent\n- R073 — BudgetView endpoint wiring + S01 backend contract verified via chained verifier\n- R074 — BudgetViewModel retry path preserved in budget-regression chain (S02) which is part of S04 regression chain\n- R076 — QR continuity seams in HomeView + TransactionsView preserved via QR regression chain (S02) which is part of S04 regression chain\n\n## New Requirements Surfaced\n\nNone.\n\n## Requirements Invalidated or Re-scoped\n\nNone.\n\n## Deviations\n\nNone.\n\n## Known Limitations\n\n[\"On Windows host, Apple runtime (xcodebuild, xcrun) cannot execute; runtime proof for on-device acceptance deferred to S06\", \"Source-contract tests validate Swift source markers, not runtime iOS behavior on device\"]\n\n## Follow-ups\n\n[\"M008/S06 manual on-device UAT gate requires physical iOS hardware; S05 source contracts are a pre-condition, not the final acceptance signal\", \"Final iOS UX acceptance on device remains user-performed manual validation\"]\n\n## Files Created/Modified\n\n- `scripts/verify-m008-s05.sh` — chained shell verifier running all 4 phase verifiers in sequence\n- `tests/test_verify_m008_s05_ios_integration_contract.py` — 17 integration contract tests across all rollback surfaces\n"
     },
     {
       "seq": 5,
@@ -2172,6 +2175,28 @@
       "verdict": "✅ pass",
       "duration_ms": 540,
       "created_at": "2026-04-04T09:41:55.103Z"
+    },
+    {
+      "id": 29,
+      "task_id": "T03",
+      "slice_id": "S05",
+      "milestone_id": "M008-l1ngya",
+      "command": "rtk proxy python -m pytest -q tests/test_verify_m008_s05_ios_integration_contract.py",
+      "exit_code": 0,
+      "verdict": "✅ pass",
+      "duration_ms": 530,
+      "created_at": "2026-04-04T09:46:15.501Z"
+    },
+    {
+      "id": 30,
+      "task_id": "T03",
+      "slice_id": "S05",
+      "milestone_id": "M008-l1ngya",
+      "command": "rtk proxy \"C:\\Program Files\\Git\\bin\\bash.exe\" scripts/verify-m008-s05.sh",
+      "exit_code": 0,
+      "verdict": "✅ pass",
+      "duration_ms": 25000,
+      "created_at": "2026-04-04T09:46:15.501Z"
     }
   ]
 }
