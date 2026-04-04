@@ -318,3 +318,26 @@ Some automation runners execute verification commands by tokenizing plain string
 - `rtk proxy C:/Progra~1/Git/bin/bash.exe scripts/verify-....sh`
 
 Keep quoted long-path guidance only as a fallback inside shell scripts, not as the primary gate command string.
+
+---
+
+## Swift source verification: use contract tests, not py_compile
+
+`python -m py_compile` cannot parse Swift files and always returns exit code 1. Never include Swift files in `py_compile` verification commands in task plans.
+
+**Rule:** For Swift files, verify source validity via contract tests (grep-style substring assertions) that read the source as text and assert presence/absence of markers. This is the same mechanism used for iOS source contracts throughout M008 and works in any environment without a Swift compiler.
+
+**Pattern established:** All S01–S04 iOS rollback slices use `assert_required_markers()` / `assert_forbidden_markers()` helper functions in pytest test files to verify Swift source state. The same pattern should be used for any future Swift verification in M008 slices.
+
+---
+
+## UI-only rollback must include ViewModel cleanup in the same pass
+
+When a slice says "UI-only rollback", it's tempting to leave the backing ViewModel properties in place to avoid breaking compilation. However, if those properties are only consumed by the removed UI surface, they become dead code that must be excised.
+
+**Rule:** If a ViewModel property is only referenced by a UI element being removed, remove the property from both the View and the ViewModel. Leaving dead properties creates:
+1. Contract test failures (forbidden markers remain in source)
+2. Confusing maintenance burden for future slices
+3. R072/R071 compliance gaps
+
+**Counter-example (correct):** T01 left `personalInfoCard` in SettingsView because "the VM still has the properties." T02 discovered the S04 contract test failed — `personalInfoCard` was still present in source. Full excision from both SettingsView and SettingsViewModel was required for compliance. Always verify rollback completeness with contract tests that assert forbidden markers are absent.

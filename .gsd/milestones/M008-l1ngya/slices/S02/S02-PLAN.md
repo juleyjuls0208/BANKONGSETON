@@ -1,4 +1,4 @@
-# S02: 
+# S02: Full UX Rollback Baseline + Native Tab Bar
 
 **Goal:** ---
 id: S02

@@ -6,7 +6,8 @@ TBD
 ## Slice Overview
 | ID | Slice | Risk | Depends | Done | After this |
 |----|-------|------|---------|------|------------|
-| S02 |  | medium | — | ✅ | # S02: Full UX Rollback Baseline + Native Tab Bar — UAT
+| S01 | Budget Contract Restoration (Backend + iOS) | high | — | ✅ | Budget API contract is available and contract-guarded. |
+| S02 | Full UX Rollback Baseline + Native Tab Bar | medium | — | ✅ | # S02: Full UX Rollback Baseline + Native Tab Bar — UAT
 
 **Milestone:** M008-l1ngya
 **Written:** 2026-03-27T10:09:46.924Z
@@ -96,6 +97,6 @@ Run:
 - On Windows, treat `/bin/bash` errors as environment constraints and use Git Bash path execution for authoritative results.
  |
 | S03 | Home Rollback + Credit-Card Hero + QR Continuity | high | S02 | ✅ | Home shows minimalist credit-card balance hero with preserved QR entry/continuity checks passing. |
-| S04 | Transactions/Settings Minimalist Scope Restoration | high | S03 | ⬜ | Transactions is filter-only (no search) and Settings exposes theme+accent-only appearance controls. |
+| S04 | Transactions/Settings Minimalist Scope Restoration | high | S03 | ✅ | Transactions is filter-only (no search) and Settings exposes theme+accent-only appearance controls. |
 | S05 | Integrated UX Closure + Requirement Validation | medium | S01, S02, S03, S04 | ⬜ | Integrated login→home→transactions→budget→settings flow passes contract and regression suites with no QR regressions. |
 | S06 | Manual On-Device UAT Gate | medium | S05 | ⬜ | User executes manual iOS device acceptance and records explicit PASS/FAIL evidence for milestone closeout. |

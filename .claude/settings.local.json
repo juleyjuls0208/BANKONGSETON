@@ -4,7 +4,9 @@
       "Bash(ls:*)",
       "Bash(grep:*)",
       "Bash(node:*)",
-      "Bash(rtk git:*)"
+      "Bash(rtk git:*)",
+      "Skill(gsd:update)",
+      "WebFetch(domain:raw.githubusercontent.com)"
     ]
   }
 }
