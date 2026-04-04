@@ -16,7 +16,7 @@ Save completed results to `.gsd/milestones/M008-l1ngya/slices/S06/S06-UAT-RESULT
   - Estimate: 1-2h (user action)
   - Files: .gsd/milestones/M008-l1ngya/slices/S06/S06-UAT-RESULT.md
   - Verify: S06-UAT-RESULT.md exists with all scenarios completed and explicit PASS/FAIL verdicts recorded
-- [ ] **T02: Write milestone summary and close M008-l1ngya** — 1. Review all S01-S05 summary files for key decisions and verification evidence.
+- [x] **T02: M008-l1ngya milestone summary written and milestone closed** — 1. Review all S01-S05 summary files for key decisions and verification evidence.
 2. Review requirements R068-R076 against S01-S05 deliverables.
 3. Write `M008-l1ngya-MILESTONE-SUMMARY.md` with: oneLiner, narrative, success criteria results, definition-of-done results, requirement outcomes, key decisions, key files, lessons learned.
 4. Use `gsd_complete_milestone` to close M008-l1ngya.
