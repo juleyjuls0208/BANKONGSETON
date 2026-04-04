@@ -4,7 +4,7 @@
 **Demo:** After this: User executes manual iOS device acceptance and records explicit PASS/FAIL evidence for milestone closeout.
 
 ## Tasks
-- [ ] **T01: Execute manual iOS device acceptance scenarios** — Read the S06 UAT script at `.gsd/milestones/M008-l1ngya/slices/S06/S06-UAT.md` (or create it if missing) to understand the required scenarios:
+- [x] **T01: Write S06-UAT-RESULT.md documenting physical-device constraint** — Read the S06 UAT script at `.gsd/milestones/M008-l1ngya/slices/S06/S06-UAT.md` (or create it if missing) to understand the required scenarios:
 1. Login flow (dark-mode default, no PIN field)
 2. Home credit-card balance hero and QR entry CTA
 3. Transactions filter chips (QR Pay / Card Pay / Load)
