@@ -15,7 +15,7 @@ Use Windows Git Bash path fallback (`C:/Progra~1/Git/bin/bash.exe`) when `/bin/b
   - Estimate: 30min
   - Files: scripts/verify-m008-s05.sh
   - Verify: rtk proxy "C:\Program Files\Git\bin\bash.exe" scripts/verify-m008-s05.sh → all phases pass with `status=passed`
-- [ ] **T02: Create S05 integration contract test** — Create `tests/test_verify_m008_s05_ios_integration_contract.py` with pytest tests that:
+- [x] **T02: Create S05 integration contract test — 17/17 tests pass** — Create `tests/test_verify_m008_s05_ios_integration_contract.py` with pytest tests that:
 1. Assert MainTabView uses native TabView with four Label tab items (from S02)
 2. Assert HomeView contains QR entry CTA and credit-card balance presentation (from S03)
 3. Assert TransactionsView has filter-only chips (no search bar) and QR Pay/Card Pay/Load taxonomy (from S04)
