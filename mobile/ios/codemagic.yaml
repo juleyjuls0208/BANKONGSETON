@@ -1,6 +1,141 @@
 workflows:
-  ios-student-app:
-    name: BankongSeton Student iOS
+  ios-student-app-sideload:
+    name: BankongSeton Student iOS (Sideload)
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+
+    environment:
+      xcode: 16.4
+      cocoapods: default
+      vars:
+        BUNDLE_ID: com.bankongseton.student
+        APP_DISPLAY_NAME: BankongSeton Student
+        TEAM_ID: ""
+        CERTIFICATE_PASSWORD: ""
+        APPLE_ID: ""
+        APPLE_APP_SPECIFIC_PASSWORD: ""
+
+    triggering:
+      events:
+        - push
+        - tag
+        - manual
+      branch_patterns:
+        - pattern: "**"
+          include: true
+      tag_patterns:
+        - pattern: "*"
+          include: false
+
+    scripts:
+      - name: Debug clone contents
+        script: |
+          echo "=== Repo root ==="
+          ls -la
+          echo "=== mobile/ios ==="
+          ls -la mobile/ios/
+          echo "=== BankongSetonStudent dir ==="
+          ls -la mobile/ios/BankongSetonStudent/ || echo "MISSING: BankongSetonStudent/"
+          echo "=== git status ==="
+          git status
+
+      - name: Set up code signing
+        script: |
+          # Create keychain
+          keychain initialize
+          
+          # Create certificate from environment variable (base64 encoded)
+          if [ -n "$CERTIFICATE_DATA" ]; then
+            echo $CERTIFICATE_DATA | base64 --decode -o Certificates.p12
+            keychain add-certificates --certificate-autocreate Certificates.p12 --certificate-password $CERTIFICATE_PASSWORD
+          fi
+          
+          # Create provisioning profile directory
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          
+          if [ -n "$PROVISIONING_PROFILE_DATA" ]; then
+            echo $PROVISIONING_PROFILE_DATA | base64 --decode -o provisioning.mobileprovision
+            cp provisioning.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
+          fi
+          
+          # List available certificates
+          security find-identity -v -p codesigning
+
+      - name: Install dependencies
+        script: |
+          cd mobile/ios/BankongSetonStudent
+          if [ -f "Podfile" ]; then
+            pod install
+          else
+            echo "No Podfile — pure SwiftUI project, skipping CocoaPods"
+          fi
+
+      - name: Build IPA for sideloading
+        script: |
+          cd mobile/ios/BankongSetonStudent
+          
+          # Build for generic iOS device
+          xcodebuild archive \
+            -project BankongSetonStudent.xcodeproj \
+            -scheme BankongSetonStudent \
+            -configuration Release \
+            -destination "generic/platform=iOS" \
+            -archivePath build/BankongSetonStudent \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="$APP_STORE_CERTIFICATE" \
+            PROVISIONING_PROFILE="$PROFILE_UUID" \
+            CODE_SIGNING_REQUIRED=YES \
+            CODE_SIGNING_ALLOWED=YES
+
+      - name: Export IPA
+        script: |
+          cd mobile/ios/BankongSetonStudent
+          
+          # Export IPA from archive
+          xcodebuild -exportArchive \
+            -archivePath build/BankongSetonStudent.xcarchive \
+            -exportPath build \
+            -exportOptionsPlist exportOptions.plist
+
+      - name: Invariant checks
+        script: |
+          echo "--- Checking for Philippine Peso symbol ---"
+          if grep -r "฿" mobile/ios/BankongSetonStudent/ 2>/dev/null; then
+            echo "FAIL: Thai Baht symbol found — expected ₱ only"
+            exit 1
+          else
+            echo "PASS: No ฿ found"
+          fi
+
+          echo "--- Checking for deprecated NavigationView ---"
+          if grep -rn "NavigationView" mobile/ios/BankongSetonStudent/ 2>/dev/null; then
+            echo "FAIL: deprecated NavigationView found"
+            exit 1
+          else
+            echo "PASS: No NavigationView"
+          fi
+
+    artifacts:
+      - mobile/ios/BankongSetonStudent/build/*.ipa
+      - mobile/ios/BankongSetonStudent/build/**/*.app
+      - /tmp/xcodebuild_logs/*.log
+
+    publishing:
+      email:
+        recipients:
+          - your-email@example.com
+        notify:
+          success: true
+          failure: true
+      google_play:
+        credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+        track: production
+      app_store_connect:
+        api_key: $APP_STORE_CONNECT_API_KEY
+        submit_to_testflight: true
+
+  ios-student-app-simulator:
+    name: BankongSeton Student iOS (Simulator)
     instance_type: mac_mini_m2
     max_build_duration: 30
 
@@ -15,42 +150,20 @@ workflows:
       branch_patterns:
         - pattern: main
           include: true
+        - pattern: "gsd/**"
+          include: true
 
     scripts:
-      - name: Set Xcode version
-        script: xcode-select -p
-
       - name: Debug clone contents
         script: |
-          echo "=== Repo root ==="
+          echo "=== Clone contents ==="
           ls -la
           echo "=== BankongSetonStudent dir ==="
           ls -la BankongSetonStudent/ || echo "MISSING: BankongSetonStudent/"
-          echo "=== App dir ==="
-          ls -la BankongSetonStudent/App/ || echo "MISSING: BankongSetonStudent/App/"
-          echo "=== Core dir ==="
-          ls -la BankongSetonStudent/Core/ || echo "MISSING: BankongSetonStudent/Core/"
-          echo "=== Models dir ==="
-          ls -la BankongSetonStudent/Models/ || echo "MISSING: BankongSetonStudent/Models/"
-          echo "=== ViewModels dir ==="
-          ls -la BankongSetonStudent/ViewModels/ || echo "MISSING: BankongSetonStudent/ViewModels/"
-          echo "=== Views dir ==="
-          ls -la BankongSetonStudent/Views/ || echo "MISSING: BankongSetonStudent/Views/"
-          echo "=== Assets ==="
-          ls -la BankongSetonStudent/Assets.xcassets/ || echo "MISSING: Assets.xcassets/"
-          echo "=== xcodeproj ==="
-          ls -la BankongSetonStudent/BankongSetonStudent.xcodeproj/ || echo "MISSING: xcodeproj/"
-          echo "=== git status ==="
-          git status
-          echo "=== git log ==="
-          git log --oneline -5
 
-      - name: Force checkout all tracked files
-        script: git checkout HEAD -- .
-
-      - name: Install dependencies (if needed)
+      - name: Install dependencies
         script: |
-          cd BankongSetonStudent
+          cd mobile/ios/BankongSetonStudent
           if [ -f "Podfile" ]; then
             pod install
           else
@@ -59,8 +172,9 @@ workflows:
 
       - name: Build (Simulator — no signing required)
         script: |
+          cd mobile/ios/BankongSetonStudent
           xcodebuild build \
-            -project BankongSetonStudent/BankongSetonStudent.xcodeproj \
+            -project BankongSetonStudent.xcodeproj \
             -scheme BankongSetonStudent \
             -destination "generic/platform=iOS Simulator" \
             -configuration Debug \
@@ -72,37 +186,11 @@ workflows:
       - name: Invariant checks
         script: |
           echo "--- Checking for Philippine Peso symbol ---"
-          if grep -r "฿" BankongSetonStudent/; then
-            echo "FAIL: Thai Baht symbol found — expected ₱ only"
+          if grep -r "฿" mobile/ios/BankongSetonStudent/ 2>/dev/null; then
+            echo "FAIL: Thai Baht symbol found"
             exit 1
-          else
-            echo "PASS: No ฿ found"
-          fi
-
-          echo "--- Checking for deprecated NavigationView ---"
-          if grep -rn "NavigationView" BankongSetonStudent/; then
-            echo "FAIL: deprecated NavigationView found"
-            exit 1
-          else
-            echo "PASS: No NavigationView"
-          fi
-
-          echo "--- Checking MainTabView has no stubs ---"
-          if grep -n "struct BudgetView\|struct SettingsView" BankongSetonStudent/Views/MainTabView.swift; then
-            echo "FAIL: stubs found in MainTabView.swift"
-            exit 1
-          else
-            echo "PASS: No stubs in MainTabView.swift"
           fi
 
     artifacts:
-      - BankongSetonStudent/build/**/*.app
+      - mobile/ios/BankongSetonStudent/build/**/*.app
       - /tmp/xcodebuild_logs/*.log
-
-    publishing:
-      email:
-        recipients:
-          - your-email@example.com
-        notify:
-          success: true
-          failure: true

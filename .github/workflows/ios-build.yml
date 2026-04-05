@@ -1,0 +1,247 @@
+name: Build iOS IPA
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: 'Build type'
+        required: true
+        default: 'simulator'
+        type: choice
+        options:
+          - simulator
+          - sideload
+  push:
+    branches:
+      - main
+      - 'gsd/**'
+  pull_request:
+    paths:
+      - 'mobile/ios/**'
+
+jobs:
+  build-ios-simulator:
+    name: Build iOS Simulator
+    if: github.event_name == 'push' || github.event.inputs.build_type == 'simulator'
+    runs-on: macos-14
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: List iOS files
+        run: |
+          echo "=== iOS directory ==="
+          ls -la mobile/ios/
+          echo "=== BankongSetonStudent ==="
+          ls -la mobile/ios/BankongSetonStudent/
+
+      - name: Build for Simulator
+        run: |
+          cd mobile/ios/BankongSetonStudent
+          xcodebuild build \
+            -project BankongSetonStudent.xcodeproj \
+            -scheme BankongSetonStudent \
+            -destination "generic/platform=iOS Simulator" \
+            -configuration Debug \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ios-build-logs
+          path: |
+            ~/Library/Developer/Xcode/DerivedData/**/Logs/**/*.xcactivitylog
+          retention-days: 7
+
+  build-ios-sideload:
+    name: Build iOS IPA (Sideload)
+    if: github.event.inputs.build_type == 'sideload'
+    runs-on: macos-14
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure Keychain
+        run: |
+          keychain initialize
+          keychain create TemporaryKeychain
+          keychain unlock TemporaryKeychain
+          keychain set-keychain-settings TemporaryKeychain
+
+      - name: Import Certificate
+        env:
+          CERTIFICATE: ${{ secrets.CERTIFICATE_DATA }}
+          CERTIFICATE_PASSWORD: ${{ secrets.CERTIFICATE_PASSWORD }}
+        run: |
+          if [ -n "$CERTIFICATE" ]; then
+            echo "$CERTIFICATE" | base64 --decode -o certificate.p12
+            security import certificate.p12 -P "$CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k TemporaryKeychain
+            security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "" TemporaryKeychain
+          fi
+
+      - name: Import Provisioning Profile
+        env:
+          PROVISIONING_PROFILE: ${{ secrets.PROVISIONING_PROFILE_DATA }}
+        run: |
+          if [ -n "$PROVISIONING_PROFILE" ]; then
+            echo "$PROVISIONING_PROFILE" | base64 --decode -o provisioning.mobileprovision
+            mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+            cp provisioning.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
+          fi
+
+      - name: List Certificates
+        run: security find-identity -v -p codesigning
+
+      - name: Build Archive
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          cd mobile/ios/BankongSetonStudent
+          
+          # Get the actual certificate identity
+          CERT_ID=$(security find-identity -v -p codesigning | grep "iPhone Developer" | head -1 | sed 's/.*"\(.*\)".*/\1/')
+          
+          # Get the provisioning profile UUID
+          PROFILE_UUID=$(grep -A1 "UUID" ~/Library/MobileDevice/Provisioning\ Profiles/*.mobileprovision 2>/dev/null | grep -o '[A-F0-9-]\{36\}' | head -1)
+          
+          echo "Certificate: $CERT_ID"
+          echo "Profile UUID: $PROFILE_UUID"
+          
+          xcodebuild archive \
+            -project BankongSetonStudent.xcodeproj \
+            -scheme BankongSetonStudent \
+            -configuration Release \
+            -destination "generic/platform=iOS" \
+            -archivePath build/BankongSetonStudent \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="$CERT_ID" \
+            PROVISIONING_PROFILE="$PROFILE_UUID"
+
+      - name: Export IPA
+        run: |
+          cd mobile/ios/BankongSetonStudent
+          
+          # Create export options plist
+          PROFILE_UUID=$(grep -o '[A-F0-9-]\{36\}' ~/Library/MobileDevice/Provisioning\ Profiles/*.mobileprovision 2>/dev/null | head -1)
+          
+          cat > exportOptions.plist << 'EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>method</key>
+              <string>development</string>
+              <key>teamId</key>
+              <string>${{ secrets.APPLE_TEAM_ID }}</string>
+              <key>signingStyle</key>
+              <string>manual</string>
+              <key>signingCertificate</key>
+              <string>iPhone Developer</string>
+              <key>provisioningProfiles</key>
+              <dict>
+                  <key>com.bankongseton.student</key>
+                  <string>PROFILE_UUID_PLACEHOLDER</string>
+              </dict>
+          </dict>
+          </plist>
+          EOF
+          
+          sed -i '' "s/PROFILE_UUID_PLACEHOLDER/$PROFILE_UUID/" exportOptions.plist
+          
+          xcodebuild -exportArchive \
+            -archivePath build/BankongSetonStudent.xcarchive \
+            -exportPath build \
+            -exportOptionsPlist exportOptions.plist
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: BankongSetonStudent.ipa
+          path: mobile/ios/BankongSetonStudent/build/BankongSetonStudent.ipa
+          retention-days: 30
+
+  build-ios-release:
+    name: Build iOS Release (App Store)
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: macos-14
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure Keychain
+        run: |
+          keychain initialize
+          keychain create TemporaryKeychain
+          keychain unlock TemporaryKeychain
+
+      - name: Import Certificate
+        env:
+          CERTIFICATE: ${{ secrets.CERTIFICATE_DATA }}
+          CERTIFICATE_PASSWORD: ${{ secrets.CERTIFICATE_PASSWORD }}
+        run: |
+          echo "$CERTIFICATE" | base64 --decode -o certificate.p12
+          security import certificate.p12 -P "$CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k TemporaryKeychain
+
+      - name: Import Provisioning Profile
+        env:
+          PROVISIONING_PROFILE: ${{ secrets.PROVISIONING_PROFILE_DATA }}
+        run: |
+          echo "$PROVISIONING_PROFILE" | base64 --decode -o provisioning.mobileprovision
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          cp provisioning.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
+
+      - name: Build and Archive
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+        run: |
+          cd mobile/ios/BankongSetonStudent
+          
+          CERT_ID=$(security find-identity -v -p codesigning | grep "Apple Distribution" | head -1 | sed 's/.*"\(.*\)".*/\1/')
+          PROFILE_UUID=$(grep -o '[A-F0-9-]\{36\}' ~/Library/MobileDevice/Provisioning\ Profiles/*.mobileprovision | head -1)
+          
+          xcodebuild archive \
+            -project BankongSetonStudent.xcodeproj \
+            -scheme BankongSetonStudent \
+            -configuration Release \
+            -destination "generic/platform=iOS" \
+            -archivePath build/BankongSetonStudent \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="$CERT_ID" \
+            PROVISIONING_PROFILE="$PROFILE_UUID"
+
+      - name: Export IPA
+        run: |
+          cd mobile/ios/BankongSetonStudent
+          PROFILE_UUID=$(grep -o '[A-F0-9-]\{36\}' ~/Library/MobileDevice/Provisioning\ Profiles/*.mobileprovision | head -1)
+          
+          cat > exportOptions.plist << EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>method</key>
+              <string>app-store</string>
+              <key>teamId</key>
+              <string>${{ secrets.APPLE_TEAM_ID }}</string>
+          </dict>
+          </plist>
+          EOF
+          
+          xcodebuild -exportArchive \
+            -archivePath build/BankongSetonStudent.xcarchive \
+            -exportPath build \
+            -exportOptionsPlist exportOptions.plist
+
+      - name: Upload IPA to GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: mobile/ios/BankongSetonStudent/build/BankongSetonStudent.ipa
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
