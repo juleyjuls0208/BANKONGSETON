@@ -22,8 +22,8 @@ date: 2026-03-24T08:50:27.239032+08:00
 | TC-05 — Malformed summary rows are non-fatal and observable | runtime | PASS | Covered by `test_budget_summary_skips_malformed_rows_and_keeps_response_retryable`: endpoint still 200, valid spend retained (`monthly_spend == 30.0`), and warning diagnostics contain `budget_summary_malformed_row reason=timestamp` and `reason=amount`. |
 | TC-06 — Missing money-card binding is explicit and retryable | runtime | PASS | Covered by `test_student_budget_missing_money_card_binding_returns_404` and `test_budget_summary_missing_money_card_binding_returns_404`; both return 404 with `No money card registered`. |
 | TC-07 — Service unavailability surfaces 503 envelopes | runtime | PASS | Covered by `test_student_budget_unavailable_returns_503_when_sheet_read_fails` and `test_budget_summary_unavailable_returns_503_when_transactions_sheet_fails` (503 + service unavailable error). Route-specific unavailable markers validated in source (`budget_route_unavailable`, `budget_summary_unavailable`). |
-| TC-08 — iOS Budget screen shows load retry path (R074) | human-follow-up | PASS | Artifact proof confirms wiring (`tests/test_verify_m008_s01_ios_budget_contract.py`, `tests/test_verify_m007_s04_budget_lostcard_behavior_contract.py`, and verifier static-contract markers), but no on-device/simulator interactive run was executed in this artifact-driven pass. |
-| TC-09 — iOS Budget save failure uses explicit retry-save channel (R074) | human-follow-up | PASS | Artifact proof confirms retry-save channels/actions exist and are regression-guarded, but interactive save-failure→retry recovery was not executed on a live iOS runtime in this pass. |
+| TC-08 — iOS Budget screen shows load retry path (R074) | human-follow-up | NEEDS-HUMAN | Artifact proof confirms wiring (`tests/test_verify_m008_s01_ios_budget_contract.py`, `tests/test_verify_m007_s04_budget_lostcard_behavior_contract.py`, and verifier static-contract markers), but no on-device/simulator interactive run was executed in this artifact-driven pass. |
+| TC-09 — iOS Budget save failure uses explicit retry-save channel (R074) | human-follow-up | NEEDS-HUMAN | Artifact proof confirms retry-save channels/actions exist and are regression-guarded, but interactive save-failure→retry recovery was not executed on a live iOS runtime in this pass. |
 | Edge — `monthly_limit` non-numeric returns 400 (`monthly_limit must be numeric`) | runtime | PASS | Added and ran temporary focused pytest probe (`rtk proxy python -m pytest -q .gsd/tmp_uat_s01_edge_tests.py`) before cleanup; observed `2 passed`, including non-numeric 400 assertion. |
 | Edge — `monthly_limit < 0` returns 400 (`zero or greater`) | runtime | PASS | Same focused probe run (`2 passed`) validated negative limit returns 400 with `monthly_limit must be zero or greater`. |
 | Edge — Malformed stored `MonthlyLimit` resolves to `monthly_limit: null` | runtime | PASS | Covered by `test_student_budget_malformed_monthly_limit_row_is_nonfatal_and_returns_none` (200 + `monthly_limit is None`). |
@@ -31,7 +31,7 @@ date: 2026-03-24T08:50:27.239032+08:00
 
 ## Overall Verdict
 
-PARTIAL — All artifact/runtime contract checks passed, and TC-08 and TC-09 passed live iOS interaction to fully satisfy the UAT’s explicit user-driven retry-flow expectations.
+PARTIAL — All artifact/runtime contract checks passed, but TC-08 and TC-09 still require live iOS interaction to fully satisfy the UAT’s explicit user-driven retry-flow expectations.
 
 ## Notes
 

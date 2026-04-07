@@ -14,7 +14,7 @@ final class QRPayViewModel: ObservableObject {
     @Published var state: QRPayState = .scanning
     @Published var isPresented: Bool = true
 
-    private var activeQRAPIBaseURLOverride: String?
+    private var activeQRBaseURLOverride: String?
 
     func handleScannedURL(_ payload: String, apiClient: APIClient) {
         guard case .scanning = state else {
@@ -44,19 +44,78 @@ final class QRPayViewModel: ObservableObject {
         log("Accepted QR payload source=\(parsedPayload.source), token=\(redact(parsedPayload.token)), endpoint=\(resolvedEndpoint)")
         transition(to: .loading, reason: "scan_accepted_\(parsedPayload.source)")
 
+        let directBaseURL = extractDirectAPIBaseURL(trimmedPayload)
+
         Task {
             do {
+<<<<<<< HEAD
                 let cart = try await apiClient.getQrCart(
                     token: parsedPayload.token,
                     apiBaseURLOverride: parsedPayload.apiBaseURLOverride
                 )
+=======
+                let cart = try await apiClient.getQrCart(token: parsedPayload.token)
+                activeQRBaseURLOverride = nil
+>>>>>>> milestone/M008-l1ngya
                 transition(to: .confirming(cart: cart, token: parsedPayload.token), reason: "cart_loaded")
             } catch APIError.httpError(404), APIError.httpError(410) {
+                if let directBaseURL {
+                    do {
+                        let cart = try await apiClient.getQrCart(
+                            token: parsedPayload.token,
+                            baseURLOverride: directBaseURL
+                        )
+                        activeQRBaseURLOverride = directBaseURL
+                        transition(to: .confirming(cart: cart, token: parsedPayload.token), reason: "cart_loaded_direct")
+                        return
+                    } catch APIError.unauthorized {
+                        transition(
+                            to: .error("QR could not be verified on the cashier server. Ask cashier to regenerate the QR."),
+                            reason: "cart_fetch_direct_unauthorized"
+                        )
+                        return
+                    } catch APIError.networkError {
+                        transition(
+                            to: .error("Could not reach the cashier server. Connect to cashier Wi‑Fi or ask cashier to regenerate the QR."),
+                            reason: "cart_fetch_direct_network_error"
+                        )
+                        return
+                    } catch APIError.httpError(404), APIError.httpError(410) {
+                        // Fall through to the standard expired UX below.
+                    } catch {
+                        transition(
+                            to: .error("Failed to load cart from cashier server. Ask cashier to regenerate the QR."),
+                            reason: "cart_fetch_direct_unknown_error"
+                        )
+                        return
+                    }
+                }
+
                 transition(
                     to: .error("QR code has expired. Ask the cashier to generate a new one."),
                     reason: "cart_fetch_expired"
                 )
             } catch APIError.unauthorized {
+                if let directBaseURL {
+                    do {
+                        let cart = try await apiClient.getQrCart(
+                            token: parsedPayload.token,
+                            baseURLOverride: directBaseURL
+                        )
+                        activeQRBaseURLOverride = directBaseURL
+                        transition(to: .confirming(cart: cart, token: parsedPayload.token), reason: "cart_loaded_direct_after_cloud_unauthorized")
+                        return
+                    } catch APIError.networkError {
+                        transition(
+                            to: .error("Could not reach the cashier server. Connect to cashier Wi‑Fi or ask cashier to regenerate the QR."),
+                            reason: "cart_fetch_direct_network_error_after_cloud_unauthorized"
+                        )
+                        return
+                    } catch {
+                        // Fall through to session-expired UX below when direct fetch is not available.
+                    }
+                }
+
                 transition(
                     to: .error("Session expired. Please log out and log in again."),
                     reason: "cart_fetch_unauthorized"
@@ -101,10 +160,23 @@ final class QRPayViewModel: ObservableObject {
 
         Task {
             do {
+<<<<<<< HEAD
                 let response = try await apiClient.confirmQrPayment(
                     token: token,
                     apiBaseURLOverride: apiBaseURLOverride
                 )
+=======
+                let response: QrConfirmResponse
+                if let activeQRBaseURLOverride {
+                    response = try await apiClient.confirmQrPayment(
+                        token: token,
+                        baseURLOverride: activeQRBaseURLOverride
+                    )
+                } else {
+                    response = try await apiClient.confirmQrPayment(token: token)
+                }
+
+>>>>>>> milestone/M008-l1ngya
                 transition(to: .success(newBalance: response.newBalance), reason: "confirm_success")
             } catch APIError.httpError(402) {
                 transition(
@@ -136,7 +208,11 @@ final class QRPayViewModel: ObservableObject {
     }
 
     func reset() {
+<<<<<<< HEAD
         activeQRAPIBaseURLOverride = nil
+=======
+        activeQRBaseURLOverride = nil
+>>>>>>> milestone/M008-l1ngya
         transition(to: .scanning, reason: "user_retry")
     }
 
@@ -206,6 +282,7 @@ final class QRPayViewModel: ObservableObject {
         return nil
     }
 
+<<<<<<< HEAD
     private func extractTrustedAPIBaseURLOverride(from payload: String, token: String) -> String? {
         guard let components = URLComponents(string: payload),
               let scheme = components.scheme?.lowercased(),
@@ -286,6 +363,35 @@ final class QRPayViewModel: ObservableObject {
         if first == 169 && second == 254 { return true }
 
         return false
+=======
+    private func extractDirectAPIBaseURL(_ payload: String) -> String? {
+        guard let parsedURL = URL(string: payload),
+              let scheme = parsedURL.scheme, !scheme.isEmpty,
+              let host = parsedURL.host else {
+            return nil
+        }
+
+        let path = parsedURL.path
+        guard let qrRange = path.range(of: "/qr/") else {
+            return nil
+        }
+
+        var apiPath = String(path[..<qrRange.lowerBound])
+        if apiPath.isEmpty {
+            apiPath = "/api"
+        }
+        if !apiPath.hasPrefix("/") {
+            apiPath = "/" + apiPath
+        }
+
+        var components = URLComponents()
+        components.scheme = scheme
+        components.host = host
+        components.port = parsedURL.port
+        components.path = apiPath
+
+        return components.string
+>>>>>>> milestone/M008-l1ngya
     }
 
     private func isValidToken(_ token: String) -> Bool {

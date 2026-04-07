@@ -1,102 +1,91 @@
-# M008-l1ngya: 
+# M008-l1ngya: iOS UX Rollback + Minimalist Refresh
 
-## Vision
-TBD
+**Vision:** Bring back old iOS UI/UX because the current app feels messy and laggy, then ship a speed-first minimalist refresh with credit-card Home balance design, filter-only Transactions (no search bar), appearance controls (theme + accent), native tab navigation, and reliable budget loading.
 
-## Slice Overview
-| ID | Slice | Risk | Depends | Done | After this |
-|----|-------|------|---------|------|------------|
-| S01 | Budget Contract Restoration (Backend + iOS) | high | — | ✅ | Budget API contract is available and contract-guarded. |
-| S02 | Full UX Rollback Baseline + Native Tab Bar | medium | — | ✅ | # S02: Full UX Rollback Baseline + Native Tab Bar — UAT
+## Success Criteria
 
-**Milestone:** M008-l1ngya
-**Written:** 2026-03-27T10:09:46.924Z
+- User can run the iOS app with restored old-UX structure, native tab bar, and no floating custom shell.
+- Home screen shows name + current balance in a clear credit-card-style design that still feels lightweight and fast.
+- Transactions exposes filter-only behavior with `QR Pay` / `Card Pay` / `Load` and no search bar.
+- Budget limit/spend segments load from backend contract reliably or show explicit retryable failures (no silent stale fallback masking).
+- User completes manual on-device validation and provides explicit PASS/FAIL for milestone acceptance.
 
-# S02: Full UX Rollback Baseline + Native Tab Bar — UAT
+## Slices
 
-**Milestone:** M008-l1ngya
-**Written:** 2026-03-27
+- [x] **S01: Budget Contract Restoration (Backend + iOS)** `risk:high` `depends:[]`
+  > After this: Budget limit and spend segments load from a real backend contract (or fail explicitly with retryable messaging), eliminating hidden segment-failure ambiguity.
 
-## UAT Type
+- [ ] **S02: Full UX Rollback Baseline + Native Tab Bar** `risk:high` `depends:[]`
+  > After this: iOS returns to pre-M007 structural UX baseline (`558d8bc`) with native `TabView` chrome replacing the floating custom shell.
 
-- UAT mode: artifact-driven
-- Why this mode is sufficient: S02 is a structural shell + regression-gate slice; acceptance is based on source contracts and phased verifier behavior, not device-only runtime interactions.
+- [ ] **S03: Home Credit-Card Balance Hero + QR Continuity Guard** `risk:medium` `depends:[S02]`
+  > After this: Home presents a minimalist credit-card balance design while preserving QR payment entry and post-success continuity.
 
-## Preconditions
+- [ ] **S04: Transactions Filter-Only + Appearance (Theme/Accent)** `risk:medium` `depends:[S02]`
+  > After this: Transactions uses filter-only UX with no search bar, and Settings exposes minimalist appearance controls (theme + accent only).
 
-- Repo is at `C:\Users\admin\Desktop\projects\BANKONGSETON`.
-- Python + pytest are available in the active environment.
-- iOS source files and verifier scripts exist at:
-  - `mobile/ios/BankongSetonStudent/Views/MainTabView.swift`
-  - `tests/test_verify_m008_s02_ios_rollback_contract.py`
-  - `scripts/verify-m008-s02.sh`
-- On Windows hosts without `/bin/bash`, Git Bash executable is available at `C:\Program Files\Git\bin\bash.exe`.
+- [ ] **S05: Speed-First Minimalism Pass Across iOS Surfaces** `risk:medium` `depends:[S01,S02,S03,S04]`
+  > After this: Heavy visual/motion overhead is removed across key screens and budget states are integrated cleanly into the refreshed UX.
 
-## Smoke Test
+- [ ] **S06: Final Integration + Manual Device Acceptance Gate** `risk:low` `depends:[S01,S02,S03,S04,S05]`
+  > After this: Full app path is validated end-to-end and user issues explicit PASS/FAIL milestone verdict from real device testing.
 
-Run:
+## Boundary Map
 
-1. `rtk proxy "C:\Program Files\Git\bin\bash.exe" scripts/verify-m008-s02.sh`
-2. **Expected:** all phases pass and final line reports `[verify-m008-s02] status=passed`.
+### S01 → S02
 
-## Test Cases
+Produces:
+- Backend budget route contract: `GET /api/student/budget`, `POST /api/student/budget`, `GET /api/budget-summary`
+- `Student Budgets` persisted shape (`student_id`, `monthly_limit`, `year_month`, `updated_at`)
+- iOS budget DTO compatibility for `monthly_limit` and `monthly_spend`
 
-### 1. Native tab shell contract is present
+Consumes:
+- nothing (first slice)
 
-1. Run `rtk proxy python -m pytest -q tests/test_verify_m008_s02_ios_rollback_contract.py::test_main_tab_view_uses_native_tab_view_with_all_four_tab_items`
-2. **Expected:** pass; confirms `TabView(selection:)`, four `Label(...)` tab items, and four matching `.tag(...)` markers are present in `MainTabView.swift`.
+### S02 → S03
 
-### 2. Floating stitch shell markers are removed
+Produces:
+- Native `TabView` shell contract (`MainTabView`) with Home/History/Budget/Settings navigation continuity
+- Pre-M007 baseline layout surfaces restored for downstream targeted refresh
 
-1. Run `rtk proxy python -m pytest -q tests/test_verify_m008_s02_ios_rollback_contract.py::test_main_tab_view_removes_stitch_shell_markers`
-2. **Expected:** pass; confirms forbidden markers (`StitchTabShell(`, `StitchTabItem<MainTab>`, `shellTabs`) are absent.
+Consumes:
+- nothing (first slice)
 
-### 3. Session-expired alert behavior is preserved
+### S02 → S04
 
-1. Run `rtk proxy python -m pytest -q tests/test_verify_m008_s02_ios_rollback_contract.py::test_main_tab_view_preserves_session_expired_alert_behavior`
-2. **Expected:** pass; confirms alert title/text, `Sign In` action, and `authManager.clearAll()` are still wired.
+Produces:
+- Transactions and Settings baseline UI seams compatible with targeted control changes
+- Removal path for floating shell-specific dependencies
 
-### 4. Regression harness still protects budget/QR/login
+Consumes:
+- nothing (first slice)
 
-1. Run `rtk proxy "C:\Program Files\Git\bin\bash.exe" scripts/verify-m008-s02.sh`
-2. **Expected:** each phase passes:
-   - `s02-rollback-contract`
-   - `budget-regression`
-   - `qr-regression`
-   - `login-regression`
-3. **Expected:** no phase emits `status=failed` or `guidance=` failure lines.
+### S03 → S05
 
-## Edge Cases
+Produces:
+- Home credit-card hero composition + QR continuity invariants
+- Minimalist visual hierarchy tokens for high-priority balance/pay surfaces
 
-### Windows shell-path fallback for verifier execution
+Consumes from S02:
+- Restored baseline shell and screen structure
 
-1. Run `rtk proxy bash scripts/verify-m008-s02.sh` on a host with no `/bin/bash`.
-2. Confirm failure reflects shell-availability issue, not contract regressions.
-3. Re-run with `rtk proxy "C:\Program Files\Git\bin\bash.exe" scripts/verify-m008-s02.sh`.
-4. **Expected:** second command passes fully, proving verifier semantics are intact under Windows fallback path.
+### S04 → S05
 
-## Failure Signals
+Produces:
+- Filter-only transactions interaction contract (no search bar)
+- Appearance settings contract limited to theme + accent
 
-- Any missing/forbidden marker assertion in `test_verify_m008_s02_ios_rollback_contract.py`.
-- Any `phase=<name> status=failed` line in `scripts/verify-m008-s02.sh` output.
-- `guidance=` lines indicating tab-shell drift, budget regression, QR regression, or login payload drift.
+Consumes from S02:
+- Restored transactions/settings baseline structure
 
-## Requirements Proved By This UAT
+### S01,S03,S04,S05 → S06
 
-- R069 — Native `TabView` navigation shell is implemented and protected by executable contract checks.
-- R076 (partial guard) — QR continuity regression suite remains enforced during shell rollback.
+Produces:
+- Integrated iOS runtime path with reliable budget behavior and minimalist UX acceptance package
+- Final manual device pass/fail artifact expectation for closure
 
-## Not Proven By This UAT
-
-- Full pre-M007 UX rollback across all iOS surfaces (home hero redesign, transactions UX simplification, settings scope trim).
-- On-device performance/feel acceptance on physical iOS hardware (deferred to later M008 slices and final manual acceptance gate).
-
-## Notes for Tester
-
-- Use the phased verifier as the canonical S02 signal first; run individual tests only when a phase fails and deeper triage is needed.
-- On Windows, treat `/bin/bash` errors as environment constraints and use Git Bash path execution for authoritative results.
- |
-| S03 | Home Rollback + Credit-Card Hero + QR Continuity | high | S02 | ✅ | Home shows minimalist credit-card balance hero with preserved QR entry/continuity checks passing. |
-| S04 | Transactions/Settings Minimalist Scope Restoration | high | S03 | ✅ | Transactions is filter-only (no search) and Settings exposes theme+accent-only appearance controls. |
-| S05 | Integrated UX Closure + Requirement Validation | medium | S01, S02, S03, S04 | ✅ | Integrated login→home→transactions→budget→settings flow passes contract and regression suites with no QR regressions. |
-| S06 | Manual On-Device UAT Gate | medium | S05 | ✅ | User executes manual iOS device acceptance and records explicit PASS/FAIL evidence for milestone closeout. |
+Consumes:
+- S01 budget API + data contract
+- S03 Home + QR continuity output
+- S04 transactions/appearance scoped controls
+- S05 speed-first minimalism integration pass

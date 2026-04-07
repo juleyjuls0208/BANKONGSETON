@@ -341,3 +341,36 @@ When a slice says "UI-only rollback", it's tempting to leave the backing ViewMod
 3. R072/R071 compliance gaps
 
 **Counter-example (correct):** T01 left `personalInfoCard` in SettingsView because "the VM still has the properties." T02 discovered the S04 contract test failed — `personalInfoCard` was still present in source. Full excision from both SettingsView and SettingsViewModel was required for compliance. Always verify rollback completeness with contract tests that assert forbidden markers are absent.
+
+---
+
+## Student budget sheet creation tests: patch `get_sheets_client` when simulating `WorksheetNotFound`
+
+`backend/api/api_server.py` uses `get_worksheet_with_retry()`, which retries any worksheet error by refreshing `db = get_sheets_client()`. In pre-import mocked tests, intentionally raising `gspread.exceptions.WorksheetNotFound` for lazy-create flows will trigger that refresh path before route-level handling.
+
+**Rule:** for unit tests that simulate missing worksheets, patch both:
+1. `gspread.service_account` before module import (for module-level `db = get_sheets_client()`), and
+2. `module.get_sheets_client` after import to return the same mocked spreadsheet.
+
+Without step (2), retry logic can leak to real credential loading (`credentials.json`) and produce false 500s unrelated to route contract behavior.
+
+---
+
+## Budget summary spend parsing: check both `TransactionType` and legacy `Type` columns
+
+`Transactions Log` rows are not fully uniform across flows: some records use `TransactionType`, while older/alternate writers may populate only `Type`.
+
+**Rule:** when deriving `monthly_spend`, treat a row as spend only when:
+1. `Status` is `Completed`,
+2. transaction type resolves from `TransactionType` **or** fallback `Type`, and
+3. amount/timestamp parsing succeeds.
+
+Malformed timestamp/amount rows should be skipped with structured warning logs rather than failing the entire summary response.
+
+---
+
+## Pytest `-k` wrapper compatibility: normalize one layer of surrounding quotes in test config
+
+Some external verification wrappers pass keyword selectors as literal quoted strings (for example, `-k '"student_budget"'`) instead of shell-unwrapped expressions. Pytest treats that as invalid expression syntax and exits with code 4 before collection.
+
+**Rule:** in repo-level pytest config hooks, normalize `config.option.keyword` by stripping exactly one matching pair of outer single/double quotes when present. This keeps normal `-k student_budget` behavior unchanged while making wrapped invocations deterministic.

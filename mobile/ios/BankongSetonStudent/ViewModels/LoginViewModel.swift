@@ -23,6 +23,8 @@ final class LoginViewModel: ObservableObject {
             authManager.login(token: response.token, student: response.student, jwtToken: response.jwtToken)
         } catch APIError.cardLost {
             errorMessage = "Your card has been reported lost. Please contact the canteen admin."
+        } catch APIError.loginRejected(let message) {
+            errorMessage = message
         } catch APIError.unauthorized {
             errorMessage = "Invalid student ID. Please try again."
         } catch APIError.httpError(let code) {
