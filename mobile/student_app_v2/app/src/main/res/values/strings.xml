@@ -71,4 +71,20 @@
     <string name="qr_pay_scanning">Point camera at QR code on terminal</string>
     <string name="qr_pay_confirm_title">Confirm Payment</string>
     <string name="qr_pay_confirm_button">Pay Now</string>
+
+    <!-- Budget -->
+    <string name="budget_change_limit">Change Budget</string>
+    <string name="budget_remaining">remaining</string>
+
+    <!-- History filters -->
+    <string name="filter_all">All</string>
+    <string name="filter_qr_pay">QR Pay</string>
+    <string name="filter_card_pay">Card Pay</string>
+    <string name="filter_load">Load</string>
+
+    <!-- Nav -->
+    <string name="nav_home">Home</string>
+    <string name="nav_history">History</string>
+    <string name="nav_budget">Budget</string>
+    <string name="nav_settings">Settings</string>
 </resources>

@@ -13,15 +13,12 @@ class MainActivity : AppCompatActivity() {
         
         secureStorage = SecureStorage(this)
         
-        // Check if user is logged in
+        // Check if user is logged in — v2 uses MainNavActivity shell
         if (secureStorage.isLoggedIn()) {
-            // Go to home
-            startActivity(Intent(this, HomeActivity::class.java))
+            startActivity(Intent(this, MainNavActivity::class.java))
         } else {
-            // Go to login
             startActivity(Intent(this, LoginActivity::class.java))
         }
-        
         finish()
     }
 }

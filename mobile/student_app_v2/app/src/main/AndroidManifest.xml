@@ -38,6 +38,10 @@
             android:exported="false" />
 
         <activity
+            android:name=".MainNavActivity"
+            android:exported="false" />
+
+        <activity
             android:name=".HomeActivity"
             android:exported="false" />
 
