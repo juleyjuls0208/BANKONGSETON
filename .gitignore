@@ -109,3 +109,7 @@ coverage/
 
 # ── GSD baseline (auto-generated) ──
 .gsd-id
+
+# ── GSD baseline (auto-generated) ──
+.mcp.json
+.bg-shell/
