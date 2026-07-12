@@ -888,17 +888,20 @@
       const scene = new TEX.Scene();
       const camera = new TEX.PerspectiveCamera(34, canvas.clientWidth / canvas.clientHeight, 0.1, 100);
       camera.position.set(0, 0.85, 4.7);
-      camera.lookAt(0, 0.05, 0);
+      camera.lookAt(0, 0.7, 0);
 
       const pmrem = new TEX.PMREMGenerator(renderer);
       pmrem.compileEquirectangularShader();
       const envTex = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
       scene.environment = envTex;
 
-      scene.add(new TEX.HemisphereLight(0xffffff, 0x23232b, 0.35));
-      const key  = new TEX.DirectionalLight(0xfff4e2, 1.1); key.position.set(2.0, 2.6, 3.4);  scene.add(key);
-      const fill = new TEX.DirectionalLight(0xbcd4ff, 0.4); fill.position.set(-3.0, 0.6, 2.0); scene.add(fill);
-      const rim  = new TEX.DirectionalLight(0xffe6bd, 0.8); rim.position.set(0.6, 2.2, -3.2);  scene.add(rim);
+      scene.add(new TEX.HemisphereLight(0xffffff, 0x23232b, 0.45));
+      const key  = new TEX.DirectionalLight(0xfff4e2, 1.6); key.position.set(2.0, 3.2, 3.4);  scene.add(key);
+      const fill = new TEX.DirectionalLight(0xbcd4ff, 0.55); fill.position.set(-3.0, 1.2, 2.0); scene.add(fill);
+      const rim  = new TEX.DirectionalLight(0xffe6bd, 1.1); rim.position.set(0.6, 2.8, -3.2);  scene.add(rim);
+      // Animated specular sweep — a bright point light that orbits in front of the card so a
+      // moving glint travels across it even while it just rotates in place.
+      const glint = new TEX.PointLight(0xffffff, 90, 0, 2.0); glint.position.set(0, 0.6, 3.2); scene.add(glint);
 
       function buildProceduralCard(TEX) {
         const w = 1.5, h = 0.945, r = 0.13;
@@ -932,11 +935,11 @@
           o.material = new TEX.MeshPhysicalMaterial({
               color: 0xffffff,
               map: src && src.map ? src.map : null,
-              roughness: 0.08,
-              metalness: 0.7,
+              roughness: 0.045,
+              metalness: 0.85,
               clearcoat: 1.0,
-              clearcoatRoughness: 0.03,
-              envMapIntensity: 2.4,
+              clearcoatRoughness: 0.02,
+              envMapIntensity: 3.4,
               transparent: !!(src && src.transparent),
               side: TEX.FrontSide,
               flatShading: false,
@@ -967,6 +970,7 @@
       const inner = new TEX.Group();   // carries the static 45° roll; card centered inside
       inner.add(card);
       pivot.add(inner);                // pivot carries interactive yaw + pitch
+      pivot.position.y = 0.85;          // lift the card up, above the "Tap. Pay. Done." copy
       scene.add(pivot);
 
       const composer = new EffectComposer(renderer);
@@ -984,8 +988,8 @@
       const shadow = new TEX.Mesh(new TEX.PlaneGeometry(3.2, 1.8),
         new TEX.MeshBasicMaterial({ map: new TEX.CanvasTexture(sc), transparent: true, depthWrite: false, opacity: 0.8 }));
       shadow.rotation.x = -Math.PI / 2;
-      shadow.position.y = -1.2 * 0.82; shadow.scale.setScalar(0.82);
-      const shadowBaseY = -1.2 * 0.82; scene.add(shadow);
+      shadow.position.y = -0.35; shadow.scale.setScalar(0.82);
+      const shadowBaseY = -0.35; scene.add(shadow);
 
       const clock = new TEX.Clock();
       const STAND_X = 0.0;
@@ -1042,6 +1046,11 @@
         inner.rotation.set(0, 0, BASE_ROLL);
         pivot.rotation.y = curYaw;
         pivot.rotation.x = curPitch;
+        // Sweep the specular glint horizontally across the card face so a highlight
+        // travels over it even when it's just rotating in place.
+        const t = clock.elapsedTime;
+        glint.position.x = Math.sin(t * 0.9) * 2.6;
+        glint.position.y = 0.85 + Math.cos(t * 0.6) * 0.5;
         shadow.position.y = shadowBaseY;
         renderer.render(scene, camera);
       };
