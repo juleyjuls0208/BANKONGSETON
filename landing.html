@@ -1047,10 +1047,11 @@
         pivot.rotation.y = curYaw;
         pivot.rotation.x = curPitch;
         // Sweep the specular glint horizontally across the card face so a highlight
-        // travels over it even when it's just rotating in place.
+        // travels over it even when it's just rotating in place. Horizontal only —
+        // vertical bobbing looked off.
         const t = clock.elapsedTime;
         glint.position.x = Math.sin(t * 0.9) * 2.6;
-        glint.position.y = 0.85 + Math.cos(t * 0.6) * 0.5;
+        glint.position.y = 0.85;
         shadow.position.y = shadowBaseY;
         renderer.render(scene, camera);
       };
