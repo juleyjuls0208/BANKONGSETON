@@ -240,6 +240,8 @@
   .role-tag .dot{width:8px;height:8px;border-radius:50%;background:var(--acid)}
   .role-panel h2{font-size:clamp(2rem,4.4vw,3.4rem);margin-bottom:18px}
   .role-panel .lead{margin-bottom:26px}
+  /* Nudge the role copy inward so it reads more centered, not hard against the left. */
+  .role-panel .copy{padding-left:clamp(20px,7vw,110px)}
   .role-list{list-style:none;display:flex;flex-direction:column;gap:12px}
   .role-list li{display:flex;gap:10px;align-items:flex-start;font-size:1rem;color:var(--ink)}
   .role-list li svg{width:18px;height:18px;color:var(--acid-deep);flex:0 0 auto;margin-top:3px}
@@ -520,9 +522,7 @@
       <div class="role-panel active" data-role="0" data-name="For Students">
         <div class="split">
           <div class="copy section-head">
-            <div class="role-tag"><span class="dot"></span> For Students</div>
             <h2>Tap and go.</h2>
-            <p class="lead">Your balance is always on the reader. Tap your money card, confirm with your ID, and you're done — before the line moves.</p>
             <ul class="role-list">
               <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6L9 17l-5-5"/></svg> Money card tap → balance shows instantly</li>
               <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6L9 17l-5-5"/></svg> Confirm with your ID card</li>
@@ -553,9 +553,7 @@
       <div class="role-panel" data-role="1" data-name="For Teachers &amp; Cashiers">
         <div class="split">
           <div class="copy section-head">
-            <div class="role-tag"><span class="dot"></span> For Teachers &amp; Cashiers</div>
             <h2>Run the station.</h2>
-            <p class="lead">Teachers track their advisory at a glance; cashiers just wait for the tap. The system reads the card so nobody types a thing.</p>
             <ul class="role-list">
               <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6L9 17l-5-5"/></svg> No manual entry — wait for the tap</li>
               <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6L9 17l-5-5"/></svg> Audio alert on success / low balance</li>
@@ -582,9 +580,7 @@
       <div class="role-panel" data-role="2" data-name="For Admins">
         <div class="split">
           <div class="copy section-head">
-            <div class="role-tag"><span class="dot"></span> For Admins</div>
             <h2>One dashboard.</h2>
-            <p class="lead">Register, load, and oversee everything from a single place. Flag a lost card, export a report, and watch fraud alerts in real time.</p>
             <ul class="role-list">
               <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6L9 17l-5-5"/></svg> Register a student with one ID tap</li>
               <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6L9 17l-5-5"/></svg> Load balance &amp; freeze lost cards</li>
