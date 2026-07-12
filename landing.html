@@ -139,6 +139,9 @@
 
   /* ===== Statement ===== */
   .statement{padding:clamp(90px,14vw,160px) 0;text-align:center;background:radial-gradient(60% 60% at 50% 30%, rgba(230,194,41,0.10), transparent 60%),var(--bg)}
+  /* The big BANKONGSETON word can render wider than the default text container (980px);
+     let the statement container use full width so text-align:center has room to center it. */
+  .statement .wrap-text{max-width:none}
   .statement-word{margin-bottom:26px}
   .statement-sub{font-family:var(--display);font-size:clamp(1.3rem,3.4vw,2.4rem);font-weight:500;letter-spacing:-0.02em;line-height:1.15;max-width:20ch;margin:0 auto;color:var(--ink)}
   .statement-sub b{color:var(--acid-deep);font-weight:600;background:linear-gradient(transparent 62%, rgba(230,194,41,0.45) 62%)}
