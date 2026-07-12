@@ -240,8 +240,13 @@
   .role-tag .dot{width:8px;height:8px;border-radius:50%;background:var(--acid)}
   .role-panel h2{font-size:clamp(2rem,4.4vw,3.4rem);margin-bottom:18px}
   .role-panel .lead{margin-bottom:26px}
-  /* Nudge the role copy inward so it reads more centered, not hard against the left. */
-  .role-panel .copy{padding-left:clamp(20px,7vw,110px)}
+  /* Stack the roles panels vertically: preview (visual) on top, centered text below. */
+  .role-panel .split{grid-template-columns:1fr;gap:clamp(24px,4vw,40px);justify-items:center;max-width:560px;margin:0 auto}
+  .role-panel .visual{order:-1}
+  .role-panel .copy{padding-left:0;text-align:center;display:flex;flex-direction:column;align-items:center}
+  .role-panel .copy h2{max-width:none}
+  .role-panel .role-list{align-items:center}
+  .role-panel .role-list li{justify-content:center}
   .role-list{list-style:none;display:flex;flex-direction:column;gap:12px}
   .role-list li{display:flex;gap:10px;align-items:flex-start;font-size:1rem;color:var(--ink)}
   .role-list li svg{width:18px;height:18px;color:var(--acid-deep);flex:0 0 auto;margin-top:3px}
