@@ -26,4 +26,4 @@ gunicorn==21.2.0
 
 # Security
 pyjwt==2.8.0
-cryptography==41.0.7
+cryptography>=41.0.7   # ponytail: was ==41.0.7; dashboard pins 46.0.5, unify on >= so one venv resolves

@@ -1,0 +1,83 @@
+#!/usr/bin/env bash
+#
+# hostbox bootstrap — run ONCE on the Oracle VM (as root) to set up the
+# multi-site static+node host platform. Idempotent.
+#
+#   BASE_DOMAIN=yourdomain.com bash bootstrap
+#   (or run with no arg and it prompts)
+#
+# It installs nginx/certbot/node, creates /srv/hostbox, writes /etc/hostbox.conf,
+# injects common nginx TLS settings + a default server, opens the firewall,
+# and installs `addsite` to /usr/local/bin.
+set -euo pipefail
+
+HOSTBOX="${HOSTBOX:-/srv/hostbox}"
+BASE_DOMAIN="${BASE_DOMAIN:-}"
+ENV_FILE=/etc/hostbox.conf
+SRC_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+[ -z "$BASE_DOMAIN" ] && read -r -p "Base domain (e.g. yourdomain.com): " BASE_DOMAIN
+[ -z "$BASE_DOMAIN" ] && { echo "BASE_DOMAIN required"; exit 1; }
+
+echo "==> hostbox bootstrap — base: $BASE_DOMAIN  root: $HOSTBOX"
+
+# ── OS deps ──
+if command -v apt-get >/dev/null 2>&1; then
+  apt-get update -y
+  apt-get install -y nginx certbot python3-certbot-nginx git curl ufw nodejs npm
+elif command -v dnf >/dev/null 2>&1; then
+  dnf install -y nginx certbot python3-certbot-nginx git curl ufw nodejs npm
+else echo "unsupported package manager"; exit 1; fi
+
+# ── dirs ──
+mkdir -p "$HOSTBOX/_default/public" "$HOSTBOX/logs"
+cat > "$HOSTBOX/_default/public/index.html" <<'EOF'
+<!doctype html><meta charset=utf-8><title>hostbox</title><h1>hostbox</h1>
+EOF
+
+# ── config ──
+cat > "$ENV_FILE" <<EOF
+HOSTBOX=$HOSTBOX
+BASE_DOMAIN=$BASE_DOMAIN
+EOF
+
+# ── common nginx settings (loaded inside http{} via conf.d include) ──
+cat > /etc/nginx/conf.d/hostbox.conf <<'EOF'
+server_names_hash_bucket_size 64;
+ssl_session_cache shared:SSL:10m;
+ssl_session_timeout 1d;
+ssl_session_tickets off;
+ssl_stapling on;
+ssl_stapling_verify on;
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+    server_name _;
+    root /srv/hostbox/_default/public;
+    location / { try_files $uri $uri/ /index.html; }
+}
+EOF
+
+# remove Ubuntu's default site so our default_server owns :80
+rm -f /etc/nginx/sites-enabled/default
+
+# ── firewall ──
+if command -v ufw >/dev/null 2>&1; then
+  ufw --force enable; ufw allow 22,80,443/tcp
+elif command -v firewall-cmd >/dev/null 2>&1; then
+  firewall-cmd --permanent --add-service={ssh,http,https}; firewall-cmd --reload
+fi
+
+# ── install addsite ──
+cp "$SRC_DIR/addsite" /usr/local/bin/addsite
+chmod +x /usr/local/bin/addsite
+
+nginx -t
+systemctl reload nginx || systemctl restart nginx
+
+echo
+echo "==> hostbox ready. Add sites with:"
+echo "    addsite landing   static landing     # -> https://landing.$BASE_DOMAIN"
+echo "    addsite campusnav node    campusnav   # -> https://campusnav.$BASE_DOMAIN"
+echo "    then push files to /srv/hostbox/<name>/public"
+echo "    certbot auto-renews (systemd timer)."

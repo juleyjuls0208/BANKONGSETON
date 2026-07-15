@@ -1,0 +1,109 @@
+#!/usr/bin/env bash
+#
+# addsite — provision a new site on the host box (server's agent runs this).
+#
+# Usage:  addsite <name> [static|node] [subdomain]
+#   name    lowercase, no dots — used for /srv/<name>, logs, cert name
+#   type    static (default) | node  (serves $ROOT/public via `npm start` on :3000)
+#   subdomain  label under BASE_DOMAIN (default = name) -> https://<sub>.<base>
+#
+# Config comes from /etc/hostbox.conf (HOSTBOX, BASE_DOMAIN), written by bootstrap.
+#
+# Workflow for the on-server agent:
+#   1. addsite landing static landing
+#   2. cp -r <pasted project>/* /srv/hostbox/landing/public/
+#   3. (node only) systemctl restart landing
+set -euo pipefail
+
+ENV_FILE="${HOSTBOX_ENV:-/etc/hostbox.conf}"
+[ -f "$ENV_FILE" ] && . "$ENV_FILE"
+HOSTBOX="${HOSTBOX:-/srv/hostbox}"
+BASE_DOMAIN="${BASE_DOMAIN:?set BASE_DOMAIN in $ENV_FILE (run bootstrap first)}"
+
+NAME="${1:?usage: addsite <name> [static|node] [subdomain]}"
+TYPE="${2:-static}"
+SUB="${3:-$NAME}"
+DOMAIN="$SUB.$BASE_DOMAIN"
+ROOT="$HOSTBOX/$NAME"
+
+[ -d "$ROOT" ] && { echo "error: $ROOT already exists"; exit 1; }
+case "$TYPE" in static|node) ;; *) echo "type must be static|node"; exit 1 ;; esac
+
+echo "==> Provisioning $NAME ($TYPE) -> https://$DOMAIN"
+
+mkdir -p "$ROOT/public" "$ROOT/logs"
+# own the site dir so the deploy user can push files (addsite runs as root via sudo)
+chown -R "$(logname 2>/dev/null || echo "$SUDO_USER" || echo ubuntu)":"$(logname 2>/dev/null || echo "$SUDO_USER" || echo ubuntu)" "$ROOT"
+cat > "$ROOT/public/index.html" <<EOF
+<!doctype html><meta charset=utf-8><title>$NAME</title>
+<h1>$NAME</h1><p>Push site files into public/ then reload.</p>
+EOF
+
+if [ "$TYPE" = "node" ]; then
+  cat > "/etc/systemd/system/${NAME}.service" <<EOF
+[Unit]
+Description=$NAME node app
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=$ROOT/public
+EnvironmentFile=-$ROOT/.env
+ExecStart=/usr/bin/bash -lc 'cd $ROOT/public && npm install --omit=dev && npm start'
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
+EOF
+  cat > "/etc/nginx/sites-available/$NAME.conf" <<EOF
+server {
+    listen 80;
+    listen [::]:80;
+    server_name $DOMAIN;
+    client_max_body_size 25M;
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_read_timeout 120s;
+    }
+    access_log $ROOT/logs/access.log;
+    error_log  $ROOT/logs/error.log;
+}
+EOF
+  systemctl daemon-reload
+  systemctl enable "${NAME}.service"
+else
+  cat > "/etc/nginx/sites-available/$NAME.conf" <<EOF
+server {
+    listen 80;
+    listen [::]:80;
+    server_name $DOMAIN;
+    root $ROOT/public;
+    client_max_body_size 25M;
+    location / { try_files \$uri \$uri/ /index.html; }
+    access_log $ROOT/logs/access.log;
+    error_log  $ROOT/logs/error.log;
+}
+EOF
+fi
+
+ln -sf "/etc/nginx/sites-available/$NAME.conf" "/etc/nginx/sites-enabled/$NAME.conf"
+nginx -t
+systemctl reload nginx
+
+# TLS — non-interactive; if DNS for $DOMAIN isn't propagated yet, this warns
+# and you re-run: certbot --nginx -d $DOMAIN
+certbot --nginx -d "$DOMAIN" --non-interactive --agree-tos \
+  -m "admin@$BASE_DOMAIN" --redirect || \
+  echo "WARN: certbot failed — fix DNS for $DOMAIN, then: certbot --nginx -d $DOMAIN"
+
+echo "==> Done."
+echo "    Files dir    : $ROOT/public"
+echo "    $( [ "$TYPE" = node ] && echo "Start cmd    : systemctl restart $NAME" || echo "Static       : files served as-is" )"
