@@ -1,116 +1,103 @@
-# Environment and credentials
-.env
-credentials.json
-token.json
-*.key
-*.pem
-nul
 
-# Config folder credentials
-config/credentials.json
-backend/dashboard/.env
-backend/dashboard/credentials.json
-backend/api/.env
-
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-venv/
-env/
-ENV/
-.venv
-
-# Logs
-*.log
-bangko.log
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# OS
-.DS_Store
-Thumbs.db
-desktop.ini
-
-# Backup files
-*.bak
-*.backup
-*~
-
-# Database dumps
-*.sql
-*.db
-*.sqlite
-
-# Build artifacts
-build/
-dist/
-*.egg-info/
-
-# Testing
-.pytest_cache/
-.coverage
-htmlcov/
-coverage_report/
-
-# Node modules (if any)
-node_modules/
-
-# Android
-*.apk
-*.ap_
-*.dex
-.gradle/
-local.properties
-*.iml
-.kotlin/
-captures/
-.externalNativeBuild/
-.cxx/
-
-# Temporary files
-*.tmp
-temp/
-tmp/
-
-
-# ── GSD baseline (auto-generated) ──
-.gsd/activity/
-.gsd/runtime/
-.gsd/worktrees/
-.gsd/completed-units.json
-.gsd/auto.lock
-.gsd/metrics.json
-.gsd/STATE.md
-*.code-workspace
-.env.*
 !.env.example
-.next/
-*.pyc
-.venv/
-target/
-vendor/
-coverage/
-.cache/
-
 # ── GSD baseline (auto-generated) ──
-.gsd/forensics/
-.gsd/parallel/
-.gsd/gsd.db
+# Android
+# Backup files
+# Build artifacts
+# Config folder credentials
+# Database dumps
+# Environment and credentials
+# IDE
+# Logs
+# Node modules (if any)
+# OS
+# Python
+# Temporary files
+# Testing
+*$py.class
+*.ap_
+*.apk
+*.backup
+*.bak
+*.code-workspace
+*.db
+*.dex
+*.egg-info/
+*.iml
+*.key
+*.log
+*.pem
+*.py[cod]
+*.pyc
+*.so
+*.sql
+*.sqlite
+*.swo
+*.swp
+*.tmp
+*~
+.bg-shell/
+.cache/
+.coverage
+.cxx/
+.DS_Store
+.env
+.env.*
+.externalNativeBuild/
+.gradle/
+.gsd/
+.gsd/activity/
+.gsd/auto.lock
+.gsd/completed-units.json
 .gsd/DISCUSSION-MANIFEST.json
+.gsd/forensics/
+.gsd/gsd.db
+.gsd/metrics.json
 .gsd/milestones/**/*-CONTINUE.md
 .gsd/milestones/**/continue.md
-
-# ── GSD baseline (auto-generated) ──
+.gsd/parallel/
+.gsd/runtime/
+.gsd/STATE.md
+.gsd/worktrees/
 .gsd-id
-
-# ── GSD baseline (auto-generated) ──
+.idea/
+.kotlin/
 .mcp.json
-.bg-shell/
+.next/
+.planning/
+.pytest_cache/
+.Python
+.tmp_*
+.venv
+.venv/
+.vscode/
+__pycache__/
+backend/api/.env
+backend/dashboard/.env
+backend/dashboard/credentials.json
+bangko.log
+build/
+captures/
+config/credentials.json
+coverage/
+coverage_report/
+credentials.json
+desktop.ini
+dist/
+env/
+ENV/
+fix_*.py
+gsd-session-*.html
+htmlcov/
+landing.html
+local.properties
 mobile/
+node_modules/
+nul
+target/
+temp/
+Thumbs.db
+tmp/
+token.json
+vendor/
+venv/
