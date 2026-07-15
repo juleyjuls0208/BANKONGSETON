@@ -1,0 +1,4 @@
+# Extra deps for the Oracle deployment (not in the app requirements files).
+# eventlet is REQUIRED for gunicorn to serve Flask-SocketIO websockets on the
+# web dashboard. All have aarch64 (ARM) wheels.
+eventlet>=0.36.0

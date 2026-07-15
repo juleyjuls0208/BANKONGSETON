@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
+<title>Bangko ng Seton — Tech Kiosk</title>
+<style>
+  :root{--bg:#0f1b2d;--panel:#16263c;--panel2:#1e3354;--accent:#ffce47;--ok:#22c55e;--err:#ef4444;--txt:#f1f5f9;--muted:#94a3b8;}
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--txt);height:100vh;overflow:hidden;}
+  #app{display:flex;flex-direction:column;height:100vh;}
+  header{display:flex;align-items:center;justify-content:space-between;padding:16px 24px;background:rgba(0,0,0,.25);border-bottom:1px solid #ffffff14;}
+  header .brand{font-weight:700;font-size:18px;}
+  header .user{display:flex;gap:14px;align-items:center;color:var(--muted);}
+  header button{background:var(--panel2);color:var(--txt);border:none;padding:10px 16px;border-radius:10px;cursor:pointer;}
+  main{flex:1;display:flex;gap:16px;padding:16px 24px;min-height:0;}
+  .col{flex:1;display:flex;flex-direction:column;gap:14px;min-height:0;}
+  .card{background:var(--panel);border:1px solid #ffffff10;border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:12px;}
+  .card h2{margin:0;font-size:17px;}
+  .btn{padding:14px;font-size:16px;font-weight:600;border:none;border-radius:12px;background:var(--panel2);color:var(--txt);cursor:pointer;}
+  .btn.accent{background:var(--accent);color:#0f1b2d;}
+  .btn.ok{background:var(--ok);color:#06210f;}
+  .btn:disabled{opacity:.4;}
+  input{padding:14px;font-size:16px;border-radius:10px;border:none;background:#0c1726;color:var(--txt);}
+  .readout{background:#0c1726;border-radius:10px;padding:14px;font-family:monospace;min-height:60px;word-break:break-all;}
+  .msg{min-height:20px;font-size:14px;}.msg.ok{color:var(--ok);}.msg.err{color:var(--err);}
+  .tabs{display:flex;gap:8px;}
+  .tab{flex:1;padding:12px;text-align:center;background:var(--panel2);border-radius:10px;cursor:pointer;}
+  .tab.active{outline:2px solid var(--accent);}
+  .pane{display:none;flex-direction:column;gap:10px;}
+  .pane.active{display:flex;}
+  .hint{color:var(--muted);font-size:13px;}
+  .row{display:flex;gap:10px;}
+  .row>*{flex:1;}
+</style></head>
+<body>
+<div id="app">
+  <header>
+    <div class="brand">🔧 Bangko ng Seton · Tech Kiosk</div>
+    <div class="user"><span id="who"></span><button id="logout">Logout</button></div>
+  </header>
+  <main>
+    <div class="col">
+      <div class="card">
+        <h2>📡 RFID Debug</h2>
+        <div class="row">
+          <input id="port" placeholder="COM3 / /dev/ttyUSB0" value="COM3"/>
+          <button class="btn accent" id="connect" style="flex:0 0 130px;">Connect</button>
+        </div>
+        <button class="btn" id="read">Read Card (raw)</button>
+        <div class="hint">Last read:</div>
+        <div class="readout" id="readout">—</div>
+      </div>
+      <div class="card" style="flex:1;">
+        <h2>🪪 Add New Money Card</h2>
+        <div class="row">
+          <button class="btn" id="regId">1 · Tap ID Card</button>
+          <button class="btn" id="linkMoney" disabled>2 · Tap Money Card</button>
+        </div>
+        <input id="stuId" placeholder="Student ID (auto-filled after ID tap)"/>
+        <div class="msg" id="cardMsg"></div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card" style="flex:1;">
+        <h2>🛠 Card Lifecycle</h2>
+        <div class="tabs">
+          <div class="tab active" data-pane="lost">Report Lost</div>
+          <div class="tab" data-pane="replace">Replace Lost</div>
+        </div>
+        <div class="pane active" id="pane-lost">
+          <input id="lostSid" placeholder="Student ID"/>
+          <button class="btn" id="reportLost">Report Card Lost</button>
+          <div class="hint">Deactivates the card, preserves balance, opens a pending report.</div>
+        </div>
+        <div class="pane" id="pane-replace">
+          <input id="repSid" placeholder="Student ID"/>
+          <button class="btn ok" id="replaceBtn">Tap New Card to Replace</button>
+          <div class="hint">Transfer preserved balance to the new money card.</div>
+        </div>
+        <div class="msg" id="lifeMsg"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js" crossorigin="anonymous"></script>
+<script>
+const $=id=>document.getElementById(id);
+$('who').textContent = sessionStorage.getItem('tech_user')||'tech';
+// SocketIO for live card reads
+const sock = io();
+sock.on('rfid_debug', d=>{
+  if(d.uid){ $('readout').textContent = `UID: ${d.uid}\nValid: ${d.valid}`; }
+  else if(d.timeout){ $('readout').textContent='timeout — no card read'; }
+  else if(d.error){ $('readout').textContent='error: '+d.error; }
+});
+sock.on('id_card_read', d=>{ $('stuId').value=d.uid||''; $('linkMoney').disabled=false; $('cardMsg').textContent='ID card read. Now tap money card.'; $('cardMsg').className='msg ok'; });
+sock.on('money_card_linked', d=>{ $('cardMsg').textContent='Money card linked!'; $('cardMsg').className='msg ok'; $('linkMoney').disabled=true; });
+sock.on('card_error', d=>{ $('cardMsg').textContent=d.message||'card error'; $('cardMsg').className='msg err'; });
+
+$('connect').onclick=async()=>{
+  const r=await fetch('/api/tech/serial/connect',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({port:$('port').value})});
+  const j=await r.json(); $('readout').textContent = j.success?'connected':'fail: '+(j.error||'');
+};
+$('read').onclick=()=>fetch('/api/tech/rfid/read',{method:'POST'}).then(()=>{$('readout').textContent='waiting…';});
+$('regId').onclick=()=>fetch('/api/card/start-register',{method:'POST'}).then(()=>{$('cardMsg').textContent='Tap the student ID card…';});
+$('linkMoney').onclick=()=>{ const sid=$('stuId').value.trim(); if(!sid){$('cardMsg').textContent='Enter Student ID first';return;} fetch('/api/card/link-money',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({student_id:sid})}); };
+
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.pane').forEach(x=>x.classList.remove('active'));
+  t.classList.add('active'); $('pane-'+t.dataset.pane).classList.add('active');
+});
+$('reportLost').onclick=async()=>{
+  const sid=$('lostSid').value.trim(); if(!sid){$('lifeMsg').textContent='Enter Student ID';$('lifeMsg').className='msg err';return;}
+  const r=await fetch('/api/card/report-lost',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({student_id:sid})});
+  const j=await r.json(); $('lifeMsg').textContent=j.success?('Lost reported. '+j.report_id):(j.error||'failed'); $('lifeMsg').className=j.success?'msg ok':'msg err';
+};
+$('replaceBtn').onclick=async()=>{
+  const sid=$('repSid').value.trim(); if(!sid){$('lifeMsg').textContent='Enter Student ID';$('lifeMsg').className='msg err';return;}
+  // The replacement flow taps a new card via the shared reader; kick off then wait for tap.
+  fetch('/api/card/start-register',{method:'POST'});
+  $('lifeMsg').textContent='Tap the NEW money card…';
+};
+sock.on('money_card_linked', d=>{ $('lifeMsg').textContent='Card replaced/linked: '+JSON.stringify(d); $('lifeMsg').className='msg ok'; });
+
+$('logout').onclick=()=>fetch('/tech/logout',{method:'POST'}).then(()=>location.href='/tech/login');
+</script>
+</body></html>

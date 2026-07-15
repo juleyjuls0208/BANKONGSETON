@@ -113,3 +113,4 @@ coverage/
 # ── GSD baseline (auto-generated) ──
 .mcp.json
 .bg-shell/
+mobile/

@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+<title>Bangko ng Seton — Loading Kiosk</title>
+<style>
+  :root{
+    --bg:#0f1b2d; --panel:#16263c; --panel2:#1e3354; --accent:#ffce47;
+    --accent2:#3b82f6; --ok:#22c55e; --err:#ef4444; --txt:#f1f5f9; --muted:#94a3b8;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; height:100%;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:radial-gradient(1200px 800px at 50% -10%,#1c2f4d,var(--bg));
+    color:var(--txt); overflow:hidden; user-select:none;
+  }
+  #app{height:100vh; display:flex; flex-direction:column;}
+  header{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:18px 28px; background:rgba(0,0,0,.25); border-bottom:1px solid #ffffff14;
+  }
+  header .brand{display:flex; align-items:center; gap:14px; font-weight:700; font-size:20px;}
+  header .brand .logo{width:38px;height:38px;border-radius:10px;background:var(--accent);
+    display:grid;place-items:center;color:#0f1b2d;font-size:22px;}
+  header .status{font-size:14px;color:var(--muted);display:flex;gap:18px;align-items:center;}
+  header .status .dot{width:10px;height:10px;border-radius:50%;background:var(--muted);display:inline-block;margin-right:6px;}
+  header .status .dot.on{background:var(--ok);}
+  header .gear{cursor:pointer;font-size:22px;color:var(--muted);padding:6px 10px;border-radius:10px;}
+  header .gear:active{background:#ffffff14;}
+
+  main{flex:1; display:flex; gap:18px; padding:18px 28px; min-height:0;}
+  .col{flex:1; display:flex; flex-direction:column; min-height:0; gap:14px;}
+
+  .card{background:var(--panel); border:1px solid #ffffff10; border-radius:18px; padding:20px;
+    display:flex; flex-direction:column; gap:12px; min-height:0;}
+  .card h2{margin:0; font-size:18px; letter-spacing:.3px; display:flex; align-items:center; gap:10px;}
+  .card h2 .ic{font-size:22px;}
+
+  .methods{display:flex; gap:12px; flex-wrap:wrap;}
+  .method{flex:1; min-width:140px; background:var(--panel2); border:2px solid transparent;
+    border-radius:14px; padding:18px; text-align:center; cursor:pointer; transition:.15s;}
+  .method:active{transform:scale(.98);}
+  .method.active{border-color:var(--accent);}
+  .method .ic{font-size:34px; display:block; margin-bottom:8px;}
+  .method .t{font-weight:600; font-size:16px;}
+
+  input.student{width:100%; padding:16px; font-size:20px; border-radius:12px; border:none;
+    background:#0c1726; color:var(--txt); text-align:center;}
+  .btn{padding:16px; font-size:18px; font-weight:600; border:none; border-radius:14px;
+    cursor:pointer; background:var(--accent2); color:#fff; transition:.15s;}
+  .btn:active{transform:scale(.98);}
+  .btn.secondary{background:var(--panel2); color:var(--txt);}
+  .btn.accent{background:var(--accent); color:#0f1b2d;}
+  .btn.ok{background:var(--ok); color:#06210f;}
+  .btn:disabled{opacity:.4; cursor:not-allowed;}
+  .btn-row{display:flex; gap:12px;}
+
+  .denoms{display:grid; grid-template-columns:repeat(3,1fr); gap:12px;}
+  .denom{background:var(--panel2); border:2px solid transparent; border-radius:14px;
+    padding:22px 0; font-size:26px; font-weight:700; text-align:center; cursor:pointer;}
+  .denom:active{transform:scale(.97);}
+  .denom.active{border-color:var(--accent);}
+
+  .amount-box{text-align:center; padding:10px 0;}
+  .amount-box .label{color:var(--muted); font-size:14px;}
+  .amount-box .value{font-size:54px; font-weight:800; color:var(--accent);}
+
+  .student-card{background:var(--panel2); border-radius:14px; padding:18px; display:none;}
+  .student-card.show{display:block;}
+  .student-card .name{font-size:24px; font-weight:700;}
+  .student-card .sid{color:var(--muted); font-size:14px;}
+  .student-card .bal{margin-top:8px; font-size:18px;}
+  .student-card .bal b{color:var(--ok);}
+
+  .msg{min-height:24px; font-size:15px; text-align:center;}
+  .msg.ok{color:var(--ok);} .msg.err{color:var(--err);}
+
+  /* right column: live readout + confirm */
+  .receipt{font-size:16px; line-height:1.8;}
+  .receipt .row{display:flex; justify-content:space-between; border-bottom:1px dashed #ffffff14; padding:6px 0;}
+
+  /* overlay for settings / success */
+  .overlay{position:fixed; inset:0; background:#000a; display:none; place-items:center; z-index:50;}
+  .overlay.show{display:grid;}
+  .modal{background:var(--panel); border-radius:18px; padding:26px; width:min(420px,90vw);
+    display:flex; flex-direction:column; gap:14px; text-align:center;}
+  .modal h3{margin:0 0 6px; font-size:22px;}
+  .success-ic{font-size:64px; color:var(--ok);}
+
+  .hint{color:var(--muted); font-size:13px; text-align:center;}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="brand"><span class="logo">₿</span> Bangko ng Seton · Loading Kiosk</div>
+    <div class="status">
+      <span><span class="dot" id="rfidDot"></span>RFID</span>
+      <span><span class="dot" id="netDot"></span>Network</span>
+    </div>
+    <div class="gear" id="gearBtn" title="Settings">⚙</div>
+  </header>
+
+  <main>
+    <!-- LEFT: identify + collect cash -->
+    <div class="col">
+      <div class="card">
+        <h2><span class="ic">🪪</span> 1 · Identify Student</h2>
+        <div class="methods">
+          <div class="method active" data-mode="card" id="mCard"><span class="ic">💳</span><div class="t">Tap Money Card</div></div>
+          <div class="method" data-mode="qr" id="mQr"><span class="ic">📷</span><div class="t">Scan App QR</div></div>
+          <div class="method" data-mode="manual" id="mManual"><span class="ic">⌨️</span><div class="t">Student ID</div></div>
+        </div>
+        <div id="manualWrap" style="display:none;">
+          <input class="student" id="studentInput" placeholder="Type Student ID" inputmode="text" />
+          <div class="btn-row" style="margin-top:10px;">
+            <button class="btn accent" id="lookupBtn" style="flex:1;">Look Up</button>
+          </div>
+        </div>
+        <div class="student-card" id="studentCard">
+          <div class="name" id="scName">—</div>
+          <div class="sid" id="scSid"></div>
+          <div class="bal">Balance: <b id="scBal">₱0.00</b></div>
+        </div>
+      </div>
+
+      <div class="card" style="flex:1;">
+        <h2><span class="ic">💵</span> 2 · Collect Cash</h2>
+        <div class="denoms" id="denoms"></div>
+        <div class="amount-box">
+          <div class="label">AMOUNT TO LOAD</div>
+          <div class="value" id="amountVal">₱0</div>
+        </div>
+        <div class="btn-row">
+          <button class="btn secondary" id="clearBtn" style="flex:1;">Clear</button>
+          <button class="btn" id="customBtn" style="flex:1;">Custom ₱</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: confirm -->
+    <div class="col">
+      <div class="card" style="flex:1; justify-content:space-between;">
+        <h2><span class="ic">✅</span> 3 · Confirm & Load</h2>
+        <div class="receipt" id="receipt">
+          <div class="row"><span>Student</span><span id="rName">—</span></div>
+          <div class="row"><span>Current Balance</span><span id="rCur">—</span></div>
+          <div class="row"><span>Load Amount</span><span id="rAmt">₱0</span></div>
+          <div class="row"><span>New Balance</span><span id="rNew">—</span></div>
+          <div class="row"><span>Method</span><span id="rMethod">cash</span></div>
+        </div>
+        <div class="msg" id="msg">Tap a card or choose an identification method.</div>
+        <button class="btn ok" id="confirmBtn" disabled style="width:100%; font-size:22px; padding:22px;">LOAD MONEY</button>
+        <div class="hint">For staff: cardless top-up uses the student's app QR. Cash collected matches the amount loaded.</div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Settings overlay -->
+<div class="overlay" id="settingsOverlay">
+  <div class="modal">
+    <h3>⚙ Kiosk Settings</h3>
+    <p class="hint">Enter unlock PIN to manage hardware.</p>
+    <input class="student" id="pinInput" type="password" placeholder="PIN" inputmode="numeric" />
+    <div class="btn-row">
+      <button class="btn secondary" id="pinCancel" style="flex:1;">Cancel</button>
+      <button class="btn accent" id="pinOk" style="flex:1;">Unlock</button>
+    </div>
+    <div id="hwPanel" style="display:none; border-top:1px solid #ffffff14; padding-top:14px; gap:10px; flex-direction:column;">
+      <button class="btn" id="connectBtn">Connect RFID Reader</button>
+      <div class="hint" id="hwStatus">Status: disconnected</div>
+    </div>
+  </div>
+</div>
+
+<!-- Success overlay -->
+<div class="overlay" id="successOverlay">
+  <div class="modal">
+    <div class="success-ic">✔</div>
+    <h3>Load Successful!</h3>
+    <div id="successBody"></div>
+    <button class="btn ok" id="successOk" style="width:100%;">Done</button>
+  </div>
+</div>
+
+<script>
+const $ = (id)=>document.getElementById(id);
+let state = { mode:'card', student:null, amount:0, cardless:false };
+const fmt = (n)=>'₱'+(Number(n)||0).toLocaleString('en-PH',{minimumFractionDigits:2,maximumFractionDigits:2});
+
+// --- status dots ---
+async function ping(){
+  try{ const r=await fetch('/api/kiosk/health'); const j=await r.json();
+    $('netDot').classList.add('on');
+    $('rfidDot').classList.toggle('on', !!j.rfid_connected);
+  }catch(e){ $('netDot').classList.remove('on'); }
+}
+setInterval(ping, 4000); ping();
+
+// --- denominations ---
+fetch('/api/kiosk/denominations').then(r=>r.json()).then(j=>{
+  const wrap=$('denoms'); wrap.innerHTML='';
+  (j.denominations||[20,50,100,200,500,1000]).forEach(d=>{
+    const b=document.createElement('div'); b.className='denom'; b.textContent='₱'+d;
+    b.onclick=()=>{ setAmount(state.amount + d); };
+    wrap.appendChild(b);
+  });
+});
+
+function setAmount(v){
+  state.amount = Math.max(0, Math.round(v*100)/100);
+  $('amountVal').textContent = fmt(state.amount);
+  $('rAmt').textContent = fmt(state.amount);
+  refreshReceipt(); updateConfirm();
+}
+function clearAmount(){ setAmount(0); }
+
+// --- mode switching ---
+['mCard','mQr','mManual'].forEach(id=>{
+  $(id).onclick=()=>{
+    document.querySelectorAll('.method').forEach(m=>m.classList.remove('active'));
+    $(id).classList.add('active');
+    state.mode = $(id).dataset.mode;
+    $('manualWrap').style.display = (state.mode==='manual')?'block':'none';
+    $('msg').textContent = state.mode==='qr'
+      ? 'Scan the student\'s app QR with the scanner.'
+      : state.mode==='manual' ? 'Type the Student ID and tap Look Up.'
+      : 'Ask the student to tap their money card.';
+  };
+});
+
+// --- RFID: poll for card reads (SocketIO optional; HTTP fallback) ---
+async function pollCard(){
+  if(state.mode!=='card' || state.student) return;
+}
+setInterval(pollCard, 1500);
+
+// --- manual lookup ---
+$('lookupBtn').onclick = async ()=>{
+  const sid = $('studentInput').value.trim();
+  if(!sid){ $('msg').textContent='Enter a Student ID'; $('msg').className='msg err'; return; }
+  await identifyStudent({student_id:sid}, false, 'manual');
+};
+
+// --- QR scan (operator triggers scanner; for demo we accept pasted token) ---
+$('mQr').ondblclick = ()=>{ // quick demo hook: paste QR token
+  const t=prompt('Paste QR data (app JWT / session token):');
+  if(t) identifyStudent({qr_data:t}, true, 'cardless_qr');
+};
+
+async function identifyStudent(body, cardless, method){
+  $('msg').textContent='Looking up…'; $('msg').className='msg';
+  try{
+    const endpoint = body.qr_data ? '/api/kiosk/topup/qr-scan'
+                   : body.uid ? '/api/kiosk/topup/card-scan'
+                   : '/api/kiosk/topup/student-lookup';
+    const r = await fetch(endpoint, {method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(body)});
+    const j = await r.json();
+    if(!j.success){ $('msg').textContent=j.error||'Student not found'; $('msg').className='msg err'; return; }
+    state.student = j.student; state.cardless = !!cardless;
+    renderStudent(j.student);
+    $('msg').textContent='Student identified. Collect cash and load.';
+    $('msg').className='msg ok';
+  }catch(e){ $('msg').textContent='Lookup failed'; $('msg').className='msg err'; }
+}
+
+function renderStudent(s){
+  $('studentCard').classList.add('show');
+  $('scName').textContent = s.student_name || '—';
+  $('scSid').textContent = 'ID: '+s.student_id;
+  $('scBal').textContent = fmt(s.balance);
+  $('rName').textContent = s.student_name || '—';
+  $('rCur').textContent = fmt(s.balance);
+  return s;
+}
+
+function refreshReceipt(){
+  if(!state.student) return;
+  const cur = Number(state.student.balance)||0;
+  $('rNew').textContent = fmt(cur + state.amount);
+  $('rMethod').textContent = state.cardless ? 'cardless_qr' : 'cash';
+}
+
+function updateConfirm(){
+  $('confirmBtn').disabled = !(state.student && state.amount>0);
+}
+
+// --- confirm / load ---
+$('confirmBtn').onclick = async ()=>{
+  if(!state.student || state.amount<=0) return;
+  $('confirmBtn').disabled=true; $('msg').textContent='Processing…';
+  try{
+    const r = await fetch('/api/kiosk/topup/confirm', {method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ student_id: state.student.student_id,
+        amount: state.amount, payment_method: state.cardless?'cardless_qr':'cash' })});
+    const j = await r.json();
+    if(!j.success){ $('msg').textContent=j.error||'Failed'; $('msg').className='msg err'; $('confirmBtn').disabled=false; return; }
+    showSuccess(j);
+  }catch(e){ $('msg').textContent='Load failed'; $('msg').className='msg err'; $('confirmBtn').disabled=false; }
+};
+
+function showSuccess(j){
+  $('successBody').innerHTML =
+    `<div style="font-size:20px;">${j.student_name}</div>
+     <div class="hint">ID: ${j.student_id}</div>
+     <div style="margin-top:10px;">Loaded <b>${fmt(j.amount_loaded)}</b></div>
+     <div>New Balance: <b style="color:var(--ok)">${fmt(j.new_balance)}</b></div>`;
+  $('successOverlay').classList.add('show');
+}
+$('successOk').onclick = ()=>{
+  $('successOverlay').classList.remove('show');
+  // reset for next customer
+  state={mode:state.mode, student:null, amount:0, cardless:false};
+  $('studentCard').classList.remove('show'); setAmount(0);
+  $('msg').textContent='Ready for next student.';
+  document.querySelectorAll('.method').forEach(m=>m.classList.remove('active'));
+  $('mCard').classList.add('active');
+  $('manualWrap').style.display='none';
+};
+
+$('clearBtn').onclick=clearAmount;
+$('customBtn').onclick=()=>{ const v=prompt('Enter custom amount (₱):'); const n=parseFloat(v); if(!isNaN(n)) setAmount(n); };
+
+// --- settings / unlock ---
+$('gearBtn').onclick=()=>{ $('settingsOverlay').classList.add('show'); $('pinInput').value=''; $('hwPanel').style.display='none'; };
+$('pinCancel').onclick=()=>$('settingsOverlay').classList.remove('show');
+$('pinOk').onclick=async()=>{
+  const r=await fetch('/api/kiosk/unlock',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({pin:$('pinInput').value})});
+  if(r.ok){ $('hwPanel').style.display='flex'; $('settingsOverlay').classList.remove('show'); }
+  else { $('pinInput').classList.add('err'); alert('Invalid PIN'); }
+};
+$('connectBtn').onclick=async()=>{
+  const r=await fetch('/api/kiosk/serial/connect',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({})});
+  const j=await r.json(); $('hwStatus').textContent='Status: '+(j.success?j.message:j.error);
+};
+</script>
+</body>
+</html>
