@@ -328,8 +328,14 @@ def ensure_settings_sheet():
         return ws
 
 
-def register_routes(app, socketio):
-    """Register all shared routes onto the given Flask app + SocketIO instance."""
+def register_routes(app, socketio, serial_enabled=True):
+    """Register all shared routes onto the given Flask app + SocketIO instance.
+
+    serial_enabled: when False (cloud/web build), the Arduino serial routes are
+    NOT registered — card reading requires an on-prem machine with the USB
+    reader, so the cloud dashboard must not expose serial endpoints at all.
+    The on-prem registration_app passes serial_enabled=True.
+    """
 
     # ============= AUTH DECORATORS =============
 
@@ -374,115 +380,116 @@ def register_routes(app, socketio):
         return decorated_function
 
     # ============= SERIAL / ARDUINO =============
+    if serial_enabled:
 
-    def send_display(line1, line2=""):
-        """Send display command to Arduino"""
-        if not SERIAL_AVAILABLE:
-            return
-        ard = card_reader_state.get("arduino")
-        if ard and ard.is_open:
-            try:
-                ard.write(f"DISPLAY|{line1}|{line2}\n".encode())
-            except Exception as e:
-                logger.error("event=serial_write_error error=%s", e)
-
-    def send_success(message):
-        """Send success signal to Arduino"""
-        if not SERIAL_AVAILABLE:
-            return
-        ard = card_reader_state.get("arduino")
-        if ard and ard.is_open:
-            try:
-                ard.write(f"SUCCESS|{message}\n".encode())
-            except Exception as e:
-                logger.error("event=serial_write_error error=%s", e)
-
-    def send_error(message):
-        """Send error signal to Arduino"""
-        if not SERIAL_AVAILABLE:
-            return
-        ard = card_reader_state.get("arduino")
-        if ard and ard.is_open:
-            try:
-                ard.write(f"ERROR|{message}\n".encode())
-            except Exception as e:
-                logger.error("event=serial_write_error error=%s", e)
-
-    @app.route("/api/serial/ports", methods=["GET"])
-    @login_required
-    def get_serial_ports():
-        """Get available serial ports"""
-        if not SERIAL_AVAILABLE:
-            return jsonify({"ports": [], "error": "Serial not available"})
-        try:
-            ports = serial.tools.list_ports.comports()
-            port_list = [
-                {"port": p.device, "description": p.description} for p in ports
-            ]
-            return jsonify({"ports": port_list})
-        except Exception as e:
-            logger.error("event=serial_ports_error error=%s", e)
-            return jsonify({"error": str(e)}), 500
-
-    @app.route("/api/serial/connect", methods=["POST"])
-    @login_required
-    def connect_serial():
-        """Connect to Arduino serial port"""
-        if not SERIAL_AVAILABLE:
-            return jsonify({"error": "Serial not available"}), 400
-        try:
-            data = request.get_json()
-            port = data.get("port")
-            baud_rate = data.get("baud_rate", 9600)
-
+        def send_display(line1, line2=""):
+            """Send display command to Arduino"""
+            if not SERIAL_AVAILABLE:
+                return
             ard = card_reader_state.get("arduino")
             if ard and ard.is_open:
-                ard.close()
+                try:
+                    ard.write(f"DISPLAY|{line1}|{line2}\n".encode())
+                except Exception as e:
+                    logger.error("event=serial_write_error error=%s", e)
 
-            new_arduino = serial.Serial(port, baud_rate, timeout=1)
-            card_reader_state.set("arduino", new_arduino)
-
-            # Wire up app.arduino_bridge so NFC|/CARD| lines are handled
-            # immediately without waiting for a manual card-scan action.
-            try:
-                from arduino_bridge import ArduinoBridge
-
-                bridge = ArduinoBridge(new_arduino, socketio)
-                app.arduino_bridge = bridge
-                bridge.start_background_listener()
-                logger.info("event=arduino_bridge_created_and_listening port=%s", port)
-            except Exception as bridge_err:
-                logger.warning(
-                    "event=arduino_bridge_init_failed error=%s "
-                    "(serial still connected, background listener unavailable)",
-                    bridge_err,
-                )
-
-            logger.info("event=serial_connected port=%s baud=%d", port, baud_rate)
-            return jsonify({"success": True, "port": port})
-        except Exception as e:
-            logger.error("event=serial_connect_error error=%s", e)
-            return jsonify({"error": str(e)}), 500
-
-    @app.route("/api/serial/disconnect", methods=["POST"])
-    @login_required
-    def disconnect_serial():
-        """Disconnect from Arduino serial port"""
-        try:
-            # Closing the serial port causes the background listener loop to
-            # exit naturally (ard.is_open == False → loop returns).
+        def send_success(message):
+            """Send success signal to Arduino"""
+            if not SERIAL_AVAILABLE:
+                return
             ard = card_reader_state.get("arduino")
             if ard and ard.is_open:
-                ard.close()
-            card_reader_state.set("arduino", None)
-            # Nullify the bridge so it is garbage-collected.
-            if hasattr(app, "arduino_bridge"):
-                app.arduino_bridge = None
-            logger.info("event=serial_disconnected")
-            return jsonify({"success": True})
-        except Exception as e:
-            logger.error("event=serial_disconnect_error error=%s", e)
-            return jsonify({"error": str(e)}), 500
+                try:
+                    ard.write(f"SUCCESS|{message}\n".encode())
+                except Exception as e:
+                    logger.error("event=serial_write_error error=%s", e)
+
+        def send_error(message):
+            """Send error signal to Arduino"""
+            if not SERIAL_AVAILABLE:
+                return
+            ard = card_reader_state.get("arduino")
+            if ard and ard.is_open:
+                try:
+                    ard.write(f"ERROR|{message}\n".encode())
+                except Exception as e:
+                    logger.error("event=serial_write_error error=%s", e)
+
+        @app.route("/api/serial/ports", methods=["GET"])
+        @login_required
+        def get_serial_ports():
+            """Get available serial ports"""
+            if not SERIAL_AVAILABLE:
+                return jsonify({"ports": [], "error": "Serial not available"})
+            try:
+                ports = serial.tools.list_ports.comports()
+                port_list = [
+                    {"port": p.device, "description": p.description} for p in ports
+                ]
+                return jsonify({"ports": port_list})
+            except Exception as e:
+                logger.error("event=serial_ports_error error=%s", e)
+                return jsonify({"error": str(e)}), 500
+
+        @app.route("/api/serial/connect", methods=["POST"])
+        @login_required
+        def connect_serial():
+            """Connect to Arduino serial port"""
+            if not SERIAL_AVAILABLE:
+                return jsonify({"error": "Serial not available"}), 400
+            try:
+                data = request.get_json()
+                port = data.get("port")
+                baud_rate = data.get("baud_rate", 9600)
+
+                ard = card_reader_state.get("arduino")
+                if ard and ard.is_open:
+                    ard.close()
+
+                new_arduino = serial.Serial(port, baud_rate, timeout=1)
+                card_reader_state.set("arduino", new_arduino)
+
+                # Wire up app.arduino_bridge so NFC|/CARD| lines are handled
+                # immediately without waiting for a manual card-scan action.
+                try:
+                    from arduino_bridge import ArduinoBridge
+
+                    bridge = ArduinoBridge(new_arduino, socketio)
+                    app.arduino_bridge = bridge
+                    bridge.start_background_listener()
+                    logger.info("event=arduino_bridge_created_and_listening port=%s", port)
+                except Exception as bridge_err:
+                    logger.warning(
+                        "event=arduino_bridge_init_failed error=%s "
+                        "(serial still connected, background listener unavailable)",
+                        bridge_err,
+                    )
+
+                logger.info("event=serial_connected port=%s baud=%d", port, baud_rate)
+                return jsonify({"success": True, "port": port})
+            except Exception as e:
+                logger.error("event=serial_connect_error error=%s", e)
+                return jsonify({"error": str(e)}), 500
+
+        @app.route("/api/serial/disconnect", methods=["POST"])
+        @login_required
+        def disconnect_serial():
+            """Disconnect from Arduino serial port"""
+            try:
+                # Closing the serial port causes the background listener loop to
+                # exit naturally (ard.is_open == False → loop returns).
+                ard = card_reader_state.get("arduino")
+                if ard and ard.is_open:
+                    ard.close()
+                card_reader_state.set("arduino", None)
+                # Nullify the bridge so it is garbage-collected.
+                if hasattr(app, "arduino_bridge"):
+                    app.arduino_bridge = None
+                logger.info("event=serial_disconnected")
+                return jsonify({"success": True})
+            except Exception as e:
+                logger.error("event=serial_disconnect_error error=%s", e)
+                return jsonify({"error": str(e)}), 500
 
     # ============= CARD READING THREAD =============
 

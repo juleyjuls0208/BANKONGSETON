@@ -228,13 +228,16 @@ def flask_app():
     creds_patch.start()
     gspread_patch.start()
 
-    # Step 4 — import (handles already-cached module from other test files)
+    # Step 4 — import the deployed dashboard (web_app) — admin_dashboard.py was
+    # removed; its Arduino/card-tap logic now lives in registration_app.py (on-prem).
+    # web_app is the production cloud dashboard and exposes the same app/db/get_sheets_client
+    # interface the fixtures expect.
     try:
-        import backend.dashboard.admin_dashboard as adm  # noqa: F401
+        import backend.dashboard.web_app as adm  # noqa: F401
     except Exception:
         pass  # may already be cached; the second import below retrieves the cached copy
 
-    import backend.dashboard.admin_dashboard as adm
+    import backend.dashboard.web_app as adm
 
     # Step 5 — stop patches (imports complete; patches no longer needed at runtime)
     creds_patch.stop()

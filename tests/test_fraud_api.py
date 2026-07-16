@@ -260,11 +260,11 @@ def flask_app():
     gspread_patch.start()
 
     try:
-        import backend.dashboard.admin_dashboard as adm
+        import backend.dashboard.web_app as adm
     except Exception:
         pass  # module may already be cached from earlier test classes
 
-    import backend.dashboard.admin_dashboard as adm
+    import backend.dashboard.web_app as adm
 
     # Override db on the live module object for all request-time calls
     adm.db = mock_spreadsheet
@@ -299,12 +299,12 @@ def finance_session(client):
 
 def _patch_detector(detector_instance):
     """Context manager: replace the module-level detector used by routes."""
-    import backend.dashboard.admin_dashboard as adm
+    import backend.dashboard.web_app as adm
     return patch.object(adm, '_get_fraud_detector_with_sheets', return_value=detector_instance)
 
 
 def _patch_ensure_sheets(fraud_ws=None, suspended_ws=None):
-    import backend.dashboard.admin_dashboard as adm
+    import backend.dashboard.web_app as adm
     return patch.object(
         adm, '_ensure_fraud_sheets',
         return_value=(fraud_ws or MagicMock(), suspended_ws or MagicMock())
@@ -530,8 +530,8 @@ class TestEnsureFraudSheets:
         mock_db.worksheets.return_value = []
         mock_db.add_worksheet.side_effect = _add_worksheet
 
-        with patch('backend.dashboard.admin_dashboard.get_sheets_client', return_value=mock_db):
-            from backend.dashboard.admin_dashboard import _ensure_fraud_sheets
+        with patch('backend.dashboard.web_app.get_sheets_client', return_value=mock_db):
+            from backend.dashboard.web_app import _ensure_fraud_sheets
             fraud_ws, suspended_ws = _ensure_fraud_sheets()
 
         # Should have called add_worksheet for both sheets
@@ -554,8 +554,8 @@ class TestEnsureFraudSheets:
         mock_db.worksheets.return_value = [fraud_ws_mock, suspended_ws_mock]
         mock_db.worksheet.side_effect = lambda t: fraud_ws_mock if t == 'Fraud Alerts' else suspended_ws_mock
 
-        with patch('backend.dashboard.admin_dashboard.get_sheets_client', return_value=mock_db):
-            from backend.dashboard.admin_dashboard import _ensure_fraud_sheets
+        with patch('backend.dashboard.web_app.get_sheets_client', return_value=mock_db):
+            from backend.dashboard.web_app import _ensure_fraud_sheets
             fraud_ws, suspended_ws = _ensure_fraud_sheets()
 
         mock_db.add_worksheet.assert_not_called()

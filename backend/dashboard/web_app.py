@@ -13,6 +13,8 @@ import sys
 import logging
 import time
 import json
+import re
+import jwt as _pyjwt  # aliased to avoid collision with any local 'jwt' variable
 
 from dotenv import load_dotenv
 load_dotenv()  # must run before any module-level os.getenv() calls in blueprints
@@ -31,15 +33,6 @@ except ImportError:
     def setup_logging():
         pass
 
-
-# Import cashier blueprint
-try:
-    from cashier.cashier_routes import cashier_bp
-
-    CASHIER_AVAILABLE = True
-except ImportError:
-    logger.warning("event=import_failed module=cashier_blueprint")
-    CASHIER_AVAILABLE = False
 
 # Import shared core
 from dashboard_core import (
@@ -104,21 +97,10 @@ if _parse_worker_count("WEB_CONCURRENCY") > 1 or _parse_worker_count("GUNICORN_W
     )
     sys.exit(1)
 
-# Arduino WiFi API key — loaded once at module level
-# Empty string means endpoint is disabled (returns 401 for any request)
-ARDUINO_API_KEY = os.environ.get("ARDUINO_API_KEY", "")
-ARDUINO_WIFI_OFFLINE_S = int(os.environ.get("ARDUINO_WIFI_OFFLINE_S", "60"))
-
 # Shared secret for local↔cloud cashier webhook calls.
 # Fallback to JWT_SECRET for legacy deployments that never set a dedicated key.
 CASHIER_SHARED_SECRET = (os.environ.get("CASHIER_SHARED_SECRET", "").strip()
                          or os.environ.get("JWT_SECRET", "").strip())
-
-# UID pattern for Arduino card reads
-import re
-import jwt as _pyjwt  # aliased to avoid collision with any local 'jwt' variable
-
-UID_PATTERN = re.compile(r"^[0-9A-Fa-f]{8}$|^[0-9A-Fa-f]{14}$")
 
 
 def _build_transaction_row(
@@ -226,23 +208,17 @@ _allowed_origins = get_cors_origins()
 CORS(app, origins=_allowed_origins)
 socketio = SocketIO(app, cors_allowed_origins=_allowed_origins)
 
-# Attach socketio to app for cashier blueprint access
+# Attach socketio to app
 app.socketio = socketio
-app.arduino_last_heartbeat = 0.0
 app.pending_qr_token = None
 app.last_qr_payment = None   # set when student confirms; polled by cashier browser
-app.pending_card_read = None
-
-# Register cashier blueprint
-if CASHIER_AVAILABLE:
-    app.register_blueprint(cashier_bp)
-    logger.info("event=blueprint_registered name=cashier prefix=/cashier")
 
 # Module-level db for cashier blueprint compatibility
 db = get_sheets_client()
 
-# Register all shared routes from core
-register_routes(app, socketio)
+# Register all shared routes from core (serial/Arduino disabled — cloud build
+# has no USB reader; those routes live only in the on-prem registration_app).
+register_routes(app, socketio, serial_enabled=False)
 
 
 # ============= AUTHENTICATION ROUTES =============
@@ -318,7 +294,6 @@ def dashboard():
         "dashboard.html",
         username=session.get("admin_username"),
         role=session.get("role", "finance"),
-        arduino_available=False,
         active_page="dashboard",
         students=students,
     )
@@ -363,124 +338,8 @@ def transactions_page():
     )
 
 
-# ============= ARDUINO WIFI ROUTE =============
-
-
-@app.route("/api/arduino/card-read", methods=["POST"])
-def arduino_card_read():
-    """
-    WiFi card-read endpoint for Arduino UNO R4 WiFi.
-    Arduino POSTs {"uid": "ABCDEF12"} with X-API-Key header.
-    Emits card_read SocketIO event — identical to the serial path in ArduinoBridge.
-    ARDW-02
-    """
-    # 1. Validate API key — reject empty ARDUINO_API_KEY to prevent open-door bug
-    api_key = request.headers.get("X-API-Key", "")
-    if not ARDUINO_API_KEY or api_key != ARDUINO_API_KEY:
-        logger.warning(
-            "event=arduino_card_read_rejected reason=invalid_api_key remote=%s",
-            request.remote_addr,
-        )
-        return jsonify({"error": "Unauthorized"}), 401
-
-    # 2. Validate UID format
-    data = request.get_json(silent=True) or {}
-    uid = data.get("uid", "")
-    if not UID_PATTERN.match(uid):
-        logger.warning(
-            "event=arduino_card_read_rejected reason=invalid_uid uid=%r", uid
-        )
-        return jsonify({"error": "Invalid UID format — expected 8 hex chars"}), 400
-
-    # 3. Emit card_read event — same shape as ArduinoBridge._read_card_thread
-    #    Cashier frontend receives this identically to a serial card read (ARDW-03)
-    app.pending_card_read = {"uid": uid, "created_at": time.time()}
-    socketio.emit("card_read", {"success": True, "uid": uid})
-    logger.info("event=arduino_card_read uid=%s remote=%s", uid, request.remote_addr)
-
-    return jsonify({"status": "ok"}), 200
-
-
-@app.route("/api/arduino/card-read-pending", methods=["GET"])
-def arduino_card_read_pending():
-    payload = _decode_cashier_cookie()
-    if not payload and "admin_logged_in" not in session:
-        return jsonify({"error": "Unauthorized"}), 401
-
-    pending = app.pending_card_read
-    if pending is None:
-        return jsonify({"uid": None}), 200
-
-    if time.time() - pending.get("created_at", 0) > 10:
-        app.pending_card_read = None
-        return jsonify({"uid": None}), 200
-
-    uid = pending.get("uid")
-    app.pending_card_read = None
-    logger.info("event=arduino_card_read_consumed uid=%s", uid)
-    return jsonify({"uid": uid}), 200
-
-
-@app.route("/api/arduino/heartbeat", methods=["POST"])
-def arduino_heartbeat():
-    """
-    WiFi keep-alive / status heartbeat endpoint for Arduino UNO R4 WiFi.
-    Arduino POSTs every HEARTBEAT_INTERVAL_MS ms with X-API-Key header.
-    Emits arduino_wifi_status SocketIO event to cashier UI.
-    """
-    api_key = request.headers.get("X-API-Key", "")
-    if not ARDUINO_API_KEY or api_key != ARDUINO_API_KEY:
-        logger.warning(
-            "event=arduino_heartbeat_rejected reason=invalid_api_key remote=%s",
-            request.remote_addr,
-        )
-        return jsonify({"error": "Unauthorized"}), 401
-
-    app.arduino_last_heartbeat = time.time()
-    last_seen_s = 0.0  # just updated
-    socketio.emit("arduino_wifi_status", {"online": True, "last_seen_s": last_seen_s})
-    logger.info("event=arduino_heartbeat remote=%s", request.remote_addr)
-    return jsonify({"status": "ok"}), 200
-
-
-# ============= JWT HELPER =============
-
-def _decode_student_jwt(token_str: str):
-    """Decode a student JWT. Returns payload dict or None on failure."""
-    try:
-        return _pyjwt.decode(token_str, _jwt_secret, algorithms=["HS256"])
-    except Exception:
-        return None
-
-
-def _decode_cashier_cookie():
-    """Decode cashier/admin cookie JWT. Returns payload dict or None on failure."""
-    token = request.cookies.get("jwt_token", "")
-    if not token:
-        return None
-    try:
-        payload = _pyjwt.decode(token, _jwt_secret, algorithms=["HS256"])
-    except Exception:
-        return None
-    if payload.get("role") not in {"cashier", "admin"}:
-        return None
-    return payload
-
 
 # ============= QR PAYMENT ROUTES =============
-
-@app.route("/api/arduino/qr-pending", methods=["GET"])
-def arduino_qr_pending():
-    api_key = request.headers.get("X-API-Key", "")
-    if not ARDUINO_API_KEY or api_key != ARDUINO_API_KEY:
-        return jsonify({"error": "Unauthorized"}), 401
-    t = app.pending_qr_token
-    if t is None or time.time() - t["created_at"] > 300:
-        return app.response_class('{"token":null}', status=200, mimetype='application/json')
-    return app.response_class(
-        json.dumps({"token": t["token"], "url": t["url"], "qr_value": t.get("qr_value", t["token"])}, separators=(',', ':')),
-        status=200, mimetype='application/json'
-    )
 
 
 # ── Cashier↔Cloud QR handshake endpoints ────────────────────────────────────

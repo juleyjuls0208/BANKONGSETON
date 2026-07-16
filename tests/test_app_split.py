@@ -211,3 +211,35 @@ def test_api_topup_qr_endpoint(fake_db):
     body = r.get_json()
     assert "qr_data" in body
     assert body["student_id"] == "2024-001"
+
+
+def test_web_app_has_no_arduino_or_cashier(fake_db):
+    """Cloud dashboard must NOT expose Arduino WiFi, serial, or cashier POS routes."""
+    _set_env()
+    import dashboard_core as _dc
+    _dc.get_sheets_client = lambda: MagicMock()
+    import web_app
+    rules = {r.rule for r in web_app.app.url_map.iter_rules()}
+    assert not any("arduino" in r.lower() for r in rules)
+    assert not any("serial" in r.lower() for r in rules)
+    # cashier POS blueprint (prefix /cashier) must be gone; only the admin
+    # cashier-accounts management page remains
+    assert not any(r.startswith("/cashier/") or r == "/cashier" for r in rules)
+
+
+def test_registration_app_holds_card_tap_routes(fake_db):
+    """On-prem registration_app must own the Arduino/serial + card-tap routes
+    that were removed from the cloud dashboard."""
+    _set_env()
+    import dashboard_core as _dc
+    _dc.get_sheets_client = lambda: MagicMock()
+    import registration_app
+    rules = {r.rule for r in registration_app.app.url_map.iter_rules()}
+    assert "/api/serial/connect" in rules
+    assert "/api/student/register" in rules
+    assert "/api/card/link-money" in rules
+    assert "/api/card/report-lost" in rules
+    assert "/api/card/replace-lost" in rules
+    assert "/panel" in rules
+    # it must not carry the cloud cashier POS blueprint either
+    assert not any(r.startswith("/cashier/") or r == "/cashier" for r in rules)

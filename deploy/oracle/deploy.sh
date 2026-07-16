@@ -20,12 +20,14 @@ sudo -u "$USER_NAME" bash -c "
 "
 
 echo "==> Restarting services"
-sudo systemctl restart bankongseton-api bankongseton-web bankongseton-kiosk bankongseton-tech
+sudo systemctl restart bankongseton-api bankongseton-web bankongseton-kiosk bankongseton-tech bankongseton-registration
 sleep 2
-sudo systemctl status bankongseton-api bankongseton-web bankongseton-kiosk bankongseton-tech --no-pager
+sudo systemctl status bankongseton-api bankongseton-web bankongseton-kiosk bankongseton-tech bankongseton-registration --no-pager
 echo "==> API health:"
 curl -sk https://localhost/api/health || echo "(API not reachable — check journalctl -u bankongseton-api)"
 echo "==> Kiosk health:"
 curl -sk https://localhost/kiosk/api/kiosk/health || echo "(Kiosk not reachable — check journalctl -u bankongseton-kiosk)"
 echo "==> Tech health:"
 curl -sk https://localhost/tech/api/tech/health || echo "(Tech not reachable — check journalctl -u bankongseton-tech)"
+echo "==> Registration health:"
+curl -skI https://localhost/panel/ | head -1 || echo "(Registration not reachable — check journalctl -u bankongseton-registration)"

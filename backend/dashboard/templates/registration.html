@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+
+{% block title %}Card Registration — Bangko ng Seton{% endblock %}
+
+{% block content %}
+<style>
+    .reg-wrap { max-width: 920px; margin: 0 auto; padding: 1.25rem 0.5rem; }
+    .reg-card {
+        background: #fff; border: 1px solid #e6e8ee; border-radius: 14px;
+        padding: 1.25rem 1.4rem; margin-bottom: 1.1rem;
+        box-shadow: 0 1px 2px rgba(16,24,40,.04);
+    }
+    .reg-card h3 { margin: 0 0 .35rem; font-size: 1.05rem; }
+    .reg-card .sub { color: #6b7280; font-size: .85rem; margin-bottom: .9rem; }
+    .field-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-bottom: .6rem; }
+    .field-row input {
+        flex: 1 1 200px; padding: .55rem .7rem; border: 1px solid #d7dbe3;
+        border-radius: 9px; font-size: .92rem;
+    }
+    .btn-reg {
+        border: none; border-radius: 9px; padding: .55rem 1.1rem; font-weight: 600;
+        cursor: pointer; background: #1f6feb; color: #fff; font-size: .9rem;
+    }
+    .btn-reg.secondary { background: #eef1f6; color: #1f2937; }
+    .btn-reg:disabled { opacity: .5; cursor: not-allowed; }
+    .status-log {
+        margin-top: .8rem; background: #0f172a; color: #cbd5e1; border-radius: 10px;
+        padding: .7rem .9rem; font-size: .82rem; max-height: 200px; overflow-y: auto;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace; line-height: 1.45;
+    }
+    .reg-grid { display: grid; grid-template-columns: 1fr; gap: 1.1rem; }
+    @media (min-width: 760px) { .reg-grid { grid-template-columns: 1fr 1fr; } } }
+    .arduino-state {
+        display: inline-flex; align-items: center; gap: .4rem; font-size: .82rem;
+        font-weight: 600; margin-bottom: .8rem;
+    }
+    .arduino-state .dot { width: 10px; height: 10px; border-radius: 50%; background: #ef4444; }
+    .arduino-state.connected .dot { background: #22c55e; }
+</style>
+
+<div class="reg-wrap">
+    <h2 style="margin:0 0 .25rem">Card Registration Panel</h2>
+    <p class="sub">On-prem control panel — requires a physical Arduino RFID reader connected to this machine (USB/serial).</p>
+
+    <div class="reg-card">
+        <div class="arduino-state" id="arduinoState">
+            <span class="dot"></span><span id="arduinoStateText">Disconnected</span>
+        </div>
+        <div class="field-row">
+            <select id="portSelect" class="form-select" style="flex:1 1 200px; padding:.55rem .7rem; border:1px solid #d7dbe3; border-radius:9px;">
+                <option value="">Select serial port…</option>
+            </select>
+            <button class="btn-reg" id="btnConnect">Connect</button>
+            <button class="btn-reg secondary" id="btnDisconnect">Disconnect</button>
+        </div>
+    </div>
+
+    <div class="reg-grid">
+        <div class="reg-card">
+            <h3>Register Student (ID card tap)</h3>
+            <p class="sub">Connect the reader, then arm it and tap the student's ID card.</p>
+            <div class="field-row">
+                <input id="stuId" placeholder="Student ID (e.g. STU001)">
+                <input id="stuName" placeholder="Full name">
+                <input id="stuEmail" placeholder="Parent email (optional)">
+            </div>
+            <button class="btn-reg" id="btnRegister">Arm reader & register</button>
+        </div>
+
+        <div class="reg-card">
+            <h3>Link Money Card (tap)</h3>
+            <p class="sub">Search a student with no money card, then tap their money card.</p>
+            <div class="field-row">
+                <input id="linkStuId" placeholder="Student ID to link">
+            </div>
+            <button class="btn-reg" id="btnLink">Arm reader & link</button>
+        </div>
+
+        <div class="reg-card">
+            <h3>Report Lost Card</h3>
+            <p class="sub">Deactivates the student's money card and preserves the balance.</p>
+            <div class="field-row">
+                <input id="lostStuId" placeholder="Student ID">
+            </div>
+            <button class="btn-reg" id="btnLost">Report lost</button>
+        </div>
+
+        <div class="reg-card">
+            <h3>Replace Lost Card (tap)</h3>
+            <p class="sub">After a report exists, arm the reader and tap the new card.</p>
+            <div class="field-row">
+                <input id="replaceStuId" placeholder="Student ID">
+            </div>
+            <button class="btn-reg" id="btnReplace">Arm reader & replace</button>
+        </div>
+    </div>
+
+    <div class="reg-card">
+        <h3>Activity</h3>
+        <div class="status-log" id="statusLog">Waiting for reader…</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script>
+const socket = io();
+const log = (msg, type) => {
+    const el = document.getElementById('statusLog');
+    const line = document.createElement('div');
+    line.textContent = '• ' + msg;
+    if (type === 'error') line.style.color = '#fca5a5';
+    if (type === 'success') line.style.color = '#86efac';
+    el.appendChild(line);
+    el.scrollTop = el.scrollHeight;
+};
+socket.on('status', d => log(d.message, d.type));
+socket.on('card_error', d => log(d.message, 'error'));
+socket.on('student_registered', d => log('Student registered: ' + d.student_id, 'success'));
+socket.on('money_card_linked', d => log('Money card linked: ' + d.student_id, 'success'));
+socket.on('card_reported_lost', d => log('Lost card reported: ' + d.student_id, 'success'));
+socket.on('card_replaced', d => log('Card replaced: ' + d.student_id, 'success'));
+
+function setArduino(connected) {
+    const s = document.getElementById('arduinoState');
+    s.classList.toggle('connected', connected);
+    document.getElementById('arduinoStateText').textContent = connected ? 'Connected' : 'Disconnected';
+}
+async function api(path, body) {
+    const r = await fetch(path, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
+    return r.json().catch(() => ({}));
+}
+(async () => {
+    const r = await fetch('/api/serial/ports').then(r => r.json()).catch(() => ({ports: []}));
+    const sel = document.getElementById('portSelect');
+    (r.ports || []).forEach(p => {
+        const o = document.createElement('option');
+        o.value = p.port; o.textContent = p.port + ' — ' + (p.description || '');
+        sel.appendChild(o);
+    });
+})();
+document.getElementById('btnConnect').onclick = async () => {
+    const port = document.getElementById('portSelect').value;
+    if (!port) return log('Pick a serial port first.', 'error');
+    const r = await api('/api/serial/connect', {port});
+    if (r.success) { setArduino(true); log('Connected to ' + port, 'success'); }
+    else log(r.error || 'Connect failed', 'error');
+};
+document.getElementById('btnDisconnect').onclick = async () => {
+    const r = await api('/api/serial/disconnect', {});
+    setArduino(false); log('Disconnected');
+};
+document.getElementById('btnRegister').onclick = async () => {
+    const id = document.getElementById('stuId').value.trim();
+    const name = document.getElementById('stuName').value.trim();
+    const email = document.getElementById('stuEmail').value.trim();
+    if (!id || !name) return log('Student ID and name required', 'error');
+    // register-student handles ID card UID via the armed reader; send details first,
+    // then start the card read.
+    const r = await api('/api/student/register', {student_id: id, name, parent_email: email, id_card_uid: 'PENDING'});
+    // Note: the original flow taps the ID card to capture the UID. We arm the reader
+    // and let the server read the CARD| line, then call start-register.
+    const arm = await api('/api/card/start-register', {});
+    log(arm.success ? 'Reader armed — tap the ID card' : (arm.error || 'Arm failed'), arm.success ? 'success' : 'error');
+};
+document.getElementById('btnLink').onclick = async () => {
+    const id = document.getElementById('linkStuId').value.trim();
+    if (!id) return log('Student ID required', 'error');
+    const r = await api('/api/card/link-money', {student_id: id});
+    log(r.success ? 'Reader armed — tap the money card' : (r.error || 'Arm failed'), r.success ? 'success' : 'error');
+};
+document.getElementById('btnLost').onclick = async () => {
+    const id = document.getElementById('lostStuId').value.trim();
+    if (!id) return log('Student ID required', 'error');
+    const r = await api('/api/card/report-lost', {student_id: id});
+    log(r.success ? 'Lost card reported: ' + r.report_id : (r.error || 'Failed'), r.success ? 'success' : 'error');
+};
+document.getElementById('btnReplace').onclick = async () => {
+    const id = document.getElementById('replaceStuId').value.trim();
+    if (!id) return log('Student ID required', 'error');
+    const r = await api('/api/card/replace-lost', {student_id: id});
+    log(r.success ? 'Reader armed — tap the NEW card' : (r.error || 'Failed'), r.success ? 'success' : 'error');
+};
+</script>
+{% endblock %}

@@ -178,7 +178,7 @@ class TestLoadBalance:
             'Transactions Log': txn_ws,
         })
 
-        import backend.dashboard.admin_dashboard as adm_module
+        import backend.dashboard.web_app as adm_module
         with patch.object(adm_module, 'get_sms_notifier',
                           side_effect=RuntimeError('Twilio down'), create=True):
             resp = admin_client.post('/api/load-balance', json={
@@ -319,7 +319,7 @@ class TestVoidTransaction:
             'Money Accounts': money_ws,
         })
 
-        import backend.dashboard.admin_dashboard as adm_module
+        import backend.dashboard.web_app as adm_module
         with patch.object(adm_module, 'invalidate_pattern', create=True) as mock_inv:
             resp = admin_client.post(
                 f'/api/admin/transactions/{_TXN_ID}/void',
@@ -430,7 +430,7 @@ class TestDashboardStats:
     """GET /api/stats should count only real, completed, non-void transactions."""
 
     def test_stats_excludes_void_failed_and_malformed_rows(self, flask_app, db, admin_client):
-        import backend.dashboard.admin_dashboard as adm_module
+        import backend.dashboard.web_app as adm_module
 
         today = adm_module.get_philippines_time().strftime('%Y-%m-%d')
 

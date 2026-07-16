@@ -49,8 +49,8 @@ def _resolve_runtime_module():
 
     Priority:
     1) __main__ when running an entrypoint script directly
-    2) already-imported dashboard_core/admin_dashboard modules
-    3) import dashboard_core, then admin_dashboard as final fallback
+    2) already-imported dashboard_core/web_app modules
+    3) import dashboard_core, then web_app as final fallback
     """
     main_mod = sys.modules.get('__main__')
     if main_mod and hasattr(main_mod, 'get_sheets_client'):
@@ -62,8 +62,8 @@ def _resolve_runtime_module():
         'app',
         'backend.dashboard.dashboard_core',
         'dashboard_core',
-        'backend.dashboard.admin_dashboard',
-        'admin_dashboard',
+        'backend.dashboard.web_app',
+        'web_app',
     )
 
     for name in module_names:

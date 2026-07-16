@@ -119,13 +119,15 @@ sudo cp "$DEPLOY_DIR/bankongseton-api.service" /etc/systemd/system/
 sudo cp "$DEPLOY_DIR/bankongseton-web.service"  /etc/systemd/system/
 sudo cp "$DEPLOY_DIR/bankongseton-kiosk.service" /etc/systemd/system/
 sudo cp "$DEPLOY_DIR/bankongseton-tech.service"  /etc/systemd/system/
+sudo cp "$DEPLOY_DIR/bankongseton-registration.service" /etc/systemd/system/
 sudo sed -i "s#__APP_DIR__#$APP_DIR#g; s#__USER__#$USER_NAME#g" \
   /etc/systemd/system/bankongseton-api.service \
   /etc/systemd/system/bankongseton-web.service \
   /etc/systemd/system/bankongseton-kiosk.service \
-  /etc/systemd/system/bankongseton-tech.service
+  /etc/systemd/system/bankongseton-tech.service \
+  /etc/systemd/system/bankongseton-registration.service
 sudo systemctl daemon-reload
-sudo systemctl enable bankongseton-api bankongseton-web bankongseton-kiosk bankongseton-tech
+sudo systemctl enable bankongseton-api bankongseton-web bankongseton-kiosk bankongseton-tech bankongseton-registration
 
 # ── nginx ──────────────────────────────────────────────────────────────────────
 echo "==> Installing nginx site"
@@ -151,7 +153,7 @@ echo "    NOTE: also open 80/443/22 in the OCI VCN Security List (console)."
 
 # ── start services ────────────────────────────────────────────────────────────
 echo "==> Starting services"
-sudo systemctl restart bankongseton-api bankongseton-web bankongseton-kiosk bankongseton-tech
+sudo systemctl restart bankongseton-api bankongseton-web bankongseton-kiosk bankongseton-tech bankongseton-registration
 
 # ── TLS (optional) ────────────────────────────────────────────────────────────
 if [ -n "$DOMAIN" ] && [ -n "$ADMIN_EMAIL" ]; then
