@@ -62,14 +62,12 @@
 
     <div class="content-shell">
         <header class="global-topbar">
-            <div class="topbar-search">
+            <form class="topbar-search" action="/students" method="get" role="search">
                 <i class="bi bi-search"></i>
-                <input type="text" placeholder="Search students, transactions, or alerts..." aria-label="Global Search">
-            </div>
+                <input type="text" name="q" placeholder="Search students by name or ID..." aria-label="Search students">
+            </form>
             <div class="topbar-center">Financial <span>Intelligence</span></div>
             <div class="topbar-right">
-                <button class="topbar-icon"><i class="bi bi-bell-fill"></i></button>
-                <button class="topbar-icon"><i class="bi bi-question-circle-fill"></i></button>
                 <div class="topbar-user">
                     <div>
                         <strong>{{ username or 'Admin User' }}</strong>

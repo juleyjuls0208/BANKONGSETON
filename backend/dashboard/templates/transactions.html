@@ -190,7 +190,6 @@
     </div>
     <div class="tx-foot">
         <small id="transactionCountBadge">Loading...</small>
-        <div class="pager" style="display:none;"><!-- Pagination not yet implemented --></div>
     </div>
 </section>
 
@@ -413,10 +412,8 @@ function exportTransactionsCSV() {
     }
     
     let csv = 'Date & Time,Student ID,Student Name,Type,Amount,Balance After\n';
-    
-    // We only have the DOM or the global variable. It's better to fetch all or use the loaded ones.
-    // For simplicity, just alert that it's a placeholder if it's too complex, or implement a basic one.
-    // Let's implement a basic one based on current table rows:
+
+    // Export the currently rendered table rows.
     for (let i = 0; i < table.rows.length; i++) {
         let row = table.rows[i];
         let cols = row.cells;

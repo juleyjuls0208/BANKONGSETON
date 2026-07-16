@@ -167,7 +167,6 @@
     </div>
     <div class="students-foot">
         <small id="studentsCountNote" class="text-muted">Loading entries...</small>
-        <div class="pager" style="display:none;"><!-- Pagination not yet implemented --></div>
     </div>
 </section>
 
@@ -268,8 +267,16 @@
     const studentsCountNote = document.getElementById('studentsCountNote');
 
     document.addEventListener('DOMContentLoaded', () => {
-        loadStudents();
-        document.getElementById('searchInput').addEventListener('input', searchStudents);
+        const params = new URLSearchParams(window.location.search);
+        const initialQuery = (params.get('q') || '').trim();
+        const searchInput = document.getElementById('searchInput');
+        if (initialQuery) {
+            searchInput.value = initialQuery;
+            searchStudents();
+        } else {
+            loadStudents();
+        }
+        searchInput.addEventListener('input', searchStudents);
     });
 
     function esc(value) {
