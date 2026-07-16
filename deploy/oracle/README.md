@@ -112,9 +112,14 @@ machine is stateless and replaceable.
   `eventlet`) have aarch64 builds; `pip install` works without a compiler.
 - **Cold start:** always-free ARM never sleeps, so there's no cold-start lag
   (unlike Render). Good for a live POS.
-- **DB is Supabase**, not local — make sure `DATABASE_URL` in `/opt/bankongseton/.env`
-  points at your Supabase project and the VM's outbound 5432 is allowed by
-  Supabase's firewall (add the VM's public IP to Supabase allowed IPs, or use
-  the connection-pooler port 6543).
+- **DB is Supabase**, not local. The `DATABASE_URL` in `/opt/bankongseton/.env`
+  already points at the live project (`db.pmzaxwqygzuuiawdrkvv.supabase.co`,
+  ap-southeast-1). The DB host publishes **only an IPv6 AAAA record** — the
+  direct `:5432` URL works if the Oracle VM has IPv6 egress (always-free ARM
+  instances do). If the VM can't reach IPv6, switch to the commented IPv4
+  session-pooler URL in `.env` (port `6543`, same password) — note some older
+  Oracle shapes block outbound 5432, in which case the pooler is required.
+  Either way: add the VM's public IP to Supabase → Database → Network
+  Restrictions, or the connection is refused.
 - **Secrets** live only in `/opt/bankongseton/.env` (chmod 600, owned by `banko`).
   Never commit it. `.env.production.example` is the template.

@@ -98,8 +98,10 @@ ADMIN_USERNAME=admin
 ADMIN_PASSWORD=$ADMIN_PASSWORD
 FINANCE_USERNAME=finance
 FINANCE_PASSWORD=$FINANCE_PASSWORD
-# Supabase Postgres — EDIT THIS (or set DATABASE_URL in systemd override)
-DATABASE_URL=postgresql://postgres:CHANGE_ME@db.supabase.co:5432/postgres
+# Supabase Postgres — real project ref (host is IPv6-only; use pooler below if VM has no IPv6 egress)
+DATABASE_URL=postgresql://postgres:***@db.pmzaxwqygzuuiawdrkvv.supabase.co:5432/postgres
+# IPv4 fallback (session pooler, ap-southeast-1) — swap in if direct :5432 won't connect:
+# DATABASE_URL=postgresql://postgres:***@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres
 CORS_ORIGINS=$CORS
 SERVER_URL=$SERVER_URL
 WEB_CONCURRENCY=1

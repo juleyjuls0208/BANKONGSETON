@@ -130,7 +130,8 @@ def tech_home():
 
 @app.route("/api/tech/health", methods=["GET"])
 def tech_health():
-    return jsonify({"service": "tech-kiosk", "status": "ok", "db": db is not None})
+    db_ok = bool(db) and db.test_connection()
+    return jsonify({"service": "tech-kiosk", "status": "ok", "db": db_ok})
 
 
 # Thin wrappers that require tech login for the shared hardware endpoints.

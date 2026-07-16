@@ -3200,9 +3200,8 @@ def register_routes(app, socketio):
                 sheets_ok = False
                 latency_ms = 0
             else:
-                db.worksheets()
+                sheets_ok = db.test_connection()
                 latency_ms = int((_time.time() - t0) * 1000)
-                sheets_ok = True
         except Exception:
             latency_ms = int((_time.time() - t0) * 1000)
             sheets_ok = False

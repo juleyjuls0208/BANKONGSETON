@@ -61,10 +61,10 @@ from services.loading_service import (
 )
 
 from sheets_adapter import APIError, SpreadsheetNotFound, WorksheetNotFound
+from sheets_adapter import get_sheets_client as _get_kiosk_db
 
 # Import RFID bridge + utils (best effort — hardware may be absent in dev/test).
 try:
-    from utils import card_reader_state, normalize_card_uid
     from arduino_bridge import ArduinoBridge
     _HARDWARE_OK = True
 except Exception as _imp_err:  # pragma: no cover
@@ -160,9 +160,15 @@ def connect_arduino(port: str, baud: int = 9600):
 
 @app.route("/api/kiosk/health", methods=["GET"])
 def health():
+    db_ok = False
+    try:
+        db_ok = _get_kiosk_db().test_connection()
+    except Exception:
+        db_ok = False
     return jsonify({
         "service": "loading-kiosk",
         "status": "ok",
+        "db": db_ok,
         "hardware": _HARDWARE_OK,
         "rfid_connected": bool(getattr(app, "arduino_bridge", None)),
     })

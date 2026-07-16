@@ -345,10 +345,9 @@ def health_check():
     sheets_ok = False
     latency_ms = 0
     try:
-        probe_client = get_sheets_client()
-        probe_client.worksheets()
+        probe_client = _get_sheets_client()
+        sheets_ok = probe_client.test_connection()
         latency_ms = int((time.time() - t0) * 1000)
-        sheets_ok = True
     except Exception:
         latency_ms = int((time.time() - t0) * 1000)
         sheets_ok = False
