@@ -158,7 +158,7 @@ def login():
             session['role'] = 'admin'
             return jsonify({'success': True, 'role': 'admin'})
         return jsonify({'success': False, 'error': 'Invalid credentials'}), 401
-    return render_template('login_panel.html')
+    return render_template('login.html', redirect_target='/panel')
 
 @app.route('/logout')
 def logout():
