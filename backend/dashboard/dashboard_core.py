@@ -3242,6 +3242,7 @@ def register_routes(app, socketio, serial_enabled=True):
             worksheet.delete_rows(row)
         return len(rows)
 
+
     @app.route("/api/students/<student_id>", methods=["DELETE"])
     @admin_only
     def delete_student(student_id):
@@ -3288,6 +3289,9 @@ def register_routes(app, socketio, serial_enabled=True):
         except Exception as e:
             logger.error(f"Unexpected error in delete_student: {e}", exc_info=True)
             return jsonify({"error": "An unexpected error occurred"}), 500
+
+
+
 
     @app.route("/api/transactions/recent", methods=["GET"])
     @login_required
@@ -3349,7 +3353,6 @@ def register_routes(app, socketio, serial_enabled=True):
             logger.error(
                 f"Unexpected error in get_recent_transactions: {e}", exc_info=True
             )
-            return jsonify({"error": "An unexpected error occurred"}), 500
 
     @app.route("/api/transactions/filtered", methods=["GET"])
     @login_required
