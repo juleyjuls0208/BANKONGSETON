@@ -35,6 +35,7 @@ import threading
 import re
 import logging
 from urllib.parse import urlparse
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -108,7 +109,15 @@ def desktop_features(f):
     return decorated_function
 
 # App + SocketIO
-app = Flask(__name__)
+if getattr(sys, "frozen", False):
+    _launch_dir = Path(sys.executable).resolve().parent
+else:
+    _launch_dir = Path(__file__).resolve().parent
+app = Flask(
+    __name__,
+    template_folder=str(_launch_dir / "templates"),
+    static_folder=str(_launch_dir / "static"),
+)
 app.secret_key = _secret_key
 _allowed_origins = get_cors_origins()
 CORS(app, origins=_allowed_origins)

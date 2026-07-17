@@ -164,7 +164,19 @@ def create_app() -> tuple[Flask, SocketIO]:
     if not jwt_secret or jwt_secret == INSECURE_JWT_DEFAULT:
         raise RuntimeError("JWT_SECRET must be set and must not use insecure default")
 
-    app = Flask(__name__)
+    # Bind template/static folders to the launch directory, not Flask's import
+    # root_path. When frozen by PyInstaller, root_path points into the extracted
+    # _MEIPASS bundle (no templates there); in dev it equals this directory anyway,
+    # so this is a no-op for the source run and correct for the .exe.
+    if getattr(sys, "frozen", False):
+        _launch_dir = Path(sys.executable).resolve().parent
+    else:
+        _launch_dir = APP_DIR
+    app = Flask(
+        __name__,
+        template_folder=str(_launch_dir / "templates"),
+        static_folder=str(_launch_dir / "static") if (_launch_dir / "static").is_dir() else None,
+    )
     app.secret_key = flask_secret
     app.config["ARDUINO_WIFI_OFFLINE_S"] = int(os.getenv("ARDUINO_WIFI_OFFLINE_S", "60"))
 
