@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Card Registration — Bangko ng Seton{% endblock %}</title>
+    <link rel="stylesheet" href="/static/css/panel.css">
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="panel-body">
+    <header class="panel-topbar">
+        <div class="panel-brand">
+            <div class="panel-logo">B</div>
+            <div class="panel-brand-text">
+                <strong>Seton Academy</strong>
+                <span>Card Registration</span>
+            </div>
+        </div>
+        <div class="panel-topbar-right">
+            <div class="panel-user">
+                <span class="panel-user-name">{{ username or 'Admin' }}</span>
+                <span class="panel-user-role">{{ (role or 'admin') | capitalize }}</span>
+            </div>
+            <a href="/logout" class="panel-logout" title="Log out">
+                <i class="bi bi-box-arrow-right"></i> Logout
+            </a>
+        </div>
+    </header>
+
+    <main class="panel-main">
+        {% block content %}{% endblock %}
+    </main>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

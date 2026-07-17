@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign in — Bangko ng Seton</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="/static/css/dashboard.css">
+    <style>
+        body.login-body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+            background:
+                radial-gradient(1100px 520px at 15% -10%, #e6e2ff 0%, transparent 55%),
+                radial-gradient(900px 480px at 110% 110%, #ded9f7 0%, transparent 50%),
+                var(--bg);
+        }
+
+        .login-card {
+            width: 100%;
+            max-width: 400px;
+            background: var(--surface);
+            border: 1px solid rgba(217, 211, 232, 0.85);
+            border-radius: 18px;
+            box-shadow: 0 24px 60px rgba(49, 43, 79, 0.14);
+            padding: 2.4rem 2.1rem;
+        }
+
+        .login-brand {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            gap: 0.6rem;
+            margin-bottom: 1.6rem;
+        }
+
+        .login-brand img {
+            width: 68px;
+            height: 68px;
+            object-fit: contain;
+        }
+
+        .login-brand h1 {
+            margin: 0;
+            font-family: 'Instrument Serif', serif;
+            font-style: italic;
+            font-size: 2rem;
+            color: var(--ink);
+        }
+
+        .login-brand p {
+            margin: 0;
+            font-size: 0.72rem;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            font-weight: 700;
+            color: var(--muted);
+        }
+
+        .login-field { margin-bottom: 1rem; }
+
+        .login-field label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #38364b;
+            margin-bottom: 0.4rem;
+        }
+
+        .login-input {
+            position: relative;
+        }
+
+        .login-input i {
+            position: absolute;
+            left: 0.85rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #8a86a0;
+        }
+
+        .login-input input {
+            width: 100%;
+            height: 48px;
+            border: 1px solid var(--line);
+            border-radius: 11px;
+            background: var(--surface-soft);
+            padding: 0 0.9rem 0 2.5rem;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.98rem;
+            color: var(--ink);
+        }
+
+        .login-input input:focus {
+            outline: 2px solid rgba(53, 37, 205, 0.18);
+            border-color: rgba(53, 37, 205, 0.4);
+            background: #fff;
+        }
+
+        .login-alert {
+            display: none;
+            align-items: center;
+            gap: 0.5rem;
+            background: #ffe0e0;
+            border: 1px solid #f2c0c0;
+            color: var(--error);
+            border-radius: 10px;
+            padding: 0.65rem 0.8rem;
+            font-size: 0.88rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .login-alert.show { display: flex; }
+
+        .login-submit {
+            width: 100%;
+            height: 48px;
+            border: 0;
+            border-radius: 11px;
+            background: linear-gradient(160deg, #4f46e5, #3525cd);
+            color: #fff;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 10px 22px rgba(53, 37, 205, 0.24);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.55rem;
+            transition: filter 150ms ease, transform 150ms ease;
+        }
+
+        .login-submit:hover:not(:disabled) { filter: brightness(1.06); transform: translateY(-1px); }
+        .login-submit:disabled { opacity: 0.7; cursor: default; }
+
+        .login-spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255, 255, 255, 0.45);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: login-spin 0.7s linear infinite;
+        }
+
+        @keyframes login-spin { to { transform: rotate(360deg); } }
+
+        .login-foot {
+            margin-top: 1.5rem;
+            text-align: center;
+            font-size: 0.78rem;
+            color: var(--muted);
+        }
+    </style>
+</head>
+<body class="seton-admin-body login-body">
+    <div class="login-card">
+        <div class="login-brand">
+            <img src="/static/seton_logo.png" alt="Bangko ng Seton">
+            <h1>Bangko ng Seton</h1>
+            <p>Financial Intelligence</p>
+        </div>
+
+        <form id="loginForm" novalidate>
+            <div class="login-field">
+                <label for="username">Username</label>
+                <div class="login-input">
+                    <i class="bi bi-person"></i>
+                    <input type="text" id="username" autocomplete="username" placeholder="Enter your username">
+                </div>
+            </div>
+
+            <div class="login-field">
+                <label for="password">Password</label>
+                <div class="login-input">
+                    <i class="bi bi-lock"></i>
+                    <input type="password" id="password" autocomplete="current-password" placeholder="Enter your password">
+                </div>
+            </div>
+
+            <div id="errorAlert" class="login-alert" role="alert">
+                <i class="bi bi-exclamation-triangle-fill"></i>
+                <span id="errorText"></span>
+            </div>
+
+            <button type="submit" class="login-submit" id="loginBtn">
+                <span id="loginText">Sign in</span>
+                <span id="loginSpinner" class="login-spinner" style="display:none;"></span>
+            </button>
+        </form>
+
+        <div class="login-foot">
+            <i class="bi bi-shield-lock"></i> Secured institutional access
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('loginForm');
+        const errorAlert = document.getElementById('errorAlert');
+        const errorText = document.getElementById('errorText');
+        const loginBtn = document.getElementById('loginBtn');
+        const loginText = document.getElementById('loginText');
+        const loginSpinner = document.getElementById('loginSpinner');
+
+        function showError(msg) {
+            errorText.textContent = msg;
+            errorAlert.classList.add('show');
+        }
+
+        function setLoading(on) {
+            loginBtn.disabled = on;
+            loginText.style.display = on ? 'none' : '';
+            loginSpinner.style.display = on ? '' : 'none';
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+
+            errorAlert.classList.remove('show');
+
+            if (!username || !password) {
+                showError('Please enter both username and password.');
+                return;
+            }
+
+            setLoading(true);
+            try {
+                const response = await fetch('/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    window.location.href = '/panel';
+                } else {
+                    showError(data.error || 'Invalid credentials');
+                    setLoading(false);
+                }
+            } catch (error) {
+                showError('Connection error. Please try again.');
+                setLoading(false);
+            }
+        });
+    </script>
+</body>
+</html>

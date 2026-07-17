@@ -1,186 +1,387 @@
-{% extends "base.html" %}
+{% extends "base_panel.html" %}
 
 {% block title %}Card Registration — Bangko ng Seton{% endblock %}
 
 {% block content %}
-<style>
-    .reg-wrap { max-width: 920px; margin: 0 auto; padding: 1.25rem 0.5rem; }
-    .reg-card {
-        background: #fff; border: 1px solid #e6e8ee; border-radius: 14px;
-        padding: 1.25rem 1.4rem; margin-bottom: 1.1rem;
-        box-shadow: 0 1px 2px rgba(16,24,40,.04);
-    }
-    .reg-card h3 { margin: 0 0 .35rem; font-size: 1.05rem; }
-    .reg-card .sub { color: #6b7280; font-size: .85rem; margin-bottom: .9rem; }
-    .field-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-bottom: .6rem; }
-    .field-row input {
-        flex: 1 1 200px; padding: .55rem .7rem; border: 1px solid #d7dbe3;
-        border-radius: 9px; font-size: .92rem;
-    }
-    .btn-reg {
-        border: none; border-radius: 9px; padding: .55rem 1.1rem; font-weight: 600;
-        cursor: pointer; background: #1f6feb; color: #fff; font-size: .9rem;
-    }
-    .btn-reg.secondary { background: #eef1f6; color: #1f2937; }
-    .btn-reg:disabled { opacity: .5; cursor: not-allowed; }
-    .status-log {
-        margin-top: .8rem; background: #0f172a; color: #cbd5e1; border-radius: 10px;
-        padding: .7rem .9rem; font-size: .82rem; max-height: 200px; overflow-y: auto;
-        font-family: ui-monospace, SFMono-Regular, Menlo, monospace; line-height: 1.45;
-    }
-    .reg-grid { display: grid; grid-template-columns: 1fr; gap: 1.1rem; }
-    @media (min-width: 760px) { .reg-grid { grid-template-columns: 1fr 1fr; } } }
-    .arduino-state {
-        display: inline-flex; align-items: center; gap: .4rem; font-size: .82rem;
-        font-weight: 600; margin-bottom: .8rem;
-    }
-    .arduino-state .dot { width: 10px; height: 10px; border-radius: 50%; background: #ef4444; }
-    .arduino-state.connected .dot { background: #22c55e; }
-</style>
+<div class="panel-title">Card Registration Panel</div>
+<div class="panel-sub">On-prem control panel — connect the Arduino RFID reader (USB/serial) to this machine.</div>
 
-<div class="reg-wrap">
-    <h2 style="margin:0 0 .25rem">Card Registration Panel</h2>
-    <p class="sub">On-prem control panel — requires a physical Arduino RFID reader connected to this machine (USB/serial).</p>
+<div class="status-banner info" id="statusBanner"></div>
 
-    <div class="reg-card">
-        <div class="arduino-state" id="arduinoState">
-            <span class="dot"></span><span id="arduinoStateText">Disconnected</span>
-        </div>
-        <div class="field-row">
-            <select id="portSelect" class="form-select" style="flex:1 1 200px; padding:.55rem .7rem; border:1px solid #d7dbe3; border-radius:9px;">
-                <option value="">Select serial port…</option>
-            </select>
-            <button class="btn-reg" id="btnConnect">Connect</button>
-            <button class="btn-reg secondary" id="btnDisconnect">Disconnect</button>
+<!-- Administrative actions -->
+<section class="section">
+    <h3 class="section-title">Actions</h3>
+    <div class="action-grid">
+        <button type="button" class="action-card" id="registerBtn" disabled>
+            <span class="ico"><i class="bi bi-person-plus-fill"></i></span>Register Student
+        </button>
+        <button type="button" class="action-card" id="linkBtn" disabled>
+            <span class="ico"><i class="bi bi-link-45deg"></i></span>Link Money Card
+        </button>
+        <button type="button" class="action-card" id="lostBtn" disabled>
+            <span class="ico"><i class="bi bi-slash-circle-fill"></i></span>Report Lost Card
+        </button>
+        <button type="button" class="action-card" id="replaceBtn" disabled>
+            <span class="ico"><i class="bi bi-arrow-repeat"></i></span>Replace Lost Card
+        </button>
+    </div>
+</section>
+
+<!-- Arduino terminal -->
+<section class="section">
+    <h3 class="section-title">Arduino Terminal</h3>
+    <div class="term-head">
+        <div class="term-controls">
+            <select id="serialPortSelect"></select>
+            <button type="button" class="btn" id="refreshPortsBtn">Refresh</button>
+            <button type="button" class="btn primary" id="connectArduinoBtn">Connect</button>
+            <button type="button" class="btn" id="disconnectArduinoBtn">Disconnect</button>
         </div>
     </div>
+    <div class="term-state" id="arduinoState">Scanning for serial ports…</div>
+    <div class="term-log" id="statusLog"></div>
+</section>
 
-    <div class="reg-grid">
-        <div class="reg-card">
-            <h3>Register Student (ID card tap)</h3>
-            <p class="sub">Connect the reader, then arm it and tap the student's ID card.</p>
-            <div class="field-row">
-                <input id="stuId" placeholder="Student ID (e.g. STU001)">
-                <input id="stuName" placeholder="Full name">
-                <input id="stuEmail" placeholder="Parent email (optional)">
-            </div>
-            <button class="btn-reg" id="btnRegister">Arm reader & register</button>
+<!-- Register student slot (inline) -->
+<section class="section">
+    <h3 class="section-title">Register Student</h3>
+    <div class="card-slot" id="registerSlot">
+        <div class="scan-prompt" id="registerScan">
+            <div class="spinner"></div>
+            <strong>Tap the student's ID card</strong>
+            <small class="panel-sub" id="registerCountdown">Waiting for scan…</small>
         </div>
-
-        <div class="reg-card">
-            <h3>Link Money Card (tap)</h3>
-            <p class="sub">Search a student with no money card, then tap their money card.</p>
-            <div class="field-row">
-                <input id="linkStuId" placeholder="Student ID to link">
+        <form id="registerForm" style="display:none">
+            <div class="field">
+                <label>ID Card UID</label>
+                <input type="text" class="input" id="idCardUID" readonly>
             </div>
-            <button class="btn-reg" id="btnLink">Arm reader & link</button>
+            <div class="field">
+                <label>Student ID</label>
+                <input type="text" class="input" id="studentId" required>
+            </div>
+            <div class="field">
+                <label>Full Name</label>
+                <input type="text" class="input" id="studentName2" required>
+            </div>
+            <div class="field">
+                <label>Parent Email (optional)</label>
+                <input type="email" class="input" id="parentEmail">
+            </div>
+            <div class="row-actions">
+                <button type="button" class="btn" id="cancelRegisterBtn">Cancel</button>
+                <button type="button" class="btn primary" id="submitRegisterBtn">Register</button>
+            </div>
+        </form>
+    </div>
+</section>
+
+<!-- Link money card slot -->
+<section class="section">
+    <h3 class="section-title">Link Money Card</h3>
+    <div class="card-slot" id="linkSlot">
+        <div class="field">
+            <label>Select student (no money card)</label>
+            <input type="text" class="input" id="studentSearchLink" placeholder="Search by name or ID…" oninput="searchStudentsForLink()">
         </div>
+        <div class="search-list" id="studentsListLink"></div>
+    </div>
+</section>
 
-        <div class="reg-card">
-            <h3>Report Lost Card</h3>
-            <p class="sub">Deactivates the student's money card and preserves the balance.</p>
-            <div class="field-row">
-                <input id="lostStuId" placeholder="Student ID">
-            </div>
-            <button class="btn-reg" id="btnLost">Report lost</button>
+<!-- Report lost slot -->
+<section class="section">
+    <h3 class="section-title">Report Lost Card</h3>
+    <div class="card-slot" id="lostSlot">
+        <div class="status-banner warn">This deactivates the current money card and preserves balance for replacement.</div>
+        <div class="field">
+            <label>Search student</label>
+            <input type="text" class="input" id="lostCardSearch" placeholder="Search by name or ID…" oninput="searchStudentsWithCards()">
         </div>
+        <div class="search-list" id="lostCardList"></div>
+    </div>
+</section>
 
-        <div class="reg-card">
-            <h3>Replace Lost Card (tap)</h3>
-            <p class="sub">After a report exists, arm the reader and tap the new card.</p>
-            <div class="field-row">
-                <input id="replaceStuId" placeholder="Student ID">
-            </div>
-            <button class="btn-reg" id="btnReplace">Arm reader & replace</button>
+<!-- Replace lost slot -->
+<section class="section">
+    <h3 class="section-title">Replace Lost Card</h3>
+    <div class="card-slot" id="replaceSlot">
+        <div class="search-list" id="replaceCardList">
+            <div class="panel-sub">Click "Replace Lost Card" above to load pending reports.</div>
         </div>
     </div>
+</section>
 
-    <div class="reg-card">
-        <h3>Activity</h3>
-        <div class="status-log" id="statusLog">Waiting for reader…</div>
+<!-- Native modal (only used for confirm-style flows; card ops run inline) -->
+<div class="modal-backdrop" id="modalBackdrop">
+    <div class="modal-card">
+        <div class="modal-head">
+            <h3 id="modalTitle">Confirm</h3>
+            <button type="button" class="modal-close" data-close>&times;</button>
+        </div>
+        <div class="modal-body" id="modalBody"></div>
+        <div class="modal-foot">
+            <button type="button" class="btn" data-close>Cancel</button>
+            <button type="button" class="btn primary" id="modalConfirm">Confirm</button>
+        </div>
     </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script src="/socket.io/socket.io.js"></script>
 <script>
-const socket = io();
-const log = (msg, type) => {
-    const el = document.getElementById('statusLog');
-    const line = document.createElement('div');
-    line.textContent = '• ' + msg;
-    if (type === 'error') line.style.color = '#fca5a5';
-    if (type === 'success') line.style.color = '#86efac';
-    el.appendChild(line);
-    el.scrollTop = el.scrollHeight;
-};
-socket.on('status', d => log(d.message, d.type));
-socket.on('card_error', d => log(d.message, 'error'));
-socket.on('student_registered', d => log('Student registered: ' + d.student_id, 'success'));
-socket.on('money_card_linked', d => log('Money card linked: ' + d.student_id, 'success'));
-socket.on('card_reported_lost', d => log('Lost card reported: ' + d.student_id, 'success'));
-socket.on('card_replaced', d => log('Card replaced: ' + d.student_id, 'success'));
+    const el = {
+        statusLog: document.getElementById('statusLog'),
+        arduinoState: document.getElementById('arduinoState'),
+        serialPortSelect: document.getElementById('serialPortSelect'),
+        banner: document.getElementById('statusBanner')
+    };
+    const terminalEvents = [];
 
-function setArduino(connected) {
-    const s = document.getElementById('arduinoState');
-    s.classList.toggle('connected', connected);
-    document.getElementById('arduinoStateText').textContent = connected ? 'Connected' : 'Disconnected';
-}
-async function api(path, body) {
-    const r = await fetch(path, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
-    return r.json().catch(() => ({}));
-}
-(async () => {
-    const r = await fetch('/api/serial/ports').then(r => r.json()).catch(() => ({ports: []}));
-    const sel = document.getElementById('portSelect');
-    (r.ports || []).forEach(p => {
-        const o = document.createElement('option');
-        o.value = p.port; o.textContent = p.port + ' — ' + (p.description || '');
-        sel.appendChild(o);
+    function esc(value) {
+        return String(value ?? '').replace(/[&<>'"]/g, m => ({ '&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;' }[m]));
+    }
+    function setBanner(type, message) {
+        el.banner.className = 'status-banner show ' + (type || 'info');
+        el.banner.innerHTML = message;
+    }
+    function addLog(type, message) {
+        const stamp = new Date().toLocaleTimeString();
+        terminalEvents.push(`${stamp}  [${String(type || 'INFO').toUpperCase()}] ${message}`);
+        if (terminalEvents.length > 60) terminalEvents.shift();
+        el.statusLog.textContent = terminalEvents.join('\n');
+        el.statusLog.scrollTop = el.statusLog.scrollHeight;
+    }
+    function setCardActionEnabled(enabled) {
+        ['registerBtn', 'linkBtn', 'lostBtn', 'replaceBtn'].forEach(id => {
+            const b = document.getElementById(id);
+            if (b) b.disabled = !enabled;
+        });
+    }
+    function openSlot(id) { document.getElementById(id).classList.add('show'); }
+    function closeSlot(id) { document.getElementById(id).classList.remove('show'); }
+
+    async function loadSerialPorts() {
+        try {
+            const res = await fetch('/api/serial/ports');
+            const data = await res.json();
+            const ports = data.ports || [];
+            el.serialPortSelect.innerHTML = '<option value="">Select a port…</option>' +
+                ports.map(p => `<option value="${esc(p.port)}">${esc(p.port)} — ${esc(p.description || '')}</option>`).join('');
+            el.arduinoState.textContent = ports.length ? `${ports.length} serial port(s) detected` : 'No serial ports detected';
+            if (!ports.length) addLog('info', 'No Arduino serial ports detected');
+        } catch {
+            el.arduinoState.textContent = 'Failed to query serial ports';
+            addLog('error', 'Failed to load serial ports');
+        }
+    }
+
+    async function connectArduino() {
+        const port = el.serialPortSelect.value;
+        if (!port) { alert('Please select a serial port'); return; }
+        try {
+            const res = await fetch('/api/serial/connect', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ port }) });
+            const data = await res.json();
+            if (!res.ok || !data.success) { addLog('error', data.error || 'Failed to connect'); return; }
+            el.arduinoState.textContent = `Connected to ${port}`;
+            setCardActionEnabled(true);
+            addLog('success', `Connected to ${port}`);
+        } catch { addLog('error', 'Network error while connecting'); }
+    }
+    async function disconnectArduino() {
+        try {
+            const res = await fetch('/api/serial/disconnect', { method: 'POST' });
+            const data = await res.json();
+            if (!res.ok || !data.success) { addLog('error', data.error || 'Failed to disconnect'); return; }
+            el.arduinoState.textContent = 'Disconnected';
+            setCardActionEnabled(false);
+            addLog('info', 'Disconnected');
+        } catch { addLog('error', 'Network error while disconnecting'); }
+    }
+
+    // ---- Register ----
+    let idCardUID = '', isSubmitting = false, registerCountdownTimer = null, socket = null;
+    document.getElementById('registerBtn').addEventListener('click', async () => {
+        openSlot('registerSlot');
+        document.getElementById('registerScan').style.display = '';
+        document.getElementById('registerForm').style.display = 'none';
+        document.getElementById('registerForm').reset();
+        idCardUID = '';
+        try {
+            const res = await fetch('/api/card/start-register', { method: 'POST' });
+            const data = await res.json();
+            if (!res.ok) { setBanner('err', data.error || 'Failed to start card reader'); return; }
+            setBanner('info', 'Card reader armed — tap the ID card now.');
+            addLog('info', 'Card reader armed — tap the ID card now');
+        } catch (e) { setBanner('err', 'Failed to reach server: ' + e.message); return; }
+        let secs = 60;
+        clearInterval(registerCountdownTimer);
+        registerCountdownTimer = setInterval(() => {
+            secs--;
+            const c = document.getElementById('registerCountdown');
+            if (c) c.textContent = `Timeout in ${secs}s`;
+            if (secs <= 0) { clearInterval(registerCountdownTimer); }
+        }, 1000);
     });
-})();
-document.getElementById('btnConnect').onclick = async () => {
-    const port = document.getElementById('portSelect').value;
-    if (!port) return log('Pick a serial port first.', 'error');
-    const r = await api('/api/serial/connect', {port});
-    if (r.success) { setArduino(true); log('Connected to ' + port, 'success'); }
-    else log(r.error || 'Connect failed', 'error');
-};
-document.getElementById('btnDisconnect').onclick = async () => {
-    const r = await api('/api/serial/disconnect', {});
-    setArduino(false); log('Disconnected');
-};
-document.getElementById('btnRegister').onclick = async () => {
-    const id = document.getElementById('stuId').value.trim();
-    const name = document.getElementById('stuName').value.trim();
-    const email = document.getElementById('stuEmail').value.trim();
-    if (!id || !name) return log('Student ID and name required', 'error');
-    // register-student handles ID card UID via the armed reader; send details first,
-    // then start the card read.
-    const r = await api('/api/student/register', {student_id: id, name, parent_email: email, id_card_uid: 'PENDING'});
-    // Note: the original flow taps the ID card to capture the UID. We arm the reader
-    // and let the server read the CARD| line, then call start-register.
-    const arm = await api('/api/card/start-register', {});
-    log(arm.success ? 'Reader armed — tap the ID card' : (arm.error || 'Arm failed'), arm.success ? 'success' : 'error');
-};
-document.getElementById('btnLink').onclick = async () => {
-    const id = document.getElementById('linkStuId').value.trim();
-    if (!id) return log('Student ID required', 'error');
-    const r = await api('/api/card/link-money', {student_id: id});
-    log(r.success ? 'Reader armed — tap the money card' : (r.error || 'Arm failed'), r.success ? 'success' : 'error');
-};
-document.getElementById('btnLost').onclick = async () => {
-    const id = document.getElementById('lostStuId').value.trim();
-    if (!id) return log('Student ID required', 'error');
-    const r = await api('/api/card/report-lost', {student_id: id});
-    log(r.success ? 'Lost card reported: ' + r.report_id : (r.error || 'Failed'), r.success ? 'success' : 'error');
-};
-document.getElementById('btnReplace').onclick = async () => {
-    const id = document.getElementById('replaceStuId').value.trim();
-    if (!id) return log('Student ID required', 'error');
-    const r = await api('/api/card/replace-lost', {student_id: id});
-    log(r.success ? 'Reader armed — tap the NEW card' : (r.error || 'Failed'), r.success ? 'success' : 'error');
-};
+    document.getElementById('cancelRegisterBtn').addEventListener('click', async () => {
+        closeSlot('registerSlot');
+        clearInterval(registerCountdownTimer);
+        await fetch('/api/card/cancel', { method: 'POST' }).catch(() => {});
+        setBanner('', '');
+    });
+    document.getElementById('submitRegisterBtn').addEventListener('click', async () => {
+        if (isSubmitting) return;
+        const studentId = document.getElementById('studentId').value.trim();
+        const name = document.getElementById('studentName2').value.trim();
+        const parentEmail = document.getElementById('parentEmail').value.trim();
+        if (!studentId || !name) { alert('Please fill in all required fields'); return; }
+        isSubmitting = true;
+        try {
+            const res = await fetch('/api/student/register', {
+                method: 'POST', headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({ student_id: studentId, name, id_card_uid: idCardUID, parent_email: parentEmail })
+            });
+            if (res.ok) {
+                document.getElementById('registerForm').reset();
+                idCardUID = '';
+                closeSlot('registerSlot');
+                clearInterval(registerCountdownTimer);
+                setBanner('ok', `Student ${name} registered successfully.`);
+                addLog('success', `Student ${name} registered successfully`);
+            } else {
+                const data = await res.json().catch(() => ({}));
+                setBanner('err', data.error || 'Registration failed');
+            }
+        } catch (e) { setBanner('err', 'Error: ' + e.message); }
+        finally { isSubmitting = false; }
+    });
+
+    // ---- Link money card ----
+    document.getElementById('linkBtn').addEventListener('click', () => { openSlot('linkSlot'); searchStudentsForLink(); });
+    async function searchStudentsForLink() {
+        const query = document.getElementById('studentSearchLink').value || '';
+        try {
+            const res = await fetch(`/api/students/without-cards?q=${encodeURIComponent(query)}`);
+            const data = await res.json();
+            const list = document.getElementById('studentsListLink');
+            if (!data.students || data.students.length === 0) {
+                list.innerHTML = '<div class="panel-sub">No students found without money cards.</div>';
+                return;
+            }
+            list.innerHTML = data.students.map(s => `
+                <div class="list-item" onclick="linkMoneyCardToStudent('${esc(s.student_id)}')">
+                    <div><strong>${esc(s.name)}</strong><small>${esc(s.student_id)}</small></div>
+                    <span class="chip">Select</span>
+                </div>`).join('');
+        } catch { addLog('error', 'Failed to load students for linking'); }
+    }
+    async function linkMoneyCardToStudent(studentId) {
+        try {
+            const res = await fetch('/api/card/link-money', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ student_id: studentId }) });
+            if (!res.ok) { const d = await res.json().catch(()=>({})); setBanner('err', d.error || 'Failed to start money card link'); return; }
+            setBanner('info', `Reader armed for money card link: ${studentId}`);
+            addLog('info', `Reader armed for money card link: ${studentId}`);
+        } catch { setBanner('err', 'Failed to start money card link'); }
+    }
+
+    // ---- Report lost ----
+    document.getElementById('lostBtn').addEventListener('click', () => { openSlot('lostSlot'); searchStudentsWithCards(); });
+    async function searchStudentsWithCards() {
+        const query = document.getElementById('lostCardSearch').value || '';
+        try {
+            const res = await fetch(`/api/students/with-cards?q=${encodeURIComponent(query)}`);
+            const data = await res.json();
+            const list = document.getElementById('lostCardList');
+            if (!data.students || data.students.length === 0) {
+                list.innerHTML = '<div class="panel-sub">No students found with active money cards.</div>';
+                return;
+            }
+            list.innerHTML = data.students.map(s => `
+                <div class="list-item" onclick="reportLostCard('${esc(s.student_id)}', '${esc(s.money_card)}')">
+                    <div><strong>${esc(s.name)}</strong><small>${esc(s.student_id)} • Card: ${esc(s.money_card)}</small></div>
+                    <span class="chip warn">Mark Lost</span>
+                </div>`).join('');
+        } catch { addLog('error', 'Failed to load students with cards'); }
+    }
+    async function reportLostCard(studentId, cardNumber) {
+        if (isSubmitting) return;
+        if (!confirm(`Report card ${cardNumber} as lost for student ${studentId}?`)) return;
+        isSubmitting = true;
+        try {
+            const res = await fetch('/api/card/report-lost', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ student_id: studentId, card_number: cardNumber }) });
+            if (res.ok) {
+                setBanner('ok', 'Card reported lost. Balance preserved for replacement.');
+                closeSlot('lostSlot');
+                addLog('success', 'Card reported lost. Balance preserved for replacement.');
+            } else {
+                const d = await res.json().catch(()=>({}));
+                setBanner('err', d.error || 'Failed to report lost card');
+            }
+        } catch { setBanner('err', 'Failed to report lost card'); }
+        finally { isSubmitting = false; }
+    }
+
+    // ---- Replace lost ----
+    document.getElementById('replaceBtn').addEventListener('click', () => { openSlot('replaceSlot'); loadPendingReports(); });
+    async function loadPendingReports() {
+        const list = document.getElementById('replaceCardList');
+        list.innerHTML = '<div class="panel-sub"><span class="spinner" style="margin:0 auto 0.5rem"></span><br>Loading students with pending reports…</div>';
+        try {
+            const res = await fetch('/api/students/with-lost-reports');
+            const data = await res.json();
+            if (data.error) { list.innerHTML = `<div class="status-banner warn show">${esc(data.error)}</div>`; return; }
+            if (!data.students || data.students.length === 0) { list.innerHTML = '<div class="panel-sub">No pending lost-card reports.</div>'; return; }
+            list.innerHTML = data.students.map(s => `
+                <div class="list-item" onclick="startReplaceCard('${esc(s.student_id)}')">
+                    <div><strong>${esc(s.student_id)}</strong><small>Old Card: ${esc(s.old_card)} • Balance: ₱${Number(s.balance || 0).toFixed(2)}</small></div>
+                    <span class="chip">Replace</span>
+                </div>`).join('');
+        } catch { list.innerHTML = '<div class="panel-sub">Failed to load pending reports.</div>'; }
+    }
+    async function startReplaceCard(studentId) {
+        if (isSubmitting) return;
+        isSubmitting = true;
+        try {
+            const res = await fetch('/api/card/replace-lost', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ student_id: studentId }) });
+            if (res.ok) {
+                closeSlot('replaceSlot');
+                setBanner('info', `Reader armed for replacement card: ${studentId}`);
+                addLog('info', `Reader armed for replacement card: ${studentId}`);
+            } else {
+                const d = await res.json().catch(()=>({}));
+                setBanner('err', d.error || 'Failed to start replacement');
+            }
+        } catch { setBanner('err', 'Failed to start replacement'); }
+        finally { isSubmitting = false; }
+    }
+
+    // ---- Socket.IO live updates ----
+    if (window.io) {
+        socket = io({ transports: ['polling'], upgrade: false });
+        socket.on('status', d => addLog(d.type || 'info', d.message || ''));
+        socket.on('id_card_read', d => {
+            idCardUID = d.uid;
+            document.getElementById('idCardUID').value = d.uid;
+            addLog('success', `ID Card read: ${d.uid}`);
+            document.getElementById('registerScan').style.display = 'none';
+            document.getElementById('registerForm').style.display = '';
+            clearInterval(registerCountdownTimer);
+        });
+        socket.on('money_card_linked', d => { closeSlot('linkSlot'); setBanner('ok', `Money card linked for ${d.student_id}`); addLog('success', `Money card linked for ${d.student_id}`); });
+        socket.on('card_reported_lost', d => { closeSlot('lostSlot'); setBanner('ok', `Card reported lost for ${d.student_id}. Balance ₱${Number(d.balance || 0).toFixed(2)} preserved.`); });
+        socket.on('card_replaced', d => { closeSlot('replaceSlot'); setBanner('ok', d.message || 'Card replaced'); });
+        socket.on('card_error', d => setBanner('err', d.message || 'Card error'));
+        socket.on('card_timeout', d => setBanner('err', d.message || 'Card timeout'));
+        socket.on('student_registered', d => setBanner('ok', `Student ${d.name} registered successfully!`));
+    } else {
+        addLog('warning', 'Socket.IO unavailable; tap flows may not auto-update');
+    }
+
+    document.getElementById('refreshPortsBtn').addEventListener('click', loadSerialPorts);
+    document.getElementById('connectArduinoBtn').addEventListener('click', connectArduino);
+    document.getElementById('disconnectArduinoBtn').addEventListener('click', disconnectArduino);
+    setCardActionEnabled(false);
+    addLog('info', 'Terminal ready. Select a serial port and click Connect.');
+    loadSerialPorts();
 </script>
 {% endblock %}
