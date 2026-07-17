@@ -3264,12 +3264,12 @@ def register_routes(app, socketio, serial_enabled=True):
 
             money_card = normalize_card_uid(str(student.get("MoneyCardNumber", "")))
 
+            txn_sheet = get_worksheet_with_retry("Transactions Log")
+            _delete_sheet_rows_matching(txn_sheet, student_id)
+
             if money_card:
                 money_sheet = get_worksheet_with_retry("Money Accounts")
                 _delete_sheet_rows_matching(money_sheet, money_card)
-
-            txn_sheet = get_worksheet_with_retry("Transactions Log")
-            _delete_sheet_rows_matching(txn_sheet, student_id)
 
             _delete_sheet_rows_matching(users_sheet, student_id)
 
