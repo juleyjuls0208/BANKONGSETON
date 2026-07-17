@@ -418,6 +418,9 @@
                     <td>
                         <button class="icon-btn" title="Adjust balance" data-adjust-id="${esc(s.StudentID || '')}" data-adjust-name="${esc(s.Name || '')}"><i class="bi bi-cash-coin"></i></button>
                         <a class="icon-btn" title="View transactions" href="/transactions?q=${encodeURIComponent(s.StudentID)}"><i class="bi bi-clock-history"></i></a>
+                        {% if role == 'admin' %}
+                        <button class="icon-btn" title="Delete student" data-delete-id="${esc(s.StudentID || '')}" data-delete-name="${esc(s.Name || '')}"><i class="bi bi-trash3"></i></button>
+                        {% endif %}
                     </td>
                 </tr>
             `;
@@ -441,10 +444,31 @@
     // sidestep the quoting entirely.
     if (studentsBody) {
         studentsBody.addEventListener('click', (e) => {
-            const btn = e.target.closest('[data-adjust-id]');
-            if (!btn) return;
-            openAdjustModal(btn.getAttribute('data-adjust-id'), btn.getAttribute('data-adjust-name'));
+            const adjBtn = e.target.closest('[data-adjust-id]');
+            if (adjBtn) {
+                openAdjustModal(adjBtn.getAttribute('data-adjust-id'), adjBtn.getAttribute('data-adjust-name'));
+                return;
+            }
+            const delBtn = e.target.closest('[data-delete-id]');
+            if (delBtn) {
+                deleteStudent(delBtn.getAttribute('data-delete-id'), delBtn.getAttribute('data-delete-name'));
+            }
         });
+    }
+
+    async function deleteStudent(studentId, name) {
+        if (!confirm(`Delete student ${studentId} (${name || '—'}) and all their balance/transaction data? This cannot be undone.`)) return;
+        try {
+            const res = await fetch(`/api/students/${encodeURIComponent(studentId)}`, { method: 'DELETE' });
+            const data = await res.json();
+            if (data.success) {
+                await loadStudents();
+            } else {
+                alert(data.error || 'Failed to delete student');
+            }
+        } catch (err) {
+            alert('Network error while deleting student');
+        }
     }
 
     {% if role == 'admin' %}

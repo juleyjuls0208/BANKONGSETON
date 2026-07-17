@@ -3216,6 +3216,78 @@ def register_routes(app, socketio, serial_enabled=True):
             )
             return jsonify({"error": "An unexpected error occurred"}), 500
 
+    def _delete_sheet_rows_matching(worksheet, value):
+        """Delete every row whose content exactly equals `value` (any column).
+
+        Mode-agnostic: gspread .findall (grid order) and the Supabase adapter's
+        .findall/.delete_rows (ctid order) are each internally consistent, so the
+        row number findall returns is the correct one to hand to delete_rows in
+        BOTH backends. Deletion in descending order avoids index-shift surprises.
+        Exact-value filtering stops the substring find from matching siblings
+        (e.g. "2014" inside "201420029").
+        """
+        value = str(value)
+        if USE_SUPABASE:
+            found = worksheet.findall(value)
+            rows = sorted(
+                {m["row"] for m in found if str(m.get("value")) == value}, reverse=True
+            )
+        else:
+            found = worksheet.findall(value, regex=False)
+            rows = sorted(
+                {c.row for c in found if str(c.value) == value}, reverse=True
+            )
+        for row in rows:
+            worksheet.delete_rows(row)
+        return len(rows)
+
+    @app.route("/api/students/<student_id>", methods=["DELETE"])
+    @admin_only
+    def delete_student(student_id):
+        """Delete a student and all of their data (money account + transactions)."""
+        try:
+            student_id = str(student_id).strip()
+            if not student_id:
+                return jsonify({"error": "Student ID required"}), 400
+
+            users_sheet = get_worksheet_with_retry("Users")
+            users = users_sheet.get_all_records()
+
+            student = next(
+                (u for u in users if str(u.get("StudentID", "")).strip() == student_id),
+                None,
+            )
+            if not student:
+                return jsonify({"error": "Student not found"}), 404
+
+            money_card = normalize_card_uid(str(student.get("MoneyCardNumber", "")))
+
+            if money_card:
+                money_sheet = get_worksheet_with_retry("Money Accounts")
+                _delete_sheet_rows_matching(money_sheet, money_card)
+
+            txn_sheet = get_worksheet_with_retry("Transactions Log")
+            _delete_sheet_rows_matching(txn_sheet, student_id)
+
+            _delete_sheet_rows_matching(users_sheet, student_id)
+
+            invalidate_pattern("students")
+            invalidate_pattern("transactions")
+            invalidate_pattern("sheet_records:Transactions Log")
+            return jsonify({"success": True, "deleted": student_id})
+        except (
+            gspread.exceptions.APIError,
+            gspread.exceptions.SpreadsheetNotFound,
+            gspread.exceptions.WorksheetNotFound,
+            ConnectionError,
+            TimeoutError,
+        ) as e:
+            logger.error(f"Google Sheets unavailable in delete_student: {e}")
+            return jsonify({"error": "Service unavailable, please try again"}), 503
+        except Exception as e:
+            logger.error(f"Unexpected error in delete_student: {e}", exc_info=True)
+            return jsonify({"error": "An unexpected error occurred"}), 500
+
     @app.route("/api/transactions/recent", methods=["GET"])
     @login_required
     def get_recent_transactions():
