@@ -245,8 +245,8 @@ def login():
         admin_pass = os.getenv("ADMIN_PASSWORD", "").strip()
 
         # Check Finance credentials
-        finance_user = os.getenv("FINANCE_USERNAME", "financedashboard")
-        finance_pass = os.getenv("FINANCE_PASSWORD")
+        finance_user = os.getenv("FINANCE_USERNAME", "financedashboard").strip()
+        finance_pass = (os.getenv("FINANCE_PASSWORD") or "").strip()
 
         # Empty-credential guard (BUG-04): reject blank submissions before comparison
         if not username:
@@ -970,8 +970,8 @@ if __name__ == "__main__":
 
     admin_user = os.getenv("ADMIN_USERNAME", "").strip()
     admin_pass = os.getenv("ADMIN_PASSWORD", "").strip()
-    finance_user = os.getenv("FINANCE_USERNAME", "financedashboard")
-    finance_pass = os.getenv("FINANCE_PASSWORD")
+    finance_user = os.getenv("FINANCE_USERNAME", "financedashboard").strip()
+    finance_pass = (os.getenv("FINANCE_PASSWORD") or "").strip()
 
     # --- Redacted credential logging (SEC-01) ---
     logger.info(

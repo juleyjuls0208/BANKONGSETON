@@ -87,6 +87,16 @@ except ImportError:
 
 load_dotenv()
 
+# Data layer: Supabase Postgres (via gspread-compatible adapter) when DATABASE_URL
+# is set, otherwise fall back to Google Sheets. Gate keeps the old build working.
+USE_SUPABASE = bool(os.getenv("DATABASE_URL"))
+try:
+    from sheets_adapter import get_sheets_client as _adapter_get_client
+    _ADAPTER_AVAILABLE = True
+except Exception as _adapter_err:
+    _ADAPTER_AVAILABLE = False
+    logger.warning("event=adapter_import_failed error=%s", _adapter_err)
+
 # Timezone configuration
 PHILIPPINES_TZ = pytz.timezone("Asia/Manila")
 
@@ -184,20 +194,37 @@ def get_sheets_client():
         raise
 
 
-# Initialize global db after get_sheets_client is defined
-try:
-    db = get_sheets_client()
-except Exception:
-    pass
+# Initialize global db after get_sheets_client is defined. Skip when on Supabase
+# so we don't probe Google creds at import time (the adapter is wired lazily).
+if not USE_SUPABASE:
+    try:
+        db = get_sheets_client()
+    except Exception:
+        pass
 
 
 def get_worksheet_with_retry(sheet_name, max_retries=3):
-    """Get worksheet with retry logic and caching"""
+    """Get worksheet (or Supabase table view) with retry logic and caching.
+
+    When USE_SUPABASE is set, get_sheets_client() returns the gspread-compatible
+    adapter client whose .worksheet() yields a Supabase-backed SheetView. The
+    SheetView surface is a drop-in for gspread.Worksheet, so all call sites work
+    unchanged. Returns the same object gspread would, cached identically.
+    """
     global db
     cache_key = f"worksheet_{sheet_name}"
     cached = _sheets_cache.get(cache_key)
     if cached and time.time() - cached["timestamp"] < _cache_timeout:
         return cached["data"]
+
+    if USE_SUPABASE:
+        if not _ADAPTER_AVAILABLE:
+            raise RuntimeError("DATABASE_URL set but sheets_adapter unavailable")
+        if db is None:
+            db = _adapter_get_client()
+        worksheet = db.worksheet(sheet_name)
+        _sheets_cache[cache_key] = {"data": worksheet, "timestamp": time.time()}
+        return worksheet
 
     for attempt in range(max_retries):
         try:
@@ -1442,6 +1469,146 @@ def register_routes(app, socketio, serial_enabled=True):
             logger.error(f"Unexpected error in load_balance: {e}", exc_info=True)
             return jsonify({"error": "An unexpected error occurred"}), 500
 
+    @app.route("/api/students/<student_id>/adjust-balance", methods=["POST"])
+    @admin_only
+    def adjust_student_balance(student_id):
+        """Add or subtract money from a student's money card (admin-only)."""
+        try:
+            data = request.get_json(silent=True) or {}
+            student_id = str(student_id).strip()
+            direction = str(data.get("direction", "add")).strip().lower()
+            amount = float(data.get("amount", 0))
+            note = str(data.get("note", "")).strip()
+
+            if amount <= 0:
+                return jsonify({"error": "Amount must be positive"}), 400
+            if direction not in ("add", "subtract"):
+                return jsonify({"error": "direction must be 'add' or 'subtract'"}), 400
+
+            users_sheet = get_worksheet_with_retry("Users")
+            users_records = users_sheet.get_all_records()
+
+            student = None
+            for record in users_records:
+                if str(record.get("StudentID", "")).strip() == student_id:
+                    student = record
+                    break
+            if not student:
+                return jsonify({"error": "Student not found"}), 404
+
+            money_card = student.get("MoneyCardNumber", "")
+            if not money_card:
+                return jsonify({"error": "No money card registered"}), 400
+            normalized_money = normalize_card_uid(str(money_card))
+
+            # ponytail: one atomic SQL write (balance + txn) via the adapter when
+            # on Supabase; falls back to the gspread-style helper otherwise.
+            delta = amount if direction == "add" else -amount
+            # ponytail: transaction_type is a Postgres ENUM; only these labels are
+            # allowed. add->Load, subtract->Manual (manual adjustment). Subtract
+            # can't be "Refund" (that implies a return to a payer).
+            tx_type = "Load" if direction == "add" else "Manual"
+
+            if USE_SUPABASE:
+                money_sheet = get_worksheet_with_retry("Money Accounts")
+                try:
+                    result = money_sheet.update_balance_atomic(
+                        money_card=normalized_money,
+                        amount_delta=delta,
+                        transaction_type=tx_type,
+                        items_json=note or None,
+                        student_id=student_id,
+                    )
+                except Exception as e:
+                    msg = str(e)
+                    if "Insufficient balance" in msg or "not found" in msg:
+                        return jsonify({"error": msg}), 400
+                    raise
+                new_balance = float(result["BalanceAfter"])
+                invalidate_pattern("transactions")
+                invalidate_pattern("sheet_records:Transactions Log")
+            else:
+                money_sheet = get_worksheet_with_retry("Money Accounts")
+                money_records = money_sheet.get_all_records()
+                money_row_index = None
+                current_balance = 0.0
+                total_loaded = 0.0
+                for i, record in enumerate(money_records):
+                    if normalize_card_uid(str(record.get("MoneyCardNumber", ""))) == normalized_money:
+                        money_row_index = i + 2
+                        current_balance = float(record.get("Balance", 0))
+                        total_loaded = float(record.get("TotalLoaded", 0))
+                        break
+                if not money_row_index:
+                    return jsonify({"error": "Money account not found"}), 404
+
+                new_balance = current_balance + delta
+                if new_balance < 0:
+                    return jsonify({"error": "Cannot subtract beyond zero balance"}), 400
+
+                timestamp = get_philippines_time().strftime("%Y-%m-%d %H:%M:%S")
+                new_total = total_loaded + (amount if direction == "add" else 0)
+
+                balance_col = get_cached_column_index(money_sheet, "Balance")
+                total_col = get_cached_column_index(money_sheet, "TotalLoaded")
+                updated_col = get_cached_column_index(money_sheet, "LastUpdated")
+
+                money_sheet.batch_update([
+                    {"range": rowcol_to_a1(money_row_index, balance_col), "values": [[new_balance]]},
+                    {"range": rowcol_to_a1(money_row_index, total_col), "values": [[new_total]]},
+                    {"range": rowcol_to_a1(money_row_index, updated_col), "values": [[timestamp]]},
+                ])
+
+                try:
+                    transactions_sheet = get_worksheet_with_retry("Transactions Log")
+                    transaction_id = f"TXN-{get_philippines_time().strftime('%Y%m%d%H%M%S')}"
+                    row_map = {
+                        "TransactionID": transaction_id,
+                        "Timestamp": timestamp,
+                        "StudentID": student_id,
+                        "MoneyCardNumber": normalized_money,
+                        "TransactionType": tx_type,
+                        "Amount": delta,
+                        "BalanceBefore": float(current_balance),
+                        "BalanceAfter": float(new_balance),
+                        "Status": "Completed",
+                        "ErrorMessage": note,
+                        "ProcessedBy": session.get("admin_username", "admin"),
+                        "PaymentMethod": "manual-adjust",
+                        "StationID": "finance-dashboard",
+                    }
+                    headers = [str(h).strip() for h in transactions_sheet.row_values(1) if str(h).strip()]
+                    if headers:
+                        tx_row = [row_map.get(h, "") for h in headers]
+                    else:
+                        tx_row = [
+                            row_map["TransactionID"], row_map["Timestamp"], row_map["StudentID"],
+                            row_map["MoneyCardNumber"], row_map["TransactionType"], row_map["Amount"],
+                            row_map["BalanceBefore"], row_map["BalanceAfter"], row_map["Status"],
+                            row_map["ErrorMessage"],
+                        ]
+                    transactions_sheet.append_row(tx_row, table_range="A1")
+                    invalidate_pattern("transactions")
+                    invalidate_pattern("sheet_records:Transactions Log")
+                except Exception as tx_err:
+                    logger.warning("event=adjust_transaction_log_failed error=%s", tx_err)
+
+            socketio.emit("balance_updated", {"student_id": student_id, "new_balance": new_balance, "amount": delta})
+
+            return jsonify({"success": True, "student_id": student_id, "new_balance": new_balance, "amount": delta})
+        except (
+            gspread.exceptions.APIError,
+            gspread.exceptions.SpreadsheetNotFound,
+            gspread.exceptions.WorksheetNotFound,
+            ConnectionError,
+            TimeoutError,
+        ) as e:
+            logger.error(f"Google Sheets unavailable in adjust_student_balance: {e}")
+            return jsonify({"error": "Service unavailable, please try again"}), 503
+        except Exception as e:
+            logger.error(f"Unexpected error in adjust_student_balance: {e}", exc_info=True)
+            return jsonify({"error": "An unexpected error occurred"}), 500
+
     @app.route("/api/transactions", methods=["GET"])
     @login_required
     def get_transactions():
@@ -1467,13 +1634,35 @@ def register_routes(app, socketio, serial_enabled=True):
 
     # ============= STUDENTS =============
 
+    def _attach_balance(students):
+        # ponytail: single join point for balance + card status, reused by
+        # get_students and search_students so both render identically.
+        try:
+            money_sheet = get_worksheet_with_retry("Money Accounts")
+            money_accounts = money_sheet.get_all_records()
+        except Exception:
+            money_accounts = []
+        balance_map = {}
+        status_map = {}
+        for account in money_accounts:
+            card_number = normalize_card_uid(str(account.get("MoneyCardNumber", "")))
+            if card_number:
+                balance_map[card_number] = account.get("Balance", 0)
+                status_map[card_number] = account.get("Status", "Active")
+        for student in students:
+            card_number = normalize_card_uid(str(student.get("MoneyCardNumber", "")))
+            student["Balance"] = balance_map.get(card_number, 0.00)
+            student["MoneyCardStatus"] = status_map.get(card_number, "N/A") if card_number else "N/A"
+        return students
+
     @app.route("/api/students", methods=["GET"])
     @login_required
     def get_students():
-        """Get all students"""
+        """Get all students (with balance + card status)"""
         try:
             users_sheet = get_worksheet_with_retry("Users")
             students = users_sheet.get_all_records()
+            _attach_balance(students)
             return jsonify({"students": students})
         except (
             gspread.exceptions.APIError,
@@ -2895,30 +3084,7 @@ def register_routes(app, socketio, serial_enabled=True):
             query = request.args.get("q", "").strip().lower()
             users_sheet = get_worksheet_with_retry("Users")
             students = users_sheet.get_all_records()
-
-            money_sheet = get_worksheet_with_retry("Money Accounts")
-            money_accounts = money_sheet.get_all_records()
-
-            balance_map = {}
-            status_map = {}
-            for account in money_accounts:
-                card_number = normalize_card_uid(
-                    str(account.get("MoneyCardNumber", ""))
-                )
-                balance = account.get("Balance", 0)
-                status = account.get("Status", "Active")
-                if card_number:
-                    balance_map[card_number] = balance
-                    status_map[card_number] = status
-
-            for student in students:
-                card_number = normalize_card_uid(
-                    str(student.get("MoneyCardNumber", ""))
-                )
-                student["Balance"] = balance_map.get(card_number, 0.00)
-                student["MoneyCardStatus"] = (
-                    status_map.get(card_number, "N/A") if card_number else "N/A"
-                )
+            _attach_balance(students)
 
             if query:
                 filtered = []

@@ -687,6 +687,30 @@ class SheetView:
                     break
         return results
 
+    def find(self, query: Any, in_column: str | None = None) -> dict | None:
+        # gspread drop-in: returns {"row", "col", "value"} for the first match.
+        return self.find_cell(query, in_column=in_column)
+
+    def batch_update(self, data: list[dict]) -> None:
+        # gspread drop-in: data is a list of {"range": "A1", "values": [[...]]}.
+        # Ranges use A1 notation; translate to (row, col) grid updates.
+        import re as _re
+
+        def _a1_to_rc(a1: str) -> tuple[int, int]:
+            m = _re.match(r"([A-Z]+)(\d+)", a1.strip().upper())
+            if not m:
+                raise APIError(f"Invalid A1 range in batch_update: {a1!r}")
+            col = 0
+            for ch in m.group(1):
+                col = col * 26 + (ord(ch) - ord("A") + 1)
+            return int(m.group(2)), col
+
+        for item in data:
+            rng = (item.get("range") or "").split(":")[0]
+            values = item.get("values") or [[]]
+            start_row, start_col = _a1_to_rc(rng)
+            self._update_cells_grid(start_row, start_col, values)
+
     @classmethod
     def sheet_exists(cls, name: str) -> bool:
         table = name.lower().strip()

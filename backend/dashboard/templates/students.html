@@ -201,6 +201,40 @@
     </div>
 </div>
 {% endif %}
+
+<div class="modal fade" id="adjustModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Adjust Balance</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-1">Student: <strong id="adjustStudentName"></strong> <span class="text-muted" id="adjustStudentId"></span></p>
+                <p class="mb-3">Current balance: <strong id="adjustCurrentBalance">—</strong></p>
+                <div class="btn-group w-100 mb-3" role="group">
+                    <input type="radio" class="btn-check" name="adjDir" id="adjAdd" value="add" autocomplete="off" checked>
+                    <label class="btn btn-outline-success" for="adjAdd">Add</label>
+                    <input type="radio" class="btn-check" name="adjDir" id="adjSub" value="subtract" autocomplete="off">
+                    <label class="btn btn-outline-danger" for="adjSub">Subtract</label>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Amount (₱)</label>
+                    <input type="number" class="form-control" id="adjustAmount" min="0" step="0.01" placeholder="0.00">
+                </div>
+                <div class="mb-2">
+                    <label class="form-label fw-semibold">Note (optional)</label>
+                    <input type="text" class="form-control" id="adjustNote" placeholder="Reason for adjustment">
+                </div>
+                <div id="adjustError" class="text-danger small"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="submitAdjust()">Apply</button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -276,8 +310,64 @@
         } else {
             loadStudents();
         }
-        searchInput.addEventListener('input', searchStudents);
+        // ponytail: 220ms debounce so each keystroke doesn't fire a Sheets round-trip
+        let searchTimer = null;
+        searchInput.addEventListener('input', () => {
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(searchStudents, 220);
+        });
     });
+
+    let adjustStudentId = null;
+
+    function openAdjustModal(studentId, name) {
+        adjustStudentId = studentId;
+        document.getElementById('adjustStudentName').textContent = name || '—';
+        document.getElementById('adjustStudentId').textContent = studentId || '';
+        document.getElementById('adjustCurrentBalance').textContent = '—';
+        document.getElementById('adjustAmount').value = '';
+        document.getElementById('adjustNote').value = '';
+        document.getElementById('adjustError').textContent = '';
+        document.getElementById('adjAdd').checked = true;
+
+        const student = allStudents.find(s => String(s.StudentID) === String(studentId));
+        if (student) {
+            const bal = Number(student.Balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            document.getElementById('adjustCurrentBalance').textContent = '₱' + bal;
+        }
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('adjustModal')).show();
+    }
+
+    async function submitAdjust() {
+        const direction = document.querySelector('input[name="adjDir"]:checked').value;
+        const amount = parseFloat(document.getElementById('adjustAmount').value);
+        const note = document.getElementById('adjustNote').value.trim();
+        const errEl = document.getElementById('adjustError');
+        errEl.textContent = '';
+
+        if (!adjustStudentId) return;
+        if (!amount || amount <= 0) {
+            errEl.textContent = 'Enter a positive amount.';
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/students/${encodeURIComponent(adjustStudentId)}/adjust-balance`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ direction, amount, note })
+            });
+            const data = await response.json();
+            if (!response.ok || !data.success) {
+                errEl.textContent = data.error || 'Failed to adjust balance';
+                return;
+            }
+            bootstrap.Modal.getInstance(document.getElementById('adjustModal'))?.hide();
+            await loadStudents();
+        } catch (error) {
+            errEl.textContent = 'Network error while adjusting balance';
+        }
+    }
 
     function esc(value) {
         return String(value ?? '').replace(/[&<>'"]/g, m => ({ '&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;' }[m]));
@@ -325,7 +415,10 @@
                             ${cardStateText}
                         </span>
                     </td>
-                    <td><button class="icon-btn" onclick="window.location.href='/transactions?q=' + encodeURIComponent('${esc(s.StudentID)}')"><i class="bi bi-clock-history"></i></button></td>
+                    <td>
+                        <button class="icon-btn" title="Adjust balance" data-adjust-id="${esc(s.StudentID || '')}" data-adjust-name="${esc(s.Name || '')}"><i class="bi bi-cash-coin"></i></button>
+                        <a class="icon-btn" title="View transactions" href="/transactions?q=${encodeURIComponent(s.StudentID)}"><i class="bi bi-clock-history"></i></a>
+                    </td>
                 </tr>
             `;
         }).join('');
@@ -340,6 +433,18 @@
         } catch (error) {
             console.error('Error searching:', error);
         }
+    }
+
+    // ponytail: delegate the adjust click instead of inline onclick — inline
+    // handlers break when the interpolated value contains a double-quote
+    // (it terminates the attribute early). data-* attrs + addEventListener
+    // sidestep the quoting entirely.
+    if (studentsBody) {
+        studentsBody.addEventListener('click', (e) => {
+            const btn = e.target.closest('[data-adjust-id]');
+            if (!btn) return;
+            openAdjustModal(btn.getAttribute('data-adjust-id'), btn.getAttribute('data-adjust-name'));
+        });
     }
 
     {% if role == 'admin' %}

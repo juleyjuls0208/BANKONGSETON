@@ -31,6 +31,14 @@ from google.oauth2.service_account import Credentials
 # Load .env before reading env vars
 load_dotenv()
 
+USE_SUPABASE = bool(os.getenv("DATABASE_URL"))
+try:
+    from sheets_adapter import get_sheets_client as _adapter_get_client
+    _ADAPTER_AVAILABLE = True
+except Exception as _adapter_err:
+    _ADAPTER_AVAILABLE = False
+    logger.warning("event=adapter_import_failed error=%s", _adapter_err)
+
 # Ensure imports work when launched as: python backend/cashier_app/app.py
 APP_DIR = Path(__file__).resolve().parent
 BACKEND_DIR = APP_DIR.parent
@@ -80,11 +88,19 @@ def _resolve_credentials_path() -> str:
 
 
 def get_sheets_client():
+    """Get or refresh the data-layer client.
+
+    When DATABASE_URL is set, return the gspread-compatible Supabase
+    adapter client so every .worksheet()/get_all_records() call is a drop-in.
+    """
+    if USE_SUPABASE:
+        if not _ADAPTER_AVAILABLE:
+            raise RuntimeError("DATABASE_URL set but sheets_adapter unavailable")
+        return _adapter_get_client()
     creds_path = _resolve_credentials_path()
     spreadsheet_id = os.getenv("GOOGLE_SHEETS_ID", "").strip()
     if not spreadsheet_id:
         raise ValueError("GOOGLE_SHEETS_ID environment variable is not set")
-
     scopes = [
         "https://www.googleapis.com/auth/spreadsheets",
         "https://www.googleapis.com/auth/drive",

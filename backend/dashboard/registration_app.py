@@ -131,6 +131,12 @@ def index():
         return redirect(url_for('registration_panel'))
     return redirect(url_for('login'))
 
+# Shared login.html redirects here on success; this app only serves the on-prem
+# registration panel, so land on /panel.
+@app.route('/dashboard')
+def dashboard_redirect():
+    return redirect(url_for('registration_panel'))
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -143,18 +149,11 @@ def login():
             return jsonify({'success': False, 'error': 'Password cannot be empty'}), 400
         admin_user = os.getenv('ADMIN_USERNAME', '').strip()
         admin_pass = os.getenv('ADMIN_PASSWORD', '').strip()
-        finance_user = os.getenv('FINANCE_USERNAME', 'financedashboard')
-        finance_pass = os.getenv('FINANCE_PASSWORD')
         if username == admin_user and password == admin_pass and admin_user:
             session['admin_logged_in'] = True
             session['admin_username'] = username or 'admin'
             session['role'] = 'admin'
             return jsonify({'success': True, 'role': 'admin'})
-        elif username == finance_user and password == finance_pass:
-            session['admin_logged_in'] = True
-            session['admin_username'] = username
-            session['role'] = 'finance'
-            return jsonify({'success': True, 'role': 'finance'})
         return jsonify({'success': False, 'error': 'Invalid credentials'}), 401
     return render_template('login.html')
 
@@ -164,13 +163,13 @@ def logout():
     return redirect(url_for('login'))
 
 @app.route('/panel')
-@login_required
+@admin_only
 def registration_panel():
     """The separated control panel: register student, link money card, report lost."""
     return render_template(
         'registration.html',
         username=session.get('admin_username'),
-        role=session.get('role', 'finance'),
+        role=session.get('role', 'admin'),
         arduino_available=True,
     )
 

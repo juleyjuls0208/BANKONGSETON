@@ -49,6 +49,14 @@ sms_notifier = TwilioSMSNotifier() if TwilioSMSNotifier else None
 
 load_dotenv()
 
+USE_SUPABASE = bool(os.getenv("DATABASE_URL"))
+try:
+    from sheets_adapter import get_sheets_client as _adapter_get_client
+    _ADAPTER_AVAILABLE = True
+except Exception as _adapter_err:
+    _ADAPTER_AVAILABLE = False
+    logger.warning("event=adapter_import_failed error=%s", _adapter_err)
+
 # JWT Configuration
 JWT_SECRET = os.getenv('JWT_SECRET', secrets.token_urlsafe(32))
 JWT_ALGORITHM = 'HS256'
@@ -80,14 +88,22 @@ CORS(app, origins=get_cors_origins())
 # Google Sheets Setup
 
 def get_sheets_client():
-    """Get or refresh Google Sheets client"""
+    """Get or refresh the data-layer client.
+
+    When DATABASE_URL is set, return the gspread-compatible Supabase
+    adapter client so every .worksheet()/get_all_records() call is a drop-in.
+    """
+    if USE_SUPABASE:
+        if not _ADAPTER_AVAILABLE:
+            raise RuntimeError("DATABASE_URL set but sheets_adapter unavailable")
+        return _adapter_get_client()
+    # Google Sheets path
     try:
         # Look for credentials in config folder
         credentials_path = os.path.join(os.path.dirname(__file__), '..', '..', 'config', 'credentials.json')
         if not os.path.exists(credentials_path):
             # Fallback to current directory for backward compatibility
             credentials_path = 'credentials.json'
-
         gc = gspread.service_account(filename=credentials_path)
         return gc.open_by_key(os.getenv('GOOGLE_SHEETS_ID'))
     except Exception as e:
@@ -345,7 +361,7 @@ def health_check():
     sheets_ok = False
     latency_ms = 0
     try:
-        probe_client = _get_sheets_client()
+        probe_client = get_sheets_client()
         sheets_ok = probe_client.test_connection()
         latency_ms = int((time.time() - t0) * 1000)
     except Exception:
