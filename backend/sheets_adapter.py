@@ -619,6 +619,29 @@ class SheetView:
             conn.commit()
             cur.close()
 
+    def delete_where(self, column: str, value: Any) -> int:
+        """Delete every row where the (camelCase) column exactly equals value.
+
+        ponytail: real fix for the findall/delete_rows off-by-one. findall()
+        numbers rows within its FILTERED result, but delete_rows(n) offsets over
+        the WHOLE table by physical ctid, so findall's row number is wrong
+        whenever the target isn't the first physical row (deletes the wrong row).
+        Deleting by column value sidesteps row numbering entirely.
+        """
+        phys = _PHYS[self._table].get(column, column)
+        with _conn() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                sql.SQL("DELETE FROM {} WHERE {}::TEXT = %(val)s").format(
+                    sql.Identifier(self._table), sql.Identifier(phys)
+                ),
+                {"val": str(value)},
+            )
+            n = cur.rowcount
+            conn.commit()
+            cur.close()
+        return n
+
     def insert_row(self, values: list, index: int = 1) -> None:
         del index
         self.append_row(values)

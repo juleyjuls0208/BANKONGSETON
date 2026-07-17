@@ -3219,24 +3219,25 @@ def register_routes(app, socketio, serial_enabled=True):
     def _delete_sheet_rows_matching(worksheet, value):
         """Delete every row whose content exactly equals `value` (any column).
 
-        Mode-agnostic: gspread .findall (grid order) and the Supabase adapter's
-        .findall/.delete_rows (ctid order) are each internally consistent, so the
-        row number findall returns is the correct one to hand to delete_rows in
-        BOTH backends. Deletion in descending order avoids index-shift surprises.
-        Exact-value filtering stops the substring find from matching siblings
-        (e.g. "2014" inside "201420029").
+        Mode-agnostic outcome: gspread .findall returns true grid coordinates so
+        .delete_rows(grid_row) is correct there. In Supabase mode, findall's row
+        number is WRONG (it ranks within the filtered result, delete_rows offsets
+        over the whole table), so we delete by column VALUE via delete_where() —
+        no row numbering involved. Exact-value match stops substrings (e.g.
+        "2014" inside "201420029") from matching the wrong row.
         """
         value = str(value)
         if USE_SUPABASE:
-            found = worksheet.findall(value)
-            rows = sorted(
-                {m["row"] for m in found if str(m.get("value")) == value}, reverse=True
-            )
-        else:
-            found = worksheet.findall(value, regex=False)
-            rows = sorted(
-                {c.row for c in found if str(c.value) == value}, reverse=True
-            )
+            # Delete by value across every mapped column.
+            cols = getattr(worksheet, "_columns", [])
+            deleted = 0
+            for col in cols:
+                deleted += worksheet.delete_where(col, value)
+            return deleted
+        found = worksheet.findall(value, regex=False)
+        rows = sorted(
+            {c.row for c in found if str(c.value) == value}, reverse=True
+        )
         for row in rows:
             worksheet.delete_rows(row)
         return len(rows)
