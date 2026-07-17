@@ -355,6 +355,28 @@ def ensure_settings_sheet():
         return ws
 
 
+def _attach_balance(students):
+    # ponytail: single join point for balance + card status, reused by
+    # get_students and search_students so both render identically.
+    try:
+        money_sheet = get_worksheet_with_retry("Money Accounts")
+        money_accounts = money_sheet.get_all_records()
+    except Exception:
+        money_accounts = []
+    balance_map = {}
+    status_map = {}
+    for account in money_accounts:
+        card_number = normalize_card_uid(str(account.get("MoneyCardNumber", "")))
+        if card_number:
+            balance_map[card_number] = account.get("Balance", 0)
+            status_map[card_number] = account.get("Status", "Active")
+    for student in students:
+        card_number = normalize_card_uid(str(student.get("MoneyCardNumber", "")))
+        student["Balance"] = balance_map.get(card_number, 0.00)
+        student["MoneyCardStatus"] = status_map.get(card_number, "N/A") if card_number else "N/A"
+    return students
+
+
 def register_routes(app, socketio, serial_enabled=True):
     """Register all shared routes onto the given Flask app + SocketIO instance.
 
@@ -1633,27 +1655,6 @@ def register_routes(app, socketio, serial_enabled=True):
             return jsonify({"error": "An unexpected error occurred"}), 500
 
     # ============= STUDENTS =============
-
-    def _attach_balance(students):
-        # ponytail: single join point for balance + card status, reused by
-        # get_students and search_students so both render identically.
-        try:
-            money_sheet = get_worksheet_with_retry("Money Accounts")
-            money_accounts = money_sheet.get_all_records()
-        except Exception:
-            money_accounts = []
-        balance_map = {}
-        status_map = {}
-        for account in money_accounts:
-            card_number = normalize_card_uid(str(account.get("MoneyCardNumber", "")))
-            if card_number:
-                balance_map[card_number] = account.get("Balance", 0)
-                status_map[card_number] = account.get("Status", "Active")
-        for student in students:
-            card_number = normalize_card_uid(str(student.get("MoneyCardNumber", "")))
-            student["Balance"] = balance_map.get(card_number, 0.00)
-            student["MoneyCardStatus"] = status_map.get(card_number, "N/A") if card_number else "N/A"
-        return students
 
     @app.route("/api/students", methods=["GET"])
     @login_required
