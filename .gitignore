@@ -31,6 +31,9 @@
 *.pyc
 *.so
 *.sql
+!supabase/
+!supabase/migrations/
+!supabase/migrations/*.sql
 *.sqlite
 *.swo
 *.swp
@@ -79,11 +82,17 @@ bangko.log
 build/
 captures/
 config/credentials.json
+_admin.txt
+students_backup.json
+backend/**/.env
+arduino/**/secrets.h
+logs/*_backup_*.csv
 coverage/
 coverage_report/
 credentials.json
 desktop.ini
 dist/
+dist_final/
 env/
 ENV/
 fix_*.py

@@ -66,8 +66,7 @@ if not _secret_key or _secret_key == _INSECURE_DEFAULT:
     print('FATAL: FLASK_SECRET_KEY is not set or is using the insecure default.')
     sys.exit(1)
 _jwt_secret = os.getenv('JWT_SECRET', '').strip()
-_JWT_INSECURE_DEFAULT = 'bangko-jwt-secret-2026'
-if not _jwt_secret or _jwt_secret == _JWT_INSECURE_DEFAULT:
+if not _jwt_secret or (_jwt_secret.lower().startswith('bangko-') and 'secret-' in _jwt_secret.lower()):
     print('FATAL: JWT_SECRET is not set or is using the insecure default.')
     sys.exit(1)
 
@@ -75,10 +74,19 @@ if not _jwt_secret or _jwt_secret == _JWT_INSECURE_DEFAULT:
 UID_PATTERN = re.compile(r'^[0-9A-Fa-f]{8}(?:[0-9A-Fa-f]{6})?$')
 
 def normalize_card_uid(uid):
-    """Normalize card UID by removing leading zeros."""
+    """Normalize card UID while preserving significant leading zeroes."""
     if not uid:
         return ''
-    return str(uid).strip().lstrip('0').upper()
+    return str(uid or '').strip().upper()
+
+
+def is_money_card_link_eligible(student):
+    """A money card can only be linked to an active student with an active ID card."""
+    return (
+        str(student.get('Status', '')).strip().lower() == 'active'
+        and bool(normalize_card_uid(student.get('IDCardNumber', '')))
+        and not normalize_card_uid(student.get('MoneyCardNumber', ''))
+    )
 
 # Auth decorators (moved from admin_dashboard.py)
 def login_required(f):
@@ -110,7 +118,9 @@ def desktop_features(f):
 
 # App + SocketIO
 if getattr(sys, "frozen", False):
-    _launch_dir = Path(sys.executable).resolve().parent
+    # PyInstaller onedir: data lands in the _internal/ folder (sys._MEIPASS);
+    # sys.executable's parent is the top-level dir, which has no templates/static.
+    _launch_dir = Path(getattr(sys, "_MEIPASS", sys.executable)).resolve()
 else:
     _launch_dir = Path(__file__).resolve().parent
 app = Flask(
@@ -121,7 +131,11 @@ app = Flask(
 app.secret_key = _secret_key
 _allowed_origins = get_cors_origins()
 CORS(app, origins=_allowed_origins)
-socketio = SocketIO(app, cors_allowed_origins=_allowed_origins)
+# On-prem kiosk: the panel is opened via the LAN IP (e.g. http://192.168.x.x:5004),
+# whose Origin is never in the CORS whitelist, so Socket.IO POSTs get rejected (400)
+# and live events (id_card_read) never arrive. Allow all origins for the realtime
+# channel — this is a trusted local network, not the public cloud API.
+socketio = SocketIO(app, cors_allowed_origins="*")
 app.socketio = socketio
 
 # On-prem serial/Arduino state
@@ -221,10 +235,19 @@ def connect_serial():
     try:
         data = request.get_json()
         port = data.get('port')
-        
+
+        if not port:
+            return jsonify({'error': 'Port required'}), 400
+
         if arduino and arduino.is_open:
-            arduino.close()
-        
+            connected_port = getattr(app, 'arduino_port', None) or getattr(arduino, 'port', port)
+            return jsonify({
+                'success': True,
+                'already_connected': True,
+                'port': connected_port,
+                'message': f'Already connected to {connected_port}',
+            })
+
         arduino = serial.Serial(port, 9600, timeout=2)
         time.sleep(2)  # wait for Arduino reset + boot
 
@@ -244,7 +267,8 @@ def connect_serial():
         send_display("Bangko Admin", "Connected!")
         
         socketio.emit('status', {'type': 'success', 'message': f'Connected to {port}'})
-        return jsonify({'success': True})
+        return jsonify({'success': True, 'already_connected': False, 'port': port,
+                        'message': f'Connected to {port}'})
     except (ConnectionError, TimeoutError) as e:
         logger.error(f"Serial connection error in connect_serial: {e}")
         return jsonify({'error': 'Service unavailable, please try again'}), 503
@@ -292,6 +316,9 @@ def start_register():
     
     if not arduino or not arduino.is_open:
         return jsonify({'error': 'Arduino not connected'}), 400
+
+    if card_reading_active:
+        return jsonify({'error': 'Card reader is already waiting for a card'}), 409
     
     card_reading_active = True
     send_display("Tap ID Card", "to register...")
@@ -354,7 +381,7 @@ def read_card_thread(card_type):
     socketio.emit('status', {'type': 'info', 'message': f'Waiting for {label}... tap it on the reader'})
 
     card_received = threading.Event()
-    timeout_secs = 60
+    timeout_secs = 30
 
     def on_card(uid):
         global card_reading_active
@@ -394,34 +421,39 @@ def read_card_thread(card_type):
         else:
             break
 
+    if not card_received.is_set() and card_reading_active:
+        card_reading_active = False
+        socketio.emit('card_timeout', {'message': f'No {label} detected within {timeout_secs}s'})
+
 def handle_id_card(uid):
     """Handle ID card registration - check for duplicates in BOTH ID and money cards"""
     try:
+        logger.debug("event=id_card_check uid=%s", uid)
         normalized_uid = normalize_card_uid(uid)
-
-        # Check if card is already registered
-        users_sheet = get_worksheet_with_retry('Users')
+        # byte-reversed form (MIFARE endianness can differ between reads)
+        reversed_uid = normalize_card_uid(uid[::-1]) if uid else ""
+        logger.debug("event=id_card_normalized uid=%s", normalized_uid)
+        users_sheet = get_worksheet_with_retry("Users")
         users_records = users_sheet.get_all_records()
-
-        if logger.isEnabledFor(logging.DEBUG):
+        logger.debug("event=id_card_users_loaded count=%d", len(users_records))
+        for i, record in enumerate(users_records):
+            existing_id_card_raw = record.get("IDCardNumber", "")
+            existing_id_card = normalize_card_uid(existing_id_card_raw)
+            existing_money_card_raw = record.get("MoneyCardNumber", "")
+            existing_money_card = normalize_card_uid(existing_money_card_raw)
+            # ponytail: inactive students are re-linkable, so their cards are free to reclaim
+            owner_active = str(record.get("Status", "")).strip().lower() != "inactive"
             logger.debug(
-                "card_check_started type=id_card uid=%s normalized_uid=%s users_count=%d",
-                uid,
-                normalized_uid,
-                len(users_records),
+                "event=id_card_check_row row=%d student_id=%s id_card=%s money_card=%s active=%s",
+                i + 1,
+                record.get("StudentID"),
+                existing_id_card,
+                existing_money_card,
+                owner_active,
             )
-
-        for record in users_records:
-            # Check IDCardNumber
-            existing_id_card = normalize_card_uid(record.get('IDCardNumber', ''))
-
-            # Check MoneyCardNumber
-            existing_money_card = normalize_card_uid(record.get('MoneyCardNumber', ''))
-
-            # Check if UID matches ID card
-            if existing_id_card == normalized_uid and existing_id_card:
-                existing_student = record.get('StudentID', '')
-                existing_name = record.get('Name', '')
+            if owner_active and (existing_id_card in (normalized_uid, reversed_uid)) and existing_id_card:
+                existing_student = record.get("StudentID", "")
+                existing_name = record.get("Name", "")
                 logger.info(
                     "duplicate_card_detected type=id_card uid=%s existing_student=%s existing_name=%s",
                     normalized_uid,
@@ -429,13 +461,16 @@ def handle_id_card(uid):
                     existing_name,
                 )
                 send_error("Card in use")
-                socketio.emit('card_error', {'message': f'This card is already registered as ID card for {existing_name} ({existing_student})'})
+                socketio.emit(
+                    "card_error",
+                    {
+                        "message": f"ID already registered on a student ID card for {existing_name} ({existing_student})"
+                    },
+                )
                 return
-
-            # Check if UID matches money card
-            if existing_money_card == normalized_uid and existing_money_card:
-                existing_student = record.get('StudentID', '')
-                existing_name = record.get('Name', '')
+            if owner_active and (existing_money_card in (normalized_uid, reversed_uid)) and existing_money_card:
+                existing_student = record.get("StudentID", "")
+                existing_name = record.get("Name", "")
                 logger.info(
                     "duplicate_card_detected type=money_card uid=%s existing_student=%s existing_name=%s",
                     normalized_uid,
@@ -443,22 +478,22 @@ def handle_id_card(uid):
                     existing_name,
                 )
                 send_error("Card in use")
-                socketio.emit('card_error', {'message': f'This card is already registered as money card for {existing_name} ({existing_student})'})
+                socketio.emit(
+                    "card_error",
+                    {
+                        "message": f"ID already registered on a money card for {existing_name} ({existing_student})"
+                    },
+                )
                 return
-
-        logger.info(
-            "card_available_for_registration uid=%s users_scanned=%d",
-            normalized_uid,
-            len(users_records),
-        )
+        logger.debug("event=id_card_available uid=%s", normalized_uid)
         send_success("Card read!")
-        socketio.emit('id_card_read', {'uid': uid})
+        socketio.emit("id_card_read", {"uid": uid})
     except Exception as e:
-        logger.exception("error_checking_id_card uid=%s", uid)
+        logger.error("event=id_card_check_error error=%s", e, exc_info=True)
         send_error("Error")
-        socketio.emit('card_error', {'message': str(e)})
-
-
+        socketio.emit(
+            "card_error", {"message": "Card scan failed - please try again"}
+        )
 def handle_money_card(uid):
     """Handle money card linking - check for duplicates in BOTH ID and money cards"""
     global pending_student_id
@@ -503,9 +538,11 @@ def handle_money_card(uid):
 
             # Check IDCardNumber
             existing_id_card = normalize_card_uid(record.get('IDCardNumber', ''))
+            # ponytail: inactive students are re-linkable; their cards are free to reclaim
+            owner_active = str(record.get('Status', '')).strip().lower() != 'inactive'
 
             # Check if UID matches money card
-            if existing_money_card == normalized_uid and existing_money_card:
+            if owner_active and existing_money_card == normalized_uid and existing_money_card:
                 existing_student = record.get('StudentID', '')
                 existing_name = record.get('Name', '')
                 if str(existing_student).strip() != str(student_id).strip():
@@ -516,11 +553,11 @@ def handle_money_card(uid):
                         existing_name,
                     )
                     send_error("Card in use")
-                    socketio.emit('card_error', {'message': f'This card is already money card for {existing_name} ({existing_student})'})
+                    socketio.emit('card_error', {'message': f'ID already registered on a money card for {existing_name} ({existing_student})'})
                     return
 
             # Check if UID matches ID card (same student trying to use ID card as money card)
-            if existing_id_card == normalized_uid and existing_id_card:
+            if owner_active and existing_id_card == normalized_uid and existing_id_card:
                 existing_student = record.get('StudentID', '')
                 existing_name = record.get('Name', '')
                 # Block even if it's the same student - must use different cards
@@ -541,7 +578,7 @@ def handle_money_card(uid):
                         existing_name,
                     )
                     send_error("Card in use")
-                    socketio.emit('card_error', {'message': f'This card is already registered as ID card for {existing_name} ({existing_student}). Cannot use as money card.'})
+                    socketio.emit('card_error', {'message': f'ID already registered on a student ID card for {existing_name} ({existing_student}). Cannot use as money card.'})
                     return
 
         # Find the student to link the card to
@@ -558,12 +595,22 @@ def handle_money_card(uid):
             socketio.emit('card_error', {'message': 'Student not found'})
             return
 
-        # Get student's ID card number
+        # The list can go stale between selection and tap. Re-check the same
+        # eligibility server-side before writing any card data.
+        if not is_money_card_link_eligible(student_record):
+            send_error("Student unavailable")
+            socketio.emit('card_error', {'message': 'Student must be active, have an ID card, and have no money card'})
+            return
+
         id_card_number = student_record.get('IDCardNumber', '')
 
-        # Update Users sheet
-        money_card_col = users_sheet.find('MoneyCardNumber').col
-        users_sheet.update_cell(user_row_index, money_card_col, uid)
+        # update_where is the Supabase adapter's stable value-based write path.
+        # SheetView.find() searches data rows, not its virtual header, so
+        # find('MoneyCardNumber') returns None and .col crashes here.
+        if users_sheet.update_where('StudentID', student_id, 'MoneyCardNumber', uid) != 1:
+            send_error("Student not found")
+            socketio.emit('card_error', {'message': 'Student not found'})
+            return
 
         # Create money account
         timestamp = get_philippines_time().strftime('%Y-%m-%d %H:%M:%S')
@@ -573,7 +620,8 @@ def handle_money_card(uid):
             0.0,                # Balance
             'Active',           # Status
             timestamp,          # LastUpdated
-            0.0                 # TotalLoaded
+            0.0,                # TotalLoaded
+            timestamp           # CreatedAt
         ]
         money_sheet.append_row(money_row)
 
@@ -614,25 +662,27 @@ def register_student():
 
         normalized_uid = normalize_card_uid(id_card_uid)
         logger.debug("student_register_normalized_uid student_id=%s uid=%s", student_id, normalized_uid)
+        # byte-reversed form (MIFARE endianness can differ between reads)
+        reversed_uid = normalize_card_uid(id_card_uid[::-1])  # reverse RAW, then normalize (zero-strip safe)
         
         # Check for duplicates
         users_sheet = get_worksheet_with_retry('Users')
         users_records = users_sheet.get_all_records()
         
-        # Check if Student ID already exists
+        # Check the physical card first.  A duplicate card must be rejected before
+        # any student-number validation so the operator gets the actionable card error.
         for record in users_records:
-            if str(record.get('StudentID', '')).strip() == str(student_id).strip():
-                logger.debug("student_register_duplicate_student_id student_id=%s", student_id)
-                socketio.emit('card_error', {'message': f'Student ID {student_id} already exists'})
-                return jsonify({'error': f'Student ID {student_id} already exists'}), 400
-        
-        # Check if card is already registered as ID card OR money card
-        for record in users_records:
+            # ponytail: inactive students are re-linkable; their cards are free to reclaim
+            owner_active = str(record.get('Status', '')).strip().lower() != 'inactive'
             existing_id_card = normalize_card_uid(record.get('IDCardNumber', ''))
             existing_money_card = normalize_card_uid(record.get('MoneyCardNumber', ''))
-            
-            # Check if already used as ID card
-            if existing_id_card == normalized_uid and existing_id_card:
+
+            # ponytail: MIFARE UIDs are often emitted byte-reversed by the
+            # reader vs how they were first stored, so a same physical card
+            # can compare unequal and slip through as a "new" registration.
+            # Compare both orientations — a card's reverse is still unique to it.
+            if owner_active and (existing_id_card in (normalized_uid, reversed_uid)
+                    and existing_id_card):
                 existing_student = record.get('StudentID', '')
                 existing_name = record.get('Name', '')
                 logger.debug(
@@ -640,11 +690,12 @@ def register_student():
                     normalized_uid,
                     existing_student,
                 )
-                socketio.emit('card_error', {'message': f'This card is already registered as ID card for {existing_name} ({existing_student})'})
-                return jsonify({'error': f'This card is already registered as ID card for {existing_name} ({existing_student})'}), 400
-            
+                socketio.emit('card_error', {'message': f'ID already registered on a student ID card for {existing_name} ({existing_student})'})
+                return jsonify({'error': f'ID already registered on a student ID card for {existing_name} ({existing_student})'}), 400
+
             # Check if already used as money card
-            if existing_money_card == normalized_uid and existing_money_card:
+            if owner_active and (existing_money_card in (normalized_uid, reversed_uid)
+                    and existing_money_card):
                 existing_student = record.get('StudentID', '')
                 existing_name = record.get('Name', '')
                 logger.debug(
@@ -652,8 +703,33 @@ def register_student():
                     normalized_uid,
                     existing_student,
                 )
-                socketio.emit('card_error', {'message': f'This card is already registered as money card for {existing_name} ({existing_student}). Cannot use as ID card.'})
-                return jsonify({'error': f'This card is already registered as money card for {existing_name} ({existing_student}). Cannot use as ID card.'}), 400
+                socketio.emit('card_error', {'message': f'ID already registered on a money card for {existing_name} ({existing_student}). Cannot use as ID card.'})
+                return jsonify({'error': f'ID already registered on a money card for {existing_name} ({existing_student}). Cannot use as ID card.'}), 400
+
+        # A student cannot own two active ID cards. If the dashboard already
+        # contains a cardless student (for example, a previously deactivated
+        # enrollment), attach the scanned card to that existing record instead
+        # of treating SQL NULL as the literal string "None" and blocking it.
+        for record in users_records:
+            if str(record.get('StudentID', '')).strip() == str(student_id).strip():
+                existing_card = normalize_card_uid(record.get('IDCardNumber', ''))
+                if existing_card:
+                    message = 'This student already has an ID card. Use Replace Lost Card before assigning a new card.'
+                    logger.debug("student_register_existing_card student_id=%s", student_id)
+                    socketio.emit('card_error', {'message': message})
+                    return jsonify({'error': message, 'field': 'id_card_uid'}), 409
+
+                # Do not append a duplicate StudentID. Re-enrollment activates
+                # the existing cardless student after the new ID is stored.
+                users_sheet.update_where('StudentID', student_id, 'IDCardNumber', id_card_uid)
+                users_sheet.update_where('StudentID', student_id, 'Status', 'Active')
+                logger.info("student_reactivated_with_id_card student_id=%s name=%s", student_id, name)
+                send_success("Registered!")
+                socketio.emit('student_registered', {
+                    'student_id': student_id,
+                    'name': name
+                })
+                return jsonify({'success': True})
         
         logger.debug("student_register_no_duplicates student_id=%s", student_id)
         timestamp = get_philippines_time().strftime('%Y-%m-%d %H:%M:%S')
@@ -665,7 +741,8 @@ def register_student():
             '',              # MoneyCardNumber
             'Active',
             parent_email,
-            timestamp
+            timestamp,
+            '',              # FCMToken
         ]
         users_sheet.append_row(row)
         logger.info("student_registered student_id=%s name=%s", student_id, name)
@@ -697,10 +774,10 @@ def search_students_without_cards():
         users_sheet = get_worksheet_with_retry('Users')
         students = users_sheet.get_all_records()
         
-        # Filter students without money cards
+        # Only active students with a registered ID card may receive a first money card.
         results = []
         for s in students:
-            if not s.get('MoneyCardNumber'):
+            if is_money_card_link_eligible(s):
                 if not query or query in str(s.get('Name', '')).lower() or query in str(s.get('StudentID', '')).lower():
                     results.append({
                         'student_id': s.get('StudentID'),
@@ -739,23 +816,27 @@ def search_students_with_cards():
             if card_number:
                 status_map[card_number] = status
         
-        # Filter students WITH money cards that are NOT lost
+        # Filter students WITH cards (id or money) that are not lost
         results = []
         for s in students:
             money_card = s.get('MoneyCardNumber')
-            if money_card:
-                normalized_card = normalize_card_uid(str(money_card))
-                card_status = status_map.get(normalized_card, 'active')
-                
-                # Only include students with active cards (not lost)
-                if card_status != 'lost':
-                    if not query or query in str(s.get('Name', '')).lower() or query in str(s.get('StudentID', '')).lower():
-                        results.append({
-                            'student_id': s.get('StudentID'),
-                            'name': s.get('Name'),
-                            'money_card': money_card,
-                            'status': s.get('Status')
-                        })
+            id_card = s.get('IDCardNumber')
+            if not money_card and not id_card:
+                continue
+            normalized_card = normalize_card_uid(str(money_card)) if money_card else ''
+            card_status = status_map.get(normalized_card, 'active') if normalized_card else 'none'
+            # Only include students with an active money card OR an active id card (not lost)
+            if card_status == 'lost':
+                continue
+            if not query or query in str(s.get('Name', '')).lower() or query in str(s.get('StudentID', '')).lower():
+                results.append({
+                    'student_id': s.get('StudentID'),
+                    'name': s.get('Name'),
+                    'money_card': money_card,
+                    'id_card': id_card,
+                    'money_card_status': card_status,
+                    'status': s.get('Status')
+                })
         
         return jsonify({'students': results})
     except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
@@ -769,15 +850,15 @@ def search_students_with_cards():
 @app.route('/api/card/report-lost', methods=['POST'])
 @admin_only
 def report_lost_card():
-    """Report a money card as lost and deactivate it"""
+    """Report a lost card (money OR student ID) and mark it inactive."""
     try:
         data = request.get_json()
         student_id = data.get('student_id')
-        
-        # Get student info
+        card_type = (data.get('card_type') or 'money').strip().lower()  # 'money' | 'id'
+
         users_sheet = get_worksheet_with_retry('Users')
         users_records = users_sheet.get_all_records()
-        
+
         student = None
         user_row_index = None
         for i, record in enumerate(users_records):
@@ -785,59 +866,54 @@ def report_lost_card():
                 student = record
                 user_row_index = i + 2
                 break
-        
+
         if not student:
             return jsonify({'error': 'Student not found'}), 404
-        
-        old_card = student.get('MoneyCardNumber', '')
-        if not old_card:
-            return jsonify({'error': 'No money card registered for this student'}), 400
-        
-        # Get current balance
-        money_sheet = get_worksheet_with_retry('Money Accounts')
-        money_records = money_sheet.get_all_records()
-        
-        normalized_old = normalize_card_uid(old_card)
-        current_balance = 0.0
-        money_row_index = None
-        
-        for i, record in enumerate(money_records):
-            if normalize_card_uid(record.get('MoneyCardNumber', '')) == normalized_old:
-                current_balance = float(record.get('Balance', 0))
-                money_row_index = i + 2
-                break
-        
-        # Deactivate old card in Money Accounts
-        if money_row_index:
-            status_col = money_sheet.find('Status').col
-            money_sheet.update_cell(money_row_index, status_col, 'Lost')
-        
-        # Clear MoneyCardNumber in Users sheet (overwrite with empty)
-        if user_row_index:
-            money_card_col = users_sheet.find('MoneyCardNumber').col
-            users_sheet.update_cell(user_row_index, money_card_col, '')
-        
+
+        if card_type == 'id':
+            old_card = student.get('IDCardNumber', '')
+            if not old_card:
+                return jsonify({'error': 'No student ID card registered for this student'}), 400
+            # Clear the ID card field (mark it inactive by removal)
+            users_sheet.update_where('StudentID', student_id, 'IDCardNumber', '')
+            current_balance = 0.0
+        else:
+            old_card = student.get('MoneyCardNumber', '')
+            if not old_card:
+                return jsonify({'error': 'No money card registered for this student'}), 400
+            money_sheet = get_worksheet_with_retry('Money Accounts')
+            normalized_old = normalize_card_uid(old_card)
+            # ponytail: update_where (value-based) persists reliably on Supabase;
+            # Use the adapter's stable logical-row update path.
+            money_sheet.update_where('MoneyCardNumber', normalized_old, 'Status', 'Lost')
+            current_balance = float(next(
+                (r.get('Balance', 0) for r in money_sheet.get_all_records()
+                 if normalize_card_uid(r.get('MoneyCardNumber', '')) == normalized_old),
+                0.0,
+            ))
+
         # Create lost card report
         timestamp = get_philippines_time().strftime('%Y-%m-%d %H:%M:%S')
         report_id = f"LOST-{get_philippines_time().strftime('%Y%m%d%H%M%S')}"
-        
+
         lost_sheet = get_worksheet_with_retry('Lost Card Reports')
         lost_row = [
             report_id,           # ReportID
             timestamp,           # ReportDate
             student_id,          # StudentID
             old_card,            # OldCardNumber
-            '',                  # NewCardNumber (to be filled later)
+            None,                # NewCardNumber (numeric/text) — NULL until replacement
             current_balance,     # TransferredBalance
             session.get('admin_username', 'admin'),  # ReportedBy
-            'Pending'            # Status
+            'Pending',            # Status
+            None,                 # CreatedAt (default NOW())
         ]
         lost_sheet.append_row(lost_row)
-        
-        # Send email notification to parent
+        invalidate_pattern("students")
+
         try:
             if student and PHASE3_AVAILABLE:
-                parent_email = student.get('ParentEmail', '').strip()
+                parent_email = student.get('StudentEmail', '').strip()
                 if parent_email and '@' in parent_email:
                     student_name = student.get('Name', 'Unknown')
                     notification_manager = get_notification_manager()
@@ -848,23 +924,25 @@ def report_lost_card():
                         balance=current_balance,
                         to_email=parent_email
                     )
-        except Exception as notify_error:
-            pass  # Notification failed but card was reported
-        
+        except Exception:
+            pass
+
         socketio.emit('card_reported_lost', {
             'student_id': student_id,
             'old_card': old_card,
+            'card_type': card_type,
             'balance': current_balance,
             'report_id': report_id
         })
-        
+
         return jsonify({
             'success': True,
             'report_id': report_id,
+            'card_type': card_type,
             'old_card': old_card,
             'balance': current_balance
         })
-        
+
     except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
             gspread.exceptions.WorksheetNotFound, ConnectionError, TimeoutError) as e:
         logger.error(f"Google Sheets unavailable in report_lost_card: {e}")
@@ -1043,7 +1121,8 @@ def handle_replace_card(uid):
                 balance,            # Balance (transferred)
                 'Active',           # Status
                 timestamp,          # LastUpdated
-                balance             # TotalLoaded
+                balance,            # TotalLoaded
+                timestamp           # CreatedAt
             ]
             money_sheet.append_row(money_row)
         
@@ -1057,7 +1136,7 @@ def handle_replace_card(uid):
         # Send email notification to parent
         try:
             if student_record and PHASE3_AVAILABLE:
-                parent_email = student_record.get('ParentEmail', '').strip()
+                parent_email = student_record.get('StudentEmail', '').strip()
                 if parent_email and '@' in parent_email:
                     student_name = student_record.get('Name', 'Unknown')
                     notification_manager = get_notification_manager()
@@ -1142,4 +1221,4 @@ if __name__ == '__main__':
     print('>>> BANGKO REGISTRATION PANEL (on-prem Arduino) STARTING <<<', flush=True)
     port = int(os.getenv('FINANCE_PORT_REG', 5004))
     debug = os.getenv('FLASK_DEBUG', 'false').lower() == 'true'
-    socketio.run(app, host='0.0.0.0', port=port, debug=debug)
+    socketio.run(app, host='127.0.0.1', port=port, debug=debug)

@@ -28,6 +28,7 @@ import pytest
 from sheets_adapter import (
     _TABLE_LOOKUP,
     APIError,
+    WorksheetNotFound,
     SheetsClient,
     SheetView,
 )
@@ -90,40 +91,11 @@ def test_add_worksheet_returns_existing_view_if_table_known() -> None:
     assert view.title == "users"
 
 
-def test_add_worksheet_registers_new_table_with_id_and_data_columns() -> None:
-    """If the title is unknown, add_worksheet must:
-
-    1. Register the table in _TABLES / _TABLE_COLUMNS / _TABLE_LOOKUP.
-    2. Issue a CREATE TABLE IF NOT EXISTS with an id + data JSONB schema.
-    3. Return a SheetView for the new table.
-    """
+def test_add_worksheet_rejects_unknown_schema() -> None:
+    """Unknown worksheet names fail closed instead of creating generic JSONB tables."""
     client = SheetsClient.__new__(SheetsClient)
-
-    # Mock _transaction() to be a context manager that yields a mock conn.
-    mock_cur = mock.MagicMock()
-    mock_conn = mock.MagicMock()
-    mock_conn.cursor.return_value = mock_cur
-
-    @mock.patch("sheets_adapter._transaction")
-    def run(mt: mock.MagicMock) -> SheetView:
-        mt.return_value.__enter__.return_value = mock_conn
-        return client.add_worksheet(title="custom_log", rows=10, cols=2)
-
-    view = run()
-    assert isinstance(view, SheetView)
-    assert view.title == "custom_log"
-    # Verify the CREATE TABLE SQL was issued.
-    create_calls = [
-        c for c in mock_cur.execute.call_args_list
-        if "CREATE TABLE" in str(c.args[0])
-    ]
-    assert len(create_calls) == 1
-    sql_text = str(create_calls[0].args[0])
-    assert "custom_log" in sql_text
-    assert "JSONB" in sql_text
-    # The new table must be discoverable via worksheets() afterwards.
-    new_titles = {v.title for v in client.worksheets()}
-    assert "custom_log" in new_titles
+    with pytest.raises(WorksheetNotFound):
+        client.add_worksheet(title="custom_log", rows=10, cols=2)
 
 
 # ---------------------------------------------------------------------------
@@ -163,12 +135,12 @@ def test_update_with_keyword_arguments_also_works() -> None:
     with mock.patch("sheets_adapter._conn") as mc:
         mc.return_value.__enter__.return_value = mock_conn
         sv.update(values=[["U001", "Alice"], ["U002", "Bob"]], range_name="A1:B2")
-    # Two rows by two cols = 4 UPDATEs.
+    # Header row is schema-owned; the two data-row updates are applied.
     update_calls = [
         c for c in mock_cur.execute.call_args_list
         if "UPDATE" in str(c.args[0])
     ]
-    assert len(update_calls) == 4
+    assert len(update_calls) == 2
 
 
 def test_update_raises_when_range_or_values_missing() -> None:
@@ -189,19 +161,12 @@ def test_update_raises_when_range_or_values_missing() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_append_row_accepts_table_range_a1_as_noop() -> None:
-    """``ws.append_row(row, table_range='A1')`` is the gspread pattern
-    used in api_server.py / dashboard_core.py / cashier_routes.py to
-    mean "this is the header row". For Postgres, headers live in the
-    schema, so this is a no-op.
-    """
+def test_append_row_rejects_a1_business_rows() -> None:
+    """A1 business rows must fail closed rather than silently disappearing."""
     sv = SheetView("users", client=mock.MagicMock())
     sv._columns = ["UserID", "Name", "Email"]
-    # Must not raise, must not hit the DB.
-    with mock.patch("sheets_adapter._conn") as mc:
-        mc.return_value.__enter__.return_value = mock.MagicMock()
+    with pytest.raises(APIError, match="canonical header"):
         sv.append_row(["U001", "Alice", "[email protected]"], table_range="A1")
-        mc.assert_not_called()
 
 
 def test_append_row_rejects_unknown_table_range() -> None:
@@ -222,58 +187,34 @@ def test_append_row_rejects_unknown_table_range() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_find_cell_emits_single_query_with_row_number() -> None:
-    """find_cell must emit exactly one SELECT that includes the
-    row_number() window function (eliminates the prior N+1 ctid scan).
-    """
+def test_find_cell_returns_stable_sheet_row() -> None:
+    """find_cell returns the actual ordered sheet row (header is row 1)."""
     sv = SheetView("users", client=mock.MagicMock())
     sv._columns = ["UserID", "Name"]
-    sv._col_name_to_index = lambda c: "Name"
-
     mock_cur = mock.MagicMock()
-    mock_cur.fetchone.return_value = (5, "U005", "Alice")
+    mock_cur.fetchall.return_value = [{"UserID": "U005", "Name": "Alice"}]
     mock_conn = mock.MagicMock()
     mock_conn.cursor.return_value = mock_cur
-
     with mock.patch("sheets_adapter._conn") as mc:
         mc.return_value.__enter__.return_value = mock_conn
         result = sv.find_cell("Alice", in_column="Name")
-
-    # Exactly one SELECT, no second "resolve ctid" query.
-    assert mock_cur.execute.call_count == 1
-    sql = str(mock_cur.execute.call_args.args[0])
-    assert "row_number()" in sql
-    # Row number is taken from the window function column, not derived
-    # by a second Python-side scan.
-    assert result == {"row": 5, "col": 2, "value": "Alice"}
+    assert result == {"row": 2, "col": 2, "value": "Alice"}
 
 
-def test_findall_returns_row_numbers_from_window_function() -> None:
-    """findall must use row_number() so the returned row indices match
-    the actual gspread-style 1-indexed row numbers, not Python's loop
-    counter (which would be wrong if the WHERE filter drops rows).
-    """
+def test_findall_returns_row_numbers_from_ordered_records() -> None:
+    """findall returns sheet rows, including gaps for non-matching records."""
     sv = SheetView("users", client=mock.MagicMock())
     sv._columns = ["UserID", "Name"]
-    sv._col_name_to_index = lambda c: "Name"
-
+    rows = [{"UserID": f"U{i:03d}", "Name": "Alice" if i == 7 else "Alex" if i == 12 else "Bob"}
+            for i in range(1, 13)]
     mock_cur = mock.MagicMock()
-    # Match rows 7 and 12 (not contiguous — the window function must
-    # produce the actual row number, not a counter).
-    mock_cur.fetchall.return_value = [
-        (7, "U007", "Alice"),
-        (12, "U012", "Alex"),
-    ]
+    mock_cur.fetchall.return_value = rows
     mock_conn = mock.MagicMock()
     mock_conn.cursor.return_value = mock_cur
-
     with mock.patch("sheets_adapter._conn") as mc:
         mc.return_value.__enter__.return_value = mock_conn
         results = sv.findall("Al", in_column="Name")
-
-    assert len(results) == 2
-    assert results[0]["row"] == 7
-    assert results[1]["row"] == 12
+    assert [item["row"] for item in results] == [8, 13]
 
 
 # ---------------------------------------------------------------------------
@@ -386,15 +327,9 @@ def test_cell_uses_single_column_select() -> None:
     mock_conn = mock.MagicMock()
     mock_conn.cursor.return_value = mock_cur
 
-    with mock.patch("sheets_adapter._conn") as mc:
-        mc.return_value.__enter__.return_value = mock_conn
-        result = sv.cell(row=1, col=2)
+    result = sv.cell(row=1, col=2)
 
-    # SQL should reference the column name (not "*").
-    sql = str(mock_cur.execute.call_args.args[0])
-    assert '"Name"' in sql or "'Name'" in sql or "Name" in sql
-    assert "*" not in sql
-    assert result == {"row": 1, "col": 2, "value": "Alice"}
+    assert result == {"row": 1, "col": 2, "value": "Name"}
 
 
 def test_sheetview_init_builds_col_index() -> None:

@@ -73,7 +73,7 @@ def sample_student_data():
             'IDCardNumber': '3A2B1C4D',
             'MoneyCardNumber': '5F6E7D8C',
             'Status': 'Active',
-            'ParentEmail': 'parent@email.com',
+            'StudentEmail': 'parent@email.com',
             'DateRegistered': '2026-02-02 10:30:45'
         },
         {
@@ -82,7 +82,7 @@ def sample_student_data():
             'IDCardNumber': '1F2E3D4C',
             'MoneyCardNumber': '',
             'Status': 'Active',
-            'ParentEmail': 'maria@email.com',
+            'StudentEmail': 'maria@email.com',
             'DateRegistered': '2026-02-02 11:00:00'
         }
     ]

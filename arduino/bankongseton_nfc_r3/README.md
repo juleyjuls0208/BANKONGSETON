@@ -1,113 +1,81 @@
-# BANKONGSETON RFID Registration Reader — Arduino UNO R3 (RC522 over SPI)
+# BANKONGSETON RFID Registration Reader — Arduino UNO R3
 
-Reads physical RFID cards via RC522 over SPI and emits `CARD|<UID-HEX>` over Serial for the Python `ArduinoBridge` to process card registrations.
+Serial-only RC522 reader for the on-prem registration panel. The same firmware
+also works as a cashier fallback when the UNO R4 WiFi reader is unavailable.
+It emits physical card UIDs over USB serial; it does not use WiFi or an LCD.
 
-> **Differences from the R4 WiFi sketch:** Serial-only delivery (no HTTP/WiFi), RC522 RFID module over SPI, UNO R3 pinout.
-
----
-
-## Hardware Required
+## Hardware
 
 | Component | Notes |
-|-----------|-------|
-| Arduino UNO R3 | Any genuine or clone UNO R3 |
-| RC522 RFID module | Any standard RC522 breakout board (3.3V) |
-| 16x2 LCD with PCF8574 I2C backpack | Most "I2C LCD" modules use PCF8574 |
-| Piezo buzzer | Passive or active (both work with `tone()`) |
-
----
+|---|---|
+| Arduino UNO R3 | Genuine or compatible clone |
+| RC522 RFID module | Power from **3.3V**, not 5V |
+| Piezo buzzer | Optional; both active and passive buzzers work |
 
 ## Wiring
 
-### RC522 RFID Module → Arduino UNO R3
+### RC522 → UNO R3
 
-| RC522 Pin | Arduino UNO R3 |
-|-----------|----------------|
-| SDA/SS    | D10 (RC522_SS) |
-| MOSI      | D11            |
-| MISO      | D12            |
-| SCK       | D13            |
-| RST       | D8 (RC522_RST) |
-| VCC       | 3.3V           |
-| GND       | GND            |
+| RC522 pin | UNO R3 |
+|---|---|
+| SDA/SS | D10 |
+| RST | D2 |
+| SCK | D13 |
+| MOSI | D11 |
+| MISO | D12 |
+| 3.3V | 3.3V |
+| GND | GND |
+| IRQ | Not connected |
 
-### LCD 16x2 with PCF8574 I2C Backpack → Arduino UNO R3
+### Piezo → UNO R3
 
-> **Note:** Hardware I2C pins A4/A5 are **not used**. The LCD uses software (bit-bang) I2C on D6/D7, leaving A4/A5 free for sensors or other peripherals.
+| Piezo pin | UNO R3 |
+|---|---|
+| + | D7 |
+| − | GND |
 
-| LCD Backpack Pin | Arduino UNO R3 |
-|-----------------|----------------|
-| SDA             | D6 (software)  |
-| SCL             | D7 (software)  |
-| VCC             | 5V             |
-| GND             | GND            |
+## Required library
 
-### Piezo Buzzer → Arduino UNO R3
+Install **MFRC522 by GithubCommunity** from Arduino IDE → Library Manager.
+`SPI` is included with the UNO board package.
 
-| Piezo Pin | Arduino UNO R3 |
-|-----------|----------------|
-| +         | D9             |
-| −         | GND            |
+## Serial protocol
 
----
+The sketch uses **9600 baud**, with newline-terminated commands and events.
 
-## Required Libraries
+### UNO R3 → panel
 
-Install via **Arduino IDE → Tools → Manage Libraries…**:
-
-| Library | Author | Notes |
-|---------|--------|-------|
-| **MFRC522** | GithubCommunity (miguelbalboa/rfid) | RFID reader driver |
-
-> **No extra library for LCD.** The sketch uses an inline bit-bang I2C + PCF8574 driver (~70 lines) — nothing to install.
-
----
-
-## LCD I2C Address
-
-The default PCF8574 backpack address is **`0x27`**.
-
-If the LCD is not displaying anything:
-1. Try changing `LCD_ADDR` in the sketch to `0x3F`
-2. Or run an I2C scanner sketch to find the actual address
-
-```cpp
-// In bankongseton_nfc_r3.ino — change this line:
-#define LCD_ADDR  0x27   // try 0x3F if LCD doesn't work
-```
-
----
-
-## Serial Output Format
-
-The sketch sends one line per card tap over Serial at **9600 baud**:
-
-```
+```text
+BANKONGSETON RFID reader ready
 CARD|AABBCCDD
+PONG
 ```
 
-- `AABBCCDD` is the card UID in **uppercase hexadecimal** (typically 8 hex chars for 4-byte MIFARE cards, up to 14 chars for 7-byte UIDs)
-- This format is consumed by the Python `ArduinoBridge` class via its `_read_serial_line` regex
+`CARD|` contains uppercase hex: 8 characters for a 4-byte UID or 14 for a
+7-byte UID. The panel accepts only those two lengths.
 
-At startup, the sketch also prints:
+### Panel → UNO R3
+
+```text
+PING
+<DISPLAY|Line 1|Line 2>
+<SUCCESS|message>
+<ERROR|message>
 ```
-BANKONGSETON NFC reader ready
-```
-This line is used by `ArduinoBridge` to detect that the Arduino has booted.
 
----
+`PING` replies with `PONG` and a connect beep. The R3 has no display, so
+`DISPLAY` is accepted and ignored; `SUCCESS` and `ERROR` still trigger audio
+feedback. This keeps the R3 compatible with the registration panel and the
+shared cashier serial bridge.
 
-## Pin Summary
+## Upload and test
 
-| Pin | Function |
-|-----|----------|
-| D6  | LCD SDA (software I2C) |
-| D7  | LCD SCL (software I2C) |
-| D8  | RC522 RST |
-| D9  | Piezo buzzer |
-| D10 | RC522 SDA/SS (SPI) |
-| D11 | SPI MOSI (hardware, shared) |
-| D12 | SPI MISO (hardware, shared) |
-| D13 | SPI SCK (hardware, shared) |
-| 3.3V | RC522 VCC |
-| 5V  | LCD backpack VCC |
+1. Select **Arduino UNO** in Arduino IDE.
+2. Select the board's COM port.
+3. Install MFRC522 and upload `bankongseton_nfc_r3.ino`.
+4. Open Serial Monitor at **9600 baud** only when the panel is disconnected.
+5. With the panel connected, select the same COM port and click **Connect**.
+6. A successful connection produces `PONG`; tapping a card produces `CARD|...`.
+
+Do not leave Arduino IDE Serial Monitor open while the registration or cashier
+app is connected; Windows allows only one process to own the COM port.

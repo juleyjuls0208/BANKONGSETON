@@ -1,6 +1,6 @@
 # BANKONGSETON NFC Reader — Arduino UNO R4 WiFi (Standalone / Powerbank)
 
-This guide covers running the **UNO R4 WiFi** sketch (`arduino/bankongseton_rfid/bankongseton_rfid.ino`) without a USB cable to a PC — powered by a USB powerbank and delivering NFC taps over WiFi to the Flask dashboard server.
+This guide covers running the **UNO R4 WiFi** sketch (`arduino/bankongseton_r4/bankongseton_r4.ino`) without a USB cable to a PC — powered by a USB powerbank and delivering RFID taps over WiFi to the standalone cashier app.
 
 > **Differences from the R3 sketch:** WiFi HTTP delivery instead of Serial, UNO R4 WiFi board (RA4M1 + ESP32-S3 coprocessor), 30-second heartbeat POST that keeps the powerbank alive and drives the cashier WiFi badge green.
 
@@ -11,8 +11,8 @@ This guide covers running the **UNO R4 WiFi** sketch (`arduino/bankongseton_rfid
 | Component | Notes |
 |-----------|-------|
 | Arduino UNO R4 WiFi | Genuine Renesas RA4M1 + ESP32-S3 coprocessor board |
-| PN532 NFC/RFID module | Adafruit PN532 shield/breakout, or compatible SPI module |
-| 16×2 LCD with PCF8574 I2C backpack | Most "I2C LCD" modules use PCF8574 |
+| RC522 RFID module | MFRC522-compatible SPI module |
+| 128×64 OLED | SSD1306 I2C module, address `0x3C` |
 | Piezo buzzer | Passive or active (both work with `tone()`) |
 | USB powerbank | ≥10,000 mAh, ≥2 A USB-A output port, name-brand recommended (Anker, Xiaomi, Baseus) |
 
@@ -20,11 +20,9 @@ This guide covers running the **UNO R4 WiFi** sketch (`arduino/bankongseton_rfid
 
 ## Wiring
 
-### PN532 NFC Module → Arduino UNO R4 WiFi
+### RC522 RFID Module → Arduino UNO R4 WiFi
 
-> **SPI mode selection:** On the Adafruit PN532 board, set the DIP switches to **SEL0 = LOW (0), SEL1 = HIGH (1)** before wiring.
-
-| PN532 Pin | Arduino UNO R4 WiFi |
+| RC522 Pin | Arduino UNO R4 WiFi |
 |-----------|---------------------|
 | NSS / CS  | D10                 |
 | MOSI      | D11                 |
@@ -33,15 +31,13 @@ This guide covers running the **UNO R4 WiFi** sketch (`arduino/bankongseton_rfid
 | VCC       | 3.3V                |
 | GND       | GND                 |
 
-### LCD 16×2 with PCF8574 I2C Backpack → Arduino UNO R4 WiFi
+### SSD1306 OLED → Arduino UNO R4 WiFi
 
-> **Note:** The LCD uses software (bit-bang) I2C on D6/D7, leaving the hardware I2C pins free for other peripherals.
-
-| LCD Backpack Pin | Arduino UNO R4 WiFi |
+| OLED Pin | Arduino UNO R4 WiFi |
 |-----------------|---------------------|
-| SDA             | D6 (software I2C)   |
-| SCL             | D7 (software I2C)   |
-| VCC             | 5V                  |
+| SDA             | SDA (hardware I2C)  |
+| SCL             | SCL (hardware I2C)  |
+| VCC             | 3.3V or 5V          |
 | GND             | GND                 |
 
 ### Piezo Buzzer → Arduino UNO R4 WiFi
@@ -59,26 +55,28 @@ Install via **Arduino IDE → Tools → Manage Libraries…**:
 
 | Library | Author | Notes |
 |---------|--------|-------|
-| **Adafruit PN532** | Adafruit | NFC reader driver |
-| **Adafruit BusIO** | Adafruit | Required dependency of Adafruit PN532 |
+| **MFRC522** | GithubCommunity | RFID reader driver |
+| **Adafruit SSD1306** | Adafruit | OLED driver |
+| **Adafruit GFX Library** | Adafruit | OLED graphics dependency |
+| **QRCode** | Richard Moore | OLED QR rendering |
 | **WiFiS3** | Arduino | Included with the Arduino UNO R4 board package — no separate install needed |
 
-> **No extra library for LCD.** The sketch uses an inline bit-bang I2C + PCF8574 driver — nothing to install.
+> `WiFiS3`, `Wire`, and `SPI` are included with the UNO R4 board package.
 
 ---
 
 ## secrets.h Configuration
 
-Copy `arduino/bankongseton_rfid/secrets.h.example` to `arduino/bankongseton_rfid/secrets.h` and fill in each field:
+Copy `arduino/bankongseton_r4/secrets.example.h` to `arduino/bankongseton_r4/secrets.h` and fill in each field:
 
 | Field | Value | Notes |
 |-------|-------|-------|
 | `SECRET_SSID` | Your school WiFi SSID | 2.4 GHz network recommended; UNO R4 WiFi supports 2.4 GHz only |
 | `SECRET_PASS` | WiFi password | |
-| `FLASK_HOST` | `<server-ip>:5003` | **Must use port 5003** — the dashboard server listens on 5003 and hosts both `/api/arduino/card-read` and `/api/arduino/heartbeat`. Port 5000 is wrong. |
+| `FLASK_HOST` | `<cashier-pc-lan-ip>:5010` | Use the cashier PC's LAN IP and standalone cashier port. Never use `localhost`. |
 | `SECRET_API_KEY` | API key string | **Must match `ARDUINO_API_KEY` in the Flask `.env` file exactly** — any mismatch returns HTTP 401 and the WiFi badge stays red |
 
-**`HEARTBEAT_INTERVAL_MS`** is defined as a constant directly in `bankongseton_rfid.ino` (not in `secrets.h`). If you need to change the heartbeat interval, edit the constant there and reflash.
+**`HEARTBEAT_INTERVAL_MS`** is defined as a constant directly in `bankongseton_r4.ino` (not in `secrets.h`). If you need to change the heartbeat interval, edit the constant there and reflash.
 
 > **`secrets.h` is gitignored** — never commit real credentials. The `.example` file is safe to commit.
 
@@ -87,8 +85,8 @@ Copy `arduino/bankongseton_rfid/secrets.h.example` to `arduino/bankongseton_rfid
 ## Flashing
 
 1. Open **Arduino IDE**.
-2. File → Open → navigate to `arduino/bankongseton_rfid/bankongseton_rfid.ino`.
-3. Copy `secrets.h.example` to `secrets.h` in the same directory and fill in all fields (see [secrets.h Configuration](#secretsh-configuration) above).
+2. File → Open → navigate to `arduino/bankongseton_r4/bankongseton_r4.ino`.
+3. Copy `secrets.example.h` to `secrets.h` in the same directory and fill in all fields (see [secrets.h Configuration](#secretsh-configuration) above).
 4. Connect the Arduino UNO R4 WiFi to your PC via USB.
 5. Tools → Board → select **"Arduino UNO R4 WiFi"**.
 6. Tools → Port → select the correct COM port.
@@ -104,7 +102,7 @@ After powering on from the powerbank:
 1. **Open Serial Monitor** at **9600 baud** (while USB cable is connected during initial test — remove it once confirmed working).
 2. Expect within a few seconds:
    ```
-   WiFi connected — IP: 100.120.x.x
+   WiFi connected. IP: 192.168.x.x
    ```
 3. Every 30 seconds during idle, expect:
    ```
@@ -140,12 +138,12 @@ If the badge stays red after 30 seconds, see [Troubleshooting](#troubleshooting)
 |---------|-------------|-----|
 | WiFi badge stays red after 30+ seconds | `SECRET_API_KEY` in `secrets.h` doesn't match `ARDUINO_API_KEY` in Flask `.env` | Re-check both values; reflash after fixing `secrets.h` |
 | WiFi badge stays red — Serial Monitor shows HTTP 401 | API key mismatch (same as above) | Same fix |
-| WiFi badge stays red — no `HTTP: POST` line in Serial Monitor | Heartbeat not reaching server; WiFi may not be connected | Check SSID/password, check Arduino is on school LAN, look for `WiFi connected` at boot |
-| WiFi badge stays red — wrong port | `FLASK_HOST` uses port 5000 instead of 5003 | Change to `<ip>:5003` in `secrets.h` and reflash |
+| WiFi badge stays red — no heartbeat in server logs | Heartbeat not reaching server; WiFi may not be connected | Check SSID/password, verify `FLASK_HOST`, and look for `WiFi connected` at boot |
+| WiFi badge stays red — wrong port | `FLASK_HOST` uses the wrong listener | Change to `<cashier-pc-lan-ip>:5010` in `secrets.h` and reflash |
 | WiFi never connects | Wrong SSID or password, or 5 GHz network | Verify credentials; ensure network is 2.4 GHz |
-| LCD blank | Wrong I2C address | Change `LCD_ADDR` in sketch to `0x3F` (default is `0x27`); or run an I2C scanner sketch |
+| OLED blank | Wrong I2C address or wiring | Confirm SDA/SCL wiring and address `0x3C`; run an I2C scanner if needed |
 | Powerbank shuts off within minutes | Bank has aggressive auto-shutoff | Use a name-brand bank; verify the 30-second heartbeat is firing in Serial Monitor |
-| NFC tap not delivered to server | WiFi connected but wrong Flask host | Confirm `FLASK_HOST` IP is the server machine's LAN IP, not localhost |
+| RFID tap not delivered to server | WiFi connected but wrong Flask host or API key | Confirm `FLASK_HOST` is the cashier PC's LAN IP on port 5010, not localhost, and verify the API key |
 
 ---
 
@@ -153,12 +151,12 @@ If the badge stays red after 30 seconds, see [Troubleshooting](#troubleshooting)
 
 | Pin | Function |
 |-----|----------|
-| D6  | LCD SDA (software I2C) |
-| D7  | LCD SCL (software I2C) |
-| D9  | Piezo buzzer |
-| D10 | PN532 NSS/CS (SPI) |
+| D8  | Piezo buzzer |
+| D9  | RC522 reset |
+| D10 | RC522 NSS/CS (SPI) |
 | D11 | SPI MOSI (hardware, shared) |
 | D12 | SPI MISO (hardware, shared) |
 | D13 | SPI SCK (hardware, shared) |
-| 3.3V | PN532 VCC |
-| 5V  | LCD backpack VCC |
+| SDA | SSD1306 OLED SDA |
+| SCL | SSD1306 OLED SCL |
+| 3.3V | RC522 VCC / OLED VCC |

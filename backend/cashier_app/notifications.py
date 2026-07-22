@@ -640,7 +640,7 @@ class NotificationManager:
                     if not student:
                         continue
                     
-                    parent_email = student.get('ParentEmail', '').strip()
+                    parent_email = student.get('StudentEmail', '').strip()
                     if not parent_email or '@' not in parent_email:
                         continue
                     
@@ -682,7 +682,7 @@ class NotificationManager:
             if not student:
                 return False
             
-            parent_email = student.get('ParentEmail', '').strip()
+            parent_email = student.get('StudentEmail', '').strip()
             if not parent_email or '@' not in parent_email:
                 return False
             

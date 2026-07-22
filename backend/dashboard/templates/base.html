@@ -16,10 +16,8 @@
 <div class="dashboard-container">
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
-            <div class="sidebar-brand-icon"><i class="bi bi-bank"></i></div>
             <div>
                 <h1>Seton Academy</h1>
-                <p>FINANCIAL INTELLIGENCE</p>
             </div>
         </div>
 
@@ -45,28 +43,17 @@
             <a href="/cashier-accounts" class="{% if active_page == 'cashier_accounts' %}active{% endif %}">
                 <i class="bi bi-person-vcard-fill"></i><span>Cashier Accounts</span>
             </a>
-            <a href="/panel" class="{% if active_page == 'registration_panel' %}active{% endif %}">
-                <i class="bi bi-person-badge-fill"></i><span>Card Registration</span>
-            </a>
             {% endif %}
         </nav>
 
         <div class="sidebar-footer">
-            {% block sidebar_primary_cta %}
-            <a href="/reports" class="sidebar-cta" style="text-decoration:none;display:flex;align-items:center;justify-content:center">Generate Report</a>
-            {% endblock %}
-            <a href="/settings" class="sidebar-foot-link"><i class="bi bi-gear-fill"></i><span>Settings</span></a>
             <a href="/logout" class="sidebar-foot-link logout"><i class="bi bi-box-arrow-left"></i><span>Logout</span></a>
         </div>
     </aside>
 
     <div class="content-shell">
         <header class="global-topbar">
-            <form class="topbar-search" action="/students" method="get" role="search">
-                <i class="bi bi-search"></i>
-                <input type="text" name="q" placeholder="Search students by name or ID..." aria-label="Search students">
-            </form>
-            <div class="topbar-center">Financial <span>Intelligence</span></div>
+            <div class="topbar-center">Bangko <span>ng Seton</span></div>
             <div class="topbar-right">
                 <div class="topbar-user">
                     <div>

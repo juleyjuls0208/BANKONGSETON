@@ -55,8 +55,7 @@ if not _secret_key or _secret_key == _INSECURE:
     logger.critical("event=startup_aborted reason=insecure_secret_key")
     raise SystemExit(1)
 _jwt_secret = os.getenv("JWT_SECRET", "").strip()
-_JWT_INSECURE = "bangko-jwt-secret-2026"
-if not _jwt_secret or _jwt_secret == _JWT_INSECURE:
+if not _jwt_secret or (_jwt_secret.lower().startswith("bangko-") and "secret-" in _jwt_secret.lower()):
     logger.critical("event=startup_aborted reason=insecure_jwt_secret")
     raise SystemExit(1)
 if (os.environ.get("WEB_CONCURRENCY", "1") not in ("", "1")
@@ -64,8 +63,8 @@ if (os.environ.get("WEB_CONCURRENCY", "1") not in ("", "1")
     logger.critical("event=startup_aborted reason=multi_worker_forbidden")
     raise SystemExit(1)
 
-TECH_USERNAME = os.getenv("TECH_USERNAME", os.getenv("ADMIN_USERNAME", "admin"))
-TECH_PASSWORD = os.getenv("TECH_PASSWORD", os.getenv("ADMIN_PASSWORD", "admin2025"))
+TECH_USERNAME = os.getenv("TECH_USERNAME", os.getenv("ADMIN_USERNAME", "")).strip()
+TECH_PASSWORD = os.getenv("TECH_PASSWORD", os.getenv("ADMIN_PASSWORD", "")).strip()
 
 UID_PATTERN = re.compile(r"^[0-9A-Fa-f]{8}$|^[0-9A-Fa-f]{14}$")
 
@@ -85,7 +84,19 @@ except Exception as e:  # offline/dev
 
 # Register ONLY the hardware/RFID + card-lifecycle routes from the shared core.
 from dashboard_core import register_routes, get_cors_origins
-register_routes(app, socketio, modes=("hardware",))
+register_routes(app, socketio, serial_enabled=True)
+
+# The shared core also defines cloud finance routes. Tech is the on-prem
+# hardware service; remove unrelated HTTP surfaces after registration.
+_TECH_BLOCKED = ("/api/load", "/api/balance", "/api/transactions", "/api/analytics", "/api/products", "/api/students")
+for _rule in list(app.url_map.iter_rules()):
+    if _rule.rule.startswith(_TECH_BLOCKED):
+        app.url_map._rules.remove(_rule)
+        _endpoint_rules = app.url_map._rules_by_endpoint.get(_rule.endpoint, [])
+        if _rule in _endpoint_rules:
+            _endpoint_rules.remove(_rule)
+        if not _endpoint_rules:
+            app.view_functions.pop(_rule.endpoint, None)
 
 
 # ---------------------------------------------------------------------------

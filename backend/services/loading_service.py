@@ -29,6 +29,7 @@ import re
 import time
 import uuid
 from datetime import datetime
+from math import isfinite
 from typing import Optional
 
 from dotenv import load_dotenv
@@ -149,7 +150,7 @@ def _log_transaction(row_map: dict, station_id: str) -> None:
             row_map.get("ErrorMessage", ""),
         ]
 
-    transactions_sheet.append_row(tx_row, table_range="A1")
+    transactions_sheet.append_row(tx_row)
     invalidate_pattern("transactions")
     invalidate_pattern("sheet_records:Transactions Log")
 
@@ -158,7 +159,7 @@ def _send_balance_loaded_email(student: dict, student_id: str, amount: float,
                                new_balance: float) -> None:
     """Best-effort parent notification. Never raises."""
     try:
-        parent_email = student.get("ParentEmail", "").strip()
+        parent_email = student.get("StudentEmail", "").strip()
         if not parent_email or "@" not in parent_email:
             return
         from notifications import get_notification_manager
@@ -182,14 +183,19 @@ def _send_balance_loaded_email(student: dict, student_id: str, amount: float,
 def load_money(student_id: str, amount: float, *,
                payment_method: str = "cash",
                processed_by: str = "kiosk",
-               station_id: str = STATION_KIOSK) -> dict:
+               station_id: str = STATION_KIOSK,
+               idempotency_key: str | None = None) -> dict:
     """Credit `amount` to a student's money card. Returns a result dict.
 
     Mirrors dashboard_core.load_balance() exactly (same columns, same
     transaction log, same email). Used by dashboard, kiosk, and tech apps.
     """
     student_id = str(student_id or "").strip()
-    if amount <= 0:
+    try:
+        amount = float(amount)
+    except (TypeError, ValueError):
+        return {"success": False, "error": "Invalid amount", "status": 400}
+    if not isfinite(amount) or amount <= 0:
         return {"success": False, "error": "Amount must be positive", "status": 400}
     if not student_id:
         return {"success": False, "error": "student_id is required", "status": 400}
@@ -205,6 +211,38 @@ def load_money(student_id: str, amount: float, *,
     row_index, account = _money_account_row(money_card)
     if not row_index:
         return {"success": False, "error": "Money account not found", "status": 404}
+
+    # Supabase path: row lock, balance update, TotalLoaded update, ledger
+    # insert, and idempotency all commit together.  The fake/gspread path below
+    # remains only for local compatibility tests and legacy deployments.
+    atomic = getattr(get_worksheet_with_retry("Money Accounts"), "update_balance_atomic", None)
+    if atomic is not None:
+        try:
+            result = atomic(
+                money_card=normalize_card_uid(money_card),
+                amount_delta=amount,
+                total_loaded_delta=amount,
+                transaction_type="Load",
+                items_json=payment_method,
+                student_id=student_id,
+                idempotency_key=idempotency_key,
+                station_id=station_id or processed_by,
+            )
+        except APIError as exc:
+            message = str(exc)
+            status = 402 if "Insufficient" in message else 400 if "not found" in message or "inactive" in message.lower() else 503
+            return {"success": False, "error": message, "status": status}
+        _send_balance_loaded_email(student, student_id, amount, result["BalanceAfter"])
+        return {
+            "success": True,
+            "student_id": student_id,
+            "student_name": student.get("Name", ""),
+            "money_card": normalize_card_uid(money_card),
+            "amount_loaded": amount,
+            "new_balance": result["BalanceAfter"],
+            "transaction_id": result["TransactionID"],
+            "idempotent": result.get("Idempotent", False),
+        }
 
     current_balance = float(account.get("Balance", 0))
     total_loaded = float(account.get("TotalLoaded", 0))
@@ -315,11 +353,11 @@ def report_lost_card(student_id: str, *, station_id: str = STATION_DASHBOARD) ->
     lost_sheet.append_row([
         report_id, timestamp, student_id, normalize_card_uid(money_card),
         "", balance, "admin", "Pending",
-    ], table_range="A1")
+    ])
     invalidate_pattern("sheet_records:Lost Card Reports")
 
     try:
-        parent_email = student.get("ParentEmail", "").strip()
+        parent_email = student.get("StudentEmail", "").strip()
         if parent_email and "@" in parent_email:
             from notifications import get_notification_manager
             get_notification_manager().email_notifier.send_card_lost_alert(
@@ -380,8 +418,8 @@ def replace_lost_card(student_id: str, new_card_uid: str,
     money_sheet = get_worksheet_with_retry("Money Accounts")
     money_sheet.append_row([
         new_card, student.get("IDCardNumber", ""), balance,
-        "Active", timestamp, balance,
-    ], table_range="A1")
+        "Active", timestamp, balance, timestamp,
+    ])
     invalidate_pattern("sheet_records:Money Accounts")
 
     # Update the Users sheet money card reference.
@@ -400,7 +438,7 @@ def replace_lost_card(student_id: str, new_card_uid: str,
         invalidate_pattern("sheet_records:Lost Card Reports")
 
     try:
-        parent_email = student.get("ParentEmail", "").strip()
+        parent_email = student.get("StudentEmail", "").strip()
         if parent_email and "@" in parent_email:
             from notifications import get_notification_manager
             get_notification_manager().email_notifier.send_card_replaced_confirmation(

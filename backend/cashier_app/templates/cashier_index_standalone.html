@@ -63,46 +63,6 @@
             line-height: 1;
         }
 
-        .brand .cashier-id {
-            font-size: 1.35rem;
-            color: #505066;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.4rem;
-        }
-
-        .status-strip {
-            display: flex;
-            align-items: center;
-            gap: 0.9rem;
-            color: #55526c;
-            font-size: 0.82rem;
-            font-weight: 800;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-        }
-
-        .status-strip .ok { color: var(--success); }
-
-        .status-strip .sync { color: #5f5b75; }
-
-        .status-chip {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.35rem;
-        }
-
-        .icon-circle {
-            width: 40px;
-            height: 40px;
-            border-radius: 12px;
-            background: #ece8f6;
-            border: 1px solid #d8d2e7;
-            color: #3525cd;
-            display: grid;
-            place-items: center;
-        }
-
         .terminal {
             height: calc(100vh - 70px);
             display: grid;
@@ -119,25 +79,6 @@
 
         .sidebar-top {
             padding: 1.1rem 0.9rem;
-        }
-
-        .terminal-meta {
-            padding: 0 0.55rem 0.8rem;
-        }
-
-        .terminal-meta p {
-            margin: 0;
-            color: var(--muted);
-            font-size: 0.73rem;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-            font-weight: 800;
-        }
-
-        .terminal-meta h3 {
-            margin: 0.2rem 0 0;
-            color: #26223a;
-            font-size: 1.4rem;
         }
 
         .nav-link {
@@ -244,35 +185,6 @@
             padding: 0.2rem 0.45rem;
         }
 
-        .scanner-wrap {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-end;
-            gap: 0.3rem;
-            min-width: 220px;
-        }
-
-        #scannerPill {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.4rem;
-            border-radius: 999px;
-            border: 1px solid #a6e0be;
-            background: #dff6e9;
-            color: #1a8951;
-            font-size: 0.73rem;
-            letter-spacing: 0.06em;
-            font-weight: 800;
-            padding: 0.32rem 0.72rem;
-            text-transform: uppercase;
-        }
-
-        #scannerMeta {
-            color: #67637d;
-            font-size: 0.82rem;
-            font-weight: 600;
-        }
-
         .categories {
             display: flex;
             gap: 0.5rem;
@@ -327,25 +239,12 @@
             overflow: hidden;
             background: #ece8f6;
             margin-bottom: 0.55rem;
-            position: relative;
         }
 
         .product-image img {
             width: 100%;
             height: 100%;
             object-fit: cover;
-        }
-
-        .qty-chip {
-            position: absolute;
-            top: 0.4rem;
-            right: 0.4rem;
-            border-radius: 8px;
-            background: rgba(255, 255, 255, 0.95);
-            border: 1px solid #d8d2e7;
-            font-size: 0.71rem;
-            font-weight: 800;
-            padding: 0.22rem 0.45rem;
         }
 
         .product-name {
@@ -375,60 +274,6 @@
             display: flex;
             flex-direction: column;
             min-height: 0;
-        }
-
-        .student-card {
-            background: #fff;
-            border-bottom: 1px solid #ddd7eb;
-            padding: 1rem;
-        }
-
-        .student-row {
-            display: flex;
-            align-items: center;
-            gap: 0.7rem;
-        }
-
-        .student-avatar {
-            width: 52px;
-            height: 52px;
-            border-radius: 14px;
-            background: #d9d5ff;
-            color: #3525cd;
-            display: grid;
-            place-items: center;
-            font-size: 1.25rem;
-        }
-
-        .student-title {
-            margin: 0;
-            font-size: 1.05rem;
-            font-weight: 800;
-        }
-
-        .student-id {
-            margin: 0.2rem 0 0;
-            color: #67637d;
-            font-weight: 600;
-            font-size: 0.85rem;
-        }
-
-        .student-balance {
-            margin-top: 0.7rem;
-            border-radius: 12px;
-            background: #ece8f6;
-            border: 1px solid #ddd7eb;
-            padding: 0.7rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-weight: 700;
-        }
-
-        .student-balance strong {
-            color: #251f65;
-            font-size: 1.2rem;
-            letter-spacing: 0.02em;
         }
 
         .cart-items {
@@ -568,65 +413,28 @@
             padding: 0.9rem 1rem;
         }
 
-        .cart-actions {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 0.6rem;
-            margin-bottom: 0.8rem;
-        }
-
-        .cart-actions button {
-            min-height: 44px;
-            border-radius: 10px;
-            font-weight: 800;
-            cursor: pointer;
-            border: 1px solid #d8d2e7;
-            background: #fff;
-            color: #252238;
-        }
-
-        #voidBtn {
-            border-color: #e79f9f;
-            color: var(--error);
-        }
-
-        #voidBtn.armed {
-            background: var(--error);
-            color: #fff;
-            border-color: var(--error);
-        }
-
         .totals {
             border-top: 1px dashed #d8d2e7;
             border-bottom: 1px dashed #d8d2e7;
             padding: 0.8rem 0;
-            display: grid;
-            gap: 0.4rem;
             margin-bottom: 0.8rem;
         }
 
-        .totals-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-weight: 700;
-        }
-
-        .total-ledger {
+        .total {
             display: flex;
             justify-content: space-between;
             align-items: baseline;
-            margin-top: 0.25rem;
         }
 
-        .total-ledger .label {
+        .total .label {
             font-family: 'Instrument Serif', serif;
             font-style: italic;
             font-size: 2rem;
             color: #27225e;
+            font-weight: 800;
         }
 
-        .total-ledger .value {
+        .total .value {
             color: #3525cd;
             font-size: 2.25rem;
             font-weight: 900;
@@ -722,16 +530,6 @@
             font-weight: 700;
         }
 
-        .keyboard-hint {
-            text-align: center;
-            margin-top: 0.6rem;
-            color: #5f5b75;
-            font-size: 0.72rem;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-            font-weight: 800;
-        }
-
         .modal {
             display: none;
             position: fixed;
@@ -793,7 +591,6 @@
             .terminal {
                 grid-template-columns: 220px minmax(0, 1fr) 340px;
             }
-
             .products-grid {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
             }
@@ -804,19 +601,9 @@
 <header class="topbar">
     <div class="brand">
         <h1>Canteen Ledger</h1>
-        <div class="cashier-id"><i class="bi bi-person-circle"></i> Cashier #042</div>
     </div>
     <div style="display:flex;align-items:center;gap:0.9rem;">
-        <div class="status-strip">
-            <span class="status-chip ok"><i class="bi bi-usb-symbol"></i>SERIAL</span>
-            <span class="status-chip ok"><i class="bi bi-wifi"></i>WIFI</span>
-            <span class="status-chip sync"><i class="bi bi-arrow-repeat"></i>SYNC (<span id="syncCount">0</span>)</span>
-        </div>
-        <select id="portSelector" style="height:36px;border-radius:8px;border:1px solid #d8d2e7;background:#fff;padding:0 0.6rem;min-width:120px;">
-            <option value="">COM Port</option>
-        </select>
-        <button id="connectBtn" style="height:36px;border-radius:8px;border:1px solid #d8d2e7;background:#ece8f6;font-weight:700;padding:0 0.75rem;">Connect</button>
-        <span id="wifiBadge" style="font-size:0.75rem;font-weight:800;color:#9b5c0b;">OFFLINE</span>
+        <span id="wifiBadge" style="font-size:0.75rem;font-weight:800;color:#9b5c0b;">WIFI OFFLINE</span>
         <button class="icon-circle" onclick="logout()"><i class="bi bi-box-arrow-right"></i></button>
     </div>
 </header>
@@ -824,15 +611,10 @@
 <div class="terminal">
     <aside class="sidebar">
         <div class="sidebar-top">
-            <div class="terminal-meta">
-                <p>Terminal</p>
-                <h3>Station 04</h3>
-            </div>
-            <a href="#" class="nav-link active"><i class="bi bi-shop"></i>Register</a>
-            <a href="#" class="nav-link"><i class="bi bi-clock-history"></i>History</a>
-            <a href="#" class="nav-link"><i class="bi bi-box-seam"></i>Inventory</a>
-            <a href="#" class="nav-link"><i class="bi bi-people"></i>Students</a>
-            <a href="#" class="nav-link"><i class="bi bi-gear"></i>Settings</a>
+            <a href="#" class="nav-link active" onclick="showView('register'); return false;"><i class="bi bi-shop"></i>Register</a>
+            <a href="#" class="nav-link" onclick="showView('history'); return false;"><i class="bi bi-clock-history"></i>History</a>
+            <a href="#" class="nav-link" onclick="showView('inventory'); return false;"><i class="bi bi-box-seam"></i>Inventory</a>
+            <a href="#" class="nav-link" onclick="showView('students'); return false;"><i class="bi bi-people"></i>Students</a>
         </div>
         <div class="sidebar-bottom">
             <button class="close-shift-btn" onclick="openCloseShiftModal()">Close Shift</button>
@@ -840,7 +622,7 @@
     </aside>
 
     <main class="products-pane">
-        <div id="offlineBanner"></div>
+        <div id="offLineBanner"></div>
 
         <div class="search-row">
             <div class="search-box">
@@ -848,36 +630,22 @@
                 <input id="searchBar" type="text" placeholder="Search products or scan barcode...">
                 <span class="esc">ESC</span>
             </div>
-            <div class="scanner-wrap">
-                <div id="scannerPill"><span style="width:8px;height:8px;border-radius:999px;background:#1a8951;"></span>SCANNER: READY</div>
-                <div id="scannerMeta">Last scanned: —</div>
-                <button class="icon-circle" title="View mode" onclick="document.querySelector('.products-grid').classList.toggle('list-view')"><i class="bi bi-grid-3x3-gap-fill"></i></button>
+            <button class="icon-circle" title="View mode" onclick="document.querySelector('.products-grid').classList.toggle('list-view')"><i class="bi bi-grid-3x3-gap-fill"></i></button>
+        </div>
+
+        <div id="registerView">
+            <div class="categories" id="categories"></div>
+            <div class="products-grid" id="productsGrid">
+                <div class="product-card">Loading products...</div>
             </div>
         </div>
 
-        <div class="categories" id="categories"></div>
-
-        <div class="products-grid" id="productsGrid">
-            <div class="product-card">Loading products...</div>
-        </div>
+        <div id="historyView" style="display:none;"></div>
+        <div id="inventoryView" style="display:none;"></div>
+        <div id="studentsView" style="display:none;"></div>
     </main>
 
     <aside class="cart-pane">
-        <div class="student-card">
-            <div class="student-row">
-                <div class="student-avatar"><i class="bi bi-person-fill"></i></div>
-                <div style="flex:1;min-width:0;">
-                    <h4 class="student-title">Gabriel Santos</h4>
-                    <p class="student-id">ID #2024-0012</p>
-                </div>
-                <span class="pill success">ACTIVE</span>
-            </div>
-            <div class="student-balance">
-                <span>WALLET BALANCE</span>
-                <strong id="walletBalance">₱1,245.00</strong>
-            </div>
-        </div>
-
         <div class="cart-items" id="cartItems">
             <p style="text-align:center;color:#6d6881;font-weight:600;">Cart is empty</p>
         </div>
@@ -889,15 +657,11 @@
 
         <div class="summary-pane">
             <div class="cart-actions">
-                <button type="button" onclick="holdCart()"><i class="bi bi-pause-circle me-1"></i>Hold Cart</button>
+                <button type="button" onclick="holdCart()"><i class="bi bi-pause-circle me-1"></i>Hold Card</button>
                 <button id="voidBtn" type="button" onclick="handleVoidClick()"><i class="bi bi-slash-circle me-1"></i>Void Item</button>
             </div>
-
-            <div class="totals">
-                <div class="totals-row"><span>Subtotal</span><span id="subtotalAmount">₱0.00</span></div>
-                <div class="totals-row"><span>Tax (VAT 12%)</span><span id="taxAmount">₱0.00</span></div>
-                <div class="total-ledger">
-                    <span class="label">Total Ledger</span>
+                <div class="total">
+                    <span class="label">Total</span>
                     <span class="value" id="cartTotal">₱0.00</span>
                 </div>
             </div>
@@ -932,9 +696,7 @@
 <div class="modal" id="closeShiftModal">
     <div class="modal-content">
         <h2>Close shift?</h2>
-        <p>Terminal: Station 04
-Pending sync: <span id="closeShiftSyncCount">0</span>
-<span id="closeShiftWarning"></span></p>
+        <p>Unsaved records will be lost. Continue?</p>
         <div class="modal-actions">
             <button class="secondary" onclick="closeCloseShiftModal()">Cancel</button>
             <button class="danger" onclick="confirmCloseShift()">Close Shift</button>
@@ -956,74 +718,20 @@ Pending sync: <span id="closeShiftSyncCount">0</span>
     let qrPollTimer = null;
     let qrPollAbortController = null;
     let cardReadPollTimer = null;
-    let cardReadPollInFlight = false;
-    let queuePollTimer = null;
-    let queuePollInFlight = false;
-    let searchDebounceTimer = null;
 
-    let queuePending = 0;
-    let undoTimer = null;
-    let undoAction = null;
-    let voidArmedUntil = 0;
-    const BLOCKED_SYNC_THRESHOLD = 10;
+    function endpoint(path) { return `${API_BASE}${path}`; }
+    function phpPeso(value) { return `₱${Number(value || 0).toFixed(2)}`; }
+    function esc(value) { return String(value ?? '').replace(/[&<>\"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m])); }
 
-    const REQUEST_TIMEOUT_MS = 10000;
-    const QR_POLL_TIMEOUT_MS = 5000;
-    const QR_POLL_INTERVAL_MS = 1000;
-    const CARD_READ_POLL_INTERVAL_MS = 500;
-    const QUEUE_POLL_INTERVAL_MS = 30000;
-
-    function endpoint(path) {
-        return `${API_BASE}${path}`;
-    }
-
-    function phpPeso(value) {
-        return `₱${Number(value || 0).toFixed(2)}`;
-    }
-
-    function esc(value) {
-        return String(value ?? '').replace(/[&<>'"]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[m]));
-    }
-
-    async function fetchWithTimeout(url, options = {}, timeoutMs = REQUEST_TIMEOUT_MS) {
+    async function fetchWithTimeout(url, options = {}, timeoutMs = 10000) {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-        const upstreamSignal = options.signal;
-
-        if (upstreamSignal) {
-            if (upstreamSignal.aborted) {
-                controller.abort();
-            } else {
-                upstreamSignal.addEventListener('abort', () => controller.abort(), { once: true });
-            }
-        }
-
-        try {
-            return await fetch(url, { ...options, signal: controller.signal });
-        } finally {
-            clearTimeout(timeoutId);
-        }
-    }
-
-    function showSnackbar(message, action) {
-        const bar = document.getElementById('undoSnackbar');
-        document.getElementById('undoMessage').textContent = message;
-
-        if (undoTimer) clearTimeout(undoTimer);
-        undoAction = action;
-
-        bar.classList.add('show');
-        undoTimer = setTimeout(() => {
-            bar.classList.remove('show');
-            undoAction = null;
-        }, 6000);
+        try { return await fetch(url, { ...options, signal: controller.signal }); }
+        finally { clearTimeout(timeoutId); }
     }
 
     document.getElementById('undoBtn').addEventListener('click', () => {
-        if (typeof undoAction === 'function') undoAction();
-        undoAction = null;
         document.getElementById('undoSnackbar').classList.remove('show');
-        if (undoTimer) clearTimeout(undoTimer);
     });
 
     function updatePaymentState() {
@@ -1036,17 +744,6 @@ Pending sync: <span id="closeShiftSyncCount">0</span>
 
         qrReason.textContent = '';
         tapReason.textContent = '';
-
-        if (queuePending >= BLOCKED_SYNC_THRESHOLD) {
-            chip.className = 'blocked';
-            chip.innerHTML = '<span class="bi bi-dot"></span>SYNC BLOCK • ACTION REQUIRED';
-            hint.textContent = 'Sync pending. Resolve queue before taking payments.';
-            qrBtn.disabled = true;
-            tapBtn.disabled = true;
-            qrReason.textContent = 'Sync pending';
-            tapReason.textContent = 'Sync pending';
-            return;
-        }
 
         if (!arduinoConnected) {
             chip.className = 'degraded';
@@ -1066,137 +763,43 @@ Pending sync: <span id="closeShiftSyncCount">0</span>
     }
 
     function stopQrPolling() {
-        if (qrPollTimer) {
-            clearTimeout(qrPollTimer);
-            qrPollTimer = null;
-        }
-        if (qrPollAbortController) {
-            qrPollAbortController.abort();
-            qrPollAbortController = null;
-        }
+        if (qrPollTimer) { clearTimeout(qrPollTimer); qrPollTimer = null; }
+        if (qrPollAbortController) { qrPollAbortController.abort(); qrPollAbortController = null; }
     }
 
     function stopCardReadPolling() {
-        if (cardReadPollTimer) {
-            clearTimeout(cardReadPollTimer);
-            cardReadPollTimer = null;
-        }
+        if (cardReadPollTimer) { clearTimeout(cardReadPollTimer); cardReadPollTimer = null; }
     }
 
     async function pollCardReadFallback() {
-        if (!saleInProgress || cardReadPollInFlight) return;
-        cardReadPollInFlight = true;
+        if (!saleInProgress) return;
         try {
             const res = await fetchWithTimeout('/api/arduino/card-read-pending', {}, 3000);
             if (!res.ok) return;
             const data = await res.json().catch(() => ({}));
             const uid = (data && data.uid) ? String(data.uid).trim() : '';
-            if (uid && saleInProgress) {
-                stopCardReadPolling();
-                completeSale(uid);
-                return;
-            }
-        } catch (e) {
-            if (e.name !== 'AbortError') {
-                console.warn('card-read fallback poll failed:', e.message);
-            }
-        } finally {
-            cardReadPollInFlight = false;
-        }
-
-        if (saleInProgress) {
-            cardReadPollTimer = setTimeout(pollCardReadFallback, CARD_READ_POLL_INTERVAL_MS);
-        }
-    }
-
-    function markScannerSuccess(code) {
-        const meta = document.getElementById('scannerMeta');
-        const pill = document.getElementById('scannerPill');
-        const started = Date.now();
-
-        pill.innerHTML = '<span style="width:8px;height:8px;border-radius:999px;background:#1a8951;"></span>SCANNER: READY';
-        const tick = () => {
-            const age = Math.floor((Date.now() - started) / 1000);
-            meta.textContent = `Last scanned: ${code} (${age}s ago)`;
-        };
-
-        tick();
-        const timer = setInterval(tick, 1000);
-        setTimeout(() => {
-            clearInterval(timer);
-            meta.textContent = 'Last scanned: —';
-        }, 2000);
+            if (uid && saleInProgress) { stopCardReadPolling(); completeSale(uid); return; }
+        } catch (e) { if (e.name !== 'AbortError') console.warn('card-read fallback poll failed:', e.message); }
+        if (saleInProgress) cardReadPollTimer = setTimeout(pollCardReadFallback, 500);
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-        document.getElementById('connectBtn').addEventListener('click', connectArduino);
-        document.getElementById('searchBar').addEventListener('input', () => {
-            clearTimeout(searchDebounceTimer);
-            searchDebounceTimer = setTimeout(renderProducts, 180);
-        });
-        loadPorts();
+        document.getElementById('searchBar').addEventListener('input', () => setTimeout(renderProducts, 180));
         loadProducts();
         fetchArduinoWifiStatus();
         initWebSocket();
-        scheduleQueueStatusPoll();
     });
 
-    async function loadPorts() {
-        try {
-            const response = await fetch(endpoint('/ports'));
-            const data = await response.json();
-            const selector = document.getElementById('portSelector');
-            selector.innerHTML = '<option value="">COM Port</option>';
-            (data.ports || []).forEach(port => {
-                const option = document.createElement('option');
-                option.value = port;
-                option.textContent = port;
-                selector.appendChild(option);
-            });
-        } catch (error) {
-            console.error('Failed to load ports:', error);
-        }
-    }
-
-    async function connectArduino() {
-        const port = document.getElementById('portSelector').value;
-        if (!port) {
-            alert('Please select a COM port');
-            return;
-        }
-
-        try {
-            const response = await fetch(endpoint('/connect-arduino'), {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({port})
-            });
-            const data = await response.json();
-            if (data.success) {
-                updateArduinoStatus(true);
-            } else {
-                alert('Failed to connect: ' + data.error);
-            }
-        } catch (error) {
-            alert('Connection error: ' + error.message);
-        }
-    }
-
-    function updateArduinoStatus(connected) {
-        arduinoConnected = connected;
-        updatePaymentState();
-    }
-
-    function updateWifiBadge(data) {
+    function updateWifiBadge(data, endpointReachable) {
         const badge = document.getElementById('wifiBadge');
-        if (data.online) {
-            badge.textContent = 'ONLINE';
+        if (endpointReachable && data && data.online) {
+            badge.textContent = 'WIFI ONLINE';
             badge.style.color = '#169957';
             arduinoConnected = true;
         } else {
-            badge.textContent = 'OFFLINE';
+            badge.textContent = 'WIFI OFFLINE';
             badge.style.color = '#9b5c0b';
-            if (!arduinoConnected) arduinoConnected = false;
+            arduinoConnected = false;
         }
         updatePaymentState();
     }
@@ -1204,14 +807,10 @@ Pending sync: <span id="closeShiftSyncCount">0</span>
     async function fetchArduinoWifiStatus() {
         try {
             const token = localStorage.getItem('cashier_token');
-            const resp = await fetch(endpoint('/arduino-wifi-status'), {
-                headers: {'Authorization': 'Bearer ' + token}
-            });
-            if (resp.ok) {
-                const data = await resp.json();
-                updateWifiBadge(data);
-            }
-        } catch (_) {}
+            const resp = await fetch(endpoint('/arduino-wifi-status'), { headers: {'Authorization': 'Bearer ' + token} });
+            if (resp.ok) { const data = await resp.json(); updateWifiBadge(data, true); }
+            else { updateWifiBadge(null, false); }
+        } catch (_) { updateWifiBadge(null, false); }
     }
 
     async function loadProducts() {
@@ -1219,80 +818,51 @@ Pending sync: <span id="closeShiftSyncCount">0</span>
             const response = await fetchWithTimeout(endpoint('/products'));
             if (!response.ok) throw new Error('Server returned ' + response.status);
             const data = await response.json();
-
             if (data.products && data.products.length > 0) {
                 products = data.products.filter(p => p.active !== false);
-                const categories = ['All', ...new Set(products.map(p => p.category || 'Other'))];
-                document.getElementById('categories').innerHTML = categories.map(cat =>
-                    `<button class="category-btn ${cat === selectedCategory ? 'active' : ''}" onclick="filterByCategory('${esc(cat)}')">${esc(cat)}</button>`
-                ).join('');
+                document.getElementById('categories').innerHTML = ['All', ...new Set(products.map(p => p.category || 'Other'))]
+                    .map(cat => `<button class="category-btn ${cat === selectedCategory ? 'active' : ''}" onclick="filterByCategory('${esc(cat)}')">${esc(cat)}</button>`).join('');
                 renderProducts();
             } else {
-                document.getElementById('productsGrid').innerHTML = '<div class="product-card">No products available. Please add products in admin dashboard.</div>';
+                document.getElementById('productsGrid').innerHTML = '<div class="product-card">No products available.</div>';
             }
         } catch (error) {
             console.error('Failed to load products:', error);
-            document.getElementById('productsGrid').innerHTML = '<div class="product-card">Error loading products. Check console for details.</div>';
+            document.getElementById('productsGrid').innerHTML = '<div class="product-card">Error loading products.</div>';
         }
     }
 
     function filterByCategory(category) {
         selectedCategory = category;
-        const categories = ['All', ...new Set(products.map(p => p.category || 'Other'))];
-        document.getElementById('categories').innerHTML = categories.map(cat =>
-            `<button class="category-btn ${cat === selectedCategory ? 'active' : ''}" onclick="filterByCategory('${esc(cat)}')">${esc(cat)}</button>`
-        ).join('');
+        document.getElementById('categories').innerHTML = ['All', ...new Set(products.map(p => p.category || 'Other'))]
+            .map(cat => `<button class="category-btn ${cat === selectedCategory ? 'active' : ''}" onclick="filterByCategory('${esc(cat)}')">${esc(cat)}</button>`).join('');
         renderProducts();
-    }
-
-    function seededQty(id) {
-        let hash = 0;
-        for (let i = 0; i < id.length; i++) hash = ((hash << 5) - hash) + id.charCodeAt(i);
-        return Math.abs(hash % 50) + 1;
     }
 
     function renderProducts() {
         const searchTerm = document.getElementById('searchBar').value.toLowerCase();
-
         const filtered = products.filter(p => {
             const matchesSearch = p.name.toLowerCase().includes(searchTerm) || String(p.id).toLowerCase().includes(searchTerm);
             const matchesCategory = selectedCategory === 'All' || (p.category || 'Other') === selectedCategory;
             return matchesSearch && matchesCategory;
         });
-
         const grid = document.getElementById('productsGrid');
-        if (!filtered.length) {
-            grid.innerHTML = '<div class="product-card">No products found.</div>';
-            return;
-        }
+        if (!filtered.length) { grid.innerHTML = '<div class="product-card">No products found.</div>'; return; }
 
         grid.innerHTML = filtered.map(p => {
-            const qty = Number(p.qty ?? p.stock ?? seededQty(String(p.id || p.name)));
-            const image = p.image_url ? `<img src="${esc(p.image_url)}" alt="${esc(p.name)}">` : '<div style="width:100%;height:100%;display:grid;place-items:center;color:#6d6881;"><i class="bi bi-image"></i></div>';
-            return `
-                <article class="product-card" onclick="addToCart('${esc(p.id)}', '${esc(p.name)}', ${Number(p.price || 0)}, '${esc(p.image_url || '')}', '${esc(p.category || '')}')">
-                    <div class="product-image">
-                        ${image}
-                        <span class="qty-chip">QTY: ${qty.toString().padStart(2, '0')}</span>
-                    </div>
-                    <div class="product-name">${esc(p.name)}</div>
-                    <div class="product-meta">
-                        <small>${esc(p.category || 'General')}</small>
-                        <span class="product-price">${phpPeso(p.price)}</span>
-                    </div>
-                </article>
-            `;
+            const image = p.image_url ? `<img src="${esc(p.image_url)}" alt="${esc(p.name)}" onerror="this.style.display='none'">` : '<div style="width:100%;height:100%;display:grid;place-items:center;color:#6d6881;"><i class="bi bi-image"></i></div>';
+            return `<article class="product-card" onclick="addToCart('${esc(p.id)}', '${esc(p.name)}', ${Number(p.price || 0)}, '${esc(p.image_url || '')}', '${esc(p.category || '')}')">
+                <div class="product-image">${image}</div>
+                <div class="product-name">${esc(p.name)}</div>
+                <div class="product-meta"><small>${esc(p.category || 'General')}</small><span class="product-price">${phpPeso(p.price)}</span></div>
+            </article>`;
         }).join('');
     }
 
     function addToCart(id, name, price, imageUrl = '', category = '') {
         const existing = cart.find(item => item.id === id);
-        if (existing) {
-            existing.qty++;
-        } else {
-            cart.push({ id, name, price, qty: 1, imageUrl, category, armedUntil: 0 });
-        }
-        markScannerSuccess(id);
+        if (existing) existing.qty++;
+        else cart.push({ id, name, price, qty: 1, imageUrl, category });
         renderCart();
     }
 
@@ -1302,66 +872,241 @@ Pending sync: <span id="closeShiftSyncCount">0</span>
         item.qty += delta;
         if (item.qty <= 0) {
             const idx = cart.findIndex(i => i.id === id);
-            if (idx >= 0) {
-                const removed = cart.splice(idx, 1)[0];
-                showSnackbar('Item removed. Undo?', () => {
-                    cart.splice(idx, 0, removed);
-                    renderCart();
-                });
-            }
+            if (idx >= 0) cart.splice(idx, 1);
         }
         renderCart();
     }
 
     function removeFromCart(id) {
-        const item = cart.find(i => i.id === id);
-        if (!item) return;
-        const now = Date.now();
-
-        if (item.armedUntil && now <= item.armedUntil) {
-            const idx = cart.findIndex(i => i.id === id);
-            if (idx >= 0) {
-                const removed = cart.splice(idx, 1)[0];
-                showSnackbar('Item removed. Undo?', () => {
-                    removed.armedUntil = 0;
-                    cart.splice(idx, 0, removed);
-                    renderCart();
-                });
-            }
-        } else {
-            item.armedUntil = now + 2500;
-            setTimeout(() => {
-                const current = cart.find(i => i.id === id);
-                if (current && current.armedUntil && Date.now() > current.armedUntil) {
-                    current.armedUntil = 0;
-                    renderCart();
-                }
-            }, 2600);
-        }
-
+        const idx = cart.findIndex(i => i.id === id);
+        if (idx >= 0) cart.splice(idx, 1);
         renderCart();
     }
 
+    function renderCart() {
+        const itemsEl = document.getElementById('cartItems');
+        if (!cart.length) {
+            itemsEl.innerHTML = '<p style="text-align:center;color:#6d6881;font-weight:600;">Cart is empty</p>';
+        } else {
+            itemsEl.innerHTML = cart.map(item => `
+                <div class="cart-item">
+                    <div class="cart-thumb">${item.imageUrl ? `<img src="${esc(item.imageUrl)}" alt="${esc(item.name)}" onerror="this.style.display='none'">` : '<i class="bi bi-image"></i>'}</div>
+                    <div class="cart-info"><h4>${esc(item.name)}</h4><small>${phpPeso(item.price)} each</small></div>
+                    <div class="qty-control"><button onclick="updateQty('${esc(item.id)}', -1)">-</button><span>${item.qty}</span><button onclick="updateQty('${esc(item.id)}', 1)">+</button></div>
+                    <button class="remove-btn" onclick="removeFromCart('${esc(item.id)}')"><i class="bi bi-trash3-fill"></i></button>
+                </div>
+            `).join('');
+        }
+        const total = cart.reduce((sum, item) => sum + (item.price * item.qty * 1.12), 0);
+        document.getElementById('cartTotal').textContent = phpPeso(total);
+        updatePaymentState();
+    }
+
+    function initWebSocket() {
+        socket = io();
+        socket.on('card_read', data => {
+            if (!saleInProgress) return;
+            stopCardReadPolling();
+            const uid = data && data.uid ? String(data.uid).trim() : '';
+            if (!uid) {
+                document.getElementById('modalTitle').textContent = 'Payment Failed';
+                document.getElementById('modalMessage').textContent = 'Card read event missing UID';
+                return;
+            }
+            completeSale(uid);
+        });
+        socket.on('card_timeout', () => {
+            document.getElementById('modalTitle').textContent = 'Timeout';
+            document.getElementById('modalMessage').textContent = 'No card detected. Please try again.';
+        });
+        socket.on('card_error', data => {
+            document.getElementById('modalTitle').textContent = 'Error';
+            document.getElementById('modalMessage').textContent = data.error;
+        });
+        socket.on('qr_payment', data => {
+            if (!saleInProgress) return;
+            saleInProgress = false;
+            document.getElementById('paymentModal').style.display = 'flex';
+            document.getElementById('modalTitle').textContent = 'QR Payment Received!';
+            document.getElementById('modalMessage').textContent = `New Balance: ${phpPeso(data.new_balance)}`;
+            cart = []; renderCart();
+            setTimeout(() => closeModal(), 2000);
+        });
+        socket.on('arduino_wifi_status', data => { updateWifiBadge(data, true); });
+    }
+
+    async function qrCheckout() {
+        if (!cart.length) return;
+        const items = cart.map(item => ({name: item.name, price: item.price, qty: item.qty}));
+        const total = cart.reduce((sum, item) => sum + (item.price * item.qty * 1.12), 0);
+        document.getElementById('paymentModal').style.display = 'flex';
+        document.getElementById('modalTitle').textContent = 'QR Pay';
+        document.getElementById('modalMessage').textContent = 'Generating QR code…';
+        saleInProgress = true;
+        try {
+            const response = await fetch(endpoint('/qr-generate'), {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({items, total})
+            });
+            if (!response.ok) throw new Error('Failed to generate QR');
+            const data = await response.json();
+            document.getElementById('modalTitle').textContent = 'Scan QR on OLED';
+            document.getElementById('modalMessage').textContent = `QR shown on reader display.\nAsk student to scan.\nTotal: ${phpPeso(total)}`;
+        } catch (error) {
+            document.getElementById('modalTitle').textContent = 'QR Error';
+            document.getElementById('modalMessage').textContent = error.message;
+        }
+    }
+
+    async function checkout() {
+        if (!arduinoConnected || !cart.length) return;
+        const items = cart.map(item => ({name: item.name, price: item.price, qty: item.qty}));
+        const total = cart.reduce((sum, item) => sum + (item.price * item.qty * 1.12), 0);
+        document.getElementById('paymentModal').style.display = 'flex';
+        document.getElementById('modalTitle').textContent = 'Tap Student Card';
+        document.getElementById('modalMessage').textContent = 'Waiting for card...';
+        saleInProgress = true;
+        try {
+            const response = await fetch(endpoint('/process-sale'), {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({items, total})
+            });
+            if (!response.ok) throw new Error('Failed to initiate sale');
+            stopCardReadPolling();
+            cardReadPollTimer = setTimeout(pollCardReadFallback, 500);
+        } catch (error) {
+            closeModal();
+            alert('Error: ' + error.message);
+        }
+    }
+
+    async function completeSale(cardUid) {
+        stopCardReadPolling();
+        try {
+            const response = await fetchWithTimeout(endpoint('/complete-sale'), {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({card_uid: cardUid})
+            });
+            const data = await response.json();
+            if (data.error) {
+                saleInProgress = false;
+                document.getElementById('modalTitle').textContent = 'Payment Failed';
+                document.getElementById('modalMessage').textContent = data.error;
+            } else {
+                saleInProgress = false;
+                document.getElementById('modalTitle').textContent = 'Success!';
+                document.getElementById('modalMessage').textContent = `Payment received!\nNew Balance: ${phpPeso(data.new_balance)}`;
+                cart = []; renderCart();
+                setTimeout(() => closeModal(), 2000);
+            }
+        } catch (error) {
+            document.getElementById('modalTitle').textContent = 'Error';
+            document.getElementById('modalMessage').textContent = error.message;
+        }
+    }
+
+    function closeModal() {
+        saleInProgress = false;
+        stopQrPolling();
+        stopCardReadPolling();
+        document.getElementById('paymentModal').style.display = 'none';
+    }
+
+    function logout() {
+        fetchWithTimeout(endpoint('/logout'), {method: 'POST'}, 5000).catch(() => {}).finally(() => { window.location.href = LOGOUT_REDIRECT; });
+    }
+
+    function openCloseShiftModal() { document.getElementById('closeShiftModal').style.display = 'flex'; }
+    function closeCloseShiftModal() { document.getElementById('closeShiftModal').style.display = 'none'; }
+    function confirmCloseShift() { closeCloseShiftModal(); alert('Shift closed. Terminal signed out.'); logout(); }
+
+    function showView(name) {
+        document.querySelectorAll('.nav-link').forEach(a => a.classList.remove('active'));
+        const map = { register: 'registerView', history: 'historyView', inventory: 'inventoryView', students: 'studentsView' };
+        ['registerView', 'historyView', 'inventoryView', 'studentsView'].forEach(id => {
+            document.getElementById(id).style.display = (id === map[name]) ? '' : 'none';
+        });
+        const labels = { register: 'Register', history: 'History', inventory: 'Inventory', students: 'Students' };
+        document.querySelectorAll('.nav-link').forEach(a => {
+            if (a.textContent.trim() === labels[name]) a.classList.add('active');
+        });
+        if (name === 'history') loadHistory();
+        else if (name === 'inventory') loadInventory();
+        else if (name === 'students') loadStudents();
+    }
+
+    async function loadHistory() {
+        const el = document.getElementById('historyView');
+        el.innerHTML = '<p style="padding:1rem;color:#67637d;">Loading history…</p>';
+        try {
+            const token = localStorage.getItem('cashier_token');
+            const res = await fetch(endpoint('/history'), { headers: { 'Authorization': 'Bearer ' + token } });
+            const data = await res.json();
+            const rows = (data.transactions || []).slice(0, 100);
+            if (!rows.length) { el.innerHTML = '<p style="padding:1rem;color:#67637d;">No transactions yet.</p>'; return; }
+            el.innerHTML = '<div style="padding:0.6rem 1rem;display:flex;flex-direction:column;gap:0.5rem;">' + rows.map(r => `
+                <div style="border:1px solid #ddd7eb;border-radius:10px;padding:0.6rem 0.8rem;background:#fff;">
+                    <div style="display:flex;justify-content:space-between;font-weight:700;"><span>${esc(r.student_id || '—')}</span><span>${phpPeso(r.amount)}</span></div>
+                    <small style="color:#67637d;">${esc(String(r.timestamp || ''))} · ${esc(r.status || '')}</small>
+                </div>`).join('') + '</div>';
+        } catch (e) {
+            el.innerHTML = '<p style="padding:1rem;color:#a23;">Failed to load history.</p>';
+        }
+    }
+
+    async function loadInventory() {
+        const el = document.getElementById('inventoryView');
+        el.innerHTML = '<p style="padding:1rem;color:#67637d;">Loading inventory…</p>';
+        try {
+            const token = localStorage.getItem('cashier_token');
+            const res = await fetch(endpoint('/inventory'), { headers: { 'Authorization': 'Bearer ' + token } });
+            const data = await res.json();
+            const rows = data.products || data.items || [];
+            if (!rows.length) { el.innerHTML = '<p style="padding:1rem;color:#67637d;">No products.</p>'; return; }
+            el.innerHTML = '<div style="padding:0.6rem 1rem;display:flex;flex-direction:column;gap:0.5rem;">' + rows.map(p => `
+                <div style="border:1px solid #ddd7eb;border-radius:10px;padding:0.6rem 0.8rem;background:#fff;display:flex;justify-content:space-between;align-items:center;">
+                    <span><strong>${esc(p.name)}</strong> <small style="color:#67637d;">${esc(p.category || '')}</small></span>
+                    <span style="font-weight:700;">${phpPeso(p.price)}</span>
+                </div>`).join('') + '</div>';
+        } catch (e) {
+            el.innerHTML = '<p style="padding:1rem;color:#a23;">Failed to load inventory.</p>';
+        }
+    }
+
+    async function loadStudents() {
+        const el = document.getElementById('studentsView');
+        el.innerHTML = '<p style="padding:1rem;color:#67637d;">Loading students…</p>';
+        try {
+            const token = localStorage.getItem('cashier_token');
+            const res = await fetch(endpoint('/students'), { headers: { 'Authorization': 'Bearer ' + token } });
+            const data = await res.json();
+            const rows = data.students || [];
+            if (!rows.length) { el.innerHTML = '<p style="padding:1rem;color:#67637d;">No student data.</p>'; return; }
+            el.innerHTML = '<div style="padding:0.6rem 1rem;display:flex;flex-direction:column;gap:0.5rem;">' + rows.slice(0, 100).map(s => `
+                <div style="border:1px solid #ddd7eb;border-radius:10px;padding:0.6rem 0.8rem;background:#fff;display:flex;justify-content:space-between;align-items:center;">
+                    <span><strong>${esc(s.student_id)}</strong> <small style="color:#67637d;">${s.orders} orders</small></span>
+                    <span style="font-weight:700;">${phpPeso(s.total_spent)}</span>
+                </div>`).join('') + '</div>';
+        } catch (e) {
+            el.innerHTML = '<p style="padding:1rem;color:#a23;">Failed to load students.</p>';
+        }
+    }
+
+    let voidArmedUntil = 0;
     function handleVoidClick() {
         const btn = document.getElementById('voidBtn');
         const now = Date.now();
-
         if (voidArmedUntil && now <= voidArmedUntil) {
             voidArmedUntil = 0;
             btn.classList.remove('armed');
             btn.innerHTML = '<i class="bi bi-slash-circle me-1"></i>Void Item';
-
             if (!cart.length) return;
             const idx = cart.length - 1;
             const removed = cart.splice(idx, 1)[0];
-            showSnackbar('Last item voided. Undo?', () => {
-                cart.splice(idx, 0, removed);
-                renderCart();
-            });
+            cart.splice(idx, 0, removed);
             renderCart();
             return;
         }
-
         voidArmedUntil = now + 2500;
         btn.classList.add('armed');
         btn.textContent = 'Tap again to confirm';
@@ -1377,340 +1122,6 @@ Pending sync: <span id="closeShiftSyncCount">0</span>
     function holdCart() {
         if (!cart.length) return;
         alert('Cart held for later checkout.');
-    }
-
-    function renderCart() {
-        const itemsEl = document.getElementById('cartItems');
-
-        if (!cart.length) {
-            itemsEl.innerHTML = '<p style="text-align:center;color:#6d6881;font-weight:600;">Cart is empty</p>';
-        } else {
-            itemsEl.innerHTML = cart.map(item => `
-                <div class="cart-item">
-                    <div class="cart-thumb">
-                        ${item.imageUrl ? `<img src="${esc(item.imageUrl)}" alt="${esc(item.name)}">` : '<i class="bi bi-image"></i>'}
-                    </div>
-                    <div class="cart-info">
-                        <h4>${esc(item.name)}</h4>
-                        <small>${phpPeso(item.price)} each</small>
-                    </div>
-                    <div class="qty-control">
-                        <button onclick="updateQty('${esc(item.id)}', -1)" aria-label="Decrease quantity">−</button>
-                        <span>${item.qty}</span>
-                        <button onclick="updateQty('${esc(item.id)}', 1)" aria-label="Increase quantity">+</button>
-                    </div>
-                    <button class="remove-btn ${item.armedUntil && Date.now() <= item.armedUntil ? 'armed' : ''}" onclick="removeFromCart('${esc(item.id)}')">
-                        ${item.armedUntil && Date.now() <= item.armedUntil ? 'Tap again to confirm' : '<i class="bi bi-trash3-fill"></i>'}
-                    </button>
-                </div>
-            `).join('');
-        }
-
-        const subtotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
-        const tax = subtotal * 0.12;
-        const total = subtotal + tax;
-
-        document.getElementById('subtotalAmount').textContent = phpPeso(subtotal);
-        document.getElementById('taxAmount').textContent = phpPeso(tax);
-        document.getElementById('cartTotal').textContent = phpPeso(total);
-
-        updatePaymentState();
-    }
-
-    function initWebSocket() {
-        socket = io();
-
-        socket.on('card_read', data => {
-            if (!saleInProgress) return;
-            stopCardReadPolling();
-            const uid = data && data.uid ? String(data.uid).trim() : '';
-            if (!uid) {
-                document.getElementById('modalTitle').textContent = 'Payment Failed';
-                document.getElementById('modalMessage').textContent = 'Card read event missing UID';
-                return;
-            }
-            completeSale(uid);
-        });
-
-        socket.on('card_timeout', () => {
-            document.getElementById('modalTitle').textContent = 'Timeout';
-            document.getElementById('modalMessage').textContent = 'No card detected. Please try again.';
-        });
-
-        socket.on('card_error', data => {
-            document.getElementById('modalTitle').textContent = 'Error';
-            document.getElementById('modalMessage').textContent = data.error;
-        });
-
-        socket.on('nfc_payment', data => completeNFCSale(data.token));
-
-        socket.on('qr_payment', data => {
-            if (!saleInProgress) return;
-            saleInProgress = false;
-            document.getElementById('paymentModal').style.display = 'flex';
-            document.getElementById('modalTitle').textContent = 'QR Payment Received!';
-            document.getElementById('modalMessage').textContent = `New Balance: ${phpPeso(data.new_balance)}`;
-            cart = [];
-            renderCart();
-            checkQueueStatus();
-            setTimeout(() => closeModal(), 2000);
-        });
-
-        socket.on('sale_cancelled', () => {
-            saleInProgress = false;
-        });
-
-        socket.on('arduino_wifi_status', data => {
-            updateWifiBadge(data);
-        });
-    }
-
-    async function qrCheckout() {
-        if (!cart.length || queuePending >= BLOCKED_SYNC_THRESHOLD) return;
-
-        const items = cart.map(item => ({name: item.name, price: item.price, qty: item.qty}));
-        const subtotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
-        const total = subtotal + subtotal * 0.12;
-
-        document.getElementById('paymentModal').style.display = 'flex';
-        document.getElementById('modalTitle').textContent = 'QR Pay';
-        document.getElementById('modalMessage').textContent = 'Generating QR code…';
-        saleInProgress = true;
-
-        try {
-            const response = await fetch(endpoint('/qr-generate'), {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({items, total})
-            });
-
-            if (!response.ok) {
-                const err = await response.json().catch(() => ({}));
-                throw new Error(err.error || 'Failed to generate QR (' + response.status + ')');
-            }
-
-            const data = await response.json();
-            const token = data.token;
-
-            document.getElementById('modalTitle').textContent = 'Scan QR on OLED';
-            document.getElementById('modalMessage').textContent = `QR shown on reader display.\nAsk student to scan.\nTotal: ${phpPeso(total)}`;
-
-            async function pollQrPaymentStatus() {
-                if (!saleInProgress) {
-                    stopQrPolling();
-                    return;
-                }
-
-                try {
-                    qrPollAbortController = new AbortController();
-                    const pr = await fetchWithTimeout(endpoint('/qr-paid'), {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({token}),
-                        signal: qrPollAbortController.signal
-                    }, QR_POLL_TIMEOUT_MS);
-
-                    if (pr.ok) {
-                        const pd = await pr.json();
-                        if (pd.paid) {
-                            stopQrPolling();
-                            saleInProgress = false;
-                            document.getElementById('modalTitle').textContent = 'Payment Received!';
-                            document.getElementById('modalMessage').textContent = `New Balance: ${phpPeso(pd.new_balance)}`;
-                            cart = [];
-                            renderCart();
-                            checkQueueStatus();
-                            setTimeout(() => closeModal(), 2000);
-                            return;
-                        }
-                    }
-                } catch (e) {
-                    if (e.name !== 'AbortError') {
-                        console.warn('QR poll failed:', e.message);
-                    }
-                } finally {
-                    qrPollAbortController = null;
-                }
-
-                if (saleInProgress) {
-                    qrPollTimer = setTimeout(pollQrPaymentStatus, QR_POLL_INTERVAL_MS);
-                }
-            }
-
-            stopQrPolling();
-            pollQrPaymentStatus();
-        } catch (error) {
-            saleInProgress = false;
-            document.getElementById('modalTitle').textContent = 'QR Error';
-            document.getElementById('modalMessage').textContent = error.message;
-        }
-    }
-
-    async function checkout() {
-        if (queuePending >= BLOCKED_SYNC_THRESHOLD) return;
-        if (!arduinoConnected) {
-            alert('Tap Card unavailable. Check reader connection.');
-            return;
-        }
-        if (!cart.length) return;
-
-        const items = cart.map(item => ({name: item.name, price: item.price, qty: item.qty}));
-        const subtotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
-        const total = subtotal + subtotal * 0.12;
-
-        document.getElementById('paymentModal').style.display = 'flex';
-        document.getElementById('modalTitle').textContent = 'Tap Student Card';
-        document.getElementById('modalMessage').textContent = 'Waiting for card...';
-        saleInProgress = true;
-
-        try {
-            const response = await fetch(endpoint('/process-sale'), {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({items, total})
-            });
-
-            if (!response.ok) throw new Error('Failed to initiate sale');
-            stopCardReadPolling();
-            cardReadPollTimer = setTimeout(pollCardReadFallback, CARD_READ_POLL_INTERVAL_MS);
-        } catch (error) {
-            closeModal();
-            alert('Error: ' + error.message);
-        }
-    }
-
-    async function completeSale(cardUid) {
-        stopCardReadPolling();
-        try {
-            const response = await fetchWithTimeout(endpoint('/complete-sale'), {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({card_uid: cardUid})
-            });
-
-            const data = await response.json();
-            if (data.error) {
-                saleInProgress = false;
-                document.getElementById('modalTitle').textContent = 'Payment Failed';
-                document.getElementById('modalMessage').textContent = data.error;
-            } else {
-                saleInProgress = false;
-                const offlineNote = data.offline ? ' (Offline — will sync)' : '';
-                document.getElementById('modalTitle').textContent = 'Success!';
-                document.getElementById('modalMessage').textContent = `Payment received!\nNew Balance: ${phpPeso(data.new_balance)}${offlineNote}`;
-                if (data.new_balance !== undefined) {
-                    document.getElementById('walletBalance').textContent = phpPeso(data.new_balance);
-                }
-                cart = [];
-                renderCart();
-                checkQueueStatus();
-                setTimeout(() => closeModal(), 2000);
-            }
-        } catch (error) {
-            document.getElementById('modalTitle').textContent = 'Error';
-            document.getElementById('modalMessage').textContent = error.message;
-        }
-    }
-
-    async function completeNFCSale(token) {
-        const modal = document.getElementById('paymentModal');
-        if (modal.style.display !== 'flex') {
-            modal.style.display = 'flex';
-            document.getElementById('modalTitle').textContent = 'NFC Payment';
-            document.getElementById('modalMessage').textContent = 'Processing phone tap...';
-        }
-        try {
-            const response = await fetchWithTimeout(endpoint('/complete-sale-nfc'), {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({virtual_card_token: token})
-            });
-            const data = await response.json();
-            if (data.error) {
-                document.getElementById('modalTitle').textContent = 'Payment Failed';
-                document.getElementById('modalMessage').textContent = data.error;
-            } else {
-                const offlineNote = data.offline ? ' (Offline — will sync)' : '';
-                document.getElementById('modalTitle').textContent = 'Success!';
-                document.getElementById('modalMessage').textContent = `NFC Payment received!\nNew Balance: ${phpPeso(data.new_balance)}${offlineNote}`;
-                if (data.new_balance !== undefined) {
-                    document.getElementById('walletBalance').textContent = phpPeso(data.new_balance);
-                }
-                cart = [];
-                renderCart();
-                checkQueueStatus();
-                setTimeout(() => closeModal(), 2000);
-            }
-        } catch (error) {
-            document.getElementById('modalTitle').textContent = 'Error';
-            document.getElementById('modalMessage').textContent = error.message;
-        }
-    }
-
-    function closeModal() {
-        saleInProgress = false;
-        stopQrPolling();
-        stopCardReadPolling();
-        document.getElementById('paymentModal').style.display = 'none';
-        fetchWithTimeout(endpoint('/cancel-sale'), {method: 'POST'}, 5000).catch(err => {
-            if (err.name !== 'AbortError') console.warn('cancel-sale failed:', err.message);
-        });
-    }
-
-    function logout() {
-        fetchWithTimeout(endpoint('/logout'), {method: 'POST'}, 5000)
-            .catch(() => {})
-            .finally(() => { window.location.href = LOGOUT_REDIRECT; });
-    }
-
-    function openCloseShiftModal() {
-        document.getElementById('closeShiftSyncCount').textContent = queuePending;
-        document.getElementById('closeShiftWarning').textContent = queuePending > 0 ? '\nSome records are not synced yet.' : '';
-        document.getElementById('closeShiftModal').style.display = 'flex';
-    }
-
-    function closeCloseShiftModal() {
-        document.getElementById('closeShiftModal').style.display = 'none';
-    }
-
-    function confirmCloseShift() {
-        closeCloseShiftModal();
-        alert('Shift closed. Terminal signed out.');
-        logout();
-    }
-
-    async function checkQueueStatus() {
-        if (queuePollInFlight) return;
-        queuePollInFlight = true;
-        try {
-            const res = await fetchWithTimeout(endpoint('/queue/status'), {}, 5000);
-            if (!res.ok) return;
-            const data = await res.json();
-            queuePending = Number(data.pending || 0);
-
-            document.getElementById('syncCount').textContent = queuePending;
-
-            const banner = document.getElementById('offlineBanner');
-            if (queuePending > 0) {
-                banner.style.display = 'block';
-                banner.textContent = `⚠ ${queuePending} transaction(s) pending sync. Working offline.`;
-            } else {
-                banner.style.display = 'none';
-            }
-
-            updatePaymentState();
-        } catch (e) {
-            if (e.name !== 'AbortError') {
-                console.warn('queue status check failed:', e.message);
-            }
-        } finally {
-            queuePollInFlight = false;
-        }
-    }
-
-    async function scheduleQueueStatusPoll() {
-        await checkQueueStatus();
-        queuePollTimer = setTimeout(scheduleQueueStatusPoll, QUEUE_POLL_INTERVAL_MS);
     }
 </script>
 </body>

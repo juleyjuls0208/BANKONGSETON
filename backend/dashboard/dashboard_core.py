@@ -11,6 +11,7 @@ import gspread
 from gspread.utils import rowcol_to_a1
 from google.oauth2.service_account import Credentials
 import os
+import math
 from dotenv import load_dotenv
 from datetime import datetime
 import pytz
@@ -21,6 +22,7 @@ import logging
 from urllib.parse import urlparse
 
 import sys
+from pathlib import Path
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from utils import card_reader_state, normalize_card_uid
@@ -87,8 +89,7 @@ except ImportError:
 
 load_dotenv()
 
-# Data layer: Supabase Postgres (via gspread-compatible adapter) when DATABASE_URL
-# is set, otherwise fall back to Google Sheets. Gate keeps the old build working.
+# Supabase first; Google Sheets is a failure-only compatibility fallback.
 USE_SUPABASE = bool(os.getenv("DATABASE_URL"))
 try:
     from sheets_adapter import get_sheets_client as _adapter_get_client
@@ -100,15 +101,9 @@ except Exception as _adapter_err:
 # Timezone configuration
 PHILIPPINES_TZ = pytz.timezone("Asia/Manila")
 
-# Cache for Google Sheets data
+# Supabase-backed worksheet compatibility cache.
 _sheets_cache = {}
 _cache_timeout = 30
-
-# Google Sheets Setup
-scopes = [
-    "https://www.googleapis.com/auth/spreadsheets",
-    "https://www.googleapis.com/auth/drive",
-]
 
 # UID validation pattern
 UID_PATTERN = re.compile(r"^[0-9A-Fa-f]{8}$|^[0-9A-Fa-f]{14}$")
@@ -172,60 +167,52 @@ def get_cors_origins():
     return list(dict.fromkeys(origins))
 
 
+def _get_google_sheets_client():
+    credentials_path = os.getenv("GOOGLE_CREDENTIALS_FILE", "").strip()
+    if not credentials_path:
+        candidates = [
+            Path(__file__).resolve().parent / "credentials.json",
+            Path(__file__).resolve().parent.parent.parent / "config" / "credentials.json",
+            Path.cwd() / "credentials.json",
+        ]
+        credentials_path = next((str(p) for p in candidates if p.exists()), "")
+    spreadsheet_id = os.getenv("GOOGLE_SHEETS_ID", "").strip()
+    if not credentials_path or not spreadsheet_id:
+        raise RuntimeError("Google fallback requires GOOGLE_CREDENTIALS_FILE and GOOGLE_SHEETS_ID")
+    credentials = Credentials.from_service_account_file(
+        credentials_path,
+        scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"],
+    )
+    return gspread.authorize(credentials).open_by_key(spreadsheet_id)
+
+
 def get_sheets_client():
-    """Get or refresh Google Sheets client"""
-    try:
-        credentials_path = os.path.join(
-            os.path.dirname(__file__), "..", "..", "config", "credentials.json"
-        )
-        if not os.path.exists(credentials_path):
-            credentials_path = "credentials.json"
-
-        credentials = Credentials.from_service_account_file(
-            credentials_path, scopes=scopes
-        )
-        client = gspread.authorize(credentials)
-        spreadsheet_id = os.getenv("GOOGLE_SHEETS_ID")
-        if not spreadsheet_id:
-            raise ValueError("GOOGLE_SHEETS_ID environment variable is not set")
-        return client.open_by_key(spreadsheet_id)
-    except Exception as e:
-        logger.error("event=sheets_client_error error=%s", e)
-        raise
+    """Use Supabase first; fall back to Google Sheets only when it is down."""
+    if _ADAPTER_AVAILABLE and os.getenv("DATABASE_URL"):
+        try:
+            client = _adapter_get_client()
+            probe = getattr(client, "test_connection", None)
+            if probe is None or probe():
+                return client
+            logger.warning("event=supabase_unavailable fallback=google_sheets")
+        except Exception as exc:
+            logger.warning("event=supabase_unavailable fallback=google_sheets error=%s", exc)
+    return _get_google_sheets_client()
 
 
-# Initialize global db after get_sheets_client is defined. Skip when on Supabase
-# so we don't probe Google creds at import time (the adapter is wired lazily).
-if not USE_SUPABASE:
-    try:
-        db = get_sheets_client()
-    except Exception:
-        pass
+# Initialize global db lazily so startup can still expose health/errors when
+# Supabase is temporarily unavailable.
 
 
 def get_worksheet_with_retry(sheet_name, max_retries=3):
-    """Get worksheet (or Supabase table view) with retry logic and caching.
-
-    When USE_SUPABASE is set, get_sheets_client() returns the gspread-compatible
-    adapter client whose .worksheet() yields a Supabase-backed SheetView. The
-    SheetView surface is a drop-in for gspread.Worksheet, so all call sites work
-    unchanged. Returns the same object gspread would, cached identically.
-    """
+    """Get a Supabase-backed worksheet with retry logic and caching."""
     global db
     cache_key = f"worksheet_{sheet_name}"
     cached = _sheets_cache.get(cache_key)
     if cached and time.time() - cached["timestamp"] < _cache_timeout:
         return cached["data"]
 
-    if USE_SUPABASE:
-        if not _ADAPTER_AVAILABLE:
-            raise RuntimeError("DATABASE_URL set but sheets_adapter unavailable")
-        if db is None:
-            db = _adapter_get_client()
-        worksheet = db.worksheet(sheet_name)
-        _sheets_cache[cache_key] = {"data": worksheet, "timestamp": time.time()}
-        return worksheet
-
+    last_error = None
     for attempt in range(max_retries):
         try:
             if db is None:
@@ -233,17 +220,12 @@ def get_worksheet_with_retry(sheet_name, max_retries=3):
             worksheet = db.worksheet(sheet_name)
             _sheets_cache[cache_key] = {"data": worksheet, "timestamp": time.time()}
             return worksheet
-        except gspread.exceptions.APIError as e:
+        except Exception as exc:
+            last_error = exc
             if attempt < max_retries - 1:
                 time.sleep(2**attempt)
-                db = get_sheets_client()
-            else:
-                raise
-        except Exception as e:
-            if attempt < max_retries - 1:
-                time.sleep(2**attempt)
-            else:
-                raise
+                db = None
+    raise last_error
 
 
 def _invalidate_cache(sheet_name=None):
@@ -370,10 +352,21 @@ def _attach_balance(students):
         if card_number:
             balance_map[card_number] = account.get("Balance", 0)
             status_map[card_number] = account.get("Status", "Active")
+    # App-linked = student has a student_auth row with a DeviceId
+    try:
+        auth_sheet = get_worksheet_with_retry("student_auth")
+        auth_rows = auth_sheet.get_all_records()
+        linked_ids = {str(r.get("StudentID", "")).strip() for r in auth_rows
+                      if str(r.get("DeviceId", "")).strip()}
+    except Exception:
+        linked_ids = set()
     for student in students:
         card_number = normalize_card_uid(str(student.get("MoneyCardNumber", "")))
         student["Balance"] = balance_map.get(card_number, 0.00)
         student["MoneyCardStatus"] = status_map.get(card_number, "N/A") if card_number else "N/A"
+        student["IDCardNumber"] = student.get("IDCardNumber", "")
+        student["MoneyCardNumber"] = student.get("MoneyCardNumber", "")
+        student["AppLinked"] = str(student.get("StudentID", "")).strip() in linked_ids
     return students
 
 
@@ -628,19 +621,17 @@ def register_routes(app, socketio, serial_enabled=True):
         try:
             logger.debug("event=id_card_check uid=%s", uid)
             normalized_uid = normalize_card_uid(uid)
+            # byte-reversed form (MIFARE endianness can differ between reads)
+            reversed_uid = normalize_card_uid(uid[::-1]) if uid else ""
             logger.debug("event=id_card_normalized uid=%s", normalized_uid)
-
             users_sheet = get_worksheet_with_retry("Users")
             users_records = users_sheet.get_all_records()
             logger.debug("event=id_card_users_loaded count=%d", len(users_records))
-
             for i, record in enumerate(users_records):
                 existing_id_card_raw = record.get("IDCardNumber", "")
                 existing_id_card = normalize_card_uid(existing_id_card_raw)
-
                 existing_money_card_raw = record.get("MoneyCardNumber", "")
                 existing_money_card = normalize_card_uid(existing_money_card_raw)
-
                 logger.debug(
                     "event=id_card_check_row row=%d student_id=%s id_card=%s money_card=%s",
                     i + 1,
@@ -648,8 +639,7 @@ def register_routes(app, socketio, serial_enabled=True):
                     existing_id_card,
                     existing_money_card,
                 )
-
-                if existing_id_card == normalized_uid and existing_id_card:
+                if (existing_id_card in (normalized_uid, reversed_uid)) and existing_id_card:
                     existing_student = record.get("StudentID", "")
                     existing_name = record.get("Name", "")
                     logger.debug(
@@ -665,8 +655,7 @@ def register_routes(app, socketio, serial_enabled=True):
                         },
                     )
                     return
-
-                if existing_money_card == normalized_uid and existing_money_card:
+                if (existing_money_card in (normalized_uid, reversed_uid)) and existing_money_card:
                     existing_student = record.get("StudentID", "")
                     existing_name = record.get("Name", "")
                     logger.debug(
@@ -682,7 +671,6 @@ def register_routes(app, socketio, serial_enabled=True):
                         },
                     )
                     return
-
             logger.debug("event=id_card_available uid=%s", normalized_uid)
             send_success("Card read!")
             socketio.emit("id_card_read", {"uid": uid})
@@ -690,9 +678,8 @@ def register_routes(app, socketio, serial_enabled=True):
             logger.error("event=id_card_check_error error=%s", e, exc_info=True)
             send_error("Error")
             socketio.emit(
-                "card_error", {"message": "Card scan failed — please try again"}
+                "card_error", {"message": "Card scan failed - please try again"}
             )
-
     def handle_money_card(uid):
         """Handle money card linking - check for duplicates in BOTH ID and money cards"""
         try:
@@ -821,6 +808,7 @@ def register_routes(app, socketio, serial_enabled=True):
                 "Active",
                 timestamp,
                 0.0,
+                timestamp,
             ]
             money_sheet.append_row(money_row)
 
@@ -980,6 +968,7 @@ def register_routes(app, socketio, serial_enabled=True):
                     "Active",
                     timestamp,
                     balance,
+                    timestamp,
                 ]
                 money_sheet.append_row(money_row)
 
@@ -991,7 +980,7 @@ def register_routes(app, socketio, serial_enabled=True):
 
             try:
                 if student_record and PHASE3_AVAILABLE:
-                    parent_email = student_record.get("ParentEmail", "").strip()
+                    parent_email = student_record.get("StudentEmail", "").strip()
                     if parent_email and "@" in parent_email:
                         student_name = student_record.get("Name", "Unknown")
                         notification_manager = get_notification_manager()
@@ -1305,7 +1294,7 @@ def register_routes(app, socketio, serial_enabled=True):
             return jsonify({"error": "An unexpected error occurred"}), 500
 
     @app.route("/api/load-balance", methods=["POST"])
-    @admin_only
+    @login_required
     def load_balance():
         """Load balance onto student money card"""
         try:
@@ -1314,9 +1303,14 @@ def register_routes(app, socketio, serial_enabled=True):
             legacy_money_card = normalize_card_uid(str(data.get("money_card", "")).strip())
             amount = float(data.get("amount", 0))
             payment_method = data.get("payment_method", "cash")
+            idempotency_key = str(request.headers.get("Idempotency-Key") or data.get("idempotency_key") or data.get("transaction_id") or "").strip()
+            if not idempotency_key:
+                idempotency_key = "legacy-" + os.urandom(16).hex()
 
-            if amount <= 0:
+            if not math.isfinite(amount) or amount <= 0:
                 return jsonify({"error": "Amount must be positive"}), 400
+            if not idempotency_key:
+                return jsonify({"error": "Idempotency-Key header is required"}), 400
 
             if not student_id and not legacy_money_card:
                 return jsonify({"error": "student_id is required"}), 400
@@ -1369,7 +1363,38 @@ def register_routes(app, socketio, serial_enabled=True):
             if not money_row_index:
                 return jsonify({"error": "Money account not found"}), 404
 
-            new_balance = current_balance + amount
+            atomic = getattr(money_sheet, "update_balance_atomic", None)
+            if USE_SUPABASE and callable(atomic):
+                try:
+                    result = atomic(
+                        money_card=normalized_money,
+                        amount_delta=amount,
+                        total_loaded_delta=amount,
+                        transaction_type="Load",
+                        items_json=payment_method,
+                        student_id=student_id,
+                        idempotency_key=idempotency_key,
+                        station_id="finance-dashboard",
+                    )
+                except gspread.exceptions.APIError:
+                    return jsonify({"error": "Service unavailable, please try again"}), 503
+                new_balance = result["BalanceAfter"]
+                invalidate_pattern("transactions")
+                invalidate_pattern("money_accounts")
+                socketio.emit("balance_updated", {
+                    "student_id": student_id,
+                    "new_balance": new_balance,
+                    "amount": amount,
+                })
+                return jsonify({
+                    "success": True,
+                    "message": "Balance loaded successfully",
+                    "student_name": student.get("Name", ""),
+                    "new_balance": new_balance,
+                    "amount_loaded": amount,
+                    "transaction_id": result["TransactionID"],
+                    "idempotent": result.get("Idempotent", False),
+                })
             new_total = total_loaded + amount
             timestamp = get_philippines_time().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -1437,7 +1462,7 @@ def register_routes(app, socketio, serial_enabled=True):
                         row_map["ErrorMessage"],
                     ]
 
-                transactions_sheet.append_row(tx_row, table_range="A1")
+                transactions_sheet.append_row(tx_row)
                 invalidate_pattern("transactions")
                 invalidate_pattern("sheet_records:Transactions Log")
             except Exception as tx_err:
@@ -1446,7 +1471,7 @@ def register_routes(app, socketio, serial_enabled=True):
             # FCM notification
             try:
                 if PHASE3_AVAILABLE:
-                    parent_email = student.get("ParentEmail", "").strip()
+                    parent_email = student.get("StudentEmail", "").strip()
                     if parent_email and "@" in parent_email:
                         student_name = student.get("Name", "Unknown")
                         notification_manager = get_notification_manager()
@@ -1491,6 +1516,39 @@ def register_routes(app, socketio, serial_enabled=True):
             logger.error(f"Unexpected error in load_balance: {e}", exc_info=True)
             return jsonify({"error": "An unexpected error occurred"}), 500
 
+    @app.route("/api/students/<student_id>/reset-device", methods=["POST"])
+    @admin_only
+    def reset_student_device(student_id):
+        """Clear a student's bound login device (admin-only).
+
+        Lets a student log in from a new phone after losing/replacing theirs.
+        Keeps the PIN — only the device binding is cleared. Optionally clears the
+        PIN too when body has {"reset_pin": true} (student sets a new PIN on next
+        login, treated as first login again).
+        """
+        try:
+            student_id = str(student_id).strip()
+            data = request.get_json(silent=True) or {}
+            reset_pin = bool(data.get("reset_pin", False))
+
+            try:
+                sheet = get_worksheet_with_retry("student_auth")
+            except Exception:
+                return jsonify({"error": "No login record for this student"}), 404
+            records = sheet.get_all_records()
+            now = get_philippines_time().strftime("%Y-%m-%d %H:%M:%S")
+            for idx, r in enumerate(records, start=2):  # row 1 = header
+                if str(r.get("StudentID", "")).strip() == student_id:
+                    pin_hash = "" if reset_pin else str(r.get("PinHash", ""))
+                    sheet.update(f"A{idx}:D{idx}", [[student_id, pin_hash, "", now]])
+                    logger.info("event=device_reset student_id=%s reset_pin=%s", student_id, reset_pin)
+                    return jsonify({"message": "Device reset. Student can log in on a new phone.",
+                                    "pin_reset": reset_pin}), 200
+            return jsonify({"error": "No login record for this student"}), 404
+        except Exception as e:
+            logger.error("event=reset_device_error student_id=%s error=%s", student_id, e)
+            return jsonify({"error": "Service unavailable, please try again"}), 503
+
     @app.route("/api/students/<student_id>/adjust-balance", methods=["POST"])
     @admin_only
     def adjust_student_balance(student_id):
@@ -1501,9 +1559,14 @@ def register_routes(app, socketio, serial_enabled=True):
             direction = str(data.get("direction", "add")).strip().lower()
             amount = float(data.get("amount", 0))
             note = str(data.get("note", "")).strip()
+            idempotency_key = str(request.headers.get("Idempotency-Key") or data.get("idempotency_key") or data.get("transaction_id") or "").strip()
+            if not idempotency_key:
+                idempotency_key = "legacy-" + os.urandom(16).hex()
 
-            if amount <= 0:
+            if not math.isfinite(amount) or amount <= 0:
                 return jsonify({"error": "Amount must be positive"}), 400
+            if not idempotency_key:
+                return jsonify({"error": "Idempotency-Key header is required"}), 400
             if direction not in ("add", "subtract"):
                 return jsonify({"error": "direction must be 'add' or 'subtract'"}), 400
 
@@ -1540,6 +1603,7 @@ def register_routes(app, socketio, serial_enabled=True):
                         transaction_type=tx_type,
                         items_json=note or None,
                         student_id=student_id,
+                        idempotency_key=idempotency_key,
                     )
                 except Exception as e:
                     msg = str(e)
@@ -1609,7 +1673,7 @@ def register_routes(app, socketio, serial_enabled=True):
                             row_map["BalanceBefore"], row_map["BalanceAfter"], row_map["Status"],
                             row_map["ErrorMessage"],
                         ]
-                    transactions_sheet.append_row(tx_row, table_range="A1")
+                    transactions_sheet.append_row(tx_row)
                     invalidate_pattern("transactions")
                     invalidate_pattern("sheet_records:Transactions Log")
                 except Exception as tx_err:
@@ -1698,6 +1762,8 @@ def register_routes(app, socketio, serial_enabled=True):
 
             normalized_uid = normalize_card_uid(id_card_uid)
             logger.debug("event=student_register_normalized id_card=%s", normalized_uid)
+            # byte-reversed form (MIFARE endianness can differ between reads)
+            reversed_uid = normalize_card_uid(id_card_uid[::-1])  # reverse RAW, then normalize (zero-strip safe)
 
             users_sheet = get_worksheet_with_retry("Users")
             users_records = users_sheet.get_all_records()
@@ -1723,7 +1789,8 @@ def register_routes(app, socketio, serial_enabled=True):
                     record.get("MoneyCardNumber", "")
                 )
 
-                if existing_id_card == normalized_uid and existing_id_card:
+                if (existing_id_card in (normalized_uid, reversed_uid)) and existing_id_card:
+
                     existing_student = record.get("StudentID", "")
                     existing_name = record.get("Name", "")
                     logger.debug(
@@ -1746,7 +1813,8 @@ def register_routes(app, socketio, serial_enabled=True):
                         400,
                     )
 
-                if existing_money_card == normalized_uid and existing_money_card:
+                if (existing_money_card in (normalized_uid, reversed_uid)) and existing_money_card:
+
                     existing_student = record.get("StudentID", "")
                     existing_name = record.get("Name", "")
                     logger.debug(
@@ -1879,24 +1947,28 @@ def register_routes(app, socketio, serial_enabled=True):
             results = []
             for s in students:
                 money_card = s.get("MoneyCardNumber")
-                if money_card:
-                    normalized_card = normalize_card_uid(str(money_card))
-                    card_status = status_map.get(normalized_card, "active")
-
-                    if card_status != "lost":
-                        if (
-                            not query
-                            or query in str(s.get("Name", "")).lower()
-                            or query in str(s.get("StudentID", "")).lower()
-                        ):
-                            results.append(
-                                {
-                                    "student_id": s.get("StudentID"),
-                                    "name": s.get("Name"),
-                                    "money_card": money_card,
-                                    "status": s.get("Status"),
-                                }
-                            )
+                id_card = s.get("IDCardNumber")
+                if not money_card and not id_card:
+                    continue
+                normalized_card = normalize_card_uid(str(money_card)) if money_card else ""
+                card_status = status_map.get(normalized_card, "active") if normalized_card else "none"
+                if card_status == "lost":
+                    continue
+                if (
+                    not query
+                    or query in str(s.get("Name", "")).lower()
+                    or query in str(s.get("StudentID", "")).lower()
+                ):
+                    results.append(
+                        {
+                            "student_id": s.get("StudentID"),
+                            "name": s.get("Name"),
+                            "money_card": money_card,
+                            "id_card": id_card,
+                            "money_card_status": card_status,
+                            "status": s.get("Status"),
+                        }
+                    )
 
             return jsonify({"students": results})
         except (
@@ -1919,10 +1991,11 @@ def register_routes(app, socketio, serial_enabled=True):
     @app.route("/api/card/report-lost", methods=["POST"])
     @admin_only
     def report_lost_card():
-        """Report a money card as lost and deactivate it"""
+        """Report a lost card (money OR student ID) and mark it inactive."""
         try:
             data = request.get_json()
             student_id = data.get("student_id")
+            card_type = (data.get("card_type") or "money").strip().lower()  # 'money' | 'id'
 
             users_sheet = get_worksheet_with_retry("Users")
             users_records = users_sheet.get_all_records()
@@ -1938,36 +2011,27 @@ def register_routes(app, socketio, serial_enabled=True):
             if not student:
                 return jsonify({"error": "Student not found"}), 404
 
-            old_card = student.get("MoneyCardNumber", "")
-            if not old_card:
-                return (
-                    jsonify({"error": "No money card registered for this student"}),
-                    400,
-                )
-
-            money_sheet = get_worksheet_with_retry("Money Accounts")
-            money_records = money_sheet.get_all_records()
-
-            normalized_old = normalize_card_uid(old_card)
-            current_balance = 0.0
-            money_row_index = None
-
-            for i, record in enumerate(money_records):
-                if (
-                    normalize_card_uid(record.get("MoneyCardNumber", ""))
-                    == normalized_old
-                ):
-                    current_balance = float(record.get("Balance", 0))
-                    money_row_index = i + 2
-                    break
-
-            if money_row_index:
-                status_col = money_sheet.find("Status").col
-                money_sheet.update_cell(money_row_index, status_col, "Lost")
-
-            if user_row_index:
-                money_card_col = users_sheet.find("MoneyCardNumber").col
-                users_sheet.update_cell(user_row_index, money_card_col, "")
+            if card_type == "id":
+                old_card = student.get("IDCardNumber", "")
+                if not old_card:
+                    return jsonify({"error": "No student ID card registered for this student"}), 400
+                # Clear the ID card field (mark it inactive by removal)
+                users_sheet.update_where("StudentID", student_id, "IDCardNumber", "")
+                current_balance = 0.0
+            else:
+                old_card = student.get("MoneyCardNumber", "")
+                if not old_card:
+                    return jsonify({"error": "No money card registered for this student"}), 400
+                money_sheet = get_worksheet_with_retry("Money Accounts")
+                normalized_old = normalize_card_uid(old_card)
+                # ponytail: update_where (value-based) persists reliably on Supabase;
+                # Use the adapter's stable logical-row update path.
+                money_sheet.update_where("MoneyCardNumber", normalized_old, "Status", "Lost")
+                current_balance = float(next(
+                    (r.get("Balance", 0) for r in money_sheet.get_all_records()
+                     if normalize_card_uid(r.get("MoneyCardNumber", "")) == normalized_old),
+                    0.0,
+                ))
 
             timestamp = get_philippines_time().strftime("%Y-%m-%d %H:%M:%S")
             report_id = f"LOST-{get_philippines_time().strftime('%Y%m%d%H%M%S')}"
@@ -1978,16 +2042,18 @@ def register_routes(app, socketio, serial_enabled=True):
                 timestamp,
                 student_id,
                 old_card,
-                "",
+                None,  # new_card_number (numeric/text) — NULL until replacement
                 current_balance,
                 session.get("admin_username", "admin"),
                 "Pending",
+                None,  # created_at (default NOW())
             ]
             lost_sheet.append_row(lost_row)
+            invalidate_pattern("students")
 
             try:
                 if student and PHASE3_AVAILABLE:
-                    parent_email = student.get("ParentEmail", "").strip()
+                    parent_email = student.get("StudentEmail", "").strip()
                     if parent_email and "@" in parent_email:
                         student_name = student.get("Name", "Unknown")
                         notification_manager = get_notification_manager()
@@ -2006,6 +2072,7 @@ def register_routes(app, socketio, serial_enabled=True):
                 {
                     "student_id": student_id,
                     "old_card": old_card,
+                    "card_type": card_type,
                     "balance": current_balance,
                     "report_id": report_id,
                 },
@@ -2015,6 +2082,7 @@ def register_routes(app, socketio, serial_enabled=True):
                 {
                     "success": True,
                     "report_id": report_id,
+                    "card_type": card_type,
                     "old_card": old_card,
                     "balance": current_balance,
                 }
@@ -2159,7 +2227,7 @@ def register_routes(app, socketio, serial_enabled=True):
         stream = io.StringIO(file.read().decode("utf-8-sig"))
         reader = csv.DictReader(stream)
 
-        REQUIRED = {"StudentID", "Name", "ParentEmail"}
+        REQUIRED = {"StudentID", "Name", "StudentEmail"}
         imported, skipped, errors = 0, 0, []
 
         users_sheet = get_worksheet_with_retry("Users")
@@ -2191,7 +2259,7 @@ def register_routes(app, socketio, serial_enabled=True):
                         row.get("IDCardUID", "").strip(),
                         row.get("MoneyCardNumber", "").strip(),
                         row.get("Status", "Active").strip() or "Active",
-                        row.get("ParentEmail", "").strip(),
+                        row.get("StudentEmail", "").strip(),
                         get_philippines_time().strftime("%Y-%m-%d %H:%M:%S"),
                     ]
                 )
@@ -3246,7 +3314,7 @@ def register_routes(app, socketio, serial_enabled=True):
     @app.route("/api/students/<student_id>", methods=["DELETE"])
     @admin_only
     def delete_student(student_id):
-        """Delete a student and all of their data (money account + transactions)."""
+        """Soft-delete a student: mark inactive, keep balance + transaction history."""
         try:
             student_id = str(student_id).strip()
             if not student_id:
@@ -3262,21 +3330,33 @@ def register_routes(app, socketio, serial_enabled=True):
             if not student:
                 return jsonify({"error": "Student not found"}), 404
 
-            money_card = normalize_card_uid(str(student.get("MoneyCardNumber", "")))
-
-            txn_sheet = get_worksheet_with_retry("Transactions Log")
-            _delete_sheet_rows_matching(txn_sheet, student_id)
-
+            # Soft-delete the student, but HARD-delete the cards (cards are never soft).
+            id_card = student.get("IDCardNumber", "")
+            money_card = student.get("MoneyCardNumber", "")
+            users_sheet.update_where("StudentID", student_id, "Status", "Inactive")
+            if id_card:
+                users_sheet.update_where("StudentID", student_id, "IDCardNumber", None)  # hard drop ID card
             if money_card:
-                money_sheet = get_worksheet_with_retry("Money Accounts")
-                _delete_sheet_rows_matching(money_sheet, money_card)
-
-            _delete_sheet_rows_matching(users_sheet, student_id)
+                # ponytail: hard-delete the money card (account row) only;
+                # transactions are kept as history (FK dropped so they survive).
+                get_worksheet_with_retry("Money Accounts").delete_where(
+                    "MoneyCardNumber", normalize_card_uid(money_card)
+                )
+                users_sheet.update_where("StudentID", student_id, "MoneyCardNumber", None)  # clear orphan ref
+            # hard-delete app-link (student_auth) so a fresh link starts clean
+            get_worksheet_with_retry("student_auth").delete_where("StudentID", student_id)
 
             invalidate_pattern("students")
             invalidate_pattern("transactions")
+            invalidate_pattern("money")
             invalidate_pattern("sheet_records:Transactions Log")
-            return jsonify({"success": True, "deleted": student_id})
+            invalidate_pattern("sheet_records:Money Accounts")
+            return jsonify({
+                "success": True,
+                "deactivated": student_id,
+                "id_card_removed": bool(id_card),
+                "money_card_removed": bool(money_card),
+            })
         except (
             gspread.exceptions.APIError,
             gspread.exceptions.SpreadsheetNotFound,
@@ -3446,12 +3526,10 @@ def register_routes(app, socketio, serial_enabled=True):
         sheets_ok = False
         latency_ms = 0
         try:
-            if db is None:
-                sheets_ok = False
-                latency_ms = 0
-            else:
-                sheets_ok = db.test_connection()
-                latency_ms = int((_time.time() - t0) * 1000)
+            client = db or get_sheets_client()
+            probe = getattr(client, "test_connection", None)
+            sheets_ok = probe() if probe is not None else bool(client.worksheets())
+            latency_ms = int((_time.time() - t0) * 1000)
         except Exception:
             latency_ms = int((_time.time() - t0) * 1000)
             sheets_ok = False
@@ -3508,3 +3586,22 @@ def register_routes(app, socketio, serial_enabled=True):
     @socketio.on("disconnect")
     def handle_disconnect():
         logger.debug("event=client_disconnected")
+
+    if not serial_enabled:
+        # Route registration is shared for the on-prem panel and cloud app, but
+        # card lifecycle is hardware-only. Remove those rules from the cloud
+        # app after defining the shared handlers so no hardware endpoint leaks.
+        blocked_prefixes = (
+            "/api/student/register",
+            "/api/students/without-cards",
+            "/api/students/with-cards",
+            "/api/card/",
+        )
+        for rule in list(app.url_map.iter_rules()):
+            if rule.rule.startswith(blocked_prefixes):
+                app.url_map._rules.remove(rule)
+                endpoint_rules = app.url_map._rules_by_endpoint.get(rule.endpoint, [])
+                if rule in endpoint_rules:
+                    endpoint_rules.remove(rule)
+                if not endpoint_rules:
+                    app.view_functions.pop(rule.endpoint, None)

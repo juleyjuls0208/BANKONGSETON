@@ -17,19 +17,18 @@ import sys
 import time
 import uuid
 
+from sheets_adapter import APIError
+
 try:
     import bcrypt as _bcrypt
 except ImportError:
     _bcrypt = None
 
 try:
-    import sys as _sys
-    _sys.path.insert(0, os.path.dirname(__file__))
-    from cache import get_cached, set_cached, invalidate_pattern
+    from .cache import get_cached, set_cached, invalidate_pattern
 except ImportError:
-    def get_cached(key): return None
-    def set_cached(key, val, ttl=None): pass
-    def invalidate_pattern(pat): pass
+    # Script-mode fallback: app.py was started directly from cashier_app/.
+    from cache import get_cached, set_cached, invalidate_pattern
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +37,7 @@ cashier_bp = Blueprint('cashier', __name__,
                        static_folder='static',
                        url_prefix='/cashier')
 
-JWT_SECRET = os.getenv('JWT_SECRET', 'bangko-jwt-secret-2026')
+JWT_SECRET = os.getenv('JWT_SECRET', '').strip()
 JWT_ALGORITHM = 'HS256'
 
 UID_PATTERN = re.compile(r'^[0-9A-Fa-f]{8}$|^[0-9A-Fa-f]{14}$')
@@ -105,7 +104,7 @@ def _normalize_card_uid(uid):
     uid_str = str(uid).strip()
     if not uid_str:
         return ''
-    return uid_str.lstrip('0').upper()
+    return uid_str.upper()
 
 
 def _build_transaction_row(
@@ -122,7 +121,8 @@ def _build_transaction_row(
     status='Completed',
     error_message='',
     items=None,
-    station_id='cashier-web',
+    cashier_id=None,
+    station_id=None,
 ):
     """Build a Transactions Log row aligned to current sheet headers.
 
@@ -132,6 +132,7 @@ def _build_transaction_row(
     - extended rows with ItemsJson / StationID
     """
     items_json = json.dumps(items or [])
+    cashier_id = cashier_id or station_id or ''
     row_map = {
         'TransactionID': transaction_id,
         'Timestamp': timestamp,
@@ -144,7 +145,7 @@ def _build_transaction_row(
         'Status': status,
         'ErrorMessage': error_message,
         'ItemsJson': items_json,
-        'StationID': station_id,
+        'CashierID': cashier_id,
     }
 
     # Header aliases tolerate sheet variants like "Transaction ID", "Money Card Number",
@@ -179,10 +180,12 @@ def _build_transaction_row(
         'itemsjson': 'ItemsJson',
         'items_json': 'ItemsJson',
         'items': 'ItemsJson',
-        'stationid': 'StationID',
-        'station_id': 'StationID',
-        'station': 'StationID',
-        'terminalid': 'StationID',
+        'cashierid': 'CashierID',
+        'cashier_id': 'CashierID',
+        'stationid': 'CashierID',
+        'station_id': 'CashierID',
+        'station': 'CashierID',
+        'terminalid': 'CashierID',
     }
 
     def _norm(h):
@@ -210,7 +213,7 @@ def _build_transaction_row(
     canonical_headers = [
         'TransactionID', 'Timestamp', 'StudentID', 'MoneyCardNumber',
         'TransactionType', 'Amount', 'BalanceBefore', 'BalanceAfter',
-        'Status', 'ErrorMessage', 'ItemsJson', 'StationID'
+        'Status', 'ErrorMessage', 'ItemsJson', 'CashierID'
     ]
     return [row_map.get(h, '') for h in canonical_headers]
 
@@ -260,6 +263,7 @@ def api_login():
 
     authenticated = False
     display_name = username
+    account_id = ''
 
     # Try Google Sheets Cashier Accounts first
     try:
@@ -277,6 +281,7 @@ def api_login():
                     pw_hash = row.get('PasswordHash', '')
                     if pw_hash and _bcrypt.checkpw(password.encode(), pw_hash.encode()):
                         authenticated = True
+                        account_id = str(row.get('AccountID') or username)
                         display_name = row.get('DisplayName', username)
                         # Update LastLogin
                         try:
@@ -291,10 +296,22 @@ def api_login():
     except Exception:
         pass
 
+    # Keep the configured local cashier usable when the data-store account is
+    # unavailable or the local deployment has no Cashier Accounts row.
+    if not authenticated:
+        fallback_username = os.getenv('CASHIER_USERNAME', '').strip().lower()
+        fallback_password = os.getenv('CASHIER_PASSWORD', '').strip()
+        if (fallback_username and fallback_password
+                and username == fallback_username
+                and password == fallback_password):
+            authenticated = True
+            account_id = username
+            display_name = username
+
     if authenticated:
         from datetime import datetime, timedelta
         payload = {
-            'user_id': f'{username}_id',
+            'user_id': account_id or username,
             'username': username,
             'display_name': display_name,
             'role': 'cashier',
@@ -372,6 +389,12 @@ def connect_arduino():
 
         try:
             arduino = serial.Serial(port, 9600, timeout=1)
+            # Opening a USB serial port resets an UNO. Let the R3/R4 sketch
+            # finish booting before sending the common probe command.
+            time.sleep(2)
+            arduino.reset_input_buffer()
+            arduino.write(b"PING\n")
+            arduino.flush()
         except serial.SerialException as e:
             msg = str(e)
             if 'PermissionError' in msg or 'Access is denied' in msg:
@@ -389,20 +412,28 @@ def connect_arduino():
         current_app.arduino = arduino
         current_app.arduino_port = port
 
-        # Create (or replace) the ArduinoBridge
+        # Create (or replace) the shared bridge. R3 is serial-only; R4 may
+        # deliver over WiFi, but both sketches emit the same CARD|<uid> line.
         try:
-            from arduino_bridge import ArduinoBridge
+            from dashboard.arduino_bridge import ArduinoBridge
             socketio = getattr(current_app, 'socketio', None)
             bridge = ArduinoBridge(arduino, socketio)
             current_app.arduino_bridge = bridge
             bridge.start_background_listener()
             logger.info("event=cashier_arduino_bridge_created port=%s", port)
         except Exception as bridge_err:
+            try:
+                arduino.close()
+            except Exception:
+                pass
+            current_app.arduino = None
+            current_app.arduino_port = None
             logger.warning(
                 "event=cashier_arduino_bridge_init_failed error=%s "
-                "(serial still connected, background listener unavailable)",
+                "(serial connection closed)",
                 bridge_err,
             )
+            return jsonify({'error': f'Could not start Arduino reader: {bridge_err}'}), 500
 
         return jsonify({'success': True, 'message': f'Connected to {port}'})
 
@@ -433,12 +464,153 @@ def get_products():
                 'category': record.get('Category', ''),
                 'price': float(record.get('Price', 0)),
                 'active': str(record.get('Active', 'FALSE')).upper() == 'TRUE',
+                'image_url': str(record.get('ImageURL', '') or ''),
             })
 
         return jsonify({'products': products})
     except Exception as e:
         print(f"Error fetching products: {e}")
         return jsonify({'error': 'Service unavailable, please try again'}), 503
+
+
+def _current_cashier_id():
+    """Stable account identifier written into and used to filter transactions."""
+    return str(request.user.get('user_id') or request.user.get('username') or '').strip()
+
+
+@cashier_bp.route('/api/inventory', methods=['GET', 'POST'])
+@jwt_required('cashier')
+def manage_inventory():
+    try:
+        sheet = _get_sheets_client().worksheet('Products')
+        if request.method == 'GET':
+            products = []
+            for row in sheet.get_all_records():
+                active = str(row.get('Active', 'TRUE')).strip().upper() not in {'FALSE', '0', 'NO', 'INACTIVE'}
+                products.append({
+                    'id': str(row.get('ID', '')),
+                    'name': str(row.get('Name', '')),
+                    'category': str(row.get('Category', '')),
+                    'price': float(row.get('Price', 0) or 0),
+                    'image_url': str(row.get('ImageURL', '') or ''),
+                    'active': active,
+                })
+            return jsonify({'products': products})
+
+        data = request.get_json(silent=True) or {}
+        name = str(data.get('name', '')).strip()
+        category = str(data.get('category', '')).strip()
+        try:
+            price = float(data.get('price'))
+        except (TypeError, ValueError):
+            return jsonify({'error': 'Price must be a valid number'}), 400
+        if not name or price < 0:
+            return jsonify({'error': 'Name is required and price cannot be negative'}), 400
+        from datetime import datetime as _dt
+        product_id = 'P' + uuid.uuid4().hex[:12].upper()
+        now = _dt.now().strftime('%Y-%m-%d %H:%M:%S')
+        sheet.append_row([product_id, name, category, price, str(data.get('image_url', '') or ''),
+                          'TRUE' if data.get('active', True) else 'FALSE', now, now, now])
+        invalidate_pattern('products')
+        return jsonify({'success': True, 'product_id': product_id}), 201
+    except Exception as exc:
+        logger.exception('cashier_inventory_failed')
+        return jsonify({'error': f'Inventory could not be loaded: {exc}'}), 500
+
+
+@cashier_bp.route('/api/inventory/<product_id>', methods=['PUT', 'DELETE'])
+@jwt_required('cashier')
+def update_inventory(product_id):
+    try:
+        sheet = _get_sheets_client().worksheet('Products')
+        records = sheet.get_all_records()
+        index = next((i for i, row in enumerate(records) if str(row.get('ID', '')) == str(product_id)), None)
+        if index is None:
+            return jsonify({'error': 'Product not found'}), 404
+        if request.method == 'DELETE':
+            sheet.delete_rows(index + 2)
+            invalidate_pattern('products')
+            return jsonify({'success': True})
+
+        data = request.get_json(silent=True) or {}
+        columns = {'name': 2, 'category': 3, 'price': 4, 'image_url': 5, 'active': 6}
+        for key, col in columns.items():
+            if key not in data:
+                continue
+            value = data[key]
+            if key == 'price':
+                try:
+                    value = float(value)
+                except (TypeError, ValueError):
+                    return jsonify({'error': 'Price must be a valid number'}), 400
+                if value < 0:
+                    return jsonify({'error': 'Price cannot be negative'}), 400
+            elif key == 'active':
+                value = 'TRUE' if bool(value) else 'FALSE'
+            elif key == 'name' and not str(value).strip():
+                return jsonify({'error': 'Name is required'}), 400
+            sheet.update_cell(index + 2, col, value)
+        from datetime import datetime as _dt
+        sheet.update_cell(index + 2, 9, _dt.now().strftime('%Y-%m-%d %H:%M:%S'))
+        invalidate_pattern('products')
+        return jsonify({'success': True})
+    except Exception as exc:
+        logger.exception('cashier_inventory_update_failed product_id=%s', product_id)
+        return jsonify({'error': f'Product could not be updated: {exc}'}), 500
+
+
+def _cashier_transactions():
+    cashier_id = _current_cashier_id()
+    records = _get_sheets_client().worksheet('Transactions Log').get_all_records()
+    return [row for row in records if str(row.get('CashierID', '')).strip() == cashier_id]
+
+
+@cashier_bp.route('/api/history', methods=['GET'])
+@jwt_required('cashier')
+def cashier_history():
+    try:
+        rows = []
+        for row in _cashier_transactions():
+            items = row.get('ItemsJson', [])
+            if isinstance(items, str):
+                try:
+                    items = json.loads(items or '[]')
+                except (TypeError, ValueError):
+                    items = []
+            rows.append({
+                'transaction_id': row.get('TransactionID', ''),
+                'timestamp': row.get('Timestamp', ''),
+                'student_id': row.get('StudentID', ''),
+                'amount': float(row.get('Amount', 0) or 0),
+                'status': row.get('Status', ''),
+                'items': items,
+            })
+        rows.sort(key=lambda row: str(row['timestamp']), reverse=True)
+        return jsonify({'transactions': rows})
+    except Exception as exc:
+        logger.exception('cashier_history_failed')
+        return jsonify({'error': f'History could not be loaded: {exc}'}), 500
+
+
+@cashier_bp.route('/api/students', methods=['GET'])
+@jwt_required('cashier')
+def cashier_students():
+    try:
+        aggregates = {}
+        for row in _cashier_transactions():
+            student_id = str(row.get('StudentID', '')).strip()
+            status = str(row.get('Status', '')).strip().lower()
+            if not student_id or status not in {'completed', 'success', ''}:
+                continue
+            entry = aggregates.setdefault(student_id, {'student_id': student_id, 'orders': 0, 'total_spent': 0.0})
+            entry['orders'] += 1
+            entry['total_spent'] += float(row.get('Amount', 0) or 0)
+        sort_key = 'orders' if request.args.get('sort') == 'orders' else 'total_spent'
+        students = sorted(aggregates.values(), key=lambda row: row[sort_key], reverse=True)
+        return jsonify({'students': students})
+    except Exception as exc:
+        logger.exception('cashier_students_failed')
+        return jsonify({'error': f'Student rankings could not be loaded: {exc}'}), 500
 
 
 @cashier_bp.route('/api/logout', methods=['POST'])
@@ -469,6 +641,7 @@ def process_sale():
             'total': total,
             'cashier_id': request.user.get('user_id')
         }
+        pending_tx['idempotency_key'] = f"POS-{uuid.uuid4().hex}"
         flask_session['pending_transaction'] = pending_tx
         # Also keep a process-level fallback in case session state is lost during UI reconnects.
         current_app.pending_sale = {
@@ -585,7 +758,45 @@ def complete_sale():
                 'balance': current_balance,
                 'required': total
             }), 400
-        
+
+        # Supabase path: debit and ledger insert are one locked, idempotent SQL transaction.
+        atomic = getattr(money_sheet, 'update_balance_atomic', None)
+        if atomic is not None:
+            matched_user = None
+            student_id = ''
+            try:
+                for user in db.worksheet('Users').get_all_records():
+                    if normalize_card_uid(user.get('MoneyCardNumber', '')) == normalized_card:
+                        matched_user = user
+                        student_id = str(user.get('StudentID', '')).strip()
+                        break
+            except Exception:
+                pass
+            try:
+                result = atomic(
+                    money_card=normalized_card, amount_delta=-total,
+                    transaction_type='Purchase', items_json=json.dumps(items),
+                    student_id=student_id, idempotency_key=pending.get('idempotency_key'),
+                    station_id=request.user.get('user_id') or request.user.get('username', 'cashier-web'),
+                )
+            except APIError as exc:
+                message = str(exc)
+                if 'Insufficient' in message:
+                    return jsonify({'error': message, 'balance': current_balance}), 400
+                if 'not found' in message.lower() or 'inactive' in message.lower() or 'lost' in message.lower():
+                    return jsonify({'error': message}), 403
+                logger.error('atomic_sale_failed error=%s', exc, exc_info=True)
+                return jsonify({'error': 'Service unavailable, please try again'}), 503
+            flask_session.pop('pending_transaction', None)
+            current_app.pending_sale = None
+            invalidate_pattern("transactions")
+            invalidate_pattern("money_accounts")
+            return jsonify({'success': True, 'new_balance': result['BalanceAfter'],
+                            'timestamp': result['Timestamp'],
+                            'transaction_id': result['TransactionID']})
+
+        # Legacy gspread path below is retained only for non-Supabase tests.
+        # Supabase never reaches the split update_cell + append_row flow.
         # Deduct balance and log transaction with retry + rollback
         MAX_RETRIES = 3
         new_balance = current_balance - total
@@ -626,7 +837,7 @@ def complete_sale():
             status='Completed',
             error_message='',
             items=items,
-            station_id='cashier-web',
+            station_id=request.user.get('user_id') or request.user.get('username', 'cashier-web'),
         )
 
         for attempt in range(1, MAX_RETRIES + 1):
@@ -637,7 +848,7 @@ def complete_sale():
                     balance_deducted = True
 
                 # Step 2: Log transaction
-                trans_sheet.append_row(transaction_row, table_range='A1')
+                trans_sheet.append_row(transaction_row)
                 invalidate_pattern("transactions")
                 invalidate_pattern("money_accounts")
                 logger.info(
@@ -667,44 +878,41 @@ def complete_sale():
                     # Keep retries non-blocking for request workers; final failure falls back to offline queue.
                     continue
 
-                # Non-retryable failures should still rollback to avoid Money Accounts / Transactions Log drift.
-                if balance_deducted:
-                    try:
-                        money_sheet.update_cell(account_row, 3, current_balance)
-                        logger.error(
-                            "complete_sale: rolled back balance to %s for card %s after transaction log failure. Error: %s",
-                            current_balance,
-                            normalized_card,
-                            e,
-                        )
-                    except Exception as rollback_err:
-                        logger.error(
-                            "complete_sale: CRITICAL — rollback also failed for card %s. Balance may be incorrect. Rollback error: %s. Original error: %s",
-                            normalized_card,
-                            rollback_err,
-                            e,
-                        )
-
-                if retryable:
-                    # Queue retryable failures for later sync.
+                # A failed debit is not a sale. Do not fabricate a completed ledger row.
+                # If only the log write failed after a confirmed debit, retain a signed
+                # recovery row and retry it when the data store is reachable again.
+                if retryable and balance_deducted:
                     try:
                         import sys as _sys
                         _sys.path.insert(0, os.path.dirname(__file__))
                         from offline_queue import get_offline_queue
-                        q = get_offline_queue()
-                        q.enqueue('append_row', 'Transactions Log', transaction_row)
-                        logger.info("event=offline_queued card=%s total=%.2f", normalized_card, total)
-                    except Exception as qe:
-                        logger.error("event=offline_queue_failed error=%s", qe)
-                    return jsonify({
-                        'success': True,
-                        'new_balance': new_balance,
-                        'timestamp': timestamp,
-                        'offline': True,
-                        'message': 'Sale processed offline — will sync when connection is restored.'
-                    })
+                        get_offline_queue().enqueue_transaction_log(transaction_id, transaction_row)
+                    except Exception as queue_error:
+                        logger.error("event=ledger_recovery_queue_failed tx=%s error=%s", transaction_id, queue_error)
+                    else:
+                        flask_session.pop('pending_transaction', None)
+                        current_app.pending_sale = None
+                        logger.warning("event=ledger_recovery_queued tx=%s card=%s", transaction_id, normalized_card)
+                        return jsonify({
+                            'success': True,
+                            'new_balance': new_balance,
+                            'timestamp': timestamp,
+                            'transaction_id': transaction_id,
+                            'ledger_pending': True,
+                            'message': 'Payment approved. The receipt will sync automatically when the connection returns.'
+                        })
 
-                return jsonify({'error': 'Service unavailable, please try again'}), 503
+                if balance_deducted:
+                    try:
+                        money_sheet.update_cell(account_row, 3, current_balance)
+                    except Exception as rollback_err:
+                        logger.error(
+                            "complete_sale_rollback_failed card=%s rollback_error=%s original_error=%s",
+                            normalized_card,
+                            rollback_err,
+                            e,
+                        )
+                return jsonify({'error': 'Payment not completed. Reconnect and retry.'}), 503
 
         if last_error:
             # Should not reach here, but guard just in case
@@ -722,7 +930,7 @@ def complete_sale():
 
                 email_service = EmailService()
                 email_service.send_receipt(
-                    matched_user.get('ParentEmail', ''),
+                    matched_user.get('StudentEmail', ''),
                     matched_user.get('Email', ''),
                     matched_user.get('Name', 'Student'),
                     items,
@@ -927,7 +1135,7 @@ def complete_sale_nfc():
             status='Completed',
             error_message='',
             items=items,
-            station_id='cashier-web-nfc',
+            station_id=request.user.get('user_id') or request.user.get('username', 'cashier-web-nfc'),
         )
 
         for attempt in range(1, MAX_RETRIES + 1):
@@ -938,7 +1146,7 @@ def complete_sale_nfc():
                     balance_deducted = True
 
                 # Step 2: Log transaction
-                trans_sheet.append_row(transaction_row, table_range='A1')
+                trans_sheet.append_row(transaction_row)
                 invalidate_pattern("transactions")
                 invalidate_pattern("money_accounts")
                 logger.info(
@@ -968,44 +1176,39 @@ def complete_sale_nfc():
                     # Keep retries non-blocking for request workers; final failure falls back to offline queue.
                     continue
 
-                # Non-retryable failures should still rollback to avoid Money Accounts / Transactions Log drift.
-                if balance_deducted:
-                    try:
-                        money_sheet.update_cell(account_row, 3, current_balance)
-                        logger.error(
-                            "complete_sale_nfc: rolled back balance to %s for card %s after transaction log failure. Error: %s",
-                            current_balance,
-                            money_card_number,
-                            e,
-                        )
-                    except Exception as rollback_err:
-                        logger.error(
-                            "complete_sale_nfc: CRITICAL — rollback also failed for card %s. Balance may be incorrect. Rollback error: %s. Original error: %s",
-                            money_card_number,
-                            rollback_err,
-                            e,
-                        )
-
-                if retryable:
-                    # Queue retryable failures for later sync.
+                # A failed debit is not a sale. Only recover the ledger after the debit succeeded.
+                if retryable and balance_deducted:
                     try:
                         import sys as _sys
                         _sys.path.insert(0, os.path.dirname(__file__))
                         from offline_queue import get_offline_queue
-                        q = get_offline_queue()
-                        q.enqueue('append_row', 'Transactions Log', transaction_row)
-                        logger.info("event=offline_queued card=%s total=%.2f", money_card_number, total)
-                    except Exception as qe:
-                        logger.error("event=offline_queue_failed error=%s", qe)
-                    return jsonify({
-                        'success': True,
-                        'new_balance': new_balance,
-                        'timestamp': timestamp,
-                        'offline': True,
-                        'message': 'Sale processed offline — will sync when connection is restored.'
-                    })
+                        get_offline_queue().enqueue_transaction_log(transaction_id, transaction_row)
+                    except Exception as queue_error:
+                        logger.error("event=nfc_ledger_recovery_queue_failed tx=%s error=%s", transaction_id, queue_error)
+                    else:
+                        flask_session.pop('pending_transaction', None)
+                        current_app.pending_sale = None
+                        logger.warning("event=nfc_ledger_recovery_queued tx=%s card=%s", transaction_id, money_card_number)
+                        return jsonify({
+                            'success': True,
+                            'new_balance': new_balance,
+                            'timestamp': timestamp,
+                            'transaction_id': transaction_id,
+                            'ledger_pending': True,
+                            'message': 'Payment approved. The receipt will sync automatically when the connection returns.'
+                        })
 
-                return jsonify({'error': 'Service unavailable, please try again'}), 503
+                if balance_deducted:
+                    try:
+                        money_sheet.update_cell(account_row, 3, current_balance)
+                    except Exception as rollback_err:
+                        logger.error(
+                            "complete_sale_nfc_rollback_failed card=%s rollback_error=%s original_error=%s",
+                            money_card_number,
+                            rollback_err,
+                            e,
+                        )
+                return jsonify({'error': 'Payment not completed. Reconnect and retry.'}), 503
 
         if last_error:
             # Should not reach here, but guard just in case
@@ -1028,7 +1231,7 @@ def complete_sale_nfc():
 
                 email_service = EmailService()
                 email_service.send_receipt(
-                    matched_user.get('ParentEmail', ''),
+                    matched_user.get('StudentEmail', ''),
                     matched_user.get('Email', ''),
                     matched_user.get('Name', 'Student'),
                     items,

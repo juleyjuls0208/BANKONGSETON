@@ -1,11 +1,11 @@
-"""
-Bangko ng Seton - Mobile API Backend
-Secure REST API for Android app to access Google Sheets data
+"""Bangko ng Seton - Mobile API Backend
+Secure REST API backed exclusively by Supabase Postgres.
 """
 
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 import gspread
+from google.oauth2.service_account import Credentials
 import os
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
@@ -21,6 +21,7 @@ import sys
 import threading
 import uuid
 import time
+from math import isfinite
 
 logger = logging.getLogger(__name__)
 
@@ -51,11 +52,28 @@ load_dotenv()
 
 USE_SUPABASE = bool(os.getenv("DATABASE_URL"))
 try:
-    from sheets_adapter import get_sheets_client as _adapter_get_client
+    from sheets_adapter import APIError, get_sheets_client as _adapter_get_client
     _ADAPTER_AVAILABLE = True
 except Exception as _adapter_err:
     _ADAPTER_AVAILABLE = False
+    class APIError(Exception):
+        pass
     logger.warning("event=adapter_import_failed error=%s", _adapter_err)
+
+try:
+    import psycopg2
+    _DATABASE_ERRORS = (psycopg2.Error,)
+except ImportError:
+    _DATABASE_ERRORS = ()
+
+_SERVICE_UNAVAILABLE_ERRORS = (
+    gspread.exceptions.APIError,
+    gspread.exceptions.SpreadsheetNotFound,
+    gspread.exceptions.WorksheetNotFound,
+    APIError,
+    ConnectionError,
+    TimeoutError,
+) + _DATABASE_ERRORS
 
 # JWT Configuration
 JWT_SECRET = os.getenv('JWT_SECRET', secrets.token_urlsafe(32))
@@ -85,33 +103,40 @@ def get_cors_origins():
 
 CORS(app, origins=get_cors_origins())
 
-# Google Sheets Setup
+def _get_google_sheets_client():
+    credentials_path = os.getenv("GOOGLE_CREDENTIALS_FILE", "").strip()
+    if not credentials_path:
+        credentials_path = os.path.join(os.path.dirname(__file__), "..", "..", "config", "credentials.json")
+    spreadsheet_id = os.getenv("GOOGLE_SHEETS_ID", "").strip()
+    if not os.path.exists(credentials_path) or not spreadsheet_id:
+        raise RuntimeError("Google fallback requires GOOGLE_CREDENTIALS_FILE and GOOGLE_SHEETS_ID")
+    credentials = Credentials.from_service_account_file(
+        credentials_path,
+        scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"],
+    )
+    return gspread.authorize(credentials).open_by_key(spreadsheet_id)
+
 
 def get_sheets_client():
-    """Get or refresh the data-layer client.
+    """Use Supabase first; fall back to Google Sheets only when it is down."""
+    if _ADAPTER_AVAILABLE and os.getenv("DATABASE_URL"):
+        try:
+            client = _adapter_get_client()
+            probe = getattr(client, "test_connection", None)
+            if probe is None or probe():
+                return client
+            logger.warning("event=supabase_unavailable fallback=google_sheets")
+        except Exception as exc:
+            logger.warning("event=supabase_unavailable fallback=google_sheets error=%s", exc)
+    return _get_google_sheets_client()
 
-    When DATABASE_URL is set, return the gspread-compatible Supabase
-    adapter client so every .worksheet()/get_all_records() call is a drop-in.
-    """
-    if USE_SUPABASE:
-        if not _ADAPTER_AVAILABLE:
-            raise RuntimeError("DATABASE_URL set but sheets_adapter unavailable")
-        return _adapter_get_client()
-    # Google Sheets path
-    try:
-        # Look for credentials in config folder
-        credentials_path = os.path.join(os.path.dirname(__file__), '..', '..', 'config', 'credentials.json')
-        if not os.path.exists(credentials_path):
-            # Fallback to current directory for backward compatibility
-            credentials_path = 'credentials.json'
-        gc = gspread.service_account(filename=credentials_path)
-        return gc.open_by_key(os.getenv('GOOGLE_SHEETS_ID'))
-    except Exception as e:
-        print(f"Error initializing Google Sheets: {e}")
-        raise
-
-# Initialize connection
-db = get_sheets_client()
+# Initialize connection lazily; route handlers return a service error when the
+# configured backend is unavailable instead of preventing the app from starting.
+try:
+    db = get_sheets_client()
+except Exception as _db_init_error:
+    logger.warning("event=api_db_unavailable error=%s", _db_init_error)
+    db = None
 
 def get_worksheet_with_retry(sheet_name, retries=2):
     """Get worksheet with retry logic for connection errors"""
@@ -295,6 +320,45 @@ def generate_token():
     """Generate secure session token"""
     return secrets.token_urlsafe(32)
 
+
+# ── Student login security: PIN (set once on first login) + one device per account ──
+# Stored in the student_auth table (auto-created by the adapter; a plain Key/Value
+# style row per student). PIN is hashed; device_id binds the account to one phone.
+from werkzeug.security import generate_password_hash, check_password_hash
+
+
+def _get_student_auth(student_id):
+    """Return the student_auth row dict for a student, or None if never set up."""
+    try:
+        records = get_sheet_records_cached('student_auth', ttl=5)
+    except (gspread.exceptions.WorksheetNotFound, KeyError):
+        return None
+    for r in records:
+        if str(r.get('StudentID', '')).strip() == str(student_id).strip():
+            return r
+    return None
+
+
+def _save_student_auth(student_id, pin_hash, device_id):
+    """Insert-or-update the student_auth row. Invalidates the cache."""
+    try:
+        sheet = get_worksheet_with_retry('student_auth')
+    except gspread.exceptions.WorksheetNotFound:
+        sheet = db.add_worksheet(title='student_auth', rows=1000, cols=4)
+        sheet.append_row(['StudentID', 'PinHash', 'DeviceId', 'UpdatedAt'])
+    records = sheet.get_all_records()
+    now = get_philippines_time().strftime('%Y-%m-%d %H:%M:%S')
+    for idx, r in enumerate(records, start=2):  # row 1 = header
+        if str(r.get('StudentID', '')).strip() == str(student_id).strip():
+            sheet.update(f'A{idx}:D{idx}', [[student_id, pin_hash, device_id, now]])
+            invalidate_cached('sheet_records:student_auth')
+            invalidate_pattern('sheet_records:student_auth')
+            return
+    sheet.append_row([student_id, pin_hash, device_id, now])
+    invalidate_cached('sheet_records:student_auth')
+    invalidate_pattern('sheet_records:student_auth')
+
+
 def generate_jwt_token(user_id, role='student'):
     """Generate JWT token for authenticated users"""
     payload = {
@@ -341,10 +405,10 @@ def require_auth(roles=None):
     return decorator
 
 def normalize_card_uid(uid):
-    """Normalize card UID by removing leading zeros"""
-    return str(uid).lstrip('0').upper()
+    """Normalize card UID while preserving significant leading zeroes."""
+    return str(uid or '').strip().upper()
 
-UID_PATTERN = re.compile(r'^[0-9A-Fa-f]{8}$')
+UID_PATTERN = re.compile(r'^[0-9A-Fa-f]{8}$|^[0-9A-Fa-f]{14}$')
 
 def validate_card_uid(uid):
     """Validate card UID format. Returns (is_valid, error_message)."""
@@ -354,6 +418,28 @@ def validate_card_uid(uid):
         return False, "Card UID format is invalid"
     return True, ""
 
+
+@app.route('/api/topup/qr', methods=['GET'])
+@require_auth(roles=['student'])
+def create_topup_qr():
+    """Issue a short-lived, authenticated QR payload for kiosk top-ups."""
+    student_id = str(request.user.get('user_id', '')).strip()
+    if not student_id:
+        return jsonify({'error': 'Invalid student identity'}), 401
+    now = datetime.utcnow()
+    payload = {
+        'user_id': student_id,
+        'role': 'student',
+        'scope': 'topup',
+        'iat': now,
+        'exp': now + timedelta(minutes=2),
+    }
+    return jsonify({
+        'qr_data': jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM),
+        'student_id': student_id,
+        'expires_in': 120,
+    })
+
 @app.route('/api/health', methods=['GET'])
 def health_check():
     """Health check endpoint - standardized contract (S03/R018)"""
@@ -362,7 +448,8 @@ def health_check():
     latency_ms = 0
     try:
         probe_client = get_sheets_client()
-        sheets_ok = probe_client.test_connection()
+        probe = getattr(probe_client, "test_connection", None)
+        sheets_ok = probe() if probe is not None else bool(probe_client.worksheets())
         latency_ms = int((time.time() - t0) * 1000)
     except Exception:
         latency_ms = int((time.time() - t0) * 1000)
@@ -387,16 +474,25 @@ def health_check():
 @app.route('/api/auth/login', methods=['POST'])
 def login():
     """
-    Login with Student ID
+    Login with Student ID + PIN (GCash-style), bound to one device.
     POST /api/auth/login
-    Body: { "student_id": "202501" }
+    Body: { "student_id": "202501", "pin": "1234", "device_id": "<android_id>" }
+
+    First login for a student sets the PIN and binds the device (one device per
+    account). Subsequent logins must match both the PIN and the bound device.
     """
     try:
         data = request.get_json()
         student_id = data.get('student_id', '').strip()
+        pin = str(data.get('pin', '')).strip()
+        device_id = str(data.get('device_id', '')).strip()
 
         if not student_id:
             return jsonify({'error': 'Student ID required'}), 400
+        if not pin or not (pin.isdigit() and 4 <= len(pin) <= 6):
+            return jsonify({'error': 'PIN must be 4 to 6 digits'}), 400
+        if not device_id:
+            return jsonify({'error': 'Device ID required'}), 400
 
         # Search for student in Users sheet
         records = get_sheet_records_cached('Users', ttl=5)
@@ -437,6 +533,19 @@ def login():
         if card_status and card_status.lower() != 'active':
             return jsonify({'error': f'Your money card is {card_status}. Please contact admin.'}), 403
 
+        auth = _get_student_auth(student_id)
+        first_login = auth is None or not str(auth.get('PinHash', '')).strip()
+        if first_login:
+            _save_student_auth(student_id, generate_password_hash(pin), device_id)
+        else:
+            if not check_password_hash(str(auth.get('PinHash', '')), pin):
+                return jsonify({'error': 'Invalid credentials'}), 401
+            bound_device = str(auth.get('DeviceId', '')).strip()
+            if bound_device and bound_device != device_id:
+                return jsonify({'error': 'Invalid credentials'}), 401
+            if not bound_device:
+                _save_student_auth(student_id, str(auth.get('PinHash', '')), device_id)
+
         # Generate session token
         token = generate_token()
         active_sessions[token] = {
@@ -448,6 +557,7 @@ def login():
         return jsonify({
             'token': token,
             'jwt_token': generate_jwt_token(student['StudentID'], role='student'),
+            'first_login': first_login,
             'student': {
                 'id': student['StudentID'],
                 'name': student['Name'],
@@ -457,13 +567,23 @@ def login():
             }
         })
 
-    except (gspread.exceptions.APIError, gspread.exceptions.SpreadsheetNotFound,
-            gspread.exceptions.WorksheetNotFound, ConnectionError, TimeoutError) as e:
+    except _SERVICE_UNAVAILABLE_ERRORS as e:
         logger.error(f"Google Sheets unavailable in login: {e}")
         return jsonify({'error': 'Service unavailable, please try again'}), 503
     except Exception as e:
         logger.error(f"Unexpected error in login: {e}", exc_info=True)
         return jsonify({'error': 'An unexpected error occurred'}), 500
+
+@app.route('/api/auth/pin-status', methods=['POST'])
+def pin_status():
+    """Return a non-enumerating enrollment hint for the mobile client."""
+    data = request.get_json(silent=True) or {}
+    student_id = str(data.get('student_id', '')).strip()
+    if not student_id:
+        return jsonify({'error': 'Student ID required'}), 400
+    # Deliberately do not reveal whether the ID exists or whether it has a PIN.
+    return jsonify({'available': True})
+
 
 @app.route('/api/student/profile', methods=['GET'])
 def get_profile():
@@ -475,10 +595,10 @@ def get_profile():
     try:
         token = request.headers.get('Authorization', '').replace('Bearer ', '')
 
-        if token not in active_sessions:
+        if _check_session(token) is None:
             return jsonify({'error': 'Invalid or expired token'}), 401
 
-        session = active_sessions[token]
+        session = _check_session(token)
         student_id = session['student_id']
 
         # Get student data
@@ -522,7 +642,7 @@ def get_profile():
             'id_card': student['IDCardNumber'],
             'money_card': student.get('MoneyCardNumber', ''),
             'status': student.get('Status', 'Active'),
-            'parent_email': student.get('ParentEmail', ''),
+            'parent_email': student.get('StudentEmail', ''),
             'date_registered': student.get('DateRegistered', '')
         })
 
@@ -544,10 +664,10 @@ def get_balance():
     try:
         token = request.headers.get('Authorization', '').replace('Bearer ', '')
 
-        if token not in active_sessions:
+        if _check_session(token) is None:
             return jsonify({'error': 'Invalid or expired token'}), 401
 
-        session = active_sessions[token]
+        session = _check_session(token)
 
         # Get student's money card
         records = get_sheet_records_cached('Users', ttl=5)
@@ -605,10 +725,10 @@ def get_transactions():
     try:
         token = request.headers.get('Authorization', '').replace('Bearer ', '')
 
-        if token not in active_sessions:
+        if _check_session(token) is None:
             return jsonify({'error': 'Invalid or expired token'}), 401
 
-        session = active_sessions[token]
+        session = _check_session(token)
 
         # Pagination params are optional and defensive-parsed so malformed query
         # values don't crash the endpoint.
@@ -829,7 +949,7 @@ def upsert_student_budget():
 
         row_payload = [student_id, monthly_limit, year_month, updated_at]
         if existing_row_index is None:
-            budgets_sheet.append_row(row_payload, table_range='A1')
+            budgets_sheet.append_row(row_payload)
         else:
             budgets_sheet.update(f'A{existing_row_index}:D{existing_row_index}', [row_payload])
 
@@ -1145,8 +1265,11 @@ def nfc_pay():
         except (TypeError, ValueError):
             return jsonify({"error": "Invalid transaction data"}), 400
 
-        if not virtual_card_token or not items or total <= 0:
+        idempotency_key = str(request.headers.get("Idempotency-Key") or data.get("idempotency_key") or "").strip()
+        if not virtual_card_token or not items or not isfinite(total) or total <= 0:
             return jsonify({"error": "Invalid transaction data"}), 400
+        if not idempotency_key:
+            return jsonify({"error": "Idempotency-Key header is required"}), 400
 
         # Step 2: Look up VirtualCard by token (must be active)
         db = get_sheets_client()
@@ -1168,12 +1291,42 @@ def nfc_pay():
 
         money_card_number = str(matched.get("MoneyCardNumber", "")).strip()
 
+        money_sheet = get_worksheet_with_retry("Money Accounts")
+        atomic = getattr(money_sheet, "update_balance_atomic", None)
+        if atomic is not None:
+            student_id = ""
+            try:
+                for user in get_sheet_records_cached("Users", ttl=30):
+                    if normalize_card_uid(user.get("MoneyCardNumber")) == normalize_card_uid(money_card_number):
+                        student_id = str(user.get("StudentID", "")).strip()
+                        break
+            except Exception:
+                pass
+            try:
+                result = atomic(
+                    money_card=normalize_card_uid(money_card_number),
+                    amount_delta=-total,
+                    transaction_type="NFC Purchase",
+                    items_json=json.dumps(items),
+                    student_id=student_id,
+                    idempotency_key=idempotency_key,
+                    station_id=station_id,
+                )
+            except APIError as exc:
+                message = str(exc)
+                status = 400 if "Insufficient" in message else 403 if "inactive" in message.lower() or "lost" in message.lower() else 503
+                return jsonify({"error": message if status != 503 else "Service unavailable, please try again"}), status
+            invalidate_cached("transactions_all")
+            invalidate_pattern("sheet_records:Money Accounts")
+            invalidate_pattern("sheet_records:Transactions Log")
+            return jsonify({"success": True, "new_balance": result["BalanceAfter"],
+                            "timestamp": result["Timestamp"], "transaction_id": result["TransactionID"]})
+
         # Step 4: Debit balance from Money Accounts sheet
         # Acquire per-card lock to prevent double-spend race condition
         with _card_locks_lock:
             card_lock = _card_locks.setdefault(money_card_number, threading.Lock())
         with card_lock:
-            money_sheet = get_worksheet_with_retry("Money Accounts")
             money_records = money_sheet.get_all_records()
             balance_row_idx = None
             current_balance = None
@@ -1255,7 +1408,7 @@ def nfc_pay():
         ]
 
         try:
-            trans_sheet.append_row(transaction_row, table_range="A1")
+            trans_sheet.append_row(transaction_row)
         except Exception as log_err:
             logger.error(
                 "event=nfc_pay_log_failed money_card=%s error=%s",
@@ -1304,7 +1457,7 @@ def nfc_pay():
                         # Low-balance email alert
                         if new_balance < LOW_BALANCE_THRESHOLD:
                             try:
-                                parent_email = str(u.get("ParentEmail", "")).strip()
+                                parent_email = str(u.get("StudentEmail", "")).strip()
                                 student_name = str(u.get("Name", "Student")).strip()
                                 from notifications import EmailNotifier
 
@@ -1485,9 +1638,12 @@ def process_cashier_transaction():
         card_uid = data.get('card_uid', '').strip()
         items = data.get('items', [])
         total = float(data.get('total', 0))
+        idempotency_key = str(request.headers.get("Idempotency-Key") or data.get("idempotency_key") or "").strip()
 
-        if not card_uid or not items or total <= 0:
+        if not card_uid or not items or not isfinite(total) or total <= 0:
             return jsonify({'error': 'Invalid transaction data'}), 400
+        if not idempotency_key:
+            return jsonify({'error': 'Idempotency-Key header is required'}), 400
 
         # Validate card UID format before any Sheets query (BUG-02, SEC-04)
         valid, err_msg = validate_card_uid(card_uid)
@@ -1529,6 +1685,28 @@ def process_cashier_transaction():
 
         if not account_row:
             return jsonify({'error': 'Card not found'}), 404
+
+        atomic = getattr(money_sheet, "update_balance_atomic", None)
+        if atomic is not None:
+            try:
+                result = atomic(
+                    money_card=normalized_card,
+                    amount_delta=-total,
+                    transaction_type='Purchase',
+                    items_json=json.dumps(items),
+                    student_id=student_id or '',
+                    idempotency_key=idempotency_key,
+                    station_id=request.headers.get('X-Station-ID', 'api-cashier'),
+                )
+            except APIError as exc:
+                message = str(exc)
+                status = 400 if 'Insufficient' in message else 403 if any(word in message.lower() for word in ('inactive', 'lost')) else 503
+                return jsonify({'error': message if status != 503 else 'Service unavailable, please try again'}), status
+            invalidate_cached("transactions_all")
+            invalidate_pattern("sheet_records:Money Accounts")
+            invalidate_pattern("sheet_records:Transactions Log")
+            return jsonify({'success': True, 'new_balance': result['BalanceAfter'],
+                            'timestamp': result['Timestamp'], 'transaction_id': result['TransactionID']})
 
         # Check sufficient balance
         if current_balance < total:
@@ -1598,7 +1776,7 @@ def process_cashier_transaction():
             ]
 
         try:
-            trans_sheet.append_row(transaction_row, table_range="A1")
+            trans_sheet.append_row(transaction_row)
         except Exception as log_err:
             logger.error(
                 "process_cashier_transaction: transaction log write failed for card %s: %s",
@@ -1632,7 +1810,7 @@ def process_cashier_transaction():
             user_records = users_sheet.get_all_records()
             for user in user_records:
                 if user.get('StudentID') == student_id:
-                    parent_email = user.get('ParentEmail', '')
+                    parent_email = user.get('StudentEmail', '')
                     student_email = user.get('Email', '')
                     student_name = user.get('Name', 'Student')
 
@@ -1719,10 +1897,10 @@ def get_lost_card_status():
     """
     try:
         token = request.headers.get('Authorization', '').replace('Bearer ', '')
-        if token not in active_sessions:
+        if _check_session(token) is None:
             return jsonify({'error': 'Invalid or expired token'}), 401
 
-        session = active_sessions[token]
+        session = _check_session(token)
         student_id = session['student_id']
 
         try:
@@ -1781,10 +1959,10 @@ def report_lost_card():
     """
     try:
         token = request.headers.get('Authorization', '').replace('Bearer ', '')
-        if token not in active_sessions:
+        if _check_session(token) is None:
             return jsonify({'error': 'Invalid or expired token'}), 401
 
-        session_data = active_sessions[token]
+        session_data = _check_session(token)
         student_id = str(session_data['student_id'])
 
         # ── 1. Look up student record ─────────────────────────────────────

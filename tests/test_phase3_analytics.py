@@ -89,19 +89,19 @@ def sample_students():
         {
             'StudentID': 'S001',
             'Name': 'John Doe',
-            'ParentEmail': 'parent1@example.com',
+            'StudentEmail': 'parent1@example.com',
             'Status': 'Active'
         },
         {
             'StudentID': 'S002',
             'Name': 'Jane Smith',
-            'ParentEmail': 'parent2@example.com',
+            'StudentEmail': 'parent2@example.com',
             'Status': 'Active'
         },
         {
             'StudentID': 'S003',
             'Name': 'Bob Johnson',
-            'ParentEmail': '',  # No email
+            'StudentEmail': '',  # No email
             'Status': 'Active'
         },
     ]

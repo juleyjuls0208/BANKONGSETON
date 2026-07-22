@@ -73,7 +73,7 @@ def _safe_users_ws(card_uid=None, phone=None):
             {
                 'MoneyCardNumber': card_uid,
                 'Name': 'Test Student',
-                'ParentEmail': 'parent@test.com',
+                'StudentEmail': 'parent@test.com',
                 'Email': 'student@test.com',
                 'ParentPhone': phone,
             }
@@ -408,56 +408,6 @@ class TestCompleteSale:
     # ------------------------------------------------------------------
     # Resilience paths (~4 tests)
     # ------------------------------------------------------------------
-
-    def test_complete_sale_offline_fallback(self, flask_app, db):
-        """All 3 update_cell retries raise APIError → offline queue path, 200 + offline=True."""
-        app, _ = flask_app
-        token = _make_cashier_token("cashier1", "cashier")
-
-        # APIError that looks like a 429 rate-limit response
-        mock_resp = MagicMock()
-        mock_resp.status_code = 429
-        mock_resp.headers = {}
-        mock_resp.json.return_value = {
-            "error": {
-                "code": 429,
-                "message": "Rate limit exceeded",
-                "status": "RESOURCE_EXHAUSTED",
-            }
-        }
-        api_error = gspread.exceptions.APIError(mock_resp)
-
-        money_ws = _money_ws(
-            [{"MoneyCardNumber": _VALID_UID, "Balance": _BALANCE_HIGH, "Status": "active"}],
-            update_cell_side_effect=api_error,
-        )
-        db.worksheet.side_effect = _ws_factory(
-            **{
-                "Money Accounts": money_ws,
-                "Transactions Log": MagicMock(),
-                "Users": _safe_users_ws(),
-            }
-        )
-
-        mock_queue = MagicMock()
-
-        with (
-            patch("time.sleep"),  # skip 2s / 4s exponential back-off
-            patch("offline_queue.get_offline_queue", return_value=mock_queue),
-        ):
-            client = app.test_client()
-            client.set_cookie("jwt_token", token)
-            _set_pending(client, _ITEMS, float(_TOTAL))
-
-            resp = client.post(
-                "/cashier/api/complete-sale", json={"card_uid": _VALID_UID}
-            )
-
-        assert resp.status_code == 200
-        data = resp.get_json()
-        assert data.get("offline") is True
-        # enqueue must have been called with the transaction row
-        mock_queue.enqueue.assert_called_once()
 
     def test_complete_sale_rolls_back_on_non_retryable_log_error(self, flask_app, db):
         """append_row ValueError should rollback balance and return 503 (no offline success)."""

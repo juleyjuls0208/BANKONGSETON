@@ -81,6 +81,15 @@
     .card-state.ok { color: #16784a; }
     .card-state.lost { color: #c21f1f; }
 
+    /* ponytail: compact rows so the whole table fits without scrolling */
+    .table-compact th, .table-compact td {
+        padding: 0.32rem 0.5rem;
+        font-size: 0.82rem;
+        white-space: nowrap;
+    }
+    .table-compact td .icon-btn { padding: 0.2rem 0.35rem; font-size: 0.85rem; }
+    .table-compact .student-id { font-size: 0.85rem; }
+
     .student-id {
         color: #3525cd;
         font-weight: 800;
@@ -145,14 +154,16 @@
 
 <section class="table-shell">
     <div class="table-responsive">
-        <table>
+        <table class="table-compact">
             <thead>
                 <tr>
                     <th>Student ID</th>
                     <th>Name</th>
+                    <th>ID Card</th>
+                    <th>Money Card</th>
                     <th>Balance (₱)</th>
-                    <th>Account Status</th>
-                    <th>Card State</th>
+                    <th>Account</th>
+                    <th>App</th>
                     <th>Action</th>
                 </tr>
             </thead>
@@ -278,7 +289,7 @@
         if (currentFilter === 'active') {
             filtered = filtered.filter(s => String(s.Status || 'Active').toLowerCase() === 'active');
         } else if (currentFilter === 'lost') {
-            filtered = filtered.filter(s => !String(s.MoneyCardNumber || '').trim());
+            filtered = filtered.filter(s => String(s.MoneyCardStatus || '').toLowerCase() === 'lost');
         }
         
         filtered.sort((a, b) => {
@@ -388,7 +399,7 @@
         if (updateGlobal) allStudents = students;
 
         if (!students || students.length === 0) {
-            studentsBody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">No students found</td></tr>';
+            studentsBody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">No students found</td></tr>';
             studentsCountNote.textContent = 'Showing 0 entries';
             return;
         }
@@ -398,28 +409,28 @@
         studentsBody.innerHTML = students.slice(0, 50).map(s => {
             const balance = Number(s.Balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             const isActive = String(s.Status || 'Active').toLowerCase() === 'active';
-            const hasCard = !!String(s.MoneyCardNumber || '').trim();
-            const cardStateClass = hasCard ? 'ok' : 'lost';
-            const cardStateText = hasCard ? 'Linked' : 'LOST';
-            const cardIcon = hasCard ? 'bi-check-circle-fill' : 'bi-exclamation-circle-fill';
+            const idCard = String(s.IDCardNumber || '').trim();
+            const moneyCard = String(s.MoneyCardNumber || '').trim();
+            const moneyStolen = String(s.MoneyCardStatus || '').toLowerCase() === 'lost';
+            const appLinked = !!s.AppLinked;
+
+            const chip = (txt, ok) => `<span class="card-state ${ok ? 'ok' : 'lost'}"><i class="bi ${ok ? 'bi-check-circle-fill' : 'bi-exclamation-circle-fill'}"></i>${txt}</span>`;
 
             return `
                 <tr>
                     <td><a class="student-id" href="#">${esc(s.StudentID || 'N/A')}</a></td>
                     <td><strong>${esc(s.Name || 'Unnamed')}</strong></td>
+                    <td>${idCard ? chip('Active', true) : '<span class="text-muted">—</span>'}</td>
+                    <td>${moneyCard ? chip(moneyStolen ? 'Stolen' : 'Active', !moneyStolen) : '<span class="text-muted">—</span>'}</td>
                     <td><strong>${balance}</strong></td>
                     <td><span class="status-chip ${isActive ? 'status-active' : 'status-inactive'}">${isActive ? 'ACTIVE' : 'INACTIVE'}</span></td>
-                    <td>
-                        <span class="card-state ${cardStateClass}">
-                            <i class="bi ${cardIcon}"></i>
-                            ${cardStateText}
-                        </span>
-                    </td>
+                    <td>${appLinked ? chip('Linked', true) : chip('No', false)}</td>
                     <td>
                         <button class="icon-btn" title="Adjust balance" data-adjust-id="${esc(s.StudentID || '')}" data-adjust-name="${esc(s.Name || '')}"><i class="bi bi-cash-coin"></i></button>
                         <a class="icon-btn" title="View transactions" href="/transactions?q=${encodeURIComponent(s.StudentID)}"><i class="bi bi-clock-history"></i></a>
                         {% if role == 'admin' %}
-                        <button class="icon-btn" title="Delete student" data-delete-id="${esc(s.StudentID || '')}" data-delete-name="${esc(s.Name || '')}"><i class="bi bi-trash3"></i></button>
+                        <button class="icon-btn" title="Reset login device" data-reset-id="${esc(s.StudentID || '')}" data-reset-name="${esc(s.Name || '')}"><i class="bi bi-phone"></i></button>
+                        <button class="icon-btn" title="Deactivate student" data-delete-id="${esc(s.StudentID || '')}" data-delete-name="${esc(s.Name || '')}"><i class="bi bi-trash3"></i></button>
                         {% endif %}
                     </td>
                 </tr>
@@ -453,21 +464,40 @@
             if (delBtn) {
                 deleteStudent(delBtn.getAttribute('data-delete-id'), delBtn.getAttribute('data-delete-name'));
             }
+            const resetBtn = e.target.closest('[data-reset-id]');
+            if (resetBtn) {
+                resetDevice(resetBtn.getAttribute('data-reset-id'), resetBtn.getAttribute('data-reset-name'));
+            }
         });
     }
 
     async function deleteStudent(studentId, name) {
-        if (!confirm(`Delete student ${studentId} (${name || '—'}) and all their balance/transaction data? This cannot be undone.`)) return;
+        if (!confirm(`Deactivate student ${studentId} (${name || '—'})? They stay in the system with their balance and transaction history, but marked Inactive.`)) return;
         try {
             const res = await fetch(`/api/students/${encodeURIComponent(studentId)}`, { method: 'DELETE' });
             const data = await res.json();
             if (data.success) {
                 await loadStudents();
             } else {
-                alert(data.error || 'Failed to delete student');
+                alert(data.error || 'Failed to deactivate student');
             }
         } catch (err) {
-            alert('Network error while deleting student');
+            alert('Network error while deactivating student');
+        }
+    }
+
+    async function resetDevice(studentId, name) {
+        if (!confirm(`Reset the login device for ${studentId} (${name || '—'})? They can log in from a new phone, but will keep their PIN.`)) return;
+        try {
+            const res = await fetch(`/api/students/${encodeURIComponent(studentId)}/reset-device`, { method: 'POST' });
+            const data = await res.json();
+            if (res.ok) {
+                alert(data.message || 'Device reset.');
+            } else {
+                alert(data.error || 'Failed to reset device');
+            }
+        } catch (err) {
+            alert('Network error while resetting device');
         }
     }
 

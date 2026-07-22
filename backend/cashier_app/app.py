@@ -22,11 +22,20 @@ import jwt
 import pytz
 import requests as _http
 from dotenv import load_dotenv
-from flask import Flask, jsonify, redirect, render_template, request
+from flask import Flask, Response, jsonify, redirect, render_template, request
 from flask_cors import CORS
 from flask_socketio import SocketIO
 from google.oauth2.service_account import Credentials
 
+# Ensure imports work both as a package and as: python backend/cashier_app/app.py
+APP_DIR = Path(__file__).resolve().parent
+BACKEND_DIR = APP_DIR.parent
+PROJECT_ROOT = BACKEND_DIR.parent
+for p in (str(BACKEND_DIR), str(PROJECT_ROOT)):
+    if p not in sys.path:
+        sys.path.insert(0, p)
+
+logger = logging.getLogger(__name__)
 
 # Load .env before reading env vars
 load_dotenv()
@@ -39,24 +48,20 @@ except Exception as _adapter_err:
     _ADAPTER_AVAILABLE = False
     logger.warning("event=adapter_import_failed error=%s", _adapter_err)
 
-# Ensure imports work when launched as: python backend/cashier_app/app.py
-APP_DIR = Path(__file__).resolve().parent
-BACKEND_DIR = APP_DIR.parent
-PROJECT_ROOT = BACKEND_DIR.parent
-for p in (str(BACKEND_DIR), str(PROJECT_ROOT)):
-    if p not in sys.path:
-        sys.path.insert(0, p)
-
 try:
-    from .cashier_routes import cashier_bp, _build_transaction_row  # type: ignore
+    from .cashier_routes import (  # type: ignore
+        cashier_bp, _build_transaction_row, manage_inventory, update_inventory,
+        cashier_history, cashier_students,
+    )
 except ImportError:
-    from cashier_routes import cashier_bp, _build_transaction_row  # type: ignore
+    from cashier_routes import (  # type: ignore
+        cashier_bp, _build_transaction_row, manage_inventory, update_inventory,
+        cashier_history, cashier_students,
+    )
 
 
 PH_TZ = pytz.timezone("Asia/Manila")
 UID_PATTERN = re.compile(r"^[0-9A-Fa-f]{8}$|^[0-9A-Fa-f]{14}$")
-INSECURE_FLASK_DEFAULT = "bangko-admin-secret-key-change-in-production"
-INSECURE_JWT_DEFAULT = "bangko-jwt-secret-2026"
 
 logger = logging.getLogger(__name__)
 
@@ -71,43 +76,35 @@ def normalize_card_uid(uid):
     uid_str = str(uid).strip()
     if not uid_str:
         return ""
-    return uid_str.lstrip("0").upper()
+    return uid_str.upper()
 
 
-def _resolve_credentials_path() -> str:
-    candidates = [
-        os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "").strip(),
-        str(PROJECT_ROOT / "config" / "credentials.json"),
-        str(BACKEND_DIR / "credentials.json"),
-        "credentials.json",
-    ]
-    for candidate in candidates:
-        if candidate and os.path.exists(candidate):
-            return candidate
-    raise FileNotFoundError("Google service-account credentials file not found")
+def _get_google_sheets_client():
+    credentials_path = os.getenv("GOOGLE_CREDENTIALS_FILE", "").strip()
+    if not credentials_path:
+        credentials_path = str(PROJECT_ROOT / "config" / "credentials.json")
+    spreadsheet_id = os.getenv("GOOGLE_SHEETS_ID", "").strip()
+    if not os.path.exists(credentials_path) or not spreadsheet_id:
+        raise RuntimeError("Google fallback requires GOOGLE_CREDENTIALS_FILE and GOOGLE_SHEETS_ID")
+    credentials = Credentials.from_service_account_file(
+        credentials_path,
+        scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"],
+    )
+    return gspread.authorize(credentials).open_by_key(spreadsheet_id)
 
 
 def get_sheets_client():
-    """Get or refresh the data-layer client.
-
-    When DATABASE_URL is set, return the gspread-compatible Supabase
-    adapter client so every .worksheet()/get_all_records() call is a drop-in.
-    """
-    if USE_SUPABASE:
-        if not _ADAPTER_AVAILABLE:
-            raise RuntimeError("DATABASE_URL set but sheets_adapter unavailable")
-        return _adapter_get_client()
-    creds_path = _resolve_credentials_path()
-    spreadsheet_id = os.getenv("GOOGLE_SHEETS_ID", "").strip()
-    if not spreadsheet_id:
-        raise ValueError("GOOGLE_SHEETS_ID environment variable is not set")
-    scopes = [
-        "https://www.googleapis.com/auth/spreadsheets",
-        "https://www.googleapis.com/auth/drive",
-    ]
-    credentials = Credentials.from_service_account_file(creds_path, scopes=scopes)
-    client = gspread.authorize(credentials)
-    return client.open_by_key(spreadsheet_id)
+    """Use Supabase first; fall back to Google Sheets only when it is down."""
+    if _ADAPTER_AVAILABLE and os.getenv("DATABASE_URL"):
+        try:
+            client = _adapter_get_client()
+            probe = getattr(client, "test_connection", None)
+            if probe is None or probe():
+                return client
+            logger.warning("event=supabase_unavailable fallback=google_sheets")
+        except Exception as exc:
+            logger.warning("event=supabase_unavailable fallback=google_sheets error=%s", exc)
+    return _get_google_sheets_client()
 
 
 def _decode_student_jwt(raw_token: str, jwt_secret: str):
@@ -159,9 +156,9 @@ def create_app() -> tuple[Flask, SocketIO]:
     flask_secret = os.getenv("FLASK_SECRET_KEY", "").strip()
     jwt_secret = os.getenv("JWT_SECRET", "").strip()
 
-    if not flask_secret or flask_secret == INSECURE_FLASK_DEFAULT:
+    if not flask_secret or "change-in-production" in flask_secret.lower():
         raise RuntimeError("FLASK_SECRET_KEY must be set and must not use insecure default")
-    if not jwt_secret or jwt_secret == INSECURE_JWT_DEFAULT:
+    if not jwt_secret or (jwt_secret.lower().startswith("bangko-") and "secret-" in jwt_secret.lower()):
         raise RuntimeError("JWT_SECRET must be set and must not use insecure default")
 
     # Bind template/static folders to the launch directory, not Flask's import
@@ -233,6 +230,17 @@ def create_app() -> tuple[Flask, SocketIO]:
     def healthz():
         return jsonify({"ok": True, "service": "cashier_app"})
 
+    @app.route("/favicon.ico")
+    def favicon():
+        return Response(
+            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">'
+            '<rect width="64" height="64" rx="14" fill="#3525cd"/>'
+            '<text x="32" y="45" text-anchor="middle" font-family="Georgia,serif" '
+            'font-size="42" font-style="italic" fill="white">B</text></svg>',
+            mimetype="image/svg+xml",
+            headers={"Cache-Control": "public, max-age=86400"},
+        )
+
     # Native aliases (no /cashier prefix) for standalone cashier UX.
     @app.route("/api/login", methods=["POST"])
     def native_api_login():
@@ -245,6 +253,22 @@ def create_app() -> tuple[Flask, SocketIO]:
     @app.route("/api/products", methods=["GET"])
     def native_api_products():
         return app.view_functions["cashier.get_products"]()
+
+    @app.route("/api/inventory", methods=["GET", "POST"])
+    def native_api_inventory():
+        return app.view_functions["cashier.manage_inventory"]()
+
+    @app.route("/api/inventory/<product_id>", methods=["PUT", "DELETE"])
+    def native_api_inventory_product(product_id):
+        return app.view_functions["cashier.update_inventory"](product_id)
+
+    @app.route("/api/history", methods=["GET"])
+    def native_api_history():
+        return app.view_functions["cashier.cashier_history"]()
+
+    @app.route("/api/students", methods=["GET"])
+    def native_api_students():
+        return app.view_functions["cashier.cashier_students"]()
 
     @app.route("/api/process-sale", methods=["POST"])
     def native_api_process_sale():
@@ -468,7 +492,7 @@ def create_app() -> tuple[Flask, SocketIO]:
 
             money_sheet.update_cell(account_row, 3, new_balance)
             try:
-                trans_sheet.append_row(transaction_row, table_range="A1")
+                trans_sheet.append_row(transaction_row)
             except Exception as log_err:
                 try:
                     money_sheet.update_cell(account_row, 3, current_balance)
@@ -617,4 +641,4 @@ app, socketio = create_app()
 if __name__ == "__main__":
     port = int(os.getenv("CASHIER_PORT", "5010"))
     debug = os.getenv("FLASK_DEBUG", "false").lower() == "true"
-    socketio.run(app, host="0.0.0.0", port=port, debug=debug)
+    socketio.run(app, host="127.0.0.1", port=port, debug=debug)

@@ -24,9 +24,9 @@ for _p in [
 # Alternative: set env vars via PythonAnywhere Web tab → Environment variables panel
 load_dotenv(os.path.join(project_home, '.env'))
 
-# Non-secret config defaults (safe to set here)
-os.environ.setdefault('GOOGLE_SHEETS_ID', '1S8GHhRCb8rztEAJK2XhPD7t6Oy_UL2fiNrOVgUPQ_P0')
-os.environ.setdefault('GOOGLE_CREDENTIALS_FILE', 'credentials.json')
+# DATABASE_URL must be provided by the deployment environment; Google Sheets is disabled.
+os.environ.pop("GOOGLE_SHEETS_ID", None)
+os.environ.pop("GOOGLE_CREDENTIALS_FILE", None)
 
 # Import the Flask app (web-only version, no Arduino/serial dependencies)
 from web_app import app as application

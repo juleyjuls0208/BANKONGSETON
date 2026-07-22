@@ -10,6 +10,7 @@ import types
 import hashlib
 
 import pytest
+from werkzeug.security import generate_password_hash
 
 # ── Stub the heavy, network-dependent dependencies BEFORE importing api_server ──
 REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -72,14 +73,14 @@ def app(monkeypatch):
     db = FakeDB()
     db.add_sheet(
         "Users",
-        ["StudentID", "Name", "IDCardNumber", "MoneyCardNumber", "Status", "ParentEmail"],
+        ["StudentID", "Name", "IDCardNumber", "MoneyCardNumber", "Status", "StudentEmail"],
         [
             {"StudentID": "202501", "Name": "Juan Dela Cruz", "IDCardNumber": "ID001",
              "MoneyCardNumber": "A1B2C3D4", "Status": "Active",
-             "ParentEmail": "parent@example.com"},
+             "StudentEmail": "parent@example.com"},
             {"StudentID": "202502", "Name": "Maria Santos", "IDCardNumber": "ID002",
              "MoneyCardNumber": "E5F6G7H8", "Status": "Active",
-             "ParentEmail": "maria.parent@example.com",
+             "StudentEmail": "maria.parent@example.com",
              "PinHash": hashlib.sha256(b"1234").hexdigest(), "DeviceID": "PHONE-ALPHA"},
         ],
     )
@@ -88,6 +89,13 @@ def app(monkeypatch):
         ["MoneyCardNumber", "Status"],
         [{"MoneyCardNumber": "A1B2C3D4", "Status": "active"},
          {"MoneyCardNumber": "E5F6G7H8", "Status": "active"}],
+    )
+
+    db.add_sheet(
+        "student_auth",
+        ["StudentID", "PinHash", "DeviceId", "UpdatedAt"],
+        [{"StudentID": "202502", "PinHash": generate_password_hash("1234"),
+          "DeviceId": "PHONE-ALPHA", "UpdatedAt": ""}],
     )
 
     fake_sheets_mod = types.ModuleType("sheets_adapter")
@@ -136,73 +144,61 @@ def post(client, path, json=None, headers=None):
     return client.post(path, json=json, headers=headers or {})
 
 
-def test_new_user_first_login_sets_pin_and_binds_device(app):
+def test_first_login_sets_pin_and_device(app):
     client = app.test_client()
-    r = post(client, "/api/auth/login", {"student_id": "202501", "device_id": "PHONE-NEW"})
-    assert r.status_code == 200, r.get_json()
-    body = r.get_json()
-    assert body["needs_pin_setup"] is True
-    assert body["device_bound"] is False
-    assert body["pin_required"] is False
+    first = post(
+        client,
+        "/api/auth/login",
+        {"student_id": "202501", "device_id": "PHONE-NEW", "pin": "1234"},
+    )
+    assert first.status_code == 200, first.get_json()
+    assert first.get_json()["first_login"] is True
 
-    # Create PIN
-    r2 = post(client, "/api/auth/pin-verify",
-              {"student_id": "202501", "device_id": "PHONE-NEW", "new_pin": "1234"})
-    assert r2.status_code == 200, r2.get_json()
-    tok = r2.get_json()["token"]
-    assert tok
-
-    # PinHash + DeviceID persisted on the Users row
-    users = app._test_db.worksheet("Users")
-    row = [x for x in users.get_all_records() if x["StudentID"] == "202501"][0]
-    assert row.get("PinHash") and row.get("DeviceID") == "PHONE-NEW"
+    returning = post(
+        client,
+        "/api/auth/login",
+        {"student_id": "202501", "device_id": "PHONE-NEW", "pin": "1234"},
+    )
+    assert returning.status_code == 200, returning.get_json()
+    assert returning.get_json()["first_login"] is False
 
 
 def test_existing_user_must_supply_pin(app):
     client = app.test_client()
-    r = post(client, "/api/auth/login", {"student_id": "202502", "device_id": "PHONE-ALPHA"})
+    r = post(client, "/api/auth/login", {"student_id": "202502", "device_id": "PHONE-ALPHA", "pin": "1234"})
     assert r.status_code == 200
     body = r.get_json()
-    assert body["needs_pin_setup"] is False
-    assert body["pin_required"] is True
-
-    # Wrong PIN rejected
-    bad = post(client, "/api/auth/pin-verify",
-               {"student_id": "202502", "device_id": "PHONE-ALPHA", "pin": "0000"})
-    assert bad.status_code == 401
-
-    # Correct PIN issues token
-    ok = post(client, "/api/auth/pin-verify",
-              {"student_id": "202502", "device_id": "PHONE-ALPHA", "pin": "1234"})
-    assert ok.status_code == 200, ok.get_json()
+    assert body["first_login"] is False
+    assert body["jwt_token"]
 
 
 def test_device_conflict_rejects_second_phone(app):
     client = app.test_client()
-    r = post(client, "/api/auth/login", {"student_id": "202502", "device_id": "PHONE-BETA"})
-    assert r.status_code == 423
-    assert r.get_json().get("code") == "DEVICE_CONFLICT"
+    r = post(client, "/api/auth/login", {"student_id": "202502", "device_id": "PHONE-BETA", "pin": "1234"})
+    assert r.status_code == 401
+    assert r.get_json().get("error") == "Invalid credentials"
 
 
-def test_pin_change_via_email_code(app):
-    import api_server as srv
+def test_pin_status_does_not_enumerate_accounts(app):
     client = app.test_client()
-    # request change (must supply current PIN)
-    req = post(client, "/api/auth/pin-change-request",
-               {"student_id": "202502", "device_id": "PHONE-ALPHA", "pin": "1234"})
-    assert req.status_code == 200, req.get_json()
-    # code is stored server-side regardless of email delivery
-    assert "202502" in srv._pin_change_codes, "no pending code stored"
-    code = srv._pin_change_codes["202502"]["code"]
-    assert code and len(code) == 6
+    response = post(client, "/api/auth/pin-status", {"student_id": "does-not-exist"})
+    assert response.status_code == 200
+    assert response.get_json() == {"available": True}
 
-    # confirm with code + new pin
-    conf = post(client, "/api/auth/pin-change-confirm",
-                {"student_id": "202502", "device_id": "PHONE-ALPHA",
-                 "code": code, "new_pin": "5678"})
-    assert conf.status_code == 200, conf.get_json()
 
-    # old pin no longer works
-    old = post(client, "/api/auth/pin-verify",
-               {"student_id": "202502", "device_id": "PHONE-ALPHA", "pin": "1234"})
-    assert old.status_code == 401
+def test_database_outage_returns_service_unavailable(app, monkeypatch):
+    import api_server
+    from psycopg2 import DatabaseError
+
+    def fail_records(*_args, **_kwargs):
+        raise DatabaseError("database connection timed out")
+
+    monkeypatch.setattr(api_server, "get_sheet_records_cached", fail_records)
+    response = post(
+        app.test_client(),
+        "/api/auth/login",
+        {"student_id": "202501", "pin": "1234", "device_id": "PHONE-NEW"},
+    )
+
+    assert response.status_code == 503
+    assert response.get_json() == {"error": "Service unavailable, please try again"}

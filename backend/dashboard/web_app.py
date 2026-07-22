@@ -10,6 +10,8 @@ from flask_cors import CORS
 from flask_socketio import SocketIO
 import os
 import sys
+# Keep legacy ``import web_app`` callers bound to this same module object.
+sys.modules.setdefault("web_app", sys.modules[__name__])
 import logging
 import time
 import json
@@ -44,6 +46,7 @@ from dashboard_core import (
 )
 
 import gspread
+from sheets_adapter import APIError
 from functools import wraps
 
 # Import fraud detection (optional)
@@ -65,8 +68,7 @@ if not _secret_key or _secret_key == _INSECURE_DEFAULT:
 
 # --- JWT_SECRET startup guard ---
 _jwt_secret = os.getenv("JWT_SECRET", "").strip()
-_JWT_INSECURE_DEFAULT = "bangko-jwt-secret-2026"
-if not _jwt_secret or _jwt_secret == _JWT_INSECURE_DEFAULT:
+if not _jwt_secret or (_jwt_secret.lower().startswith("bangko-") and "secret-" in _jwt_secret.lower()):
     logger.critical(
         'event=startup_aborted reason=insecure_jwt_secret message="JWT_SECRET is not set or is using the insecure default. Set a strong random key in your .env file."'
     )
@@ -101,6 +103,17 @@ if _parse_worker_count("WEB_CONCURRENCY") > 1 or _parse_worker_count("GUNICORN_W
 # Fallback to JWT_SECRET for legacy deployments that never set a dedicated key.
 CASHIER_SHARED_SECRET = (os.environ.get("CASHIER_SHARED_SECRET", "").strip()
                          or os.environ.get("JWT_SECRET", "").strip())
+
+
+def _decode_student_jwt(raw_token: str):
+    """Decode a student JWT (issued by api_server) for QR endpoints.
+    Returns the payload dict or None on any failure — never raises."""
+    if not raw_token:
+        return None
+    try:
+        return _pyjwt.decode(raw_token, _jwt_secret, algorithms=["HS256"])
+    except Exception:
+        return None
 
 
 def _build_transaction_row(
@@ -213,8 +226,8 @@ app.socketio = socketio
 app.pending_qr_token = None
 app.last_qr_payment = None   # set when student confirms; polled by cashier browser
 
-# Module-level db for cashier blueprint compatibility
-db = get_sheets_client()
+# Module-level placeholder; request handlers acquire Supabase lazily.
+db = None
 
 # Register all shared routes from core (serial/Arduino disabled — cloud build
 # has no USB reader; those routes live only in the on-prem registration_app).
@@ -269,7 +282,7 @@ def login():
         else:
             return jsonify({"success": False, "error": "Invalid credentials"}), 401
 
-    return render_template("login.html")
+    return render_template("login.html", redirect_target="/dashboard")
 
 
 # ============= DASHBOARD / PAGE ROUTES =============
@@ -455,6 +468,8 @@ def qr_confirm():
     if time.time() - t["created_at"] > 300:
         app.pending_qr_token = None
         return jsonify({"error": "QR token expired"}), 410
+    if t.get("result") is not None:
+        return jsonify({"paid": True, **t["result"]}), 200
 
     student_id = str(payload.get("user_id", "")).strip()
     items = t["cart_snapshot"]
@@ -476,6 +491,30 @@ def qr_confirm():
 
         if not money_card_number:
             return jsonify({"error": "Student not found"}), 404
+
+        atomic = getattr(db.worksheet("Money Accounts"), "update_balance_atomic", None)
+        if atomic is not None:
+            try:
+                result = atomic(
+                    money_card=money_card_number,
+                    amount_delta=-float(total),
+                    transaction_type="QR Purchase",
+                    items_json=json.dumps(items),
+                    student_id=student_id,
+                    idempotency_key=str(t["token"])[:50],
+                    station_id="cashier-web-qr",
+                )
+            except APIError as exc:
+                message = str(exc)
+                status = 402 if "Insufficient" in message else 403 if any(word in message.lower() for word in ("inactive", "lost")) else 503
+                return jsonify({"error": message if status != 503 else "Service unavailable, please try again"}), status
+            result_payload = {"new_balance": result["BalanceAfter"],
+                              "timestamp": result["Timestamp"],
+                              "transaction_id": result["TransactionID"]}
+            t["result"] = result_payload
+            _invalidate_cache("transactions")
+            _invalidate_cache("money_accounts")
+            return jsonify({"paid": True, **result_payload}), 200
 
         # 2. Read Money Accounts fresh — no cache (D018)
         money_sheet = db.worksheet("Money Accounts")
@@ -529,7 +568,7 @@ def qr_confirm():
                 if not balance_deducted:
                     money_sheet.update_cell(account_row, 3, new_balance)
                     balance_deducted = True
-                trans_sheet.append_row(transaction_row, table_range="A1")
+                trans_sheet.append_row(transaction_row)
                 last_error = None
                 break
             except Exception as e:
@@ -652,10 +691,11 @@ CASHIER_ACCOUNTS_HEADERS = [
 ]
 
 def _ensure_cashier_accounts_sheet():
-    """Get or create Cashier Accounts worksheet."""
+    """Return the shared cashier-account store (Supabase or Sheets fallback)."""
     _db = get_sheets_client()
-    sheet_titles = [ws.title for ws in _db.worksheets()]
-    if 'Cashier Accounts' not in sheet_titles:
+    try:
+        return _db.worksheet('Cashier Accounts')
+    except (gspread.exceptions.WorksheetNotFound, APIError):
         ws = _db.add_worksheet(title='Cashier Accounts', rows=200, cols=7)
         ws.append_row(CASHIER_ACCOUNTS_HEADERS)
 
@@ -665,11 +705,11 @@ def _ensure_cashier_accounts_sheet():
         if bootstrap_username and bootstrap_password:
             import bcrypt as _bcrypt
             import datetime as _dt
-            import secrets as _secrets
+            import uuid as _uuid
 
             hashed = _bcrypt.hashpw(bootstrap_password.encode(), _bcrypt.gensalt()).decode()
             ws.append_row([
-                f"CASHIER-{_secrets.token_hex(4).upper()}",
+                str(_uuid.uuid4()),
                 bootstrap_username,
                 hashed,
                 os.getenv('CASHIER_BOOTSTRAP_DISPLAY_NAME', 'Bootstrap Cashier').strip() or 'Bootstrap Cashier',
@@ -683,9 +723,7 @@ def _ensure_cashier_accounts_sheet():
                 'cashier_accounts_sheet_created_without_bootstrap_account '
                 '(set CASHIER_BOOTSTRAP_USERNAME/CASHIER_BOOTSTRAP_PASSWORD to auto-seed one)'
             )
-    else:
-        ws = _db.worksheet('Cashier Accounts')
-    return ws
+        return ws
 
 
 @app.route('/cashier-accounts')
@@ -730,8 +768,8 @@ def create_cashier_account():
             hashed = _bcrypt.hashpw(password.encode(), _bcrypt.gensalt()).decode()
         except ImportError:
             return jsonify({'error': 'bcrypt not installed on server'}), 500
-        import datetime as _dt, secrets as _secrets
-        account_id = 'CASHIER-' + _secrets.token_hex(3).upper()
+        import datetime as _dt, uuid as _uuid
+        account_id = str(_uuid.uuid4())
         ws = _ensure_cashier_accounts_sheet()
         records = ws.get_all_records()
         for r in records:

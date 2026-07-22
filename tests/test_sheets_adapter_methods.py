@@ -28,6 +28,12 @@ if str(_BACKEND_DIR) not in sys.path:
 import pytest
 from sheets_adapter import APIError, SheetView
 
+
+def test_find_returns_a_virtual_header_cell() -> None:
+    sv = SheetView("users", client=mock.MagicMock())
+
+    assert sv.find("MoneyCardNumber") == {"row": 1, "col": 4, "value": "MoneyCardNumber"}
+
 # ---------------------------------------------------------------------------
 # cell() — gspread-compatible return shape, no dead query, no silent except
 # ---------------------------------------------------------------------------
@@ -52,9 +58,9 @@ def test_cell_returns_gspread_compatible_shape() -> None:
 
     with mock.patch("sheets_adapter._conn") as mc:
         mc.return_value.__enter__.return_value = mock_conn
-        result = sv.cell(row=1, col=2)
+        result = sv.cell(row=2, col=2)
 
-    assert result == {"row": 1, "col": 2, "value": "Alice"}, (
+    assert result == {"row": 2, "col": 2, "value": "Alice"}, (
         f"cell() must return gspread-style shape, got {result!r}"
     )
     # And the SQL is exactly one query (the dead first query is gone)
@@ -76,9 +82,9 @@ def test_cell_converts_decimal_to_float() -> None:
 
     with mock.patch("sheets_adapter._conn") as mc:
         mc.return_value.__enter__.return_value = mock_conn
-        result = sv.cell(row=1, col=1)
+        result = sv.cell(row=2, col=1)
 
-    assert result == {"row": 1, "col": 1, "value": 123.45}
+    assert result == {"row": 2, "col": 1, "value": 123.45}
     assert isinstance(result["value"], float)
 
 
@@ -101,9 +107,9 @@ def test_cell_converts_datetime_to_isoformat_string() -> None:
 
     with mock.patch("sheets_adapter._conn") as mc:
         mc.return_value.__enter__.return_value = mock_conn
-        result = sv.cell(row=1, col=1)
+        result = sv.cell(row=2, col=1)
 
-    assert result["row"] == 1
+    assert result["row"] == 2
     assert result["col"] == 1
     assert isinstance(result["value"], str)
     assert "2026-06-05" in result["value"]
@@ -147,10 +153,10 @@ def test_cell_returns_first_column_value_when_col_index_unknown() -> None:
 
     with mock.patch("sheets_adapter._conn") as mc:
         mc.return_value.__enter__.return_value = mock_conn
-        result = sv.cell(row=1, col=1)
+        result = sv.cell(row=2, col=1)
 
     # Defensive fallback returns the first column's value, not None.
-    assert result == {"row": 1, "col": 1, "value": "U001"}
+    assert result == {"row": 2, "col": 1, "value": "U001"}
 
 
 # ---------------------------------------------------------------------------
@@ -176,7 +182,7 @@ def test_update_cell_with_non_datetime_value_uses_unified_sql() -> None:
     with mock.patch("sheets_adapter._conn") as mc:
         mc.return_value.__enter__.return_value = mock_conn
         # Non-datetime value — would have NameError'd under the prior code.
-        sv.update_cell(row=1, col=1, value=123.45)
+        sv.update_cell(row=2, col=1, value=123.45)
 
     # Verify the UPDATE was issued with the right parameters
     update_calls = [
@@ -185,7 +191,7 @@ def test_update_cell_with_non_datetime_value_uses_unified_sql() -> None:
     ]
     assert len(update_calls) == 1, f"expected exactly one UPDATE, got {len(update_calls)}"
     params = update_calls[0].args[1]
-    assert params["val"] == 123.45, f"expected val=123.45, got {params!r}"
+    assert params[0] == 123.45, f"expected value=123.45, got {params!r}"
 
 
 def test_update_cell_with_datetime_value_uses_unified_sql() -> None:
@@ -201,14 +207,14 @@ def test_update_cell_with_datetime_value_uses_unified_sql() -> None:
     when = datetime(2026, 6, 5, 12, 0, 0)
     with mock.patch("sheets_adapter._conn") as mc:
         mc.return_value.__enter__.return_value = mock_conn
-        sv.update_cell(row=1, col=1, value=when)
+        sv.update_cell(row=2, col=1, value=when)
 
     update_calls = [
         c for c in mock_cur.execute.call_args_list
         if "UPDATE" in str(c.args[0])
     ]
     assert len(update_calls) == 1
-    assert update_calls[0].args[1]["val"] == when
+    assert update_calls[0].args[1][0] == when
 
 
 def test_update_cell_raises_api_error_when_row_missing() -> None:
@@ -224,6 +230,23 @@ def test_update_cell_raises_api_error_when_row_missing() -> None:
         mc.return_value.__enter__.return_value = mock_conn
         with pytest.raises(APIError, match="Row 99 not found"):
             sv.update_cell(row=99, col=1, value=50.0)
+
+
+def test_append_user_optional_fields_are_null_not_empty_strings() -> None:
+    """Optional blank cards must not collide with PostgreSQL's unique card index."""
+    sv = SheetView("users", client=mock.MagicMock())
+    cur = mock.MagicMock()
+    conn = mock.MagicMock()
+    conn.cursor.return_value = cur
+    row = ["202320112", "Student", "CARD-1", "", "Active", "", "", ""]
+
+    with mock.patch("sheets_adapter._conn") as connection:
+        connection.return_value.__enter__.return_value = conn
+        sv.append_row(row)
+
+    bound = cur.execute.call_args.args[1]
+    assert bound[3] is None  # MoneyCardNumber
+    assert bound[5:] == [None, None, None]
 
 
 # ---------------------------------------------------------------------------

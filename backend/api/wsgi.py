@@ -7,7 +7,7 @@
 #   Virtualenv (optional): /home/bankoseton/.virtualenvs/bankongseton
 #
 # Required packages (pip install -r backend/api/requirements_api.txt):
-#   flask, flask-cors, gspread, google-auth, pyjwt, cryptography,
+#   flask, flask-cors, pyjwt, cryptography,
 #   firebase-admin, python-dotenv, pytz, requests, gunicorn
 #
 # Set these in the PythonAnywhere Web tab → Environment Variables:
@@ -32,9 +32,6 @@ for _p in [
 # Set env vars BEFORE importing api_server.
 # CORS origins are evaluated at module import time — must be set here.
 os.environ.setdefault("FLASK_ENV", "production")
-os.environ.setdefault(
-    "GOOGLE_SHEETS_ID", "1S8GHhRCb8rztEAJK2XhPD7t6Oy_UL2fiNrOVgUPQ_P0"
-)
 os.environ.setdefault("CORS_ORIGINS", "https://juley2823.pythonanywhere.com")
 
 # Activate structured logging.

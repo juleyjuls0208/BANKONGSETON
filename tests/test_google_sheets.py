@@ -258,7 +258,7 @@ class TestSchemaValidation:
         users_sheet = mock_google_sheets['users']
         expected_columns = [
             'StudentID', 'Name', 'IDCardNumber', 'MoneyCardNumber',
-            'Status', 'ParentEmail', 'DateRegistered'
+            'Status', 'StudentEmail', 'DateRegistered'
         ]
         
         # Mock the first row (headers)

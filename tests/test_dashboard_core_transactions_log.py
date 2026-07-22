@@ -43,7 +43,7 @@ def test_load_balance_writes_to_transactions_log_sheet(monkeypatch, core_client)
             "StudentID": "2024-001",
             "Name": "Juan dela Cruz",
             "MoneyCardNumber": "5F6E7D8C",
-            "ParentEmail": "",
+            "StudentEmail": "",
         }
     ]
 

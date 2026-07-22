@@ -229,7 +229,7 @@ class ConfigValidator:
             # Required sheets and their columns
             required_schema = {
                 'Users': ['StudentID', 'Name', 'IDCardNumber', 'MoneyCardNumber', 
-                         'Status', 'ParentEmail', 'DateRegistered'],
+                         'Status', 'StudentEmail', 'DateRegistered'],
                 'Money Accounts': ['MoneyCardNumber', 'LinkedIDCard', 'Balance', 
                                   'Status', 'LastUpdated', 'TotalLoaded'],
                 'Transactions Log': ['TransactionID', 'Timestamp', 'StudentID', 

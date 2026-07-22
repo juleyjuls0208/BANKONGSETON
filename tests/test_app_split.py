@@ -82,9 +82,9 @@ def fake_db():
         "Balance": "500", "Status": "Active", "LastUpdated": "", "TotalLoaded": "1000",
     }
     users = FakeSheet("Users",
-        ["StudentID", "Name", "IDCardNumber", "MoneyCardNumber", "ParentEmail", "Status"],
+        ["StudentID", "Name", "IDCardNumber", "MoneyCardNumber", "StudentEmail", "Status"],
         [{"StudentID": "2024-001", "Name": "Juan", "IDCardNumber": "3A2B1C4D",
-          "MoneyCardNumber": "5F6E7D8C", "ParentEmail": "", "Status": "Active"}])
+          "MoneyCardNumber": "5F6E7D8C", "StudentEmail": "", "Status": "Active"}])
     money = FakeSheet("Money Accounts",
         ["MoneyCardNumber", "LinkedIDCard", "Balance", "Status", "LastUpdated", "TotalLoaded"],
         [dict(money_row)])
@@ -113,6 +113,9 @@ def _set_env():
     os.environ["ADMIN_PASSWORD"] = "test-admin-password"
     os.environ["WEB_CONCURRENCY"] = "1"
     os.environ["GUNICORN_WORKERS"] = "1"
+    os.environ["KIOSK_UNLOCK_PIN"] = "654321"
+    import gspread
+    gspread.service_account = lambda **_kwargs: _sa_client
 
 
 def test_kiosk_card_topup(fake_db):
@@ -121,14 +124,16 @@ def test_kiosk_card_topup(fake_db):
     import kiosk_app
     c = kiosk_app.app.test_client()
 
+    assert c.post("/api/kiosk/unlock", json={"pin": "654321"}).status_code == 200
     r = c.post("/api/kiosk/topup/card-scan", json={"uid": "5F6E7D8C"})
     assert r.status_code == 200
     body = r.get_json()
     assert body["success"] is True
     assert body["student"]["student_id"] == "2024-001"
 
-    r2 = c.post("/api/kiosk/topup/confirm",
-                json={"student_id": "2024-001", "amount": 200, "payment_method": "cash"})
+    pending_id = body["pending_id"]
+    assert c.post("/api/kiosk/topup/cash-accept", json={"pending_id": pending_id, "amount": 200}).status_code == 200
+    r2 = c.post("/api/kiosk/topup/confirm", json={"pending_id": pending_id})
     assert r2.status_code == 200
     assert r2.get_json()["new_balance"] == 700.0
     assert float(fake_db["money"]._rows[0]["Balance"]) == 700.0
@@ -145,12 +150,14 @@ def test_kiosk_cardless_qr_topup(fake_db):
         os.environ["JWT_SECRET"], algorithm="HS256")
 
     c = kiosk_app.app.test_client()
+    assert c.post("/api/kiosk/unlock", json={"pin": "654321"}).status_code == 200
     r = c.post("/api/kiosk/topup/qr-scan", json={"qr_data": token})
     assert r.status_code == 200
     assert r.get_json()["student"]["student_id"] == "2024-001"
 
-    r2 = c.post("/api/kiosk/topup/confirm",
-                json={"student_id": "2024-001", "amount": 100, "payment_method": "cardless_qr"})
+    pending_id = r.get_json()["pending_id"]
+    assert c.post("/api/kiosk/topup/cash-accept", json={"pending_id": pending_id, "amount": 100}).status_code == 200
+    r2 = c.post("/api/kiosk/topup/confirm", json={"pending_id": pending_id})
     assert r2.status_code == 200
     assert r2.get_json()["new_balance"] == 600.0
 
@@ -159,6 +166,7 @@ def test_kiosk_rejects_bad_qr(fake_db):
     _set_env()
     import kiosk_app
     c = kiosk_app.app.test_client()
+    assert c.post("/api/kiosk/unlock", json={"pin": "654321"}).status_code == 200
     r = c.post("/api/kiosk/topup/qr-scan", json={"qr_data": "not-a-real-token"})
     assert r.status_code == 400
 
@@ -167,6 +175,7 @@ def test_kiosk_requires_positive_amount(fake_db):
     _set_env()
     import kiosk_app
     c = kiosk_app.app.test_client()
+    assert c.post("/api/kiosk/unlock", json={"pin": "654321"}).status_code == 200
     r = c.post("/api/kiosk/topup/confirm",
                 json={"student_id": "2024-001", "amount": 0, "payment_method": "cash"})
     assert r.status_code == 400
