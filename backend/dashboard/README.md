@@ -23,7 +23,7 @@ Role: Finance
 ### Admin User
 ```
 Username: admindashboard
-Password: admin2025
+Password: configured via the deployment environment
 Role: Admin
 ```
 

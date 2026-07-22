@@ -68,9 +68,8 @@
                 <button type="button" class="reg-link" data-close-pane>Cancel</button>
             </div>
             <ol class="reg-stepper" id="regStepper">
-                <li class="is-active" data-step="1">Tap ID card</li>
-                <li data-step="2">Enter details</li>
-                <li data-step="3">Done</li>
+                <li class="is-active" data-step="1">Details</li>
+                <li data-step="2">Done</li>
             </ol>
 
             <!-- Step 1: tap -->
@@ -101,8 +100,8 @@
                     <small class="reg-err" id="errStudentName"></small>
                 </div>
                 <div class="field">
-                    <label for="parentEmail">Parent Email <span class="reg-opt">(optional)</span></label>
-                    <input type="email" class="input" id="parentEmail" autocomplete="off">
+                    <label for="parentEmail">Student Email <span class="req">*</span></label>
+                    <input type="email" class="input" id="parentEmail" required autocomplete="off">
                     <small class="reg-err" id="errParentEmail"></small>
                 </div>
                 <div class="row-actions">
@@ -195,7 +194,7 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="/socket.io/socket.io.js"></script>
+<script src="/static/js/socket.io.min.js"></script>
 <script>
     const el = {
         statusLog: document.getElementById('statusLog'),
@@ -203,6 +202,8 @@
         arduinoHint: document.getElementById('regStatusHint'),
         reader: document.getElementById('regReader'),
         serialPortSelect: document.getElementById('serialPortSelect'),
+        connectBtn: document.getElementById('connectArduinoBtn'),
+        disconnectBtn: document.getElementById('disconnectArduinoBtn'),
         banner: document.getElementById('statusBanner')
     };
     const terminalEvents = [];
@@ -227,6 +228,10 @@
         el.reader.dataset.state = state;
         if (text) el.arduinoState.textContent = text;
         if (hint) el.arduinoHint.textContent = hint;
+        const connected = state === 'connected';
+        el.connectBtn.disabled = connected;
+        el.connectBtn.textContent = connected ? 'Already connected' : 'Connect';
+        el.disconnectBtn.disabled = !connected;
     }
     function setCardActionEnabled(enabled) {
         document.querySelectorAll('.reg-task').forEach(b => { b.disabled = !enabled; });
@@ -267,15 +272,21 @@
     }
 
     async function connectArduino() {
+        if (el.reader.dataset.state === 'connected') {
+            setBanner('info', 'Reader is already connected. Disconnect it before changing ports.');
+            addLog('info', 'Reader is already connected');
+            return;
+        }
         const port = el.serialPortSelect.value;
         if (!port) { alert('Please select a serial port'); return; }
         try {
             const res = await fetch('/api/serial/connect', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ port }) });
             const data = await res.json();
             if (!res.ok || !data.success) { addLog('error', data.error || 'Failed to connect'); return; }
-            setReaderState('connected', `Connected to ${port}`, 'Reader is live — pick a task above.');
+            const connectedPort = data.port || port;
+            setReaderState('connected', `Connected to ${connectedPort}`, data.already_connected ? 'Already connected — pick a task above.' : 'Reader is live — pick a task above.');
             setCardActionEnabled(true);
-            addLog('success', `Connected to ${port}`);
+            addLog(data.already_connected ? 'info' : 'success', data.message || `Connected to ${connectedPort}`);
         } catch { addLog('error', 'Network error while connecting'); }
     }
     async function disconnectArduino() {
@@ -305,32 +316,45 @@
     document.querySelectorAll('[data-close-pane]').forEach(b => b.addEventListener('click', resetWorkspace));
 
     // ---------- Register flow ----------
-    let idCardUID = '', isSubmitting = false, registerCountdownTimer = null, registerSeconds = 60, socket = null;
+    let idCardUID = '', isSubmitting = false, registerRequestInFlight = false, registerReaderArmed = false,
+        registerCountdownTimer = null, registerSeconds = 60, socket = null;
     function setStep(n) {
+        const visualStep = Math.min(n, 2); // Details → Done; the form and success are separate internal stages.
         document.querySelectorAll('#regStepper li').forEach(li => {
             const s = Number(li.dataset.step);
-            li.classList.toggle('is-active', s === n);
-            li.classList.toggle('is-done', s < n);
+            li.classList.toggle('is-active', s === visualStep);
+            li.classList.toggle('is-done', s < visualStep);
         });
         document.querySelectorAll('#paneRegister .reg-step').forEach(p => { p.hidden = Number(p.dataset.step) !== n; });
     }
     function startRegister() {
+        if (registerRequestInFlight || registerReaderArmed) {
+            setBanner('info', 'Card reader is already waiting for an ID card.');
+            addLog('info', 'Registration scan already in progress');
+            return;
+        }
         idCardUID = '';
         document.getElementById('registerForm').reset();
         document.getElementById('idCardUID').value = '';
         clearErr();
         setStep(1);
+        registerRequestInFlight = true;
         try {
             fetch('/api/card/start-register', { method: 'POST' })
                 .then(r => r.json().then(d => ({ ok: r.ok, d })))
                 .then(({ ok, d }) => {
                     if (!ok) { setBanner('err', d.error || 'Failed to start card reader'); return; }
+                    registerReaderArmed = true;
                     setBanner('info', 'Card reader armed — tap the ID card now.');
                     addLog('info', 'Card reader armed — tap the ID card now');
                 })
-                .catch(e => setBanner('err', 'Failed to reach server: ' + e.message));
-        } catch (e) { setBanner('err', 'Failed to reach server: ' + e.message); }
-        registerSeconds = 60;
+                .catch(e => setBanner('err', 'Failed to reach server: ' + e.message))
+                .finally(() => { registerRequestInFlight = false; });
+        } catch (e) {
+            registerRequestInFlight = false;
+            setBanner('err', 'Failed to reach server: ' + e.message);
+        }
+        registerSeconds = 30;
         const c = document.getElementById('registerCountdown');
         const bar = document.getElementById('registerBar');
         c.textContent = `Tap within ${registerSeconds}s`;
@@ -339,8 +363,16 @@
         registerCountdownTimer = setInterval(() => {
             registerSeconds--;
             if (c) c.textContent = registerSeconds > 0 ? `Tap within ${registerSeconds}s` : 'Still waiting — tap the card, or press Cancel';
-            if (bar) bar.style.width = (registerSeconds / 60 * 100) + '%';
-            if (registerSeconds <= 0) { clearInterval(registerCountdownTimer); }
+            if (bar) bar.style.width = (registerSeconds / 30 * 100) + '%';
+            if (registerSeconds <= 0) {
+                clearInterval(registerCountdownTimer);
+                registerReaderArmed = false;
+                // close the armed "tap" prompt and report in the terminal log
+                setStep(1);
+                addLog('error', 'Time ran out — no card detected within 30s');
+                setBanner('err', 'Time ran out. Tap the card again to retry.');
+                fetch('/api/card/cancel', { method: 'POST' }).catch(() => {});
+            }
         }, 1000);
     }
     function clearErr() {
@@ -348,13 +380,15 @@
     }
     document.getElementById('cancelRegisterBtn').addEventListener('click', () => {
         clearInterval(registerCountdownTimer);
+        registerReaderArmed = false;
         fetch('/api/card/cancel', { method: 'POST' }).catch(() => {});
         setBanner('');
         resetWorkspace();
     });
-    document.getElementById('backRegisterBtn').addEventListener('click', () => {
+    document.getElementById('backRegisterBtn').addEventListener('click', async () => {
         clearInterval(registerCountdownTimer);
-        fetch('/api/card/cancel', { method: 'POST' }).catch(() => {});
+        registerReaderArmed = false;
+        await fetch('/api/card/cancel', { method: 'POST' }).catch(() => {});
         startRegister();
     });
     document.getElementById('registerForm').addEventListener('submit', async (e) => {
@@ -367,8 +401,9 @@
         let bad = false;
         if (!studentId) { document.getElementById('errStudentId').textContent = 'Student ID is required'; bad = true; }
         if (!name) { document.getElementById('errStudentName').textContent = 'Full name is required'; bad = true; }
-        if (parentEmail && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(parentEmail)) {
-            document.getElementById('errParentEmail').textContent = 'Enter a valid email or leave blank'; bad = true;
+        if (!parentEmail) { document.getElementById('errParentEmail').textContent = 'Student email is required'; bad = true; }
+        else if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(parentEmail)) {
+            document.getElementById('errParentEmail').textContent = 'Enter a valid email'; bad = true;
         }
         if (bad) return;
         isSubmitting = true;
@@ -436,27 +471,32 @@
                 list.innerHTML = '<div class="panel-sub">No students found with active money cards.</div>';
                 return;
             }
-            list.innerHTML = data.students.map(s => `
-                <div class="list-item" onclick="confirmReportLost('${esc(s.student_id)}', '${esc(s.money_card)}')">
-                    <div><strong>${esc(s.name)}</strong><small>${esc(s.student_id)} • Card: ${esc(s.money_card)}</small></div>
-                    <span class="chip warn">Mark Lost</span>
+            list.innerHTML = data.students.map(s => {
+                const cards = [];
+                if (s.money_card) cards.push({ type: 'money', label: 'Money', num: s.money_card });
+                if (s.id_card) cards.push({ type: 'id', label: 'Student ID', num: s.id_card });
+                const cardBtns = cards.map(c => `<div class="list-item sub" onclick="confirmReportLost('${esc(s.student_id)}', '${c.type}', '${esc(c.num)}')">
+                    <div><strong>${c.label} card</strong><small>${esc(c.num)}</small></div>
+                    <span class="chip warn">Lost</span>
                 </div>`).join('');
+                return `<div class="list-group-item"><div><strong>${esc(s.name)}</strong><small>${esc(s.student_id)}</small></div>${cardBtns}</div>`;
+            }).join('');
         } catch { addLog('error', 'Failed to load students with cards'); }
     }
-    function confirmReportLost(studentId, cardNumber) {
+    function confirmReportLost(studentId, cardType, cardNumber) {
         openModal(
             'Report card as lost?',
-            `Card <code>${esc(cardNumber)}</code> for student <strong>${esc(studentId)}</strong> will be frozen. The balance is kept and moved to the replacement card.`,
+            `The ${cardType === 'id' ? 'student ID' : 'money'} card <code>${esc(cardNumber)}</code> for student <strong>${esc(studentId)}</strong> will be marked inactive. Balance (money card) is kept for the replacement.`,
             'Yes, report lost',
-            () => doReportLost(studentId, cardNumber)
+            () => doReportLost(studentId, cardType, cardNumber)
         );
     }
-    async function doReportLost(studentId, cardNumber) {
+    async function doReportLost(studentId, cardType, cardNumber) {
         try {
-            const res = await fetch('/api/card/report-lost', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ student_id: studentId, card_number: cardNumber }) });
+            const res = await fetch('/api/card/report-lost', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ student_id: studentId, card_type: cardType }) });
             if (res.ok) {
-                setBanner('ok', 'Card reported lost. Balance preserved for replacement.');
-                addLog('success', 'Card reported lost. Balance preserved for replacement.');
+                setBanner('ok', 'Card reported lost. Marked inactive; balance preserved for replacement.');
+                addLog('success', 'Card reported lost. Marked inactive; balance preserved for replacement.');
                 searchStudentsWithCards();
             } else {
                 const d = await res.json().catch(()=>({}));
@@ -516,6 +556,7 @@
         socket = io({ transports: ['polling'], upgrade: false });
         socket.on('status', d => addLog(d.type || 'info', d.message || ''));
         socket.on('id_card_read', d => {
+            registerReaderArmed = false;
             idCardUID = d.uid;
             document.getElementById('idCardUID').value = d.uid;
             addLog('success', `ID Card read: ${d.uid}`);
@@ -537,8 +578,25 @@
             setBanner('ok', d.message || 'Card replaced');
             addLog('success', d.message || 'Card replaced');
         });
-        socket.on('card_error', d => setBanner('err', d.message || 'Card error'));
-        socket.on('card_timeout', d => setBanner('err', d.message || 'Card timeout'));
+        socket.on('card_error', d => {
+            registerReaderArmed = false;
+            setBanner('err', d.message || 'Card error');
+            addLog('error', d.message || 'Card error');
+            // Reset the pane, but never create a second reader request implicitly.
+            // The operator explicitly starts the retry after reading the error.
+            if (idCardUID === '' || document.querySelector('#paneRegister .reg-step[data-step="2"]')?.hidden === false) {
+                idCardUID = '';
+                document.getElementById('idCardUID').value = '';
+                setStep(1);
+            }
+        });
+        socket.on('card_timeout', d => {
+            registerReaderArmed = false;
+            setBanner('err', (d && d.message) || 'Card timeout');
+            addLog('error', 'Time ran out — no card detected');
+            hide('linkArmed');   // close the "tap money card" prompt
+            hide('replaceArmed'); // close the "tap NEW card" prompt
+        });
         socket.on('student_registered', d => {
             document.getElementById('registerSuccessName').textContent = `${d.name} registered`;
         });

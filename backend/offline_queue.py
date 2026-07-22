@@ -1,15 +1,21 @@
+"""Tamper-evident recovery queue for a debit already confirmed by the data store.
+
+This queue never authorizes a new offline payment. It only preserves a missing
+ledger row after the balance debit already succeeded, then retries that ledger
+write when connectivity returns.
 """
-Offline Write Queue — SQLite-backed
-Buffers cashier transactions when Google Sheets is unreachable.
-Syncs automatically on the next successful Sheets operation.
-"""
-import sqlite3
+
+from __future__ import annotations
+
+import hashlib
+import hmac
 import json
-import os
 import logging
+import os
+import sqlite3
 import threading
-import time
 from datetime import datetime
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 try:
@@ -18,191 +24,195 @@ try:
 except ImportError:
     logger = logging.getLogger(__name__)
 
-# DB file sits next to this module
-_DEFAULT_DB_PATH = os.path.join(os.path.dirname(__file__), 'offline_queue.db')
+
+_DEFAULT_DB_PATH = Path(__file__).with_name("offline_queue.db")
+_TRANSACTION_LOG = "Transactions Log"
+_OPERATION = "append_transaction_log"
 
 
 class SQLiteWriteQueue:
-    """
-    Persistent offline queue backed by SQLite.
+    """Persist signed ledger-recovery records until the data store is reachable."""
 
-    Operations are stored as JSON blobs with status 'pending', 'synced', or 'failed'.
-    A background thread attempts to drain the queue whenever connectivity is restored.
+    STATUS_PENDING = "pending"
+    STATUS_SYNCED = "synced"
+    STATUS_FAILED = "failed"
 
-    Usage:
-        queue = get_offline_queue()
-        queue.enqueue('append_row', 'Transactions Log', [...row data...])
-
-        # After Sheets reconnects:
-        synced, failed = queue.process_queue(sheets_client)
-    """
-
-    STATUS_PENDING = 'pending'
-    STATUS_SYNCED  = 'synced'
-    STATUS_FAILED  = 'failed'
-
-    def __init__(self, db_path: str = _DEFAULT_DB_PATH):
-        self.db_path = db_path
+    def __init__(self, db_path: str | Path = _DEFAULT_DB_PATH, *, signing_key: bytes | str | None = None):
+        self.db_path = str(db_path)
         self._lock = threading.Lock()
+        self._signing_key = self._resolve_signing_key(signing_key)
         self._init_db()
+
+    @staticmethod
+    def _resolve_signing_key(signing_key: bytes | str | None) -> bytes:
+        key = signing_key or os.getenv("OFFLINE_QUEUE_SIGNING_KEY") or os.getenv("FLASK_SECRET_KEY")
+        if isinstance(key, str):
+            key = key.encode("utf-8")
+        if not key or len(key) < 16:
+            raise RuntimeError("A strong FLASK_SECRET_KEY or OFFLINE_QUEUE_SIGNING_KEY is required for offline recovery")
+        return key
 
     def _connect(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.db_path, timeout=10)
-        conn.execute('PRAGMA journal_mode=WAL')
-        conn.execute('PRAGMA foreign_keys=ON')
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA foreign_keys=ON")
         conn.row_factory = sqlite3.Row
         return conn
 
     def _init_db(self) -> None:
         with self._connect() as conn:
-            conn.execute('''
+            conn.execute(
+                """
                 CREATE TABLE IF NOT EXISTS write_queue (
-                    id          INTEGER PRIMARY KEY AUTOINCREMENT,
-                    operation   TEXT    NOT NULL,
-                    sheet_name  TEXT    NOT NULL,
-                    data        TEXT    NOT NULL,
-                    status      TEXT    NOT NULL DEFAULT 'pending',
-                    created_at  TEXT    NOT NULL,
-                    synced_at   TEXT,
-                    error_msg   TEXT,
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    operation TEXT NOT NULL,
+                    sheet_name TEXT NOT NULL,
+                    data TEXT NOT NULL,
+                    transaction_id TEXT,
+                    signature TEXT,
+                    status TEXT NOT NULL DEFAULT 'pending',
+                    created_at TEXT NOT NULL,
+                    synced_at TEXT,
+                    error_msg TEXT,
                     retry_count INTEGER NOT NULL DEFAULT 0
                 )
-            ''')
-            conn.commit()
-
-    def enqueue(self, operation: str, sheet_name: str, data: Any) -> int:
-        """
-        Add a write operation to the queue.
-
-        Args:
-            operation:  'append_row' or 'update_cell'
-            sheet_name: Google Sheets worksheet name
-            data:       For append_row: list of values.
-                        For update_cell: {'row': int, 'col': int, 'value': Any}
-
-        Returns:
-            Row ID of the queued item.
-        """
-        ts = datetime.now().isoformat()
-        with self._lock, self._connect() as conn:
-            cur = conn.execute(
-                '''INSERT INTO write_queue (operation, sheet_name, data, status, created_at)
-                   VALUES (?, ?, ?, ?, ?)''',
-                (operation, sheet_name, json.dumps(data), self.STATUS_PENDING, ts)
+                """
             )
-            conn.commit()
-            row_id = cur.lastrowid
-        logger.info("event=queue_enqueue id=%d op=%s sheet=%s", row_id, operation, sheet_name)
-        return row_id
+            columns = {row[1] for row in conn.execute("PRAGMA table_info(write_queue)")}
+            if "transaction_id" not in columns:
+                conn.execute("ALTER TABLE write_queue ADD COLUMN transaction_id TEXT")
+            if "signature" not in columns:
+                conn.execute("ALTER TABLE write_queue ADD COLUMN signature TEXT")
+            conn.execute(
+                "CREATE UNIQUE INDEX IF NOT EXISTS write_queue_transaction_id "
+                "ON write_queue(transaction_id) WHERE transaction_id IS NOT NULL"
+            )
 
-    def get_pending(self) -> List[Dict]:
-        """Return all pending items in insertion order."""
+    def _payload(self, transaction_id: str, row: list[Any]) -> bytes:
+        return json.dumps(
+            {"operation": _OPERATION, "transaction_id": transaction_id, "row": row},
+            separators=(",", ":"),
+            sort_keys=True,
+        ).encode("utf-8")
+
+    def _sign(self, transaction_id: str, row: list[Any]) -> str:
+        return hmac.new(self._signing_key, self._payload(transaction_id, row), hashlib.sha256).hexdigest()
+
+    def enqueue_transaction_log(self, transaction_id: str, row: list[Any]) -> int:
+        """Queue only a completed debit's missing transaction-log row."""
+        transaction_id = str(transaction_id or "").strip()
+        if not transaction_id or not isinstance(row, list) or not row or str(row[0]).strip() != transaction_id:
+            raise ValueError("Offline recovery requires a matching transaction ID and transaction-log row")
+
+        row_json = json.dumps(row, separators=(",", ":"))
+        signature = self._sign(transaction_id, row)
+        with self._lock, self._connect() as conn:
+            existing = conn.execute(
+                "SELECT id FROM write_queue WHERE transaction_id=?", (transaction_id,)
+            ).fetchone()
+            if existing:
+                return int(existing[0])
+            cur = conn.execute(
+                """INSERT INTO write_queue
+                   (operation, sheet_name, data, transaction_id, signature, status, created_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    _OPERATION,
+                    _TRANSACTION_LOG,
+                    row_json,
+                    transaction_id,
+                    signature,
+                    self.STATUS_PENDING,
+                    datetime.now().isoformat(),
+                ),
+            )
+            return int(cur.lastrowid)
+
+    def get_pending(self) -> List[Dict[str, Any]]:
         with self._connect() as conn:
             rows = conn.execute(
-                "SELECT * FROM write_queue WHERE status=? ORDER BY id ASC",
-                (self.STATUS_PENDING,)
+                "SELECT * FROM write_queue WHERE status=? ORDER BY id ASC", (self.STATUS_PENDING,)
             ).fetchall()
-        return [dict(r) for r in rows]
+        return [dict(row) for row in rows]
 
     def get_status(self) -> Dict[str, Any]:
-        """Return queue health summary."""
         with self._connect() as conn:
-            pending = conn.execute(
-                "SELECT COUNT(*) FROM write_queue WHERE status=?", (self.STATUS_PENDING,)
-            ).fetchone()[0]
-            failed = conn.execute(
-                "SELECT COUNT(*) FROM write_queue WHERE status=?", (self.STATUS_FAILED,)
-            ).fetchone()[0]
-            synced = conn.execute(
-                "SELECT COUNT(*) FROM write_queue WHERE status=?", (self.STATUS_SYNCED,)
-            ).fetchone()[0]
-            last_sync_row = conn.execute(
+            counts = {
+                status: conn.execute(
+                    "SELECT COUNT(*) FROM write_queue WHERE status=?", (status,)
+                ).fetchone()[0]
+                for status in (self.STATUS_PENDING, self.STATUS_FAILED, self.STATUS_SYNCED)
+            }
+            last_sync = conn.execute(
                 "SELECT synced_at FROM write_queue WHERE status=? ORDER BY id DESC LIMIT 1",
-                (self.STATUS_SYNCED,)
+                (self.STATUS_SYNCED,),
             ).fetchone()
         return {
-            'pending': pending,
-            'failed': failed,
-            'synced': synced,
-            'last_sync_at': last_sync_row[0] if last_sync_row else None,
-            'db_path': self.db_path,
+            "pending": counts[self.STATUS_PENDING],
+            "failed": counts[self.STATUS_FAILED],
+            "synced": counts[self.STATUS_SYNCED],
+            "last_sync_at": last_sync[0] if last_sync else None,
         }
 
-    def process_queue(self, sheets_client) -> tuple:
-        """
-        Drain the pending queue using the provided Google Sheets client.
+    def _mark(self, item_id: int, status: str, *, error: str = "", synced: bool = False) -> None:
+        with self._lock, self._connect() as conn:
+            conn.execute(
+                """UPDATE write_queue
+                   SET status=?, synced_at=?, error_msg=?, retry_count=retry_count+1
+                   WHERE id=?""",
+                (status, datetime.now().isoformat() if synced else None, error[:500] or None, item_id),
+            )
 
-        Returns:
-            (synced_count, failed_count)
-        """
-        pending = self.get_pending()
-        if not pending:
-            return 0, 0
+    def _verify(self, item: Dict[str, Any]) -> list[Any] | None:
+        if item.get("operation") != _OPERATION or item.get("sheet_name") != _TRANSACTION_LOG:
+            return None
+        try:
+            row = json.loads(item["data"])
+        except (TypeError, json.JSONDecodeError):
+            return None
+        transaction_id = str(item.get("transaction_id") or "").strip()
+        signature = str(item.get("signature") or "")
+        if not transaction_id or not isinstance(row, list) or not row or str(row[0]).strip() != transaction_id:
+            return None
+        return row if hmac.compare_digest(signature, self._sign(transaction_id, row)) else None
 
-        synced = 0
-        failed = 0
-
-        for item in pending:
-            success = self._execute_item(sheets_client, item)
-            ts = datetime.now().isoformat()
-            status = self.STATUS_SYNCED if success else self.STATUS_FAILED
-            with self._lock, self._connect() as conn:
-                conn.execute(
-                    '''UPDATE write_queue
-                       SET status=?, synced_at=?, retry_count=retry_count+1
-                       WHERE id=?''',
-                    (status, ts, item['id'])
-                )
-                conn.commit()
-            if success:
-                synced += 1
-                logger.info("event=queue_synced id=%d", item['id'])
-            else:
+    def process_queue(self, sheets_client) -> tuple[int, int]:
+        """Retry signed recovery rows; transient errors stay pending for the next poll."""
+        synced = failed = 0
+        for item in self.get_pending():
+            row = self._verify(item)
+            if row is None:
+                self._mark(item["id"], self.STATUS_FAILED, error="Integrity check failed")
                 failed += 1
-                logger.warning("event=queue_sync_failed id=%d", item['id'])
-
+                logger.error("event=queue_rejected id=%s reason=integrity_check_failed", item["id"])
+                continue
+            try:
+                worksheet = sheets_client.worksheet(_TRANSACTION_LOG)
+                transaction_id = item["transaction_id"]
+                existing = worksheet.get_all_records()
+                if not any(str(record.get("TransactionID", "")).strip() == transaction_id for record in existing):
+                    worksheet.append_row(row)
+                self._mark(item["id"], self.STATUS_SYNCED, synced=True)
+                synced += 1
+            except Exception as exc:
+                self._mark(item["id"], self.STATUS_PENDING, error=str(exc))
+                failed += 1
+                logger.warning("event=queue_sync_deferred id=%s error=%s", item["id"], exc)
         return synced, failed
 
-    def _execute_item(self, sheets_client, item: Dict) -> bool:
-        try:
-            data = json.loads(item['data'])
-            ws = sheets_client.worksheet(item['sheet_name'])
-            if item['operation'] == 'append_row':
-                ws.append_row(data)
-            elif item['operation'] == 'update_cell':
-                ws.update_cell(data['row'], data['col'], data['value'])
-            else:
-                logger.warning("event=queue_unknown_op op=%s", item['operation'])
-                return False
-            return True
-        except Exception as e:
-            with self._lock, self._connect() as conn:
-                conn.execute(
-                    "UPDATE write_queue SET error_msg=? WHERE id=?",
-                    (str(e)[:500], item['id'])
-                )
-                conn.commit()
-            logger.warning("event=queue_exec_failed id=%d error=%s", item['id'], e)
-            return False
-
     def clear_synced(self) -> int:
-        """Delete synced records older than 7 days to keep DB small."""
         cutoff = datetime.now().replace(hour=0, minute=0).isoformat()
         with self._lock, self._connect() as conn:
             cur = conn.execute(
-                "DELETE FROM write_queue WHERE status=? AND synced_at < ?",
-                (self.STATUS_SYNCED, cutoff)
+                "DELETE FROM write_queue WHERE status=? AND synced_at < ?", (self.STATUS_SYNCED, cutoff)
             )
-            conn.commit()
-        return cur.rowcount
+            return cur.rowcount
 
 
-# Singleton
 _offline_queue: Optional[SQLiteWriteQueue] = None
 
 
-def get_offline_queue(db_path: str = _DEFAULT_DB_PATH) -> SQLiteWriteQueue:
-    """Get or create the SQLiteWriteQueue singleton."""
+def get_offline_queue(db_path: str | Path = _DEFAULT_DB_PATH) -> SQLiteWriteQueue:
     global _offline_queue
     if _offline_queue is None:
         _offline_queue = SQLiteWriteQueue(db_path)

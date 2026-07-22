@@ -438,7 +438,7 @@ async function createAccount() {
             ['newUsername', 'newPassword', 'confirmPassword', 'newDisplayName'].forEach(id => document.getElementById(id).value = '');
             updatePasswordRules();
             await loadAccounts();
-            showAccountToast(`Invitation email sent to ${username}.`);
+            showAccountToast(`${username} is ready to sign in.`);
         } else {
             alert(data.error || 'Failed to create account');
         }

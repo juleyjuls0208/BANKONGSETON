@@ -423,6 +423,7 @@ void setup() {
 
   // 2. Piezo — pinMode required before tone() on UNO R4
   pinMode(PIEZO_PIN, OUTPUT);
+  tone(PIEZO_PIN, 660, 120); delay(150); tone(PIEZO_PIN, 660, 120);  // restart beep
 
   // 3. Wire.begin() for I2C bus — BEFORE RC522 check so OLED can show error messages
   Wire.begin();
@@ -446,6 +447,7 @@ void setup() {
   byte ver = rfid.PCD_ReadRegister(MFRC522::VersionReg);
   if (ver == 0x00 || ver == 0xFF) {
     Serial.println("ERROR: RC522 not found — check SPI wiring (SS=D10, RST=D9)");
+    tone(PIEZO_PIN, 220, 350);  // audible fault tone
     if (oledOk) {
       display.clearDisplay();
       display.setTextSize(1);

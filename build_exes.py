@@ -22,6 +22,7 @@ Usage:
 
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 import sys
@@ -40,8 +41,8 @@ TARGETS = {
     "cashier_app": {
         "entry": ROOT / "backend" / "cashier_app" / "app.py",
         "templates": ROOT / "backend" / "cashier_app" / "templates",
-        "static": None,
-        "hidden": ["cashier_routes"],
+        "static": ROOT / "backend" / "cashier_app" / "static",
+        "hidden": ["cashier_routes", "dashboard.arduino_bridge"],
     },
     "registration_app": {
         "entry": ROOT / "backend" / "dashboard" / "registration_app.py",
@@ -57,7 +58,10 @@ def build_one(name: str, cfg: dict) -> Path:
     entry_dir = cfg["entry"].parent
     cmd = [
         str(VENV_PY), "-m", "PyInstaller",
-        "--noconfirm", "--onedir", "--name", name,
+        "--noconfirm", "--clean", "--onedir", "--name", name,
+        "--distpath", str(ROOT / "dist"),
+        "--workpath", str(ROOT / "build"),
+        "--specpath", str(ROOT / "build" / "specs"),
         # backend/ is on sys.path in dev; the entry's own dir is where its
         # sibling modules live (cashier_routes, dashboard_core, ...). Frozen,
         # __file__ sits at dist/<name>/<name>.exe so the app's own sys.path
@@ -76,12 +80,20 @@ def build_one(name: str, cfg: dict) -> Path:
     ]
     for mod in cfg["hidden"]:
         cmd += ["--hidden-import", mod]
+    for asset_name in ("templates", "static"):
+        asset_path = cfg.get(asset_name)
+        if asset_path and asset_path.exists():
+            cmd += ["--add-data", f"{asset_path}{os.pathsep}{asset_name}"]
     cmd.append(str(cfg["entry"]))
     print(f"\n=== building {name} ===", flush=True)
     subprocess.run(cmd, check=True)
 
     # --- drop runtime assets next to the exe so Flask path logic holds ---
     exe_dir = out_dir  # onedir: <name>.exe sits directly in dist/<name>/
+    # Flask resolves static files beside the frozen EXE, not from PyInstaller's
+    # _internal data folder. Keep the browser-served copy there.
+    if cfg.get("static") and cfg["static"].exists():
+        shutil.copytree(cfg["static"], exe_dir / "static", dirs_exist_ok=True)
     if ENV_SRC.exists():
         shutil.copy2(ENV_SRC, exe_dir / ".env")
     if CRED_SRC.exists():
@@ -94,18 +106,15 @@ def build_one(name: str, cfg: dict) -> Path:
                      exe_dir / "config" / "credentials.json"):
             dest.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(CRED_SRC, dest)
-    if cfg["templates"].exists():
-        shutil.copytree(cfg["templates"], exe_dir / "templates", dirs_exist_ok=True)
-    if cfg["static"] and cfg["static"].exists():
-        shutil.copytree(cfg["static"], exe_dir / "static", dirs_exist_ok=True)
 
     # --- click-to-run wrapper that launches the exe and opens the browser ---
     port = "5010" if name == "cashier_app" else "5004"
     bat = exe_dir / f"Start {name.split('_')[0].capitalize()}.bat"
     bat.write_text(
         "@echo off\n"
-        f'start "" "{name}.exe"\n'
-        f"timeout /t 3 >nul\n"
+        "cd /d \"%~dp0\"\n"
+        f'start "" /b "{name}.exe"\n'
+        "timeout /t 3 /nobreak\n"
         f'start "" "http://localhost:{port}/"\n',
         encoding="utf-8",
     )
@@ -114,7 +123,8 @@ def build_one(name: str, cfg: dict) -> Path:
 
 
 def main() -> int:
-    wanted = sys.argv[1:]
+    aliases = {"cashier": "cashier_app", "registration": "registration_app"}
+    wanted = [aliases.get(arg, arg) for arg in sys.argv[1:]]
     names = [n for n in TARGETS if n in wanted] if wanted else list(TARGETS)
     for name in names:
         build_one(name, TARGETS[name])

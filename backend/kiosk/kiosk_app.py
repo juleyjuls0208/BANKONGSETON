@@ -28,8 +28,11 @@ from __future__ import annotations
 import logging
 import os
 import re
+import secrets
 import threading
+import time
 from functools import wraps
+from math import isfinite
 
 import jwt as _pyjwt
 from dotenv import load_dotenv
@@ -71,12 +74,14 @@ except Exception as _imp_err:  # pragma: no cover
     logger.warning("event=kiosk_hardware_import_failed error=%s", _imp_err)
     _HARDWARE_OK = False
 
-    def normalize_card_uid(uid):
-        return str(uid or "").strip().upper()
-
     class _NoOp:
         pass
     ArduinoBridge = _NoOp
+
+
+def normalize_card_uid(uid):
+    """Canonicalize a UID without destroying significant leading zeroes."""
+    return str(uid or "").strip().upper()
 
 
 # --- Startup guards (mirror dashboard) -------------------------------------
@@ -87,13 +92,15 @@ if not _secret_key or _secret_key == _INSECURE_DEFAULT:
     raise SystemExit(1)
 
 _jwt_secret = os.getenv("JWT_SECRET", "").strip()
-_JWT_INSECURE = "bangko-jwt-secret-2026"
-if not _jwt_secret or _jwt_secret == _JWT_INSECURE:
+if not _jwt_secret or (_jwt_secret.lower().startswith("bangko-") and "secret-" in _jwt_secret.lower()):
     logger.critical("event=startup_aborted reason=insecure_jwt_secret")
     raise SystemExit(1)
 
-# Kiosk unlock PIN (prevents students from poking the operator settings).
-KIOSK_UNLOCK_PIN = os.getenv("KIOSK_UNLOCK_PIN", "1234").strip()
+# Kiosk unlock PIN (prevents students from poking operator-only actions).
+KIOSK_UNLOCK_PIN = os.getenv("KIOSK_UNLOCK_PIN", "").strip()
+if not KIOSK_UNLOCK_PIN or KIOSK_UNLOCK_PIN == "1234" or not KIOSK_UNLOCK_PIN.isdigit() or len(KIOSK_UNLOCK_PIN) < 6:
+    logger.critical("event=startup_aborted reason=insecure_kiosk_unlock_pin")
+    raise SystemExit(1)
 # Shared secret for local cardless top-up token minting (api_server -> kiosk).
 KIOSK_TOPUP_SECRET = (os.getenv("KIOSK_TOPUP_SECRET", "").strip()
                       or _jwt_secret)
@@ -109,6 +116,12 @@ socketio = SocketIO(app, cors_allowed_origins=_origins, async_mode="threading")
 
 # Process-local cardless top-up session store.
 topup_sessions = TopupSessionStore(ttl_seconds=int(os.getenv("KIOSK_QR_TTL", "120")))
+_pending_topups: dict[str, dict] = {}
+_completed_topups: dict[str, dict] = {}
+_pending_topups_lock = threading.Lock()
+_PENDING_TOPUP_TTL = int(os.getenv("KIOSK_TOPUP_PENDING_TTL", "120"))
+_unlock_attempts: dict[str, list[float]] = {}
+_unlock_attempts_lock = threading.Lock()
 
 app.arduino_bridge = None
 
@@ -119,6 +132,57 @@ app.arduino_bridge = None
 
 def kiosk_unlocked():
     return session.get("kiosk_unlocked") is True
+
+
+def require_kiosk_unlock(f):
+    @wraps(f)
+    def _wrapped(*args, **kwargs):
+        if not kiosk_unlocked():
+            return jsonify({"error": "Kiosk locked. Enter unlock PIN."}), 403
+        return f(*args, **kwargs)
+    return _wrapped
+
+
+def _new_pending_topup(student: dict, payment_method: str) -> dict:
+    token = secrets.token_urlsafe(24)
+    now = time.time()
+    pending = {
+        "token": token,
+        "student_id": str(student.get("student_id", "")).strip(),
+        "money_card": normalize_card_uid(student.get("money_card", "")),
+        "payment_method": payment_method,
+        "created_at": now,
+        "expires_at": now + _PENDING_TOPUP_TTL,
+        "amount": None,
+        "result": None,
+    }
+    with _pending_topups_lock:
+        for key, value in list(_completed_topups.items()):
+            if value["expires_at"] <= now:
+                _completed_topups.pop(key, None)
+        for key, value in list(_pending_topups.items()):
+            if value["expires_at"] <= now:
+                _pending_topups.pop(key, None)
+        _pending_topups[token] = pending
+    return pending
+
+
+def _get_pending_topup(token: str) -> dict | None:
+    with _pending_topups_lock:
+        pending = _pending_topups.get(token)
+        if not pending or pending["expires_at"] <= time.time():
+            _pending_topups.pop(token, None)
+            return None
+        return pending
+
+
+def _allowed_amounts() -> set[float]:
+    raw = os.getenv("KIOSK_DENOMINATIONS", "20,50,100,200,500,1000")
+    try:
+        values = {float(item.strip()) for item in raw.split(",") if item.strip()}
+    except (TypeError, ValueError):
+        return {20.0, 50.0, 100.0, 200.0, 500.0, 1000.0}
+    return {value for value in values if isfinite(value) and value > 0}
 
 
 def _decode_student_jwt(token: str) -> dict | None:
@@ -143,7 +207,7 @@ def connect_arduino(port: str, baud: int = 9600):
         return False, f"pyserial unavailable: {e}"
     try:
         ser = serial.Serial(port, baud, timeout=1)
-        card_reader_state.set("arduino", ser)
+        app.card_reader_state = ser
         bridge = ArduinoBridge(ser, socketio)
         app.arduino_bridge = bridge
         bridge.start_background_listener()
@@ -179,7 +243,17 @@ def unlock():
     """Operator unlocks settings with the kiosk PIN."""
     data = request.get_json(silent=True) or {}
     pin = str(data.get("pin", "")).strip()
+    now = time.time()
+    source = request.remote_addr or "unknown"
+    with _unlock_attempts_lock:
+        attempts = [stamp for stamp in _unlock_attempts.get(source, []) if now - stamp < 60]
+        if len(attempts) >= 5:
+            return jsonify({"success": False, "error": "Too many attempts. Try again later."}), 429
+        attempts.append(now)
+        _unlock_attempts[source] = attempts
     if pin == KIOSK_UNLOCK_PIN:
+        with _unlock_attempts_lock:
+            _unlock_attempts.pop(source, None)
         session["kiosk_unlocked"] = True
         return jsonify({"success": True})
     return jsonify({"success": False, "error": "Invalid PIN"}), 401
@@ -197,6 +271,7 @@ def serial_connect():
 
 
 @app.route("/api/kiosk/topup/card-scan", methods=["POST"])
+@require_kiosk_unlock
 def topup_card_scan():
     """Identify the student by a tapped money-card UID (from RFID reader)."""
     data = request.get_json(silent=True) or {}
@@ -212,10 +287,12 @@ def topup_card_scan():
         return jsonify({"error": "Lookup failed"}), 500
     if not res.get("success"):
         return jsonify({"success": False, "error": res.get("error", "Not found")}), res.get("status", 404)
-    return jsonify({"success": True, "student": res})
+    pending = _new_pending_topup(res, "cash")
+    return jsonify({"success": True, "student": res, "pending_id": pending["token"]})
 
 
 @app.route("/api/kiosk/topup/qr-scan", methods=["POST"])
+@require_kiosk_unlock
 def topup_qr_scan():
     """Cardless top-up: decode the student's app QR (a signed JWT)."""
     data = request.get_json(silent=True) or {}
@@ -245,10 +322,12 @@ def topup_qr_scan():
         return jsonify({"error": "Lookup failed"}), 500
     if not res.get("success"):
         return jsonify({"success": False, "error": res.get("error", "Not found")}), res.get("status", 404)
-    return jsonify({"success": True, "student": res, "cardless": True})
+    pending = _new_pending_topup(res, "cardless_qr")
+    return jsonify({"success": True, "student": res, "cardless": True, "pending_id": pending["token"]})
 
 
 @app.route("/api/kiosk/topup/student-lookup", methods=["POST"])
+@require_kiosk_unlock
 def topup_student_lookup():
     """Staff-assisted: look up by Student ID (no card / no phone needed)."""
     data = request.get_json(silent=True) or {}
@@ -263,10 +342,31 @@ def topup_student_lookup():
         return jsonify({"error": "Lookup failed"}), 500
     if not res.get("success"):
         return jsonify({"success": False, "error": res.get("error", "Not found")}), res.get("status", 404)
-    return jsonify({"success": True, "student": res})
+    pending = _new_pending_topup(res, "cash")
+    return jsonify({"success": True, "student": res, "pending_id": pending["token"]})
+
+
+@app.route("/api/kiosk/topup/cash-accept", methods=["POST"])
+@require_kiosk_unlock
+def topup_cash_accept():
+    """Record accepted cash before the balance mutation."""
+    data = request.get_json(silent=True) or {}
+    pending = _get_pending_topup(str(data.get("pending_id", "")).strip())
+    if not pending:
+        return jsonify({"success": False, "error": "Invalid or expired pending top-up"}), 400
+    try:
+        amount = float(data.get("amount"))
+    except (TypeError, ValueError):
+        return jsonify({"success": False, "error": "Invalid amount"}), 400
+    if not isfinite(amount) or amount <= 0 or amount not in _allowed_amounts():
+        return jsonify({"success": False, "error": "Amount is not an allowed denomination"}), 400
+    with _pending_topups_lock:
+        pending["amount"] = amount
+    return jsonify({"success": True, "pending_id": pending["token"], "amount": amount})
 
 
 @app.route("/api/kiosk/topup/confirm", methods=["POST"])
+@require_kiosk_unlock
 def topup_confirm():
     """Final step: credit the student's card. Amount comes from cash collected.
 
@@ -275,17 +375,19 @@ def topup_confirm():
                       'cardless_qr' (student scanned app QR).
     """
     data = request.get_json(silent=True) or {}
-    student_id = str(data.get("student_id", "")).strip()
-    try:
-        amount = float(data.get("amount", 0))
-    except (TypeError, ValueError):
-        return jsonify({"success": False, "error": "Invalid amount"}), 400
-    payment_method = data.get("payment_method", "cash")
-
-    if amount <= 0:
-        return jsonify({"success": False, "error": "Amount must be positive"}), 400
-    if not student_id:
-        return jsonify({"success": False, "error": "student_id required"}), 400
+    pending_id = str(data.get("pending_id", "")).strip()
+    with _pending_topups_lock:
+        completed = _completed_topups.get(pending_id)
+    if completed:
+        return jsonify({"success": True, **completed["result"]})
+    pending = _get_pending_topup(pending_id)
+    if not pending:
+        return jsonify({"success": False, "error": "Invalid or expired pending top-up"}), 400
+    if pending.get("amount") is None:
+        return jsonify({"success": False, "error": "Cash has not been accepted"}), 400
+    student_id = pending["student_id"]
+    amount = pending["amount"]
+    payment_method = pending["payment_method"]
 
     try:
         result = load_money(
@@ -294,6 +396,7 @@ def topup_confirm():
             payment_method=payment_method,
             processed_by="kiosk",
             station_id=STATION_KIOSK,
+            idempotency_key=pending["token"],
         )
     except (APIError, SpreadsheetNotFound, WorksheetNotFound, ConnectionError, TimeoutError):
         return jsonify({"error": "Service unavailable, please retry"}), 503
@@ -309,10 +412,14 @@ def topup_confirm():
         "new_balance": result["new_balance"],
         "amount": amount,
     })
+    with _pending_topups_lock:
+        _pending_topups.pop(pending_id, None)
+        _completed_topups[pending_id] = {"result": dict(result), "expires_at": time.time() + _PENDING_TOPUP_TTL}
     return jsonify({"success": True, **result})
 
 
 @app.route("/api/kiosk/denominations", methods=["GET"])
+@require_kiosk_unlock
 def denominations():
     """Preset cash denominations offered on the touch screen."""
     try:
@@ -331,6 +438,7 @@ def index():
 
 # Optional serial ingestion of bill-validator pulses (Arduino -> `BILL|<amount>`).
 @app.route("/api/kiosk/hardware/bill", methods=["POST"])
+@require_kiosk_unlock
 def hardware_bill():
     """Operator/hardware posts a bill-validator pulse: { amount }.
 
@@ -342,6 +450,8 @@ def hardware_bill():
         amount = float(data.get("amount", 0))
     except (TypeError, ValueError):
         return jsonify({"success": False, "error": "Invalid amount"}), 400
+    if not isfinite(amount) or amount <= 0 or amount not in _allowed_amounts():
+        return jsonify({"success": False, "error": "Amount is not an allowed denomination"}), 400
     socketio.emit("bill_inserted", {"amount": amount})
     return jsonify({"success": True, "amount": amount})
 

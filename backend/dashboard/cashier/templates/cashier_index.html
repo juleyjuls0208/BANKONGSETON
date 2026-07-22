@@ -84,8 +84,6 @@
 
         .status-strip .ok { color: var(--success); }
 
-        .status-strip .sync { color: #5f5b75; }
-
         .status-chip {
             display: inline-flex;
             align-items: center;
@@ -106,79 +104,9 @@
         .terminal {
             height: calc(100vh - 70px);
             display: grid;
-            grid-template-columns: 260px minmax(0, 1fr) 360px;
+            grid-template-columns: minmax(0, 1fr) 360px;
         }
 
-        .sidebar {
-            border-right: 1px solid var(--line);
-            background: #f2effa;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-        }
-
-        .sidebar-top {
-            padding: 1.1rem 0.9rem;
-        }
-
-        .terminal-meta {
-            padding: 0 0.55rem 0.8rem;
-        }
-
-        .terminal-meta p {
-            margin: 0;
-            color: var(--muted);
-            font-size: 0.73rem;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-            font-weight: 800;
-        }
-
-        .terminal-meta h3 {
-            margin: 0.2rem 0 0;
-            color: #26223a;
-            font-size: 1.4rem;
-        }
-
-        .nav-link {
-            width: 100%;
-            height: 52px;
-            display: flex;
-            align-items: center;
-            gap: 0.7rem;
-            border-radius: 11px;
-            padding: 0 0.85rem;
-            color: #3f3b55;
-            text-decoration: none;
-            font-size: 1.05rem;
-            font-weight: 600;
-            border: 1px solid transparent;
-            margin-bottom: 0.28rem;
-        }
-
-        .nav-link.active {
-            background: #fff;
-            color: #3525cd;
-            border-color: #d8d2e7;
-            box-shadow: 0 6px 18px rgba(46, 33, 165, 0.08);
-        }
-
-        .sidebar-bottom {
-            padding: 1rem;
-            border-top: 1px solid var(--line);
-        }
-
-        .close-shift-btn {
-            width: 100%;
-            min-height: 50px;
-            border: 0;
-            border-radius: 12px;
-            background: #101a39;
-            color: #fff;
-            font-weight: 800;
-            font-size: 1rem;
-            cursor: pointer;
-        }
 
         .products-pane {
             padding: 1.25rem;
@@ -244,42 +172,7 @@
             padding: 0.2rem 0.45rem;
         }
 
-        .scanner-wrap {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-end;
-            gap: 0.3rem;
-            min-width: 220px;
-        }
-
-        #scannerPill {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.4rem;
-            border-radius: 999px;
-            border: 1px solid #a6e0be;
-            background: #dff6e9;
-            color: #1a8951;
-            font-size: 0.73rem;
-            letter-spacing: 0.06em;
-            font-weight: 800;
-            padding: 0.32rem 0.72rem;
-            text-transform: uppercase;
-        }
-
-        #scannerPill.disconnected {
-            border-color: #ecb2b2;
-            background: #ffd9d9;
-            color: #a01d1d;
-        }
-
-        #scannerMeta {
-            color: #67637d;
-            font-size: 0.82rem;
-            font-weight: 600;
-        }
-
-        .categories {
+                .categories {
             display: flex;
             gap: 0.5rem;
             overflow-x: auto;
@@ -340,18 +233,6 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
-        }
-
-        .qty-chip {
-            position: absolute;
-            top: 0.4rem;
-            right: 0.4rem;
-            border-radius: 8px;
-            background: rgba(255, 255, 255, 0.95);
-            border: 1px solid #d8d2e7;
-            font-size: 0.71rem;
-            font-weight: 800;
-            padding: 0.22rem 0.45rem;
         }
 
         .product-name {
@@ -419,23 +300,6 @@
             font-size: 0.85rem;
         }
 
-        .student-balance {
-            margin-top: 0.7rem;
-            border-radius: 12px;
-            background: #ece8f6;
-            border: 1px solid #ddd7eb;
-            padding: 0.7rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-weight: 700;
-        }
-
-        .student-balance strong {
-            color: #251f65;
-            font-size: 1.2rem;
-            letter-spacing: 0.02em;
-        }
 
         .cart-items {
             flex: 1;
@@ -574,33 +438,7 @@
             padding: 0.9rem 1rem;
         }
 
-        .cart-actions {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 0.6rem;
-            margin-bottom: 0.8rem;
-        }
 
-        .cart-actions button {
-            min-height: 44px;
-            border-radius: 10px;
-            font-weight: 800;
-            cursor: pointer;
-            border: 1px solid #d8d2e7;
-            background: #fff;
-            color: #252238;
-        }
-
-        #voidBtn {
-            border-color: #e79f9f;
-            color: var(--error);
-        }
-
-        #voidBtn.armed {
-            background: var(--error);
-            color: #fff;
-            border-color: var(--error);
-        }
 
         .totals {
             border-top: 1px dashed #d8d2e7;
@@ -611,28 +449,22 @@
             margin-bottom: 0.8rem;
         }
 
-        .totals-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-weight: 700;
-        }
 
-        .total-ledger {
+        .total {
             display: flex;
             justify-content: space-between;
             align-items: baseline;
             margin-top: 0.25rem;
         }
 
-        .total-ledger .label {
-            font-family: 'Instrument Serif', serif;
-            font-style: italic;
-            font-size: 2rem;
+        .total .label {
+            font-family: 'Inter', sans-serif;
+            font-size: 1.15rem;
+            font-weight: 800;
             color: #27225e;
         }
 
-        .total-ledger .value {
+        .total .value {
             color: #3525cd;
             font-size: 2.25rem;
             font-weight: 900;
@@ -795,75 +627,54 @@
             color: #26223a;
         }
 
+
+        .management-pane { grid-column:1 / 3; padding:1.25rem; overflow:auto; background:#f7f5fc; }
+        .management-head { display:flex; align-items:center; justify-content:space-between; gap:1rem; margin-bottom:1rem; }
+        .management-head h2 { margin:0; }
+        .management-table { width:100%; border-collapse:collapse; background:#fff; border:1px solid #ddd7eb; border-radius:12px; overflow:hidden; }
+        .management-table th,.management-table td { padding:.75rem; border-bottom:1px solid #ebe7f3; text-align:left; }
+        .management-table th { font-size:.78rem; color:#6d6881; text-transform:uppercase; letter-spacing:.04em; }
+        .manage-btn { border:1px solid #d8d2e7; border-radius:8px; padding:.45rem .65rem; background:#fff; font-weight:700; cursor:pointer; }
+        .manage-btn.primary { background:#3525cd; border-color:#3525cd; color:#fff; }
+        .manage-btn.danger { color:#b42318; border-color:#f0b4ae; }
+        .product-form { display:grid; gap:.75rem; }
+        .product-form label { display:grid; gap:.3rem; font-weight:700; }
+        .product-form input { min-height:42px; border:1px solid #d8d2e7; border-radius:9px; padding:0 .7rem; }
+
+        [hidden] { display: none !important; }
+
         @media (max-width: 1440px) {
             .terminal {
-                grid-template-columns: 220px minmax(0, 1fr) 340px;
+                grid-template-columns: minmax(0, 1fr) 340px;
             }
 
             .products-grid {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
             }
         }
-    /* Animations */
-@keyframes fade-in-up { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes slide-in-right { from { opacity: 0; transform: translateX(-30px); } to { opacity: 1; transform: translateX(0); } }
-@keyframes pulse-ring { 0% { box-shadow: 0 0 0 0 rgba(53, 37, 205, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(53, 37, 205, 0); } 100% { box-shadow: 0 0 0 0 rgba(53, 37, 205, 0); } }
-
-.product-card { transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); }
-.product-card:hover { transform: translateY(-4px) scale(1.02); box-shadow: 0 8px 24px rgba(0,0,0,0.08); border-color: var(--primary-soft); }
-.product-card:active { transform: scale(0.98); }
-
-.cart-item { animation: slide-in-right 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-.category-btn { transition: all 0.2s ease; }
-.category-btn:hover { transform: translateY(-2px); }
-
-#checkout-btn { transition: all 0.2s ease; }
-#checkout-btn:not(:disabled):hover { transform: translateY(-2px); filter: brightness(1.1); box-shadow: 0 4px 12px rgba(53, 37, 205, 0.3); }
-
-.main-layout { animation: fade-in-up 0.5s ease-out; }
-</style>
-<link rel="stylesheet" href="/static/css/animations.css">
+    </style>
 </head>
 <body>
 <header class="topbar">
     <div class="brand">
         <h1>Canteen Ledger</h1>
-        <div class="cashier-id"><i class="bi bi-person-circle"></i> Cashier #042</div>
+        <div class="cashier-id"><i class="bi bi-person-circle"></i> {{ user.display_name or user.username or 'Cashier' }}</div>
     </div>
     <div style="display:flex;align-items:center;gap:0.9rem;">
         <div class="status-strip">
-            <span class="status-chip ok"><i class="bi bi-usb-symbol"></i>SERIAL</span>
-            <span class="status-chip ok"><i class="bi bi-wifi"></i>WIFI</span>
-            <span class="status-chip sync"><i class="bi bi-arrow-repeat"></i>SYNC (<span id="syncCount">0</span>)</span>
+            <span class="status-chip" id="wifiBadge" style="color:#9b5c0b;"><i class="bi bi-wifi"></i>WIFI</span>
         </div>
         <select id="portSelector" style="height:36px;border-radius:8px;border:1px solid #d8d2e7;background:#fff;padding:0 0.6rem;min-width:120px;">
             <option value="">COM Port</option>
         </select>
         <button id="connectBtn" style="height:36px;border-radius:8px;border:1px solid #d8d2e7;background:#ece8f6;font-weight:700;padding:0 0.75rem;">Connect</button>
-        <span id="wifiBadge" style="font-size:0.75rem;font-weight:800;color:#9b5c0b;">OFFLINE</span>
         <button class="icon-circle" onclick="logout()"><i class="bi bi-box-arrow-right"></i></button>
     </div>
 </header>
 
 <div class="terminal">
-    <aside class="sidebar">
-        <div class="sidebar-top">
-            <div class="terminal-meta">
-                <p>Terminal</p>
-                <h3>Station 04</h3>
-            </div>
-            <a href="#" class="nav-link active"><i class="bi bi-shop"></i>Register</a>
-            <a href="#" class="nav-link"><i class="bi bi-clock-history"></i>History</a>
-            <a href="#" class="nav-link"><i class="bi bi-box-seam"></i>Inventory</a>
-            <a href="#" class="nav-link"><i class="bi bi-people"></i>Students</a>
-            <a href="#" class="nav-link"><i class="bi bi-gear"></i>Settings</a>
-        </div>
-        <div class="sidebar-bottom">
-            <button class="close-shift-btn" onclick="openCloseShiftModal()">Close Shift</button>
-        </div>
-    </aside>
 
-    <main class="products-pane">
+    <main class="products-pane" id="registerProductsPane">
         <div id="offlineBanner"></div>
 
         <div class="search-row">
@@ -872,9 +683,7 @@
                 <input id="searchBar" type="text" placeholder="Search products or scan barcode...">
                 <span class="esc">ESC</span>
             </div>
-            <div class="scanner-wrap">
-                <div id="scannerPill"><span style="width:8px;height:8px;border-radius:999px;background:#1a8951;"></span>SCANNER: READY</div>
-                <div id="scannerMeta">Last scanned: —</div>
+
                 <button class="icon-circle" title="View mode" onclick="document.querySelector('.products-grid').classList.toggle('list-view')"><i class="bi bi-grid-3x3-gap-fill"></i></button>
             </div>
         </div>
@@ -882,23 +691,18 @@
         <div class="categories" id="categories"></div>
 
         <div class="products-grid" id="productsGrid">
-            <div class="product-card" style="animation: fade-in-up 0.4s ease-out backwards;">Loading products...</div>
+            <div class="product-card">Loading products...</div>
         </div>
     </main>
 
-    <aside class="cart-pane">
+    <aside class="cart-pane" id="registerCartPane">
         <div class="student-card">
             <div class="student-row">
                 <div class="student-avatar"><i class="bi bi-person-fill"></i></div>
-                <div style="flex:1;min-width:0;">
-                    <h4 class="student-title">Gabriel Santos</h4>
-                    <p class="student-id">ID #2024-0012</p>
+                <div>
+                    <h4 class="student-title">{{ user.display_name or user.username or 'Cashier' }}</h4>
+                    <p class="student-id">ID: {{ user.username or 'Cashier' }}</p>
                 </div>
-                <span class="pill success">ACTIVE</span>
-            </div>
-            <div class="student-balance">
-                <span>WALLET BALANCE</span>
-                <strong id="walletBalance">₱1,245.00</strong>
             </div>
         </div>
 
@@ -912,16 +716,9 @@
         </div>
 
         <div class="summary-pane">
-            <div class="cart-actions">
-                <button type="button" onclick="holdCart()"><i class="bi bi-pause-circle me-1"></i>Hold Cart</button>
-                <button id="voidBtn" type="button" onclick="handleVoidClick()"><i class="bi bi-slash-circle me-1"></i>Void Item</button>
-            </div>
-
             <div class="totals">
-                <div class="totals-row"><span>Subtotal</span><span id="subtotalAmount">₱0.00</span></div>
-                <div class="totals-row"><span>Tax (VAT 12%)</span><span id="taxAmount">₱0.00</span></div>
-                <div class="total-ledger">
-                    <span class="label">Total Ledger</span>
+                <div class="total">
+                    <span class="label">Total</span>
                     <span class="value" id="cartTotal">₱0.00</span>
                 </div>
             </div>
@@ -936,12 +733,40 @@
                 <button id="checkoutBtn" class="checkout-btn primary" onclick="checkout()"><i class="bi bi-nfc"></i>Tap Card</button>
             </div>
             <div class="inline-reason" id="qrDisabledReason"></div>
-            <div class="inline-reason" id="tapDisabledReason"></div>
 
             <div class="keyboard-hint">ENTER = PAY • +/- = QTY</div>
         </div>
     </aside>
+
+    <main class="management-pane" id="historyView" hidden>
+        <div class="management-head"><div><h2>My Transaction History</h2><small>Payments processed by this cashier account only.</small></div><button class="manage-btn" onclick="loadHistory()">Refresh</button></div>
+        <table class="management-table"><thead><tr><th>Date</th><th>Transaction</th><th>Student ID</th><th>Items</th><th>Amount</th><th>Status</th></tr></thead><tbody id="historyRows"><tr><td colspan="6">Open History to load transactions.</td></tr></tbody></table>
+    </main>
+
+    <main class="management-pane" id="studentsView" hidden>
+        <div class="management-head"><div><h2>Student Rankings</h2><small>Student IDs only, based on payments handled by this cashier.</small></div><select id="studentSort" class="manage-btn" onchange="loadStudents()"><option value="revenue">Most revenue</option><option value="orders">Most orders</option></select></div>
+        <table class="management-table"><thead><tr><th>Rank</th><th>Student ID</th><th>Orders</th><th>Total spent</th></tr></thead><tbody id="studentRows"><tr><td colspan="4">Open Students to load rankings.</td></tr></tbody></table>
+    </main>
+
+    <main class="management-pane" id="inventoryView" hidden>
+        <div class="management-head"><div><h2>Inventory</h2><small>Add, edit, remove, enable, or disable POS products.</small></div><button class="manage-btn primary" onclick="openProductDialog()">+ Add Product</button></div>
+        <table class="management-table"><thead><tr><th>Product</th><th>Category</th><th>Price</th><th>Enabled</th><th>Actions</th></tr></thead><tbody id="inventoryRows"><tr><td colspan="5">Open Inventory to load products.</td></tr></tbody></table>
+    </main>
 </div>
+
+
+<dialog id="productDialog" class="modal-content">
+    <form method="dialog" class="product-form" id="productForm">
+        <h2 id="productDialogTitle">Add Product</h2>
+        <input type="hidden" id="productId">
+        <label>Name<input id="productName" required maxlength="120"></label>
+        <label>Category<input id="productCategory" maxlength="60"></label>
+        <label>Price<input id="productPrice" type="number" min="0" step="0.01" required></label>
+        <label>Image URL<input id="productImageUrl" type="url"></label>
+        <label style="display:flex;grid-template-columns:auto 1fr;align-items:center;"><input id="productActive" type="checkbox" checked> Enabled</label>
+        <div class="modal-actions"><button type="button" class="secondary" onclick="productDialog.close()">Cancel</button><button type="submit" class="manage-btn primary">Save Product</button></div>
+    </form>
+</dialog>
 
 <div class="modal" id="paymentModal">
     <div class="modal-content">
@@ -953,27 +778,17 @@
     </div>
 </div>
 
-<div class="modal" id="closeShiftModal">
-    <div class="modal-content">
-        <h2>Close shift?</h2>
-        <p>Terminal: Station 04
-Pending sync: <span id="closeShiftSyncCount">0</span>
-<span id="closeShiftWarning"></span></p>
-        <div class="modal-actions">
-            <button class="secondary" onclick="closeCloseShiftModal()">Cancel</button>
-            <button class="danger" onclick="confirmCloseShift()">Close Shift</button>
-        </div>
-    </div>
-</div>
 
 <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
 <script>
-    const API_BASE = '/cashier/api';
-    const LOGOUT_REDIRECT = '/cashier/login';
+    const API_BASE = '/api';
+    const LOGOUT_REDIRECT = '/login';
 
     let products = [];
+    let inventoryProducts = [];
     let cart = [];
-    let selectedCategory = 'All Items';
+
+    let selectedCategory = 'All';
     let socket = null;
     let arduinoConnected = false;
     let saleInProgress = false;
@@ -981,21 +796,17 @@ Pending sync: <span id="closeShiftSyncCount">0</span>
     let qrPollAbortController = null;
     let cardReadPollTimer = null;
     let cardReadPollInFlight = false;
-    let queuePollTimer = null;
-    let queuePollInFlight = false;
     let searchDebounceTimer = null;
 
-    let queuePending = 0;
     let undoTimer = null;
     let undoAction = null;
-    let voidArmedUntil = 0;
+
     const BLOCKED_SYNC_THRESHOLD = 10;
 
     const REQUEST_TIMEOUT_MS = 10000;
     const QR_POLL_TIMEOUT_MS = 5000;
     const QR_POLL_INTERVAL_MS = 1000;
     const CARD_READ_POLL_INTERVAL_MS = 500;
-    const QUEUE_POLL_INTERVAL_MS = 30000;
 
     function endpoint(path) {
         return `${API_BASE}${path}`;
@@ -1043,22 +854,6 @@ Pending sync: <span id="closeShiftSyncCount">0</span>
         }, 6000);
     }
 
-    function setScannerState(online) {
-        const pill = document.getElementById('scannerPill');
-        const meta = document.getElementById('scannerMeta');
-        if (online) {
-            pill.classList.remove('disconnected');
-            pill.innerHTML = '<span style="width:8px;height:8px;border-radius:999px;background:#1a8951;"></span>SCANNER: READY';
-            if (!meta.textContent || meta.textContent === 'Scanner disconnected') {
-                meta.textContent = 'Last scanned: —';
-            }
-        } else {
-            pill.classList.add('disconnected');
-            pill.innerHTML = '<span style="width:8px;height:8px;border-radius:999px;background:#a01d1d;"></span>SCANNER: DISCONNECTED';
-            meta.textContent = 'Scanner disconnected';
-        }
-    }
-
     document.getElementById('undoBtn').addEventListener('click', () => {
         if (typeof undoAction === 'function') undoAction();
         undoAction = null;
@@ -1066,18 +861,29 @@ Pending sync: <span id="closeShiftSyncCount">0</span>
         if (undoTimer) clearTimeout(undoTimer);
     });
 
+    function setSaleInProgress(active) {
+        saleInProgress = Boolean(active);
+        renderCart();
+    }
+
     function updatePaymentState() {
         const chip = document.getElementById('paymentStateChip');
         const hint = document.getElementById('paymentStateHint');
         const qrBtn = document.getElementById('qrBtn');
         const tapBtn = document.getElementById('checkoutBtn');
         const qrReason = document.getElementById('qrDisabledReason');
-        const tapReason = document.getElementById('tapDisabledReason');
-
-        setScannerState(arduinoConnected);
 
         qrReason.textContent = '';
-        tapReason.textContent = '';
+
+        if (saleInProgress) {
+            chip.className = 'degraded';
+            chip.innerHTML = '<span class="bi bi-dot"></span>PAYMENT IN PROGRESS';
+            hint.textContent = 'Cart is locked until this payment finishes or is cancelled.';
+            qrBtn.disabled = true;
+            tapBtn.disabled = true;
+            qrReason.textContent = 'Payment in progress';
+            return;
+        }
 
         if (queuePending >= BLOCKED_SYNC_THRESHOLD) {
             chip.className = 'blocked';
@@ -1086,7 +892,6 @@ Pending sync: <span id="closeShiftSyncCount">0</span>
             qrBtn.disabled = true;
             tapBtn.disabled = true;
             qrReason.textContent = 'Sync pending';
-            tapReason.textContent = 'Sync pending';
             return;
         }
 
@@ -1096,7 +901,6 @@ Pending sync: <span id="closeShiftSyncCount">0</span>
             hint.textContent = 'Tap Card unavailable. Check reader connection.';
             qrBtn.disabled = cart.length === 0;
             tapBtn.disabled = true;
-            tapReason.textContent = 'Reader offline';
             return;
         }
 
@@ -1149,24 +953,6 @@ Pending sync: <span id="closeShiftSyncCount">0</span>
         if (saleInProgress) {
             cardReadPollTimer = setTimeout(pollCardReadFallback, CARD_READ_POLL_INTERVAL_MS);
         }
-    }
-
-    function markScannerSuccess(code) {
-        const meta = document.getElementById('scannerMeta');
-        setScannerState(true);
-        const started = Date.now();
-
-        const tick = () => {
-            const age = Math.floor((Date.now() - started) / 1000);
-            meta.textContent = `Last scanned: ${code} (${age}s ago)`;
-        };
-
-        tick();
-        const timer = setInterval(tick, 1000);
-        setTimeout(() => {
-            clearInterval(timer);
-            meta.textContent = 'Last scanned: —';
-        }, 2000);
     }
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -1228,16 +1014,21 @@ Pending sync: <span id="closeShiftSyncCount">0</span>
         updatePaymentState();
     }
 
-    function updateWifiBadge(data) {
+    function showApprovedBalance(newBalance) {
+        // The account card is cashier identity only; payment results stay in the receipt modal.
+    }
+
+    function updateWifiBadge(data, endpointReachable = false) {
         const badge = document.getElementById('wifiBadge');
-        if (data.online) {
-            badge.textContent = 'ONLINE';
+        const online = Boolean(endpointReachable && data && data.online === true);
+        if (online) {
+            badge.innerHTML = '<i class="bi bi-wifi"></i>WIFI';
             badge.style.color = '#169957';
             arduinoConnected = true;
         } else {
-            badge.textContent = 'OFFLINE';
+            badge.innerHTML = '<i class="bi bi-wifi-off"></i>WIFI';
             badge.style.color = '#9b5c0b';
-            if (!arduinoConnected) arduinoConnected = false;
+            arduinoConnected = false;
         }
         updatePaymentState();
     }
@@ -1250,9 +1041,11 @@ Pending sync: <span id="closeShiftSyncCount">0</span>
             });
             if (resp.ok) {
                 const data = await resp.json();
-                updateWifiBadge(data);
+                updateWifiBadge(data, true);
+            } else {
+                updateWifiBadge(null, false);
             }
-        } catch (_) {}
+        } catch (_) { updateWifiBadge(null, false); }
     }
 
     async function loadProducts() {
@@ -1263,50 +1056,27 @@ Pending sync: <span id="closeShiftSyncCount">0</span>
 
             if (data.products && data.products.length > 0) {
                 products = data.products.filter(p => p.active !== false);
-                const categories = ['All Items', ...new Set(products.map(p => p.category || 'Other'))];
+                const categories = ['All', ...new Set(products.map(p => p.category || 'Other'))];
                 document.getElementById('categories').innerHTML = categories.map(cat =>
                     `<button class="category-btn ${cat === selectedCategory ? 'active' : ''}" onclick="filterByCategory('${esc(cat)}')">${esc(cat)}</button>`
                 ).join('');
                 renderProducts();
             } else {
-                document.getElementById('productsGrid').innerHTML = '<div class="product-card" style="animation: fade-in-up 0.4s ease-out backwards;">No products available. Please add products in admin dashboard.</div>';
+                document.getElementById('productsGrid').innerHTML = '<div class="product-card">No products available. Please add products in admin dashboard.</div>';
             }
         } catch (error) {
             console.error('Failed to load products:', error);
-            document.getElementById('productsGrid').innerHTML = '<div class="product-card" style="animation: fade-in-up 0.4s ease-out backwards;">Error loading products. Check console for details.</div>';
+            document.getElementById('productsGrid').innerHTML = '<div class="product-card">Error loading products. Check console for details.</div>';
         }
     }
 
     function filterByCategory(category) {
         selectedCategory = category;
-        const categories = ['All Items', ...new Set(products.map(p => p.category || 'Other'))];
+        const categories = ['All', ...new Set(products.map(p => p.category || 'Other'))];
         document.getElementById('categories').innerHTML = categories.map(cat =>
             `<button class="category-btn ${cat === selectedCategory ? 'active' : ''}" onclick="filterByCategory('${esc(cat)}')">${esc(cat)}</button>`
         ).join('');
         renderProducts();
-    }
-
-    function seededQty(id) {
-        let hash = 0;
-        for (let i = 0; i < id.length; i++) hash = ((hash << 5) - hash) + id.charCodeAt(i);
-        return Math.abs(hash % 50) + 1;
-    }
-
-    function productFallbackImage(name, category) {
-        const text = `${name || ''} ${category || ''}`.toLowerCase();
-        if (text.includes('burger') || text.includes('sandwich') || text.includes('beef')) {
-            return 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=800&q=80';
-        }
-        if (text.includes('salad')) {
-            return 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=800&q=80';
-        }
-        if (text.includes('tea') || text.includes('drink') || text.includes('water') || text.includes('coke')) {
-            return 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&w=800&q=80';
-        }
-        if (text.includes('spaghetti') || text.includes('rice') || text.includes('food')) {
-            return 'https://images.unsplash.com/photo-1512058564366-18510be2db19?auto=format&fit=crop&w=800&q=80';
-        }
-        return 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=800&q=80';
     }
 
     function renderProducts() {
@@ -1314,25 +1084,22 @@ Pending sync: <span id="closeShiftSyncCount">0</span>
 
         const filtered = products.filter(p => {
             const matchesSearch = p.name.toLowerCase().includes(searchTerm) || String(p.id).toLowerCase().includes(searchTerm);
-            const matchesCategory = selectedCategory === 'All Items' || (p.category || 'Other') === selectedCategory;
+            const matchesCategory = selectedCategory === 'All' || (p.category || 'Other') === selectedCategory;
             return matchesSearch && matchesCategory;
         });
 
         const grid = document.getElementById('productsGrid');
         if (!filtered.length) {
-            grid.innerHTML = '<div class="product-card" style="animation: fade-in-up 0.4s ease-out backwards;">No products found.</div>';
+            grid.innerHTML = '<div class="product-card">No products found.</div>';
             return;
         }
 
         grid.innerHTML = filtered.map(p => {
-            const qty = Number(p.qty ?? p.stock ?? seededQty(String(p.id || p.name)));
-            const finalImage = p.image_url || productFallbackImage(p.name, p.category);
-            const image = `<img src="${esc(finalImage)}" alt="${esc(p.name)}">`;
+            const image = p.image_url ? `<img src="${esc(p.image_url)}" alt="${esc(p.name)}">` : '<div style="width:100%;height:100%;display:grid;place-items:center;color:#6d6881;"><i class="bi bi-image"></i></div>';
             return `
-                <article class="product-card" onclick="addToCart('${esc(p.id)}', '${esc(p.name)}', ${Number(p.price || 0)}, '${esc(finalImage)}', '${esc(p.category || '')}')">
+                <article class="product-card" onclick="addToCart('${esc(p.id)}', '${esc(p.name)}', ${Number(p.price || 0)}, '${esc(p.image_url || '')}', '${esc(p.category || '')}')">
                     <div class="product-image">
                         ${image}
-                        <span class="qty-chip">QTY: ${qty.toString().padStart(2, '0')}</span>
                     </div>
                     <div class="product-name">${esc(p.name)}</div>
                     <div class="product-meta">
@@ -1345,98 +1112,17 @@ Pending sync: <span id="closeShiftSyncCount">0</span>
     }
 
     function addToCart(id, name, price, imageUrl = '', category = '') {
+        if (saleInProgress) return;
         const existing = cart.find(item => item.id === id);
         if (existing) {
             existing.qty++;
         } else {
             cart.push({ id, name, price, qty: 1, imageUrl, category, armedUntil: 0 });
         }
-        markScannerSuccess(id);
         renderCart();
     }
 
-    function updateQty(id, delta) {
-        const item = cart.find(i => i.id === id);
-        if (!item) return;
-        item.qty += delta;
-        if (item.qty <= 0) {
-            const idx = cart.findIndex(i => i.id === id);
-            if (idx >= 0) {
-                const removed = cart.splice(idx, 1)[0];
-                showSnackbar('Item removed. Undo?', () => {
-                    cart.splice(idx, 0, removed);
-                    renderCart();
-                });
-            }
-        }
-        renderCart();
-    }
 
-    function removeFromCart(id) {
-        const item = cart.find(i => i.id === id);
-        if (!item) return;
-        const now = Date.now();
-
-        if (item.armedUntil && now <= item.armedUntil) {
-            const idx = cart.findIndex(i => i.id === id);
-            if (idx >= 0) {
-                const removed = cart.splice(idx, 1)[0];
-                showSnackbar('Item removed. Undo?', () => {
-                    removed.armedUntil = 0;
-                    cart.splice(idx, 0, removed);
-                    renderCart();
-                });
-            }
-        } else {
-            item.armedUntil = now + 2500;
-            setTimeout(() => {
-                const current = cart.find(i => i.id === id);
-                if (current && current.armedUntil && Date.now() > current.armedUntil) {
-                    current.armedUntil = 0;
-                    renderCart();
-                }
-            }, 2600);
-        }
-
-        renderCart();
-    }
-
-    function handleVoidClick() {
-        const btn = document.getElementById('voidBtn');
-        const now = Date.now();
-
-        if (voidArmedUntil && now <= voidArmedUntil) {
-            voidArmedUntil = 0;
-            btn.classList.remove('armed');
-            btn.innerHTML = '<i class="bi bi-slash-circle me-1"></i>Void Item';
-
-            if (!cart.length) return;
-            const idx = cart.length - 1;
-            const removed = cart.splice(idx, 1)[0];
-            showSnackbar('Last item voided. Undo?', () => {
-                cart.splice(idx, 0, removed);
-                renderCart();
-            });
-            renderCart();
-            return;
-        }
-
-        voidArmedUntil = now + 2500;
-        btn.classList.add('armed');
-        btn.textContent = 'Tap again to confirm';
-        setTimeout(() => {
-            if (Date.now() > voidArmedUntil) {
-                voidArmedUntil = 0;
-                btn.classList.remove('armed');
-                btn.innerHTML = '<i class="bi bi-slash-circle me-1"></i>Void Item';
-            }
-        }, 2550);
-    }
-
-    function holdCart() {
-        if (!cart.length) return;
-        alert('Cart held for later checkout.');
-    }
 
     function renderCart() {
         const itemsEl = document.getElementById('cartItems');
@@ -1465,12 +1151,7 @@ Pending sync: <span id="closeShiftSyncCount">0</span>
             `).join('');
         }
 
-        const subtotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
-        const tax = subtotal * 0.12;
-        const total = subtotal + tax;
-
-        document.getElementById('subtotalAmount').textContent = phpPeso(subtotal);
-        document.getElementById('taxAmount').textContent = phpPeso(tax);
+        const total = cart.reduce((sum, item) => sum + (item.price * item.qty), 0) * 1.12;
         document.getElementById('cartTotal').textContent = phpPeso(total);
 
         updatePaymentState();
@@ -1492,11 +1173,13 @@ Pending sync: <span id="closeShiftSyncCount">0</span>
         });
 
         socket.on('card_timeout', () => {
+            setSaleInProgress(false);
             document.getElementById('modalTitle').textContent = 'Timeout';
             document.getElementById('modalMessage').textContent = 'No card detected. Please try again.';
         });
 
         socket.on('card_error', data => {
+            setSaleInProgress(false);
             document.getElementById('modalTitle').textContent = 'Error';
             document.getElementById('modalMessage').textContent = data.error;
         });
@@ -1505,10 +1188,11 @@ Pending sync: <span id="closeShiftSyncCount">0</span>
 
         socket.on('qr_payment', data => {
             if (!saleInProgress) return;
-            saleInProgress = false;
+            setSaleInProgress(false);
             document.getElementById('paymentModal').style.display = 'flex';
             document.getElementById('modalTitle').textContent = 'QR Payment Received!';
             document.getElementById('modalMessage').textContent = `New Balance: ${phpPeso(data.new_balance)}`;
+            showApprovedBalance(data.new_balance);
             cart = [];
             renderCart();
             checkQueueStatus();
@@ -1516,16 +1200,16 @@ Pending sync: <span id="closeShiftSyncCount">0</span>
         });
 
         socket.on('sale_cancelled', () => {
-            saleInProgress = false;
+            setSaleInProgress(false);
         });
 
         socket.on('arduino_wifi_status', data => {
-            updateWifiBadge(data);
+            updateWifiBadge(data, true);
         });
     }
 
     async function qrCheckout() {
-        if (!cart.length || queuePending >= BLOCKED_SYNC_THRESHOLD) return;
+        if (saleInProgress || !cart.length || queuePending >= BLOCKED_SYNC_THRESHOLD) return;
 
         const items = cart.map(item => ({name: item.name, price: item.price, qty: item.qty}));
         const subtotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
@@ -1534,7 +1218,7 @@ Pending sync: <span id="closeShiftSyncCount">0</span>
         document.getElementById('paymentModal').style.display = 'flex';
         document.getElementById('modalTitle').textContent = 'QR Pay';
         document.getElementById('modalMessage').textContent = 'Generating QR code…';
-        saleInProgress = true;
+        setSaleInProgress(true);
 
         try {
             const response = await fetch(endpoint('/qr-generate'), {
@@ -1573,7 +1257,7 @@ Pending sync: <span id="closeShiftSyncCount">0</span>
                         const pd = await pr.json();
                         if (pd.paid) {
                             stopQrPolling();
-                            saleInProgress = false;
+                            setSaleInProgress(false);
                             document.getElementById('modalTitle').textContent = 'Payment Received!';
                             document.getElementById('modalMessage').textContent = `New Balance: ${phpPeso(pd.new_balance)}`;
                             cart = [];
@@ -1599,14 +1283,14 @@ Pending sync: <span id="closeShiftSyncCount">0</span>
             stopQrPolling();
             pollQrPaymentStatus();
         } catch (error) {
-            saleInProgress = false;
+            setSaleInProgress(false);
             document.getElementById('modalTitle').textContent = 'QR Error';
             document.getElementById('modalMessage').textContent = error.message;
         }
     }
 
     async function checkout() {
-        if (queuePending >= BLOCKED_SYNC_THRESHOLD) return;
+        if (saleInProgress || queuePending >= BLOCKED_SYNC_THRESHOLD) return;
         if (!arduinoConnected) {
             alert('Tap Card unavailable. Check reader connection.');
             return;
@@ -1620,7 +1304,7 @@ Pending sync: <span id="closeShiftSyncCount">0</span>
         document.getElementById('paymentModal').style.display = 'flex';
         document.getElementById('modalTitle').textContent = 'Tap Student Card';
         document.getElementById('modalMessage').textContent = 'Waiting for card...';
-        saleInProgress = true;
+        setSaleInProgress(true);
 
         try {
             const response = await fetch(endpoint('/process-sale'), {
@@ -1649,16 +1333,16 @@ Pending sync: <span id="closeShiftSyncCount">0</span>
 
             const data = await response.json();
             if (data.error) {
-                saleInProgress = false;
+                setSaleInProgress(false);
                 document.getElementById('modalTitle').textContent = 'Payment Failed';
                 document.getElementById('modalMessage').textContent = data.error;
             } else {
-                saleInProgress = false;
-                const offlineNote = data.offline ? ' (Offline — will sync)' : '';
+                setSaleInProgress(false);
+                const recoveryNote = data.ledger_pending ? ' (Receipt sync pending)' : '';
                 document.getElementById('modalTitle').textContent = 'Success!';
-                document.getElementById('modalMessage').textContent = `Payment received!\nNew Balance: ${phpPeso(data.new_balance)}${offlineNote}`;
+                document.getElementById('modalMessage').textContent = `Payment received!\nNew Balance: ${phpPeso(data.new_balance)}${recoveryNote}`;
                 if (data.new_balance !== undefined) {
-                    document.getElementById('walletBalance').textContent = phpPeso(data.new_balance);
+                    showApprovedBalance(data.new_balance);
                 }
                 cart = [];
                 renderCart();
@@ -1666,6 +1350,7 @@ Pending sync: <span id="closeShiftSyncCount">0</span>
                 setTimeout(() => closeModal(), 2000);
             }
         } catch (error) {
+            setSaleInProgress(false);
             document.getElementById('modalTitle').textContent = 'Error';
             document.getElementById('modalMessage').textContent = error.message;
         }
@@ -1686,14 +1371,16 @@ Pending sync: <span id="closeShiftSyncCount">0</span>
             });
             const data = await response.json();
             if (data.error) {
+                setSaleInProgress(false);
                 document.getElementById('modalTitle').textContent = 'Payment Failed';
                 document.getElementById('modalMessage').textContent = data.error;
             } else {
-                const offlineNote = data.offline ? ' (Offline — will sync)' : '';
+                setSaleInProgress(false);
+                const recoveryNote = data.ledger_pending ? ' (Receipt sync pending)' : '';
                 document.getElementById('modalTitle').textContent = 'Success!';
-                document.getElementById('modalMessage').textContent = `NFC Payment received!\nNew Balance: ${phpPeso(data.new_balance)}${offlineNote}`;
+                document.getElementById('modalMessage').textContent = `NFC Payment received!\nNew Balance: ${phpPeso(data.new_balance)}${recoveryNote}`;
                 if (data.new_balance !== undefined) {
-                    document.getElementById('walletBalance').textContent = phpPeso(data.new_balance);
+                    showApprovedBalance(data.new_balance);
                 }
                 cart = [];
                 renderCart();
@@ -1701,13 +1388,14 @@ Pending sync: <span id="closeShiftSyncCount">0</span>
                 setTimeout(() => closeModal(), 2000);
             }
         } catch (error) {
+            setSaleInProgress(false);
             document.getElementById('modalTitle').textContent = 'Error';
             document.getElementById('modalMessage').textContent = error.message;
         }
     }
 
     function closeModal() {
-        saleInProgress = false;
+        setSaleInProgress(false);
         stopQrPolling();
         stopCardReadPolling();
         document.getElementById('paymentModal').style.display = 'none';
@@ -1722,55 +1410,8 @@ Pending sync: <span id="closeShiftSyncCount">0</span>
             .finally(() => { window.location.href = LOGOUT_REDIRECT; });
     }
 
-    function openCloseShiftModal() {
-        document.getElementById('closeShiftSyncCount').textContent = queuePending;
-        document.getElementById('closeShiftWarning').textContent = queuePending > 0 ? '\nSome records are not synced yet.' : '';
-        document.getElementById('closeShiftModal').style.display = 'flex';
-    }
 
-    function closeCloseShiftModal() {
-        document.getElementById('closeShiftModal').style.display = 'none';
-    }
 
-    function confirmCloseShift() {
-        closeCloseShiftModal();
-        alert('Shift closed. Terminal signed out.');
-        logout();
-    }
-
-    async function checkQueueStatus() {
-        if (queuePollInFlight) return;
-        queuePollInFlight = true;
-        try {
-            const res = await fetchWithTimeout(endpoint('/queue/status'), {}, 5000);
-            if (!res.ok) return;
-            const data = await res.json();
-            queuePending = Number(data.pending || 0);
-
-            document.getElementById('syncCount').textContent = queuePending;
-
-            const banner = document.getElementById('offlineBanner');
-            if (queuePending > 0) {
-                banner.style.display = 'block';
-                banner.textContent = `⚠ ${queuePending} transaction(s) pending sync. Working offline.`;
-            } else {
-                banner.style.display = 'none';
-            }
-
-            updatePaymentState();
-        } catch (e) {
-            if (e.name !== 'AbortError') {
-                console.warn('queue status check failed:', e.message);
-            }
-        } finally {
-            queuePollInFlight = false;
-        }
-    }
-
-    async function scheduleQueueStatusPoll() {
-        await checkQueueStatus();
-        queuePollTimer = setTimeout(scheduleQueueStatusPoll, QUEUE_POLL_INTERVAL_MS);
-    }
 </script>
 </body>
 </html>

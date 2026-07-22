@@ -188,7 +188,7 @@
 
 <script>
 const $ = (id)=>document.getElementById(id);
-let state = { mode:'card', student:null, amount:0, cardless:false };
+let state = { mode:'card', student:null, amount:0, cardless:false, pending_id:null };
 const fmt = (n)=>'₱'+(Number(n)||0).toLocaleString('en-PH',{minimumFractionDigits:2,maximumFractionDigits:2});
 
 // --- status dots ---
@@ -257,11 +257,18 @@ async function identifyStudent(body, cardless, method){
     const endpoint = body.qr_data ? '/api/kiosk/topup/qr-scan'
                    : body.uid ? '/api/kiosk/topup/card-scan'
                    : '/api/kiosk/topup/student-lookup';
-    const r = await fetch(endpoint, {method:'POST', headers:{'Content-Type':'application/json'},
+    let r = await fetch(endpoint, {method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify(body)});
+    if(r.status===403){
+      const pin=prompt('Enter kiosk unlock PIN');
+      if(!pin) return;
+      const unlocked=await fetch('/api/kiosk/unlock',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pin})});
+      if(!unlocked.ok){ $('msg').textContent='Kiosk unlock failed'; $('msg').className='msg err'; return; }
+      r = await fetch(endpoint, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)});
+    }
     const j = await r.json();
     if(!j.success){ $('msg').textContent=j.error||'Student not found'; $('msg').className='msg err'; return; }
-    state.student = j.student; state.cardless = !!cardless;
+    state.student = j.student; state.cardless = !!cardless; state.pending_id = j.pending_id;
     renderStudent(j.student);
     $('msg').textContent='Student identified. Collect cash and load.';
     $('msg').className='msg ok';
@@ -294,10 +301,13 @@ $('confirmBtn').onclick = async ()=>{
   if(!state.student || state.amount<=0) return;
   $('confirmBtn').disabled=true; $('msg').textContent='Processing…';
   try{
+    const accepted = await fetch('/api/kiosk/topup/cash-accept', {method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({pending_id: state.pending_id, amount: state.amount})});
+    if(!accepted.ok){ const aj=await accepted.json(); throw new Error(aj.error||'Cash not accepted'); }
     const r = await fetch('/api/kiosk/topup/confirm', {method:'POST',
       headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ student_id: state.student.student_id,
-        amount: state.amount, payment_method: state.cardless?'cardless_qr':'cash' })});
+      body: JSON.stringify({ pending_id: state.pending_id })});
     const j = await r.json();
     if(!j.success){ $('msg').textContent=j.error||'Failed'; $('msg').className='msg err'; $('confirmBtn').disabled=false; return; }
     showSuccess(j);
@@ -315,7 +325,7 @@ function showSuccess(j){
 $('successOk').onclick = ()=>{
   $('successOverlay').classList.remove('show');
   // reset for next customer
-  state={mode:state.mode, student:null, amount:0, cardless:false};
+  state={mode:state.mode, student:null, amount:0, cardless:false, pending_id:null};
   $('studentCard').classList.remove('show'); setAmount(0);
   $('msg').textContent='Ready for next student.';
   document.querySelectorAll('.method').forEach(m=>m.classList.remove('active'));

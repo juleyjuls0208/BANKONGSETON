@@ -58,7 +58,7 @@ def run_low_balance_batch(sheets_client_fn: Callable, email_notifier_fn: Callabl
 
         for user in users:
             try:
-                parent_email = str(user.get('ParentEmail', '')).strip()
+                parent_email = str(user.get('StudentEmail', '')).strip()
                 if not parent_email or '@' not in parent_email:
                     skipped += 1
                     continue

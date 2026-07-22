@@ -33,8 +33,7 @@ def normalize_card_uid(uid) -> str:
     Rules (applied in order):
       1. If *uid* is None or falsy-after-strip → return ""
       2. Strip leading/trailing whitespace
-      3. Strip leading zeros
-      4. Uppercase
+      3. Uppercase (leading zeroes are significant and preserved)
 
     This is the single authoritative implementation that merges the two
     previous divergent versions from admin_dashboard.py (line 196) and
@@ -52,7 +51,7 @@ def normalize_card_uid(uid) -> str:
     uid_str = str(uid).strip()
     if not uid_str:
         return ""
-    return uid_str.lstrip("0").upper()
+    return uid_str.upper()
 
 
 # ---------------------------------------------------------------------------

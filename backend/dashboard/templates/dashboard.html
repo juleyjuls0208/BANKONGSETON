@@ -12,28 +12,6 @@
         margin-bottom: 1.5rem;
     }
 
-    .live-chip {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.45rem;
-        background: #e9e6ff;
-        border: 1px solid #cbc5f7;
-        color: #3525cd;
-        padding: 0.45rem 0.9rem;
-        border-radius: 999px;
-        font-size: 0.78rem;
-        font-weight: 800;
-        letter-spacing: 0.05em;
-        text-transform: uppercase;
-    }
-
-    .dot {
-        width: 8px;
-        height: 8px;
-        border-radius: 999px;
-        background: #3525cd;
-        box-shadow: 0 0 0 8px rgba(53, 37, 205, 0.14);
-    }
 
     .dash-kpis {
         display: grid;
@@ -116,27 +94,55 @@
     .activity-item small,
     .student-item small { color: #6f6a82; }
 
+    .quick-actions {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+    }
+    .quick-action {
+        background: #fff;
+        border: 1px solid #e3def1;
+        border-radius: 11px;
+        color: #24213a;
+        padding: 0.9rem;
+        text-decoration: none;
+    }
+    .quick-action strong, .quick-action small { display: block; }
+    .quick-action small { color: #6d6881; margin-top: 0.2rem; }
+
     @media (max-width: 1200px) {
         .dash-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 700px) {
+        .quick-actions { grid-template-columns: 1fr; }
     }
 </style>
 
 <div class="dash-head">
     <div>
-        <h1 class="page-title" style="font-style: normal;">Bangko ng Seton</h1>
-        <p class="page-subtitle">Institutional dashboard for secure student banking and real-time transaction monitoring.</p>
+        <h1 class="page-title" style="font-style: normal;">Canteen dashboard</h1>
+        <p class="page-subtitle">Start with a student search, then review today’s payments and exceptions.</p>
     </div>
-    <div class="live-chip"><span class="dot"></span>System Live: Branch 001</div>
 </div>
+
+<section aria-label="Quick actions">
+    <h2 class="section-heading" style="font-size:1.45rem;margin:0 0 0.6rem;">Quick actions</h2>
+    <div class="quick-actions">
+        <a class="quick-action" href="/students"><strong>Find a student</strong><small>Manage cards and balances</small></a>
+        <a class="quick-action" href="/transactions"><strong>Review payments</strong><small>Open the transaction ledger</small></a>
+        <a class="quick-action" href="/products"><strong>Manage menu</strong><small>Add or update canteen products</small></a>
+    </div>
+</section>
 
 <section class="dash-kpis">
     <article class="metric-card">
-        <div class="label">Total Students</div>
+        <div class="label">Students</div>
         <div class="value" id="totalStudents">0</div>
-        <div class="meta"><span id="studentDelta">+0</span> since yesterday</div>
+        <div class="meta"><span id="studentDelta">0</span> active</div>
     </article>
     <article class="metric-card">
-        <div class="label">Transactions (₱)</div>
+        <div class="label">Transactions today</div>
         <div class="value" id="todayTransactions">0</div>
         <div class="meta"><span id="todayTxnCount">0</span> total events</div>
     </article>
@@ -155,8 +161,8 @@
 <section class="dash-layout">
     <div>
         <div class="hero-search">
-            <h3>Student Intelligence Center</h3>
-            <p>Quickly search student profiles to manage balances, track history, or issue credentials.</p>
+            <h3>Find a student</h3>
+            <p>Search a name or student ID to manage the account, card, or payment history.</p>
             <div class="hero-input">
                 <input id="studentSearch" type="text" placeholder="Enter Student Name or ID..." autocomplete="off">
                 <button id="studentSearchBtn" type="button">Search</button>
@@ -168,9 +174,7 @@
                 <h3 class="section-heading" style="font-size:1.8rem;">Search Results</h3>
                 <a href="/students" style="font-size:0.82rem;font-weight:700;color:#3525cd;text-decoration:none;">Open Students</a>
             </div>
-            <div id="studentList" class="student-results">
-                <div class="student-item"><div><strong>Type to search</strong><small>Results appear here.</small></div></div>
-            </div>
+            <div id="studentList" class="student-results"></div>
         </section>
 
         <section class="page-panel" style="padding:1rem;">
@@ -212,8 +216,8 @@
                 el.totalStudents.textContent = Number(stats.total_students || 0).toLocaleString();
                 el.todayTransactions.textContent = Number(stats.today_transactions || 0).toLocaleString();
                 document.getElementById('todayTxnCount').textContent = Number(stats.today_transactions || 0).toLocaleString();
-                const delta = Math.max(0, Number(stats.active_students || 0) - Number(stats.total_students || 0));
-                document.getElementById('studentDelta').textContent = `${delta >= 0 ? '+' : ''}${delta}`;
+                const activeStudents = Number(stats.active_students || 0);
+                document.getElementById('studentDelta').textContent = activeStudents.toLocaleString();
             }
 
             if (IS_ADMIN) {
@@ -283,7 +287,7 @@
     async function searchStudents() {
         const q = el.studentSearch.value.trim();
         if (!q) {
-            el.studentList.innerHTML = '<div class="student-item"><div><strong>Type to search</strong><small>Results appear here.</small></div></div>';
+            el.studentList.innerHTML = '';
             return;
         }
 

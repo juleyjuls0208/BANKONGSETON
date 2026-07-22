@@ -3,74 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cashier Login - Bangko ng Seton</title>
+    <title>Cashier sign in — Bangko ng Seton</title>
+    <link rel="stylesheet" href="/static/css/panel.css">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; justify-content: center; align-items: center; min-height: 100vh; }
-        .login-container { background: white; padding: 40px; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); width: 100%; max-width: 400px; }
-        h1 { color: #667eea; margin-bottom: 32px; text-align: center; font-size: 28px; }
-        .form-group { margin-bottom: 20px; }
-        label { display: block; margin-bottom: 8px; color: #333; font-weight: 500; }
-        input { width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 16px; transition: border 0.3s; }
-        input:focus { outline: none; border-color: #667eea; }
-        button { width: 100%; padding: 14px; background: #667eea; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; transition: background 0.3s; }
-        button:hover { background: #5568d3; }
-        button:disabled { background: #ccc; cursor: not-allowed; }
-        .error { color: #e74c3c; margin-top: 16px; text-align: center; display: none; }
+        body.login-body { display:flex; align-items:center; justify-content:center; min-height:100vh; padding:1.5rem; background:radial-gradient(1100px 520px at 15% -10%, #e6e2ff 0%, transparent 55%),radial-gradient(900px 480px at 110% 110%, #ded9f7 0%, transparent 50%),var(--bg); }
+        .login-card { width:100%; max-width:400px; background:var(--surface); border:1px solid rgba(217,211,232,.85); border-radius:18px; box-shadow:0 24px 60px rgba(49,43,79,.14); padding:2.4rem 2.1rem; }
+        .login-brand { display:flex; flex-direction:column; align-items:center; text-align:center; gap:.5rem; margin-bottom:1.6rem; }
+        .login-brand h1 { margin:0; font-family:'Instrument Serif', Georgia, serif; font-style:italic; font-size:1.9rem; color:var(--ink); }
+        .login-brand p { margin:0; font-size:.7rem; letter-spacing:.18em; text-transform:uppercase; font-weight:700; color:var(--muted); }
+        .login-field { margin-bottom:1rem; }
+        .login-field label { display:block; font-size:.8rem; font-weight:700; color:#38364b; margin-bottom:.4rem; }
+        .login-alert { display:none; background:#fdeaea; border:1px solid #f3c5c5; color:var(--err); border-radius:10px; padding:.65rem .8rem; font-size:.88rem; font-weight:600; margin-bottom:1rem; }
+        .login-alert.show { display:block; }
+        .login-foot { margin-top:1.5rem; text-align:center; font-size:.78rem; color:var(--muted); }
     </style>
 </head>
-<body>
-    <div class="login-container">
-        <h1>🏦 Cashier Login</h1>
-        <form id="loginForm">
-            <div class="form-group">
-                <label for="username">Username</label>
-                <input type="text" id="username" name="username" required autocomplete="username">
-            </div>
-            <div class="form-group">
-                <label for="password">Password</label>
-                <input type="password" id="password" name="password" required autocomplete="current-password">
-            </div>
-            <button type="submit" id="loginBtn">Login</button>
-            <div class="error" id="errorMsg"></div>
+<body class="panel-body login-body">
+    <main class="login-card">
+        <div class="login-brand"><div class="panel-logo" aria-hidden="true">B</div><h1>Bangko ng Seton</h1><p>Cashier terminal</p></div>
+        <form id="loginForm" novalidate>
+            <div class="login-field"><label for="username">Username</label><input class="input" type="text" id="username" name="username" required autocomplete="username" placeholder="Enter your username"></div>
+            <div class="login-field"><label for="password">Password</label><input class="input" type="password" id="password" name="password" required autocomplete="current-password" placeholder="Enter your password"></div>
+            <div class="login-alert" id="errorMsg" role="alert"></div>
+            <button type="submit" class="btn primary" id="loginBtn" style="width:100%;justify-content:center;">Sign in</button>
         </form>
-    </div>
-
+        <div class="login-foot">Secured cashier access</div>
+    </main>
     <script>
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            
-            const username = document.getElementById('username').value;
+            const username = document.getElementById('username').value.trim();
             const password = document.getElementById('password').value;
             const errorMsg = document.getElementById('errorMsg');
             const loginBtn = document.getElementById('loginBtn');
-            
-            loginBtn.disabled = true;
-            loginBtn.textContent = 'Logging in...';
-            errorMsg.style.display = 'none';
-            
+            errorMsg.classList.remove('show');
+            if (!username || !password) { errorMsg.textContent = 'Please enter both username and password.'; errorMsg.classList.add('show'); return; }
+            loginBtn.disabled = true; loginBtn.textContent = 'Signing in…';
             try {
-                const response = await fetch('/api/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
-                });
-                
+                const response = await fetch('/api/login', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({username, password}) });
                 const data = await response.json();
-                
-                if (response.ok) {
-                    window.location.href = '/';
-                } else {
-                    errorMsg.textContent = data.error || 'Login failed';
-                    errorMsg.style.display = 'block';
-                }
-            } catch (error) {
-                errorMsg.textContent = 'Network error. Please try again.';
-                errorMsg.style.display = 'block';
-            } finally {
-                loginBtn.disabled = false;
-                loginBtn.textContent = 'Login';
-            }
+                if (response.ok) window.location.href = '/';
+                else { errorMsg.textContent = data.error || 'Invalid credentials'; errorMsg.classList.add('show'); }
+            } catch (_) { errorMsg.textContent = 'Connection error. Please try again.'; errorMsg.classList.add('show'); }
+            finally { loginBtn.disabled = false; loginBtn.textContent = 'Sign in'; }
         });
     </script>
 </body>

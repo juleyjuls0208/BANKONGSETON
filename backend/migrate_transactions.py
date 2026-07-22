@@ -55,7 +55,7 @@ def migrate_transactions():
         traceback.print_exc()
 
 def migrate_users_schema():
-    """Add ParentEmail, FCMToken, Role columns to Users sheet"""
+    """Add StudentEmail, FCMToken, Role columns to Users sheet"""
     try:
         credentials_path = os.path.join(os.path.dirname(__file__), '..', 'config', 'credentials.json')
         if not os.path.exists(credentials_path):
@@ -77,8 +77,8 @@ def migrate_users_schema():
         
         # Add new columns if they don't exist
         columns_to_add = []
-        if 'ParentEmail' not in headers:
-            columns_to_add.append('ParentEmail')
+        if 'StudentEmail' not in headers:
+            columns_to_add.append('StudentEmail')
         if 'FCMToken' not in headers:
             columns_to_add.append('FCMToken')
         if 'Role' not in headers:

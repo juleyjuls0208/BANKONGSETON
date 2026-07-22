@@ -66,3 +66,16 @@ def test_missing_cashier_jwt_does_not_raise(bridge, monkeypatch):
             bridge._post_nfc_payment("C" * 48)
         except Exception as e:
             pytest.fail(f"_post_nfc_payment raised unexpectedly: {e}")
+
+
+def test_r3_card_line_reaches_one_shot_callback(bridge):
+    """UNO R3's serial CARD| protocol drives the registration/cashier callback."""
+    callback = MagicMock()
+    bridge.reading_active = True
+    bridge.current_callback = callback
+
+    bridge._parse_line("CARD|00A1B2C3")
+
+    callback.assert_called_once_with("00A1B2C3")
+    assert bridge.reading_active is False
+    assert bridge.current_callback is None

@@ -72,7 +72,7 @@ def _make_users_ws(card=None, name='Test Student',
                 'Name': name,
                 'StudentID': 'S-001',
                 'ParentPhone': parent_phone or '',
-                'ParentEmail': parent_email or '',
+                'StudentEmail': parent_email or '',
             }
         ]
     else:
