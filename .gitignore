@@ -109,4 +109,6 @@ Thumbs.db
 tmp/
 token.json
 vendor/
+!backend/dashboard/static/vendor/
+!backend/dashboard/static/vendor/**
 venv/

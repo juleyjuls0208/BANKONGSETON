@@ -13,6 +13,11 @@ CASHIER_TEMPLATE = ROOT / "backend" / "cashier_app" / "templates" / "cashier_ind
 DASHBOARD_TEMPLATE = ROOT / "backend" / "dashboard" / "templates" / "dashboard.html"
 BASE_TEMPLATE = ROOT / "backend" / "dashboard" / "templates" / "base.html"
 CASHIER_LOGIN_TEMPLATE = ROOT / "backend" / "dashboard" / "cashier" / "templates" / "cashier_login.html"
+CASHIER_STANDALONE_LOGIN_TEMPLATE = ROOT / "backend" / "cashier_app" / "templates" / "cashier_login.html"
+REGISTRATION_BASE_TEMPLATE = ROOT / "backend" / "dashboard" / "templates" / "base_panel.html"
+DASHBOARD_CSS = ROOT / "backend" / "dashboard" / "static" / "css" / "dashboard.css"
+TRANSACTIONS_TEMPLATE = ROOT / "backend" / "dashboard" / "templates" / "transactions.html"
+ICON_GENERATOR = ROOT / "backend" / "dashboard" / "generate_icons.py"
 CASHIER_PANEL_CSS = ROOT / "backend" / "cashier_app" / "static" / "css" / "panel.css"
 REGISTRATION_APP = ROOT / "backend" / "dashboard" / "registration_app.py"
 
@@ -196,8 +201,52 @@ def test_operator_templates_do_not_show_fake_student_or_dead_navigation():
     assert "function setSaleInProgress" in cashier
     assert "if (saleInProgress) return;" in cashier
     assert "seededQty" not in cashier
-    assert "Quick actions" in dashboard
+    assert "Quick actions" not in dashboard
     assert "host='127.0.0.1'" in registration_source
+
+
+def test_premium_dashboard_contract_and_school_branding():
+    dashboard = DASHBOARD_TEMPLATE.read_text(encoding="utf-8")
+    base = BASE_TEMPLATE.read_text(encoding="utf-8")
+    dashboard_css = DASHBOARD_CSS.read_text(encoding="utf-8")
+    registration_base = REGISTRATION_BASE_TEMPLATE.read_text(encoding="utf-8")
+    cashier_logins = CASHIER_LOGIN_TEMPLATE.read_text(encoding="utf-8") + CASHIER_STANDALONE_LOGIN_TEMPLATE.read_text(encoding="utf-8")
+
+    for removed in ("Canteen dashboard", "Quick actions", "Search Results"):
+        assert removed not in dashboard
+    assert 'id="studentSearchBackdrop"' in dashboard
+    assert 'id="studentSearchPopover"' in dashboard
+    assert "/static/vendor/gsap.min.js" in dashboard
+    assert "/static/vendor/anime.min.js" in dashboard
+    assert "prefers-reduced-motion" in dashboard
+    assert "search-mode" in dashboard
+
+    assert "Seton Academy" not in base + registration_base
+    assert ">Seton<" in base
+    assert "avatar" not in base
+    assert base.count('/static/seton_logo.png') >= 1
+    assert registration_base.count('/static/seton_logo.png') >= 1
+    assert cashier_logins.count('/static/seton_logo.png') >= 2
+
+    assert "--seton-green" in dashboard_css
+    assert "backdrop-filter" in dashboard_css
+    assert "sidebar-scrim" in dashboard_css
+
+
+def test_transactions_are_paginated_and_mobile_readable():
+    transactions = TRANSACTIONS_TEMPLATE.read_text(encoding="utf-8")
+
+    assert 'id="transactionPager"' in transactions
+    assert "renderTransactionsPage" in transactions
+    assert 'data-label="Student"' in transactions
+    assert "Search by student name or ID" in transactions
+
+
+def test_pwa_icon_generator_uses_the_school_crest():
+    generator = ICON_GENERATOR.read_text(encoding="utf-8")
+
+    assert "seton_logo.png" in generator
+    assert 'draw.text(' not in generator
 
 
 def test_dashboard_and_cashier_present_only_the_requested_operator_controls():

@@ -4,11 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cashier sign in — Bangko ng Seton</title>
+    <link rel="icon" type="image/png" href="/static/seton_logo.png">
     <link rel="stylesheet" href="/static/css/panel.css">
     <style>
-        body.login-body { display:flex; align-items:center; justify-content:center; min-height:100vh; padding:1.5rem; background:radial-gradient(1100px 520px at 15% -10%, #e6e2ff 0%, transparent 55%),radial-gradient(900px 480px at 110% 110%, #ded9f7 0%, transparent 50%),var(--bg); }
-        .login-card { width:100%; max-width:400px; background:var(--surface); border:1px solid rgba(217,211,232,.85); border-radius:18px; box-shadow:0 24px 60px rgba(49,43,79,.14); padding:2.4rem 2.1rem; }
+        body.login-body { display:flex; align-items:center; justify-content:center; min-height:100vh; padding:1.5rem; background:radial-gradient(1100px 520px at 15% -10%, rgba(0,143,69,.16) 0%, transparent 55%),radial-gradient(900px 480px at 110% 110%, rgba(226,191,36,.16) 0%, transparent 50%),var(--bg); }
+        .login-card { width:100%; max-width:410px; background:rgba(255,255,255,.78); border:1px solid rgba(255,255,255,.8); border-radius:22px; box-shadow:0 28px 80px rgba(7,86,53,.14); padding:2.4rem 2.1rem; backdrop-filter:saturate(145%) blur(22px); -webkit-backdrop-filter:saturate(145%) blur(22px); }
         .login-brand { display:flex; flex-direction:column; align-items:center; text-align:center; gap:.5rem; margin-bottom:1.6rem; }
+        .login-brand img { width:118px; height:84px; object-fit:contain; filter:drop-shadow(0 8px 18px rgba(7,86,53,.15)); }
         .login-brand h1 { margin:0; font-family:'Instrument Serif', Georgia, serif; font-style:italic; font-size:1.9rem; color:var(--ink); }
         .login-brand p { margin:0; font-size:.7rem; letter-spacing:.18em; text-transform:uppercase; font-weight:700; color:var(--muted); }
         .login-field { margin-bottom:1rem; }
@@ -21,7 +23,7 @@
 <body class="panel-body login-body">
     <main class="login-card">
         <div class="login-brand">
-            <div class="panel-logo" aria-hidden="true">B</div>
+            <img src="/static/seton_logo.png" alt="Elizabeth Seton School crest">
             <h1>Bangko ng Seton</h1>
             <p>Cashier terminal</p>
         </div>

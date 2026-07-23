@@ -4,168 +4,136 @@
 
 {% block content %}
 <style>
-    .tx-head {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-end;
-        margin-bottom: 1.2rem;
-    }
+    .tx-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 1rem; margin-bottom: 1.15rem; }
+    .tx-head .page-subtitle { max-width: 620px; }
 
     .tx-filter {
-        background: #ece8f6;
-        border: 1px solid #ddd7eb;
-        border-radius: 14px;
-        padding: 1rem;
         margin-bottom: 1rem;
+        padding: clamp(1rem, 2vw, 1.25rem);
+        border: 1px solid rgba(255,255,255,.76);
+        border-radius: 18px;
+        background: rgba(255,255,255,.72);
+        box-shadow: var(--shadow-soft);
+        backdrop-filter: saturate(145%) blur(20px);
+        -webkit-backdrop-filter: saturate(145%) blur(20px);
     }
-
-    .tx-filter-grid {
-        display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: 0.75rem;
-        align-items: end;
+    .tx-filter-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
+    .tx-filter-head h2 { margin: 0; font-size: 1rem; font-weight: 700; }
+    .tx-filter-head p { margin: .25rem 0 0; color: var(--muted); font-size: .78rem; }
+    .tx-filter-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .75rem; align-items: end; }
+    .tx-filter label { display: block; margin-bottom: .38rem; color: #526158; font-size: .73rem; font-weight: 650; }
+    .tx-filter input, .tx-filter select {
+        width: 100%; height: 44px; padding: 0 .75rem;
+        border: 1px solid rgba(30,66,45,.15); border-radius: 12px;
+        color: var(--ink); background: rgba(255,255,255,.9);
     }
+    .tx-filter input:focus, .tx-filter select:focus { outline: 0; border-color: rgba(0,143,69,.46); box-shadow: 0 0 0 4px rgba(0,143,69,.10); }
+    .tx-filter-actions { display: flex; justify-content: space-between; align-items: center; gap: .75rem; margin-top: 1rem; }
+    .tx-filter-actions > div { display: flex; gap: .5rem; }
+    #filterResultCount { color: var(--muted); font-size: .78rem; }
 
-    .tx-filter label {
-        display: block;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-        font-size: 0.7rem;
-        font-weight: 700;
-        color: #5f5b75;
-        margin-bottom: 0.35rem;
-    }
+    .tx-title { margin: 0; font-size: 1.18rem; font-weight: 700; letter-spacing: -.025em; }
+    .tx-type { display: inline-flex; border-radius: 999px; padding: .26rem .62rem; font-size: .64rem; letter-spacing: .04em; font-weight: 750; text-transform: uppercase; white-space: nowrap; }
+    .tx-type.purchase { background: #e5efe8; color: #245f40; }
+    .tx-type.load { background: #ddf2e5; color: #08733e; }
+    .tx-type.nfc_purchase, .tx-type.nfc { background: #e9f2eb; color: #2c6747; }
+    .tx-type.qr_purchase, .tx-type.qr { background: #fbf3cc; color: #755d0b; }
+    .tx-type.withdrawal { background: #fbe8da; color: #8a471b; }
+    .tx-type.void { background: #fae0e2; color: #9b2630; }
+    .tx-type.default { background: #ebefec; color: #657168; }
+    .amount.pos { color: var(--success); font-weight: 750; }
+    .amount.neg { color: var(--error); font-weight: 750; }
+    .student-id { color: var(--seton-green-deep); font-weight: 700; text-decoration: none; }
+    .student-id:hover { text-decoration: underline; }
+    .tx-actions { display: flex; gap: .35rem; justify-content: center; }
 
-    .tx-filter input,
-    .tx-filter select {
-        height: 42px;
-        width: 100%;
-        border-radius: 9px;
-        border: 1px solid #d7d1e7;
-        background: #fff;
-        padding: 0 0.7rem;
-    }
+    .table-top { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: 1rem 1.1rem; border-bottom: 1px solid var(--line); background: rgba(255,255,255,.75); }
+    .table-tools { display: flex; gap: .5rem; }
+    .tx-foot { display: flex; justify-content: space-between; align-items: center; gap: .8rem; padding: .9rem 1rem; border-top: 1px solid var(--line); background: rgba(236,243,238,.72); }
+    .pager { display: inline-flex; align-items: center; gap: .35rem; }
+    .pager button { min-width: 36px; height: 36px; padding: 0 .65rem; border: 1px solid var(--line); border-radius: 999px; color: #405047; background: rgba(255,255,255,.9); font-size: .78rem; font-weight: 650; }
+    .pager button.active { color: #fff; border-color: var(--seton-green-deep); background: var(--seton-green-deep); }
+    .pager button:disabled { opacity: .42; cursor: not-allowed; }
 
-    .tx-title {
-        font-family: 'Instrument Serif', serif;
-        font-style: italic;
-        font-size: 2rem;
-        margin: 0;
-    }
-
-    .tx-title .accent { color: #3525cd; }
-
-    .tx-type {
-        border-radius: 999px;
-        padding: 0.22rem 0.65rem;
-        font-size: 0.66rem;
-        letter-spacing: 0.05em;
-        font-weight: 800;
-        text-transform: uppercase;
-    }
-
-    .tx-type.purchase { background: #dbe9ff; color: #2058b8; }
-    .tx-type.load { background: #d4f0df; color: #147d43; }
-    .tx-type.nfc_purchase,
-    .tx-type.nfc { background: #e7ddff; color: #5632b8; }
-    .tx-type.qr_purchase,
-    .tx-type.qr { background: #ede3ff; color: #5d2fc6; }
-    .tx-type.void { background: #ffcfd3; color: #9b1a26; }
-    .tx-type.default { background: #eceaf4; color: #6d6881; }
-
-    .amount.pos { color: #179a58; font-weight: 800; }
-    .amount.neg { color: #ba1a1a; font-weight: 800; }
-
-    .tx-actions {
-        display: flex;
-        gap: 0.35rem;
-        justify-content: center;
-    }
-
-    .table-top {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 1rem;
-        border-bottom: 1px solid rgba(217, 211, 232, 0.75);
-        background: #fff;
-    }
-
-    .tx-foot {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 0.95rem 1rem;
-        border-top: 1px solid rgba(217, 211, 232, 0.75);
-        background: #f1edf9;
-    }
-
-    .pager button {
-        width: 34px;
-        height: 34px;
-        border-radius: 8px;
-        border: 1px solid #d6d0e7;
-        background: #fff;
-        color: #4f4a62;
-        font-weight: 700;
-        margin-left: 0.35rem;
-    }
-
-    .pager button.active {
-        background: #3525cd;
-        border-color: #3525cd;
-        color: #fff;
-    }
-
-    @media (max-width: 1200px) {
-        .tx-filter-grid { grid-template-columns: 1fr 1fr; }
+    @media (max-width: 1200px) { .tx-filter-grid { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 760px) {
+        .tx-head, .tx-filter-head, .table-top, .tx-foot { align-items: stretch; flex-direction: column; }
+        .tx-filter-grid { grid-template-columns: 1fr; }
+        .tx-filter-actions { align-items: stretch; flex-direction: column; }
+        .tx-filter-actions > div { display: grid; grid-template-columns: 1fr 1fr; }
+        .table-tools { display: grid; grid-template-columns: 1fr 1fr; }
+        .table-tools .action-btn { width: 100%; }
+        .table-responsive { overflow: visible; }
+        .table-shell table, .table-shell tbody { display: block; }
+        .table-shell thead { display: none; }
+        .table-shell tbody { padding: .65rem; }
+        .table-shell tbody tr { display: block; padding: .75rem; border: 1px solid var(--line); border-radius: 14px; background: rgba(255,255,255,.72); }
+        .table-shell tbody tr + tr { margin-top: .6rem; }
+        .table-shell td { min-height: 34px; padding: .35rem 0; display: grid; grid-template-columns: 108px minmax(0,1fr); align-items: center; gap: .65rem; border-top: 0; text-align: right !important; }
+        .table-shell td::before { content: attr(data-label); color: var(--muted); font-size: .69rem; font-weight: 700; letter-spacing: .05em; text-align: left; text-transform: uppercase; }
+        .table-shell td > * { justify-self: end; }
+        .table-shell td[data-label="Actions"] .tx-actions { justify-self: end; }
+        .table-shell tr:hover td { background: transparent; }
+        .tx-foot { align-items: center; text-align: center; }
+        .pager { flex-wrap: wrap; justify-content: center; }
     }
 </style>
 
 <section class="tx-head">
     <div>
-        <h1 class="page-title" style="font-size:3rem;">Transactions</h1>
+        <h1 class="page-title">Transactions</h1>
+        <p class="page-subtitle">Review the ledger, find a student payment, inspect purchased items, or export a filtered view.</p>
     </div>
 </section>
 
 <section class="tx-filter">
     <form id="filterForm" onsubmit="applyFilters(event)">
+        <div class="tx-filter-head">
+            <div>
+                <h2>Filter the ledger</h2>
+                <p>Leave fields empty to show the newest transactions.</p>
+            </div>
+        </div>
         <div class="tx-filter-grid">
             <div>
-                <label>From Date</label>
+                <label for="filterDateFrom">From date</label>
                 <input type="date" id="filterDateFrom">
             </div>
             <div>
-                <label>To Date</label>
+                <label for="filterDateTo">To date</label>
                 <input type="date" id="filterDateTo">
             </div>
             <div>
-                <label>Student Search</label>
-                <input type="text" id="filterStudent" placeholder="ID or Name...">
+                <label for="filterStudent">Student</label>
+                <input type="search" id="filterStudent" placeholder="Search by student name or ID">
             </div>
             <div>
-                <label>Transaction Type</label>
+                <label for="filterType">Transaction type</label>
                 <select id="filterType">
                     <option value="">All Types</option>
                     <option value="purchase">Purchase</option>
+                    <option value="nfc purchase">NFC purchase</option>
+                    <option value="qr purchase">QR purchase</option>
                     <option value="load">Load</option>
                     <option value="withdrawal">Withdrawal</option>
                     <option value="void">Void</option>
                 </select>
             </div>
         </div>
-        <div class="d-flex justify-content-end gap-2 mt-3">
-            <button type="button" class="action-btn secondary" onclick="clearFilters()">Clear</button>
-            <button type="submit" class="action-btn primary"><i class="bi bi-funnel me-1"></i>Apply Filters</button>
+        <div class="tx-filter-actions">
+            <span id="filterResultCount" aria-live="polite"></span>
+            <div>
+                <button type="button" class="action-btn secondary" onclick="clearFilters()">Reset</button>
+                <button type="submit" class="action-btn primary"><i class="bi bi-funnel me-1"></i>Apply filters</button>
+            </div>
         </div>
-        <div class="small text-muted mt-2" id="filterResultCount"></div>
     </form>
 </section>
 
 <section class="table-shell">
     <div class="table-top">
-        <h2 class="tx-title">Recent <span class="accent">Ledger</span> Activity</h2>
-        <div class="d-flex gap-2">
+        <h2 class="tx-title">Ledger activity</h2>
+        <div class="table-tools">
             <button class="action-btn secondary" type="button" onclick="exportTransactionsCSV()"><i class="bi bi-download me-1"></i>Export CSV</button>
             <button class="action-btn secondary" type="button" onclick="window.print()"><i class="bi bi-printer me-1"></i>Print</button>
         </div>
@@ -190,6 +158,7 @@
     </div>
     <div class="tx-foot">
         <small id="transactionCountBadge">Loading...</small>
+        <nav class="pager" id="transactionPager" aria-label="Transaction pages"></nav>
     </div>
 </section>
 
@@ -249,9 +218,84 @@
 {% block extra_js %}
 <script>
 const CAN_VOID_TRANSACTIONS = {{ 'true' if role == 'admin' else 'false' }};
+const TRANSACTIONS_PER_PAGE = 10;
+let allTransactions = [];
+let currentTransactionPage = 1;
 
 function esc(v) {
     return String(v ?? '').replace(/[&<>'"]/g, m => ({ '&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;' }[m]));
+}
+
+function renderTransactionPager(totalPages) {
+    const pager = document.getElementById('transactionPager');
+    if (totalPages <= 1) { pager.innerHTML = ''; return; }
+
+    const pageButtons = [];
+    const startPage = Math.max(1, currentTransactionPage - 1);
+    const endPage = Math.min(totalPages, startPage + 2);
+    for (let page = startPage; page <= endPage; page += 1) {
+        pageButtons.push(`<button type="button" class="${page === currentTransactionPage ? 'active' : ''}" data-page="${page}" aria-label="Page ${page}" ${page === currentTransactionPage ? 'aria-current="page"' : ''}>${page}</button>`);
+    }
+
+    pager.innerHTML = `
+        <button type="button" data-page="${currentTransactionPage - 1}" ${currentTransactionPage === 1 ? 'disabled' : ''} aria-label="Previous page"><i class="bi bi-chevron-left"></i></button>
+        ${pageButtons.join('')}
+        <button type="button" data-page="${currentTransactionPage + 1}" ${currentTransactionPage === totalPages ? 'disabled' : ''} aria-label="Next page"><i class="bi bi-chevron-right"></i></button>`;
+}
+
+function renderTransactionsPage(page = currentTransactionPage) {
+    const tbody = document.getElementById('transactionsTable');
+    const badge = document.getElementById('transactionCountBadge');
+    const totalPages = Math.max(1, Math.ceil(allTransactions.length / TRANSACTIONS_PER_PAGE));
+    currentTransactionPage = Math.min(Math.max(1, Number(page) || 1), totalPages);
+
+    if (!allTransactions.length) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">No transactions found</td></tr>';
+        badge.textContent = 'No transactions to show';
+        renderTransactionPager(0);
+        return;
+    }
+
+    const start = (currentTransactionPage - 1) * TRANSACTIONS_PER_PAGE;
+    const rows = allTransactions.slice(start, start + TRANSACTIONS_PER_PAGE);
+    badge.textContent = `Showing ${start + 1}–${Math.min(start + rows.length, allTransactions.length)} of ${allTransactions.length.toLocaleString()} transactions`;
+
+    tbody.innerHTML = rows.map((t, localIndex) => {
+        const transactionIndex = start + localIndex;
+        const amountNum = parseFloat(t.Amount) || 0;
+        const balanceAfterNum = parseFloat(t.BalanceAfter) || 0;
+        const date = new Date(t.Date || Date.now());
+        const typeStr = String(t.Type || '').toLowerCase().replace(/\s+/g, '_');
+        const isNeg = amountNum < 0 || ['purchase', 'withdrawal', 'nfc_purchase', 'qr_purchase'].includes(typeStr);
+
+        let hasItems = false;
+        try {
+            const itemsStr = String(t.ItemsJson || '').trim();
+            if (itemsStr) hasItems = Array.isArray(JSON.parse(itemsStr));
+        } catch {}
+
+        const canVoid = CAN_VOID_TRANSACTIONS && typeStr !== 'void' && t.TransactionID;
+        const viewBtn = hasItems
+            ? `<button class="icon-btn" type="button" data-view-index="${transactionIndex}" title="View purchased items" aria-label="View purchased items"><i class="bi bi-eye-fill"></i></button>`
+            : `<button class="icon-btn" type="button" disabled title="No item details" aria-label="No item details"><i class="bi bi-info-circle"></i></button>`;
+        const voidBtn = canVoid
+            ? `<button class="icon-btn" type="button" data-void-index="${transactionIndex}" title="Void transaction" aria-label="Void transaction"><i class="bi bi-trash-fill text-danger"></i></button>`
+            : '';
+        const studentId = String(t.StudentID || '');
+
+        return `
+            <tr>
+                <td data-label="Date & time">${esc(date.toLocaleString())}</td>
+                <td data-label="Student ID"><a class="student-id" href="/students?q=${encodeURIComponent(studentId)}">${esc(studentId || '—')}</a></td>
+                <td data-label="Student"><strong>${esc(t.StudentName || '—')}</strong></td>
+                <td data-label="Type"><span class="tx-type ${typeStr || 'default'}">${esc((t.Type || 'Unknown').toString())}</span></td>
+                <td data-label="Amount" class="text-end amount ${isNeg ? 'neg' : 'pos'}">${isNeg ? '−' : '+'}₱${Math.abs(amountNum).toFixed(2)}</td>
+                <td data-label="Balance after" class="text-end">₱${balanceAfterNum.toFixed(2)}</td>
+                <td data-label="Actions"><div class="tx-actions">${viewBtn}${voidBtn}</div></td>
+            </tr>`;
+    }).join('');
+
+    renderTransactionPager(totalPages);
 }
 
 async function loadTransactions(params = {}) {
@@ -260,64 +304,26 @@ async function loadTransactions(params = {}) {
     const badge = document.getElementById('transactionCountBadge');
 
     tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4"><div class="spinner-border spinner-border-sm me-2"></div>Loading transactions...</td></tr>';
+    document.getElementById('transactionPager').innerHTML = '';
 
     try {
         const qs = new URLSearchParams({limit: 200, ...params}).toString();
         const useFiltered = Object.keys(params).some(k => params[k] && k !== 'limit');
         const url = useFiltered ? '/api/transactions/filtered?' + qs : '/api/transactions/recent?limit=200';
-
         const response = await fetch(url);
         if (!response.ok) throw new Error('Failed to load transactions');
 
         const data = await response.json();
-        const transactions = data.transactions || [];
-
-        if (resultCount) resultCount.textContent = `Showing ${transactions.length} transaction(s)`;
-        badge.textContent = `Showing 1-${Math.min(transactions.length, 10)} of ${transactions.length.toLocaleString()} transactions`;
-
-        if (!transactions.length) {
-            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">No transactions found</td></tr>';
-            return;
-        }
-
-        tbody.innerHTML = transactions.slice(0, 10).map(t => {
-            const amountNum = parseFloat(t.Amount) || 0;
-            const balanceAfterNum = parseFloat(t.BalanceAfter) || 0;
-            const date = new Date(t.Date || Date.now());
-            const typeStr = String(t.Type || '').toLowerCase().replace(/\s+/g, '_');
-            const isNeg = amountNum < 0 || ['purchase', 'withdrawal', 'nfc_purchase', 'qr_purchase'].includes(typeStr);
-
-            let hasItems = false;
-            try {
-                const itemsStr = String(t.ItemsJson || '').trim();
-                if (itemsStr) hasItems = Array.isArray(JSON.parse(itemsStr));
-            } catch {}
-
-            const canVoid = CAN_VOID_TRANSACTIONS && typeStr !== 'void' && t.TransactionID;
-            const viewBtn = hasItems
-                ? `<button class="icon-btn" onclick='showTransactionDetails(${JSON.stringify(t)})' title="View"><i class="bi bi-eye-fill"></i></button>`
-                : `<button class="icon-btn" disabled title="No details"><i class="bi bi-info-circle"></i></button>`;
-            const voidBtn = canVoid
-                ? `<button class="icon-btn" onclick='openVoidModal("${esc(t.TransactionID)}")' title="Void"><i class="bi bi-trash-fill text-danger"></i></button>`
-                : '';
-
-            return `
-                <tr>
-                    <td>${esc(date.toLocaleString())}</td>
-                    <td><a class="student-id" href="#">${esc(t.StudentID || '—')}</a></td>
-                    <td><strong>${esc(t.StudentName || '—')}</strong></td>
-                    <td><span class="tx-type ${typeStr || 'default'}">${esc((t.Type || 'Unknown').toString())}</span></td>
-                    <td class="text-end amount ${isNeg ? 'neg' : 'pos'}">${isNeg ? '-' : '+'}₱${Math.abs(amountNum).toFixed(2)}</td>
-                    <td class="text-end">₱${balanceAfterNum.toFixed(2)}</td>
-                    <td><div class="tx-actions">${viewBtn}${voidBtn}</div></td>
-                </tr>
-            `;
-        }).join('');
+        allTransactions = data.transactions || [];
+        currentTransactionPage = 1;
+        resultCount.textContent = useFiltered ? `${allTransactions.length} matching transaction${allTransactions.length === 1 ? '' : 's'}` : `${allTransactions.length} recent transaction${allTransactions.length === 1 ? '' : 's'}`;
+        renderTransactionsPage(1);
     } catch (error) {
         console.error('Error loading transactions:', error);
+        allTransactions = [];
         tbody.innerHTML = `<tr><td colspan="7" class="text-center text-danger py-4">Failed to load: ${esc(error.message)}</td></tr>`;
-        if (resultCount) resultCount.textContent = '';
-        badge.textContent = 'Showing 0 entries';
+        resultCount.textContent = '';
+        badge.textContent = 'Unable to load transactions';
     }
 }
 
@@ -403,6 +409,26 @@ async function confirmVoid() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('transactionPager').addEventListener('click', event => {
+        const button = event.target.closest('[data-page]');
+        if (!button || button.disabled) return;
+        renderTransactionsPage(Number(button.dataset.page));
+        document.querySelector('.table-shell')?.scrollIntoView({behavior: 'smooth', block: 'start'});
+    });
+
+    document.getElementById('transactionsTable').addEventListener('click', event => {
+        const viewButton = event.target.closest('[data-view-index]');
+        if (viewButton) {
+            showTransactionDetails(allTransactions[Number(viewButton.dataset.viewIndex)]);
+            return;
+        }
+        const voidButton = event.target.closest('[data-void-index]');
+        if (voidButton) {
+            const transaction = allTransactions[Number(voidButton.dataset.voidIndex)];
+            if (transaction?.TransactionID) openVoidModal(String(transaction.TransactionID));
+        }
+    });
+
     const params = new URLSearchParams(window.location.search);
     const q = (params.get('q') || '').trim();
     if (q) {
@@ -419,7 +445,7 @@ function exportTransactionsCSV() {
         alert('No transactions to export');
         return;
     }
-    
+
     let csv = 'Date & Time,Student ID,Student Name,Type,Amount,Balance After\n';
 
     // Export the currently rendered table rows.
@@ -442,7 +468,7 @@ function exportTransactionsCSV() {
             csv += [dateTime, studentId, studentName, type, amount, balanceAfter].join(',') + '\n';
         }
     }
-    
+
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);

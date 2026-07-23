@@ -4,245 +4,357 @@
 
 {% block content %}
 <style>
-    .dash-head {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-end;
-        gap: 1rem;
-        margin-bottom: 1.5rem;
+    .dashboard-view { position: relative; }
+
+    .student-search-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 60;
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+        border: 0;
+        background: rgba(9, 20, 13, 0.62);
+        backdrop-filter: blur(7px);
+        -webkit-backdrop-filter: blur(7px);
+        transition: opacity 220ms ease, visibility 220ms ease;
     }
 
+    body.search-mode { overflow: hidden; }
+    body.search-mode .student-search-backdrop { opacity: 1; visibility: visible; pointer-events: auto; }
 
-    .dash-kpis {
-        display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: 0.9rem;
-        margin-bottom: 1.25rem;
-    }
-
-    .dash-kpis .label { font-size: 0.86rem; color: #5f5b75; font-weight: 600; }
-    .dash-kpis .meta { font-size: 0.84rem; color: #6d6881; margin-top: 0.35rem; }
-
-    .dash-layout {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr);
-        gap: 1rem;
-    }
-
-    .hero-search {
-        background: linear-gradient(140deg, #4f46e5, #3525cd);
-        color: #fff;
-        border-radius: 14px;
-        padding: 1.4rem;
+    .search-feature {
+        position: relative;
+        z-index: 1;
         margin-bottom: 1rem;
     }
 
-    .hero-search h3 {
-        margin: 0;
-        font-family: 'Instrument Serif', serif;
-        font-size: 2rem;
-        font-style: italic;
+    body.search-mode .search-feature { z-index: 70; }
+
+    .search-card {
+        position: relative;
+        overflow: visible;
+        padding: clamp(1.2rem, 2.7vw, 2.2rem);
+        border: 1px solid rgba(255, 255, 255, 0.78);
+        border-radius: 22px;
+        background:
+            linear-gradient(135deg, rgba(255,255,255,.91), rgba(247,252,248,.74)),
+            rgba(255,255,255,.82);
+        box-shadow: 0 24px 60px rgba(17, 56, 34, 0.10);
+        backdrop-filter: saturate(150%) blur(24px);
+        -webkit-backdrop-filter: saturate(150%) blur(24px);
+        transform-origin: center top;
     }
 
-    .hero-search p { margin: 0.4rem 0 1rem; color: #dad7ff; font-weight: 500; }
+    body.search-mode .search-card { box-shadow: 0 32px 90px rgba(3, 24, 13, 0.34); }
+
+    .search-kicker {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        margin-bottom: 0.65rem;
+        color: var(--seton-green-deep);
+        font-size: 0.72rem;
+        font-weight: 750;
+        letter-spacing: 0.09em;
+        text-transform: uppercase;
+    }
+
+    .search-kicker::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--seton-gold); box-shadow: 0 0 0 4px rgba(226,191,36,.15); }
+    .search-card h1 { max-width: 720px; margin: 0; font-size: clamp(2rem, 4vw, 3.8rem); font-weight: 700; letter-spacing: -0.055em; line-height: 1.02; }
+    .search-card > p { max-width: 690px; margin: 0.7rem 0 1.25rem; color: var(--muted); font-size: 0.94rem; line-height: 1.55; }
 
     .hero-input {
-        display: flex;
-        gap: 0.7rem;
-    }
-
-    .hero-input input {
-        flex: 1;
-        height: 45px;
-        border-radius: 9px;
-        border: 0;
-        padding: 0 0.9rem;
-    }
-
-    .hero-input button {
-        border: 0;
-        border-radius: 9px;
-        background: #1a1472;
-        color: #fff;
-        font-weight: 700;
-        min-width: 110px;
-    }
-
-    .activity-list,
-    .student-results {
-        display: flex;
-        flex-direction: column;
-        gap: 0.65rem;
-        max-height: 290px;
-        overflow-y: auto;
-    }
-
-    .activity-item,
-    .student-item {
-        background: #fff;
-        border: 1px solid #e3def1;
-        border-radius: 11px;
-        padding: 0.7rem 0.9rem;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 0.8rem;
-    }
-
-    .activity-item strong,
-    .student-item strong { display: block; font-size: 0.95rem; }
-    .activity-item small,
-    .student-item small { color: #6f6a82; }
-
-    .quick-actions {
+        min-height: 58px;
         display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: 22px minmax(0, 1fr) auto;
+        align-items: center;
         gap: 0.75rem;
-        margin-bottom: 1rem;
+        padding: 0.42rem 0.48rem 0.42rem 1rem;
+        border: 1px solid rgba(26, 76, 46, 0.16);
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.88);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,.75);
+        transition: border-color 180ms ease, box-shadow 180ms ease, background 180ms ease;
     }
-    .quick-action {
-        background: #fff;
-        border: 1px solid #e3def1;
-        border-radius: 11px;
-        color: #24213a;
-        padding: 0.9rem;
+
+    .hero-input:focus-within { border-color: rgba(0,143,69,.46); background: #fff; box-shadow: 0 0 0 4px rgba(0,143,69,.10); }
+    .hero-input > i { color: var(--seton-green); font-size: 1.05rem; }
+    .hero-input input { width: 100%; min-width: 0; height: 46px; padding: 0; border: 0; outline: 0; color: var(--ink); background: transparent; font-size: 1rem; }
+    .hero-input input::placeholder { color: #869189; }
+    .hero-input button { min-width: 106px; height: 46px; padding: 0 1rem; border: 0; border-radius: 12px; color: #fff; background: var(--seton-green-deep); font-weight: 650; }
+    .hero-input button:hover { background: var(--seton-green-dark); }
+
+    .student-search-popover {
+        width: 100%;
+        max-height: min(430px, 48vh);
+        margin-top: 0.65rem;
+        padding: 0.55rem;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        overflow-y: auto;
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+        transform: translateY(-8px) scale(.985);
+        transform-origin: top center;
+        border: 1px solid rgba(255,255,255,.78);
+        border-radius: 18px;
+        background: rgba(251, 253, 251, 0.94);
+        box-shadow: 0 26px 70px rgba(5, 35, 19, 0.28);
+        backdrop-filter: saturate(150%) blur(24px);
+        -webkit-backdrop-filter: saturate(150%) blur(24px);
+    }
+
+    .student-search-popover.is-open { opacity: 1; visibility: visible; pointer-events: auto; transform: translateY(0) scale(1); }
+
+    .student-result {
+        min-height: 66px;
+        padding: 0.72rem 0.8rem;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto 28px;
+        align-items: center;
+        gap: 0.7rem;
+        border-radius: 13px;
+        color: var(--ink);
         text-decoration: none;
     }
-    .quick-action strong, .quick-action small { display: block; }
-    .quick-action small { color: #6d6881; margin-top: 0.2rem; }
+    .student-result + .student-result { border-top: 1px solid var(--line); }
+    .student-result:hover { color: var(--ink); background: var(--seton-green-soft); }
+    .student-result strong, .student-result small { display: block; }
+    .student-result strong { font-size: 0.92rem; font-weight: 650; }
+    .student-result small { margin-top: 0.18rem; color: var(--muted); font-size: 0.78rem; }
+    .student-result .balance { color: var(--seton-green-deep); font-size: 0.88rem; font-weight: 700; white-space: nowrap; }
+    .student-result > i { color: #7d8b82; }
 
-    @media (max-width: 1200px) {
-        .dash-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .search-state { padding: 1.1rem; display: flex; align-items: center; gap: 0.75rem; color: var(--muted); }
+    .search-state i { color: var(--seton-green); font-size: 1.1rem; }
+
+    .dash-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.85rem; margin-bottom: 1rem; }
+    .dashboard-view .metric-card { min-height: 132px; opacity: 1; animation: none; }
+    .metric-top { display: flex; align-items: center; justify-content: space-between; gap: 0.7rem; }
+    .metric-card .label { color: #526158; font-size: 0.79rem; font-weight: 650; }
+    .metric-icon { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 11px; color: var(--seton-green-deep); background: var(--seton-green-soft); }
+    .metric-card:nth-child(2) .metric-icon { color: #765d08; background: var(--seton-gold-soft); }
+    .metric-card .meta { margin-top: 0.45rem; color: var(--muted); font-size: 0.76rem; line-height: 1.4; }
+
+    .activity-panel { padding: clamp(1rem, 2vw, 1.35rem); }
+    .activity-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 0.9rem; }
+    .activity-head a { color: var(--seton-green-deep); font-size: 0.78rem; font-weight: 700; text-decoration: none; }
+    .activity-list { display: flex; flex-direction: column; }
+    .activity-item { min-height: 64px; padding: 0.72rem 0.2rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+    .activity-item + .activity-item { border-top: 1px solid var(--line); }
+    .activity-item strong, .activity-item small { display: block; }
+    .activity-item strong { font-size: 0.88rem; font-weight: 650; }
+    .activity-item small { margin-top: 0.2rem; color: var(--muted); font-size: 0.76rem; }
+    .activity-amount { text-align: right; white-space: nowrap; }
+    .activity-amount .positive { color: var(--success); }
+    .activity-amount .negative { color: var(--error); }
+
+    @media (max-width: 1180px) { .dash-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @media (max-width: 640px) {
+        .search-card { padding: 1.2rem; border-radius: 18px; }
+        .search-card h1 { font-size: 2.35rem; }
+        .hero-input { grid-template-columns: 20px minmax(0, 1fr); padding: 0.45rem 0.75rem; }
+        .hero-input button { grid-column: 1 / -1; width: 100%; }
+        .student-search-popover { max-height: 46vh; }
+        .student-result { grid-template-columns: minmax(0,1fr) auto; }
+        .student-result > i { display: none; }
+        .dash-kpis { grid-template-columns: 1fr 1fr; gap: 0.65rem; }
+        .dashboard-view .metric-card { min-height: 118px; padding: 0.95rem; }
+        .metric-card .value { font-size: 2rem; }
+        .metric-card .meta { font-size: 0.7rem; }
+        .activity-head { align-items: flex-start; }
     }
-    @media (max-width: 700px) {
-        .quick-actions { grid-template-columns: 1fr; }
-    }
+    @media (max-width: 390px) { .dash-kpis { grid-template-columns: 1fr; } }
 </style>
 
-<div class="dash-head">
-    <div>
-        <h1 class="page-title" style="font-style: normal;">Canteen dashboard</h1>
-        <p class="page-subtitle">Start with a student search, then review today’s payments and exceptions.</p>
-    </div>
-</div>
+<div class="dashboard-view">
+    <button id="studentSearchBackdrop" class="student-search-backdrop" type="button" aria-label="Close student search" tabindex="-1"></button>
 
-<section aria-label="Quick actions">
-    <h2 class="section-heading" style="font-size:1.45rem;margin:0 0 0.6rem;">Quick actions</h2>
-    <div class="quick-actions">
-        <a class="quick-action" href="/students"><strong>Find a student</strong><small>Manage cards and balances</small></a>
-        <a class="quick-action" href="/transactions"><strong>Review payments</strong><small>Open the transaction ledger</small></a>
-        <a class="quick-action" href="/products"><strong>Manage menu</strong><small>Add or update canteen products</small></a>
-    </div>
-</section>
-
-<section class="dash-kpis">
-    <article class="metric-card">
-        <div class="label">Students</div>
-        <div class="value" id="totalStudents">0</div>
-        <div class="meta"><span id="studentDelta">0</span> active</div>
-    </article>
-    <article class="metric-card">
-        <div class="label">Transactions today</div>
-        <div class="value" id="todayTransactions">0</div>
-        <div class="meta"><span id="todayTxnCount">0</span> total events</div>
-    </article>
-    <article class="metric-card">
-        <div class="label">Unresolved Alerts</div>
-        <div class="value" id="unresolvedAlerts" style="color:#ba1a1a;">0</div>
-        <div class="meta">Review requested for flagged cards</div>
-    </article>
-    <article class="metric-card">
-        <div class="label">Pending Sync</div>
-        <div class="value" id="pendingSyncCount">0</div>
-        <div class="meta" id="pendingSyncMeta">Waiting for queue status...</div>
-    </article>
-</section>
-
-<section class="dash-layout">
-    <div>
-        <div class="hero-search">
-            <h3>Find a student</h3>
-            <p>Search a name or student ID to manage the account, card, or payment history.</p>
+    <section class="search-feature" id="studentSearchExperience" aria-labelledby="student-search-title">
+        <div class="search-card page-panel" id="studentSearchCard">
+            <span class="search-kicker">Student lookup</span>
+            <h1 id="student-search-title">Find a student</h1>
+            <p>Search by name or student ID to open the account, review cards, check the balance, or view payment history.</p>
             <div class="hero-input">
-                <input id="studentSearch" type="text" placeholder="Enter Student Name or ID..." autocomplete="off">
+                <i class="bi bi-search" aria-hidden="true"></i>
+                <input id="studentSearch" type="search" placeholder="Enter name or student ID" autocomplete="off" aria-controls="studentSearchPopover" aria-expanded="false">
                 <button id="studentSearchBtn" type="button">Search</button>
             </div>
+            <div id="studentSearchPopover" class="student-search-popover" role="region" aria-live="polite" aria-label="Student search matches">
+                <div id="studentList"></div>
+            </div>
         </div>
+    </section>
 
-        <section class="page-panel" style="padding:1rem; margin-bottom:1rem;">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.8rem;">
-                <h3 class="section-heading" style="font-size:1.8rem;">Search Results</h3>
-                <a href="/students" style="font-size:0.82rem;font-weight:700;color:#3525cd;text-decoration:none;">Open Students</a>
-            </div>
-            <div id="studentList" class="student-results"></div>
-        </section>
+    <section class="dash-kpis" aria-label="Overview">
+        <article class="metric-card">
+            <div class="metric-top"><div class="label">Students</div><span class="metric-icon"><i class="bi bi-people"></i></span></div>
+            <div class="value" id="totalStudents">0</div>
+            <div class="meta"><span id="studentDelta">0</span> active accounts</div>
+        </article>
+        <article class="metric-card">
+            <div class="metric-top"><div class="label">Transactions today</div><span class="metric-icon"><i class="bi bi-receipt"></i></span></div>
+            <div class="value" id="todayTransactions">0</div>
+            <div class="meta"><span id="todayTxnCount">0</span> total events</div>
+        </article>
+        <article class="metric-card">
+            <div class="metric-top"><div class="label">Unresolved alerts</div><span class="metric-icon"><i class="bi bi-shield-exclamation"></i></span></div>
+            <div class="value" id="unresolvedAlerts">0</div>
+            <div class="meta">Flagged cards needing review</div>
+        </article>
+        <article class="metric-card">
+            <div class="metric-top"><div class="label">Pending sync</div><span class="metric-icon"><i class="bi bi-arrow-repeat"></i></span></div>
+            <div class="value" id="pendingSyncCount">0</div>
+            <div class="meta" id="pendingSyncMeta">Checking terminal queues…</div>
+        </article>
+    </section>
 
-        <section class="page-panel" style="padding:1rem;">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.8rem;">
-                <h3 class="section-heading" style="font-size:1.8rem;">Recent wallet events</h3>
-                <a href="/transactions" style="font-size:0.82rem;font-weight:700;color:#3525cd;text-decoration:none;">View All Ledger</a>
-            </div>
-            <div id="recentActivity" class="activity-list"></div>
-        </section>
-    </div>
-</section>
-
+    <section class="page-panel activity-panel">
+        <div class="activity-head">
+            <h2 class="section-heading">Recent wallet activity</h2>
+            <a href="/transactions">View all transactions <i class="bi bi-arrow-right"></i></a>
+        </div>
+        <div id="recentActivity" class="activity-list"></div>
+    </section>
+</div>
 {% endblock %}
 
 {% block extra_js %}
+<script src="/static/vendor/gsap.min.js"></script>
+<script src="/static/vendor/anime.min.js"></script>
 <script>
+(() => {
     const el = {
         totalStudents: document.getElementById('totalStudents'),
         todayTransactions: document.getElementById('todayTransactions'),
         unresolvedAlerts: document.getElementById('unresolvedAlerts'),
         pendingSyncCount: document.getElementById('pendingSyncCount'),
         pendingSyncMeta: document.getElementById('pendingSyncMeta'),
-        studentList: document.getElementById('studentList'),
         recentActivity: document.getElementById('recentActivity'),
-        studentSearch: document.getElementById('studentSearch')
+        searchExperience: document.getElementById('studentSearchExperience'),
+        searchCard: document.getElementById('studentSearchCard'),
+        searchInput: document.getElementById('studentSearch'),
+        searchButton: document.getElementById('studentSearchBtn'),
+        searchBackdrop: document.getElementById('studentSearchBackdrop'),
+        searchPopover: document.getElementById('studentSearchPopover'),
+        studentList: document.getElementById('studentList')
     };
 
     const IS_ADMIN = {{ 'true' if role == 'admin' else 'false' }};
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let debounceTimer = null;
+    let searchRequest = 0;
 
     function esc(value) {
-        return String(value ?? '').replace(/[&<>'"]/g, m => ({ '&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;' }[m]));
+        return String(value ?? '').replace(/[&<>'"]/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[character]));
+    }
+
+    function openSearch() {
+        document.body.classList.add('search-mode');
+        if (!reducedMotion && window.gsap) {
+            gsap.killTweensOf(el.searchCard);
+            gsap.fromTo(el.searchCard, {scale: 0.992}, {scale: 1, duration: 0.28, ease: 'power2.out'});
+        }
+    }
+
+    function setPopover(open) {
+        el.searchPopover.classList.toggle('is-open', open);
+        el.searchInput.setAttribute('aria-expanded', open ? 'true' : 'false');
+    }
+
+    function closeSearch() {
+        document.body.classList.remove('search-mode');
+        setPopover(false);
+        el.studentList.replaceChildren();
+        el.searchInput.blur();
+    }
+
+    function showSearchState(icon, title, detail = '') {
+        el.studentList.innerHTML = `<div class="search-state"><i class="bi ${icon}"></i><div><strong>${esc(title)}</strong>${detail ? `<small class="d-block mt-1">${esc(detail)}</small>` : ''}</div></div>`;
+        setPopover(true);
+    }
+
+    function animateResults() {
+        if (reducedMotion || !window.anime) return;
+        anime.remove('.student-result');
+        anime({targets: '.student-result', opacity: [0, 1], translateY: [9, 0], delay: anime.stagger(42), duration: 300, easing: 'easeOutCubic'});
+    }
+
+    async function searchStudents() {
+        const query = el.searchInput.value.trim();
+        openSearch();
+        if (!query) {
+            setPopover(false);
+            el.studentList.replaceChildren();
+            return;
+        }
+
+        const requestId = ++searchRequest;
+        showSearchState('bi-arrow-repeat', 'Searching students…');
+
+        try {
+            const response = await fetch(`/api/students/search?q=${encodeURIComponent(query)}`);
+            if (!response.ok) throw new Error('request failed');
+            const data = await response.json();
+            if (requestId !== searchRequest) return;
+            const students = (data.students || []).slice(0, 8);
+
+            if (!students.length) {
+                showSearchState('bi-person-x', 'No matching student', 'Try another name or student ID.');
+                return;
+            }
+
+            el.studentList.innerHTML = students.map(student => {
+                const studentId = String(student.StudentID || '');
+                const balance = Number(student.Balance || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                return `<a class="student-result" href="/students?q=${encodeURIComponent(studentId)}">
+                    <span><strong>${esc(student.Name || 'Unnamed student')}</strong><small>${esc(studentId || 'No student ID')}</small></span>
+                    <span class="balance">₱${balance}</span>
+                    <i class="bi bi-chevron-right" aria-hidden="true"></i>
+                </a>`;
+            }).join('');
+            setPopover(true);
+            animateResults();
+        } catch (error) {
+            console.error('student search error', error);
+            if (requestId === searchRequest) showSearchState('bi-wifi-off', 'Search unavailable', 'Check the connection and try again.');
+        }
     }
 
     async function loadStats() {
         try {
-            const statsRes = await fetch('/api/stats');
-            if (statsRes.ok) {
-                const stats = await statsRes.json();
+            const statsResponse = await fetch('/api/stats');
+            if (statsResponse.ok) {
+                const stats = await statsResponse.json();
+                const today = Number(stats.today_transactions || 0);
                 el.totalStudents.textContent = Number(stats.total_students || 0).toLocaleString();
-                el.todayTransactions.textContent = Number(stats.today_transactions || 0).toLocaleString();
-                document.getElementById('todayTxnCount').textContent = Number(stats.today_transactions || 0).toLocaleString();
-                const activeStudents = Number(stats.active_students || 0);
-                document.getElementById('studentDelta').textContent = activeStudents.toLocaleString();
+                el.todayTransactions.textContent = today.toLocaleString();
+                document.getElementById('todayTxnCount').textContent = today.toLocaleString();
+                document.getElementById('studentDelta').textContent = Number(stats.active_students || 0).toLocaleString();
             }
-
             if (IS_ADMIN) {
-                const fraudRes = await fetch('/api/fraud/stats');
-                if (fraudRes.ok) {
-                    const fraud = await fraudRes.json();
+                const fraudResponse = await fetch('/api/fraud/stats');
+                if (fraudResponse.ok) {
+                    const fraud = await fraudResponse.json();
                     el.unresolvedAlerts.textContent = Number(fraud.unresolved_alerts || 0).toLocaleString();
                 }
             } else {
                 el.unresolvedAlerts.textContent = '—';
             }
-        } catch (err) {
-            console.error('stats error', err);
+        } catch (error) {
+            console.error('stats error', error);
         }
 
         try {
-            const q = await fetch('/cashier/api/queue/status');
-            if (q.ok) {
-                const data = await q.json();
-                const pending = Number(data.pending || 0);
-                el.pendingSyncCount.textContent = pending.toLocaleString();
-                el.pendingSyncMeta.textContent = pending > 0 ? 'Offline terminal queue active' : 'All terminal queues synced';
-            } else {
-                el.pendingSyncMeta.textContent = 'Queue status unavailable';
-            }
+            const queueResponse = await fetch('/cashier/api/queue/status');
+            if (!queueResponse.ok) throw new Error('queue unavailable');
+            const queue = await queueResponse.json();
+            const pending = Number(queue.pending || 0);
+            el.pendingSyncCount.textContent = pending.toLocaleString();
+            el.pendingSyncMeta.textContent = pending ? 'Offline terminal queue active' : 'All terminal queues synced';
         } catch {
             el.pendingSyncMeta.textContent = 'Queue status unavailable';
         }
@@ -250,87 +362,52 @@
 
     async function loadRecentActivity() {
         try {
-            const res = await fetch('/api/transactions/recent?limit=7');
-            if (!res.ok) throw new Error('request failed');
-            const data = await res.json();
-            const rows = (data.transactions || []).slice(0, 7);
+            const response = await fetch('/api/transactions/recent?limit=7');
+            if (!response.ok) throw new Error('request failed');
+            const data = await response.json();
+            const transactions = (data.transactions || []).slice(0, 7);
 
-            if (!rows.length) {
+            if (!transactions.length) {
                 el.recentActivity.innerHTML = '<div class="activity-item"><div><strong>No transactions yet</strong><small>Recent wallet activity will appear here.</small></div></div>';
                 return;
             }
 
-            el.recentActivity.innerHTML = rows.map(t => {
-                const type = String(t.Type || '').toLowerCase();
-                const amount = Number(t.Amount || 0);
-                const isDebit = type === 'purchase' || type === 'withdrawal';
-                const sign = isDebit ? '-' : '+';
-                return `
-                    <div class="activity-item">
-                        <div>
-                            <strong>${esc((t.Type || 'Transaction').toString())}</strong>
-                            <small>${esc(t.StudentName || 'Unknown')} • ${esc(t.StudentID || 'N/A')}</small>
-                        </div>
-                        <div style="text-align:right;">
-                            <strong style="color:${isDebit ? '#ba1a1a' : '#179a58'};">${sign} ₱${Math.abs(amount).toFixed(2)}</strong>
-                            <small>${esc(new Date(t.Date || Date.now()).toLocaleTimeString())}</small>
-                        </div>
-                    </div>
-                `;
+            el.recentActivity.innerHTML = transactions.map(transaction => {
+                const type = String(transaction.Type || '').toLowerCase();
+                const amount = Number(transaction.Amount || 0);
+                const isDebit = amount < 0 || ['purchase', 'withdrawal', 'nfc purchase', 'qr purchase'].includes(type);
+                const sign = isDebit ? '−' : '+';
+                return `<div class="activity-item">
+                    <div><strong>${esc(transaction.Type || 'Transaction')}</strong><small>${esc(transaction.StudentName || 'Unknown')} · ${esc(transaction.StudentID || 'N/A')}</small></div>
+                    <div class="activity-amount"><strong class="${isDebit ? 'negative' : 'positive'}">${sign} ₱${Math.abs(amount).toFixed(2)}</strong><small>${esc(new Date(transaction.Date || Date.now()).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}))}</small></div>
+                </div>`;
             }).join('');
-        } catch (err) {
-            console.error('activity error', err);
-            el.recentActivity.innerHTML = '<div class="activity-item"><div><strong>Failed to load activity</strong><small>Try refreshing.</small></div></div>';
+        } catch (error) {
+            console.error('activity error', error);
+            el.recentActivity.innerHTML = '<div class="activity-item"><div><strong>Activity unavailable</strong><small>Refresh to try again.</small></div></div>';
         }
     }
 
-    async function searchStudents() {
-        const q = el.studentSearch.value.trim();
-        if (!q) {
-            el.studentList.innerHTML = '';
-            return;
-        }
+    el.searchInput.addEventListener('focus', openSearch);
+    el.searchInput.addEventListener('input', () => {
+        openSearch();
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(searchStudents, 220);
+    });
+    el.searchInput.addEventListener('keydown', event => {
+        if (event.key === 'Enter') { event.preventDefault(); clearTimeout(debounceTimer); searchStudents(); }
+        if (event.key === 'Escape') closeSearch();
+    });
+    el.searchButton.addEventListener('click', searchStudents);
+    el.searchBackdrop.addEventListener('click', closeSearch);
+    document.addEventListener('keydown', event => { if (event.key === 'Escape' && document.body.classList.contains('search-mode')) closeSearch(); });
 
-        try {
-            const res = await fetch(`/api/students/search?q=${encodeURIComponent(q)}`);
-            if (!res.ok) throw new Error('request failed');
-            const data = await res.json();
-            const rows = (data.students || []).slice(0, 8);
-
-            if (!rows.length) {
-                el.studentList.innerHTML = '<div class="student-item"><div><strong>No matching student</strong><small>Try a different name or ID.</small></div></div>';
-                return;
-            }
-
-            el.studentList.innerHTML = rows.map(s => {
-                const bal = Number(s.Balance || 0).toFixed(2);
-                const active = (s.Status || 'Active').toString().toLowerCase() === 'active';
-                return `
-                    <div class="student-item">
-                        <div>
-                            <strong>${esc(s.Name || 'Unnamed')}</strong>
-                            <small>${esc(s.StudentID || '')} • ₱${bal}</small>
-                        </div>
-                        <span class="pill ${active ? 'success' : 'gray'}">${active ? 'ACTIVE' : 'INACTIVE'}</span>
-                    </div>
-                `;
-            }).join('');
-        } catch (err) {
-            console.error('student search error', err);
-            el.studentList.innerHTML = '<div class="student-item"><div><strong>Search failed</strong><small>Check network and retry.</small></div></div>';
-        }
+    if (!reducedMotion && window.gsap) {
+        gsap.from('.search-card', {opacity: 0, y: 16, duration: 0.52, ease: 'power3.out'});
+        gsap.from('.dash-kpis .metric-card', {opacity: 0, y: 12, duration: 0.42, stagger: 0.06, delay: 0.12, ease: 'power2.out'});
     }
 
-
-    let debounce;
-    el.studentSearch.addEventListener('input', () => {
-        clearTimeout(debounce);
-        debounce = setTimeout(searchStudents, 220);
-    });
-    document.getElementById('studentSearchBtn').addEventListener('click', searchStudents);
-
-    loadStats().finally(() => {
-        loadRecentActivity();
-    });
+    Promise.allSettled([loadStats(), loadRecentActivity()]);
+})();
 </script>
 {% endblock %}

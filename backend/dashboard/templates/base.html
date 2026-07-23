@@ -2,28 +2,37 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#075635">
     <title>{% block title %}Bangko ng Seton{% endblock %}</title>
+    <link rel="icon" type="image/png" href="/static/seton_logo.png">
+    <link rel="apple-touch-icon" href="/static/icons/icon-192x192.png">
     <link rel="manifest" href="/static/manifest.json">
     <link rel="stylesheet" href="/static/vendor/bootstrap.min.css">
     <link rel="stylesheet" href="/static/vendor/bootstrap-icons.min.css">
     <link rel="stylesheet" href="/static/css/pwa.css">
     <link rel="stylesheet" href="/static/css/dashboard.css">
     {% block extra_css %}{% endblock %}
-<link rel="stylesheet" href="/static/css/animations.css">
 </head>
 <body class="seton-admin-body">
 <div class="dashboard-container">
-    <aside class="sidebar" id="sidebar">
+    <button class="sidebar-scrim" id="sidebarScrim" type="button" aria-label="Close navigation" tabindex="-1"></button>
+
+    <aside class="sidebar" id="sidebar" aria-label="Primary navigation">
         <div class="sidebar-header">
-            <div>
-                <h1>Seton Academy</h1>
+            <img class="sidebar-logo" src="/static/seton_logo.png" alt="Elizabeth Seton School crest">
+            <div class="sidebar-brand-copy">
+                <h1>Seton</h1>
+                <span>Administration</span>
             </div>
+            <button class="sidebar-close" id="sidebarClose" type="button" aria-label="Close navigation">
+                <i class="bi bi-x-lg"></i>
+            </button>
         </div>
 
         <nav class="sidebar-menu">
             <a href="/dashboard" class="{% if active_page == 'dashboard' %}active{% endif %}">
-                <i class="bi bi-grid-fill"></i><span>Dashboard</span>
+                <i class="bi bi-grid-1x2-fill"></i><span>Dashboard</span>
             </a>
             <a href="/students" class="{% if active_page == 'students' %}active{% endif %}">
                 <i class="bi bi-people-fill"></i><span>Students</span>
@@ -53,14 +62,14 @@
 
     <div class="content-shell">
         <header class="global-topbar">
+            <button class="mobile-menu-btn" id="mobileMenuBtn" type="button" aria-label="Open navigation" aria-controls="sidebar" aria-expanded="false">
+                <i class="bi bi-list"></i>
+            </button>
             <div class="topbar-center">Bangko <span>ng Seton</span></div>
             <div class="topbar-right">
-                <div class="topbar-user">
-                    <div>
-                        <strong>{{ username or 'Admin User' }}</strong>
-                        <small>{{ (role or 'finance') | capitalize }}</small>
-                    </div>
-                    <div class="avatar">{{ (username or 'A')[0:1] | upper }}</div>
+                <div class="topbar-user" aria-label="Signed in account">
+                    <strong>{{ username or 'Admin User' }}</strong>
+                    <small>{{ (role or 'finance') | capitalize }}</small>
                 </div>
             </div>
         </header>
@@ -74,10 +83,36 @@
 <script src="/static/vendor/bootstrap.bundle.min.js"></script>
 <script>
 (function () {
+    const body = document.body;
+    const sidebar = document.getElementById('sidebar');
+    const openButton = document.getElementById('mobileMenuBtn');
+    const closeButton = document.getElementById('sidebarClose');
+    const scrim = document.getElementById('sidebarScrim');
+
+    function setMenu(open) {
+        body.classList.toggle('nav-open', open);
+        openButton?.setAttribute('aria-expanded', open ? 'true' : 'false');
+        if (open && window.innerWidth <= 980) sidebar?.querySelector('a')?.focus({preventScroll: true});
+        if (!open) openButton?.focus({preventScroll: true});
+    }
+
+    openButton?.addEventListener('click', () => setMenu(true));
+    closeButton?.addEventListener('click', () => setMenu(false));
+    scrim?.addEventListener('click', () => setMenu(false));
+    document.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && body.classList.contains('nav-open')) setMenu(false);
+    });
+    window.addEventListener('resize', () => {
+        if (window.innerWidth > 980) {
+            body.classList.remove('nav-open');
+            openButton?.setAttribute('aria-expanded', 'false');
+        }
+    });
+
     const badge = document.getElementById('fraudAlertBadge');
     if (!badge) return;
     fetch('/api/fraud/stats')
-        .then(r => r.ok ? r.json() : null)
+        .then(response => response.ok ? response.json() : null)
         .then(data => {
             if (data && Number(data.unresolved_alerts || 0) > 0) {
                 badge.textContent = data.unresolved_alerts;
